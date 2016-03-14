@@ -1,0 +1,60 @@
+# Packages to be pulled from upstream that are not in the resolver (e.g., acme-missiles-0.3)
+extra-deps: []
+
+# Override default flag values for local packages and extra-deps
+flags: {}
+#  ghcjs-base:
+#    compiler: ghcjs
+#  fastvec:
+#    compiler: ghcjs
+#  ghcjs-webgl:
+#    compiler: ghcjs
+#  qua-view:
+#    compiler: ghcjs
+
+packages:
+  # We list our internal packages in one of the linear orders compatible with
+  # their dependencies.
+
+  - libs/hs/ghcjs-base-alt
+  - libs/hs/fastvec
+  - libs/hs/ghcjs-webgl
+  - apps/hs/qua-view
+
+resolver: lts-5.1
+
+#compiler: ghcjs-0.2.0.9005001_ghc-7.10.3
+#compiler-check: match-exact
+#setup-info:
+#  ghcjs:
+#    source:
+#      ghcjs-0.2.0.9005001_ghc-7.10.3:
+#         url: "https://tolysz.org/ghcjs/lts-5.1-9005001.tar.gz"
+#
+#system-ghc: false
+#install-ghc: true
+
+compiler: ghcjs-0.2.0_ghc-7.10.3
+system-ghc: true
+install-ghc: false
+
+
+require-stack-version: ">= 1.0.2"
+
+# We use these options for development only, as deployment is handled using nix
+ghc-options:
+  "*": -O0
+
+# Extra package databases containing global packages
+extra-package-dbs: []
+
+# Override the architecture used by stack, especially useful on Windows
+# arch: i386
+# arch: x86_64
+
+# Extra directories used by stack for building
+# extra-include-dirs: [/path/to/dir]
+# extra-lib-dirs: [/path/to/dir]
+
+# Allow a newer minor version of GHC than the snapshot specifies
+# compiler-check: newer-minor

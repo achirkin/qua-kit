@@ -1,0 +1,20 @@
+[submodule "qua-view"]
+	path = apps/hs/qua-view
+	url = https://github.com/achirkin/qua-view.git
+
+[submodule "ghcjs-webgl"]
+        path = libs/hs/ghcjs-webgl
+        url = https://github.com/achirkin/ghcjs-webgl.git
+
+[submodule "fastvec"]
+        path = libs/hs/fastvec
+        url = https://github.com/achirkin/fastvec.git
+
+[submodule "ghcjs-base-alt"]
+        path = libs/hs/ghcjs-base-alt
+        url = https://github.com/achirkin/ghcjs-base-alt.git
+
+[submodule "LUCI"]
+        path = apps/java/luci2
+        url = https://bitbucket.org/treyerl/luci2.git
+
