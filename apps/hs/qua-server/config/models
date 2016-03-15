@@ -1,0 +1,4 @@
+StoredFile
+    name Text
+    contentType Text
+    content ByteString

@@ -1,0 +1,5 @@
+<a href=@{HomeR}>home
+<h1>#{filename}
+<a href=@{DownloadR ident}>download
+<p>
+  ^{previewBlock}

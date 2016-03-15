@@ -1,0 +1,5 @@
+/                            HomeR     GET POST
+/file/#StoredFileId          PreviewR  GET
+/file/#StoredFileId/download DownloadR GET
+
+/auth                        AuthR     Auth getAuth

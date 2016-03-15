@@ -1,0 +1,10 @@
+/* add rounded grey box around text */
+pre
+    -webkit-border-radius: 5pt
+    -moz-border-radius: 5pt
+    border-radius: 5pt
+    border: 1pt solid #999
+    background: #DDD
+    margin: 1em
+    padding: 1em
+    white-space: pre-wrap
