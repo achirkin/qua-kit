@@ -15,7 +15,7 @@ description:
 category: Web
 author: Artem Chirkin
 
-executable ciman
+executable qua-server
     main-is: Main.hs
     build-depends:
         base -any,

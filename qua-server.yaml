@@ -1,0 +1,11 @@
+extra-deps:
+  - yesod-auth-oauth-1.4.1
+flags: {}
+packages:
+  - apps/hs/qua-server
+resolver: lts-5.8
+compiler: ghc-7.10.3
+system-ghc: false
+install-ghc: true
+require-stack-version: ">= 1.0.2"
+extra-package-dbs: []
