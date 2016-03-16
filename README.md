@@ -21,11 +21,14 @@ First, install
 Second, using
 [`maven`](https://maven.apache.org/)
 for all java projects is highly recommended.
-Download and install the tool and use `mvn` commands to compile and deploy apps.
-For example, compiling `cdm-processor` looks like this: 
+
+#### Luci
+
+Given Java and maven are set up correctly, running luci as easy as running these four commands:
 ```
-cd apps/java/cdm-processor
-mvn clean jfx:jar
+cd apps/java/luci2
+mvn clean install
+mvn exec:exec
 ```
 
 ### Haskell
