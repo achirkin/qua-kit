@@ -94,4 +94,4 @@ web/modeler-icons
 .HTF/
 .cabal-sandbox/
 cabal.sandbox.config
-#cabal.config
+cabal.config
