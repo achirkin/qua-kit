@@ -63,21 +63,15 @@ result
 *.o
 *.hi
 *.summary
-*/haskell/*.m
-*/haskell/*.csv
-*/dist/*
-*/*/dist/*
-*/*/*/dist/*
-*/*/*/*/dist/*
-
+dist/
+.ghc-sandbox/
+.ghcjs-sandbox/
 
 # eclipse
-**/.metadata/*
-**/.dist-buildwrapper/*
+.metadata/
 .dist-buildwrapper/
 .project
 .settings/
-*.sh
 
 # leksah
 #*.lkshw
