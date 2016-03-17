@@ -73,6 +73,12 @@ instance YesodPersistRunner App where
 
 mkYesodData "App" $(parseRoutesFile "config/routes")
 
+--mkEmbeddedStatic False "quaViewHtml" [embedFileAt "/" "web/qua-view.html"]
+--mkEmbeddedStatic False "quaViewCss" [embedFileAt "/qua-view.css" "web/qua-view.css"]
+--mkEmbeddedStatic False "quaViewJs" [embedFileAt "/qua-view.js" "web/qua-view.js"]
+--mkEmbeddedStatic False "numericMinJs" [embedFileAt "/numeric.min.js" "web/numeric.min.js"]
+
+-- staticFilesList "web" ["qua-view.html", "qua-view.css", "qua-view.js", "numeric.min.js"]
 
 
 getList :: Handler [Entity StoredFile]
@@ -103,13 +109,6 @@ getById ident = do
 --    case IntMap.lookup ident store of
 --      Nothing -> notFound
 --      Just bytes -> return bytes
-
-
-
-
-
-
-
 
 
 

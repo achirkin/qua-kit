@@ -1,4 +1,6 @@
-database
+*.sqlite
 *-shm
 *-wal
 *.aes
+
+web/

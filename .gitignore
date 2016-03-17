@@ -74,7 +74,7 @@ dist/
 .settings/
 
 # leksah
-#*.lkshw
+*.lkshw
 *.lkshf
 *.lkshs
 
@@ -95,3 +95,10 @@ web/modeler-icons
 .cabal-sandbox/
 cabal.sandbox.config
 cabal.config
+
+
+# qua-server specific
+*.sqlite
+*-shm
+*-wal
+*.aes

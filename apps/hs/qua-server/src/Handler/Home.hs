@@ -51,3 +51,16 @@ postHomeR = do
 
 uploadForm :: Html -> MForm Handler (FormResult FileInfo, Widget)
 uploadForm = renderDivs $ fileAFormReq "file"
+
+
+getQuaViewR :: Handler Html
+getQuaViewR = sendFile "text/html" "web/qua-view.html"
+
+getQuaViewCSSR :: Handler ()
+getQuaViewCSSR = sendFile "text/css" "web/qua-view.css"
+
+getQuaViewJSR :: Handler ()
+getQuaViewJSR = sendFile "text/javascript" "web/qua-view.js"
+
+getNumericMinJSR :: Handler ()
+getNumericMinJSR = sendFile "text/javascript" "web/numeric.min.js"

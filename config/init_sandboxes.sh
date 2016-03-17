@@ -1,5 +1,5 @@
 #!/bin/bash
-
+set -e
 ## The aim of this script is to set up cabal sandboxes for ghc and ghcjs apps
 
 # First, find the project directory
@@ -16,9 +16,16 @@ PROJDIR=${DIR%/config}
 pushd "${PROJDIR}/apps/hs/qua-view"
 echo "compiler: ghcjs" > cabal.config
 cabal sandbox init --sandbox "${PROJDIR}/.ghcjs-sandbox"
-cabal sandbox add-source "${PROJDIR}/libs/hs/ghcjs-base-alt"
-cabal sandbox add-source "${PROJDIR}/libs/hs/ghcjs-webgl"
-cabal sandbox add-source "${PROJDIR}/libs/hs/fastvec"
+CSOURCES=`cabal sandbox list-sources`
+if [ `echo "${CSOURCES}" | grep -c "${PROJDIR}/libs/hs/ghcjs-base-alt"` -eq "0" ]; then
+    cabal sandbox add-source "${PROJDIR}/libs/hs/ghcjs-base-alt"
+fi
+if [ `echo "${CSOURCES}" | grep -c "${PROJDIR}/libs/hs/ghcjs-webgl"` -eq "0" ]; then
+    cabal sandbox add-source "${PROJDIR}/libs/hs/ghcjs-webgl"
+fi
+if [ `echo "${CSOURCES}" | grep -c "${PROJDIR}/libs/hs/fastvec"` -eq "0" ]; then
+    cabal sandbox add-source "${PROJDIR}/libs/hs/fastvec"
+fi
 cabal install --dependencies-only
 cabal configure
 popd
