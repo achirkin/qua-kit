@@ -51,9 +51,6 @@ main = do
             , oauthCallback        = Just "/"
             }
 
-mycred :: Credential
-mycred = newCredential "your access token here"
-                       "your access token secret here"
 
 --pk = "-----BEGIN PRIVATE KEY-----\
 --    \ MIICdgIBADANBgkqhkiG9w0BAQEFAASCAmAwggJcAgEAAoGBALRiMLAh9iimur8V\
@@ -71,3 +68,4 @@ mycred = newCredential "your access token here"
 --    \ AO/0isr/3aa6O6NLQxISLKcPDk2NOccAfS/xOtfOz4sJYM3+Bs4Io9+dZGSDCA54\
 --    \ Lw03eHTNQghS0A==\
 --    \ -----END PRIVATE KEY-----"
+

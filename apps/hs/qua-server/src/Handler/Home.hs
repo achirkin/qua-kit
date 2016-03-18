@@ -64,3 +64,5 @@ getQuaViewJSR = sendFile "text/javascript" "web/qua-view.js"
 
 getNumericMinJSR :: Handler ()
 getNumericMinJSR = sendFile "text/javascript" "web/numeric.min.js"
+
+

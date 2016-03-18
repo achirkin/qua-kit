@@ -1,4 +1,5 @@
 /home                        HomeR     GET POST
+/lti-test                    LtiR      GET
 /file/#StoredFileId          PreviewR  GET
 /file/#StoredFileId/download DownloadR GET
 
