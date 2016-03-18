@@ -31,7 +31,7 @@ import Yesod.Default.Util
 
 import Web.Authenticate.OAuth as OAuth
 import Network.HTTP.Client.Conduit
-import Network.HTTP.Types.URI as URI
+--import Network.HTTP.Types.URI as URI
 --import Text.Blaze (unsafeByteString)
 import Crypto.Hash.SHA1 as SHA1
 import qualified Data.ByteString.Base64 as Base64
@@ -65,7 +65,7 @@ preview ident contentType bytes
 getLtiR :: Handler Html
 getLtiR = do
     srequest <- signOAuth ltiOAuth ltiCred request
-    response <- withManager $ httpLbs (addHash srequest)
+    response <- withManager $ httpLbs (addHash srequest){queryString=""}
     defaultLayout $ do
         setTitle "LTI test"
         toWidgetBody (unsafeLazyByteString $ responseBody response)
@@ -95,10 +95,27 @@ getLtiR = do
           addHash req = req { requestHeaders = rhs }
             where rhs = appendHeader <$> requestHeaders req
                   appendHeader (hn, hv) | hn == "Authorization" = (hn, hv
-                                                                      `SB.append` " oauth_body_hash=\""
+                                                                      `SB.append` ",oauth_body_hash=\""
                                                                       `SB.append` encodedHash
                                                                       `SB.append` "\"")
                                         | otherwise = (hn,hv)
+
+
+-- answer:
+--    <imsx_POXHeader>
+--        <imsx_POXResponseHeaderInfo>
+--            <imsx_version>V1.0</imsx_version>
+--            <imsx_messageIdentifier>335349992332</imsx_messageIdentifier>
+--            <imsx_statusInfo>
+--                <imsx_codeMajor>success</imsx_codeMajor>
+--                <imsx_severity>status</imsx_severity>
+--                <imsx_description>Score for course-v1%3AETHx%2BFC-01x%2B2T2015:courses.edx.org-2fc0ef710f2c4e9ca6d2c31fc5731ff5:a9f4ca11f3b686a7bf12812326dfcb1c is now 0.7</imsx_description>
+--                <imsx_messageRefIdentifier>
+--                </imsx_messageRefIdentifier>
+--            </imsx_statusInfo>
+--        </imsx_POXResponseHeaderInfo>
+--    </imsx_POXHeader>
+--    <imsx_POXBody><replaceResultResponse/></imsx_POXBody>
 
 --("Authorization", "OAuth oauth_body_hash=\""
 --                                      `SB.append` Base64.encode (hash t_msg_content)

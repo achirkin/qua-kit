@@ -63,6 +63,5 @@ executable qua-server
         Handler.Home
         Handler.Preview
         Model
-        Web.Authenticate.OAuthB
     ghc-options: -Wall -ferror-spans
 
