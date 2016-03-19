@@ -1,8 +1,9 @@
 body
+    font-size: 10pt
     font-family: Tahoma, Genev
-    padding:1em
-    border: 1pt solid #999
-    border: inset 1pt solid #333
+    padding:0.5em
+    /* border: 1pt solid #999
+    border: inset 1pt solid #333 */
     /* Force form elements to be consistent with each other */
     input, textarea, select, button
         margin: 1pt
@@ -36,15 +37,15 @@ form::after
 
 /* add rounded grey box around text */
 pre
-    -webkit-border-radius: 5pt
+    /*-webkit-border-radius: 5pt
     -moz-border-radius: 5pt
-    border-radius: 5pt
-    border: 1pt solid #999
-    background: #DDD
-    margin: 1em
-    padding: 1em
-    white-space: pre-wrapa, sans-serif
-    font-size: 1pc
+    border-radius: 5pt */
+    border: 1pt solid #CCC
+    background: #E5E5E5
+    margin: 0.3em
+    padding: 0.3em
+    white-space: pre-wrap
+    font-size: 10pt
 form
     clear: both
     margin:auto
