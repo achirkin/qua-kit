@@ -18,27 +18,26 @@ module Handler.Preview where
 import Control.Exception hiding (Handler)
 import qualified Data.ByteString.Lazy as LB
 import qualified Data.ByteString as SB
+import qualified Data.ByteString.Char8 as SBC
+import qualified Data.Foldable as F
 import Data.Default
+import Data.Maybe (fromJust)
 import Data.Text (Text)
+import           Data.List                    as List (find)
 import qualified Data.Text as Text
 --import qualified Data.Text.Lazy as LT
 import qualified Data.Text.Lazy.Encoding as LT
 import qualified Data.Text.Encoding as Text
-import qualified Blaze.ByteString.Builder as Builder
 import Text.Blaze
 import Text.Hamlet.XML
 import Text.XML
 import Yesod
 import Yesod.Default.Util
-import qualified Data.IORef as I
 
 import Web.Authenticate.OAuth as OAuth
 import Network.HTTP.Client.Conduit
---import Network.HTTP.Types.URI as URI
---import Text.Blaze (unsafeByteString)
-import Crypto.Hash.SHA1 as SHA1
-import qualified Data.ByteString.Base64 as Base64
-import qualified Data.ByteString.Char8 as C
+import Network.HTTP.Types           (parseSimpleQuery)
+import qualified Network.Wai as Wai
 
 import Foundation
 import Model
@@ -63,29 +62,78 @@ preview ident contentType bytes
   where
     errorMessage = [whamlet|<pre>Unable to display file contents.|]
 
-
+postLtiR :: Handler Html
+postLtiR = getLtiR
 
 getLtiR :: Handler Html
 getLtiR = do
-    srequest <- signOAuthWithBodyHash ltiOAuth emptyCredential request
-    response <- withManager $ httpLbs srequest
-    defaultLayout $ do
-        setTitle "LTI test"
-        [whamlet|
+    (curReq, curBody) <- waiRequest >>= convert
+    checkedReq <- checkOAuth ltiOAuth emptyCredential curReq
+    (renderReq, edxRequest, edxRB) <- case checkedReq of
+      Left err -> return ([whamlet| Incoming msg error: #{show $ err} |], undefined, undefined)
+      Right req -> do
+        let pams = parseSimpleQuery (LB.toStrict curBody)
+            outcome_url = SBC.unpack . snd . fromJust . List.find ( ("lis_outcome_service_url" ==) . fst) $  pams
+            lis_result_sourcedid = SBC.unpack . snd . fromJust . List.find ( ("lis_result_sourcedid" ==) . fst) $  pams
+            msg_content = replaceResultTemplate
+                                "161346234345"
+                                (Text.pack lis_result_sourcedid)
+                                0.86
+                                "This is a text result data. Nothing interesting, just data"
+        ereq0 <- parseUrl outcome_url
+        let ereq = ereq0 { method = "POST"
+                         , requestBody = RequestBodyBS msg_content
+                         , requestHeaders = [ ("Content-Type", "application/xml")]
+                         }
+        return ([whamlet|
+            <h1>Incoming request
             Request URI:
-            <pre>#{show $ getUri srequest}
+            <pre>#{show $ getUri req}
             Request headers:
-            <pre>#{showHeaders $ requestHeaders srequest}
-            Request parameters:
-            <pre>#{show $ queryString srequest}
+            <pre>
+              $forall (pamn,pamv) <- requestHeaders req
+                #{show pamn}: #{SBC.unpack pamv ++ "\n"}
+            Request query parameters:
+            <pre>
+              $forall (pamn,pamv) <- parseSimpleQuery (queryString req)
+                #{SBC.unpack pamn}: #{SBC.unpack pamv ++ "\n"}
+            Response body:
+            <pre>
+              $forall (pamn,pamv) <- parseSimpleQuery (LB.toStrict curBody)
+                #{SBC.unpack pamn}: #{SBC.unpack pamv ++ "\n"}
+            |], ereq, msg_content)
+    srequest <- signOAuth ltiOAuth emptyCredential edxRequest
+    erequest <-checkOAuth ltiOAuth emptyCredential srequest
+    renderAns <- case erequest of
+      Left err -> return [whamlet| Outcoming msg error: #{show $ err} |]
+      Right req -> do
+        response <- withManager $ httpLbs srequest
+        return [whamlet|
+            <h1>EdX request
+            Request URI:
+            <pre>#{show $ getUri req}
+            Request headers:
+            <pre>
+              $forall (pamn,pamv) <- requestHeaders req
+                #{show pamn}: #{SBC.unpack pamv ++ "\n"}
+            Request query parameters:
+            <pre>
+              $forall (pamn,pamv) <- parseSimpleQuery (queryString req)
+                #{SBC.unpack pamn}: #{SBC.unpack pamv ++ "\n"}
             Request body:
-            <pre>#{Text.decodeUtf8 $ t_msg_content}
+            <pre>#{Text.decodeUtf8 $ edxRB}
             <br>
             Response headers:
-            <pre>#{showHeaders $ responseHeaders response}
+            <pre>
+              $forall (pamn,pamv) <- responseHeaders response
+                #{show pamn}: #{SBC.unpack pamv ++ "\n"}
             Response body:
             <pre>#{LT.decodeUtf8 $ responseBody response}
         |]
+    defaultLayout $ do
+        setTitle "LTI test"
+        renderReq
+        renderAns
     where ltiOAuth = newOAuth
             { oauthServerName      = "test LTI oauth"
             , oauthSignatureMethod = HMACSHA1
@@ -93,71 +141,24 @@ getLtiR = do
             , oauthConsumerSecret  = t_oauth_secret
             , oauthVersion         = OAuth10
             }
-          request = def
-            { method = "POST"
-            , secure = True
-            , host = "courses.edx.org"
-            , port = 443
-            , path = "/courses/course-v1:ETHx+FC-01x+2T2015/xblock/block-v1:ETHx+FC-01x+2T2015+type@lti_consumer+block@2fc0ef710f2c4e9ca6d2c31fc5731ff5/handler_noauth/outcome_service_handler"
+          convert wr = do
+            body <- liftIO $ Wai.strictRequestBody wr
+            return $ (def
+                { method = Wai.requestMethod wr
+                , secure = Wai.isSecure wr
+                , host = whost
+                , port = wport
+                , path = Wai.rawPathInfo wr
+                , queryString = Wai.rawQueryString wr
+                , requestBody = RequestBodyLBS body
+                , requestHeaders = Wai.requestHeaders wr
+                }, body)
+            where
+              (whost,wport) = case SBC.span (':' /=) <$> Wai.requestHeaderHost wr of
+                 Just (h, "") -> (h, if Wai.isSecure wr then 443 else 80)
+                 Just (h, p)  -> (h, read . SBC.unpack $ SB.drop 1 p)
+                 _ -> ("localhost", 80)
 
-            , requestBody = RequestBodyBS t_msg_content
-            , requestHeaders = [ ("Content-Type", "application/xml")
-                               ]
-            }
-          t_msg_content = replaceResultTemplate
-                            "161346234634"
-                            "course-v1%3AETHx%2BFC-01x%2B2T2015:courses.edx.org-2fc0ef710f2c4e9ca6d2c31fc5731ff5:a9f4ca11f3b686a7bf12812326dfcb1c"
-                            0.86
-                            "This is a text result data. Nothing interesting, just data"
-          showHeaders ((n,v):hs) = show n ++ ": " ++ show v ++ "\n" ++ showHeaders hs
-          showHeaders [] = ""
-
-
-signOAuthWithBodyHash :: MonadIO m
-                      => OAuth      -- ^ OAuth Application
-                      -> Credential -- ^ Credential
-                      -> Request    -- ^ Original Request
-                      -> m Request  -- ^ Signed OAuth Request
-signOAuthWithBodyHash auth creds req = do
-    content <- toBS $ requestBody req
-    let oauth_body_hash = paramEncode . Base64.encode $ SHA1.hash content
-        qstring = queryString req
-        mqstring = (if SB.null qstring
-                    then ""
-                    else qstring `SB.append` "&")
-                   `SB.append` "oauth_body_hash=" `SB.append` oauth_body_hash
-    sreq <- signOAuth auth creds req{queryString = mqstring}
-    let rhs = appendHeader <$> requestHeaders sreq
-        appendHeader (hn, hv) | hn == "Authorization" = (hn, hv
-                                                            `SB.append` ",oauth_body_hash=\""
-                                                            `SB.append` oauth_body_hash
-                                                            `SB.append` "\"")
-                              | otherwise = (hn,hv)
-    return sreq {queryString = qstring, requestHeaders = rhs}
-
--- COPIED
-toBS :: MonadIO m => RequestBody -> m SB.ByteString
-toBS (RequestBodyLBS l) = return $ LB.toStrict l
-toBS (RequestBodyBS s) = return s
-toBS (RequestBodyBuilder _ b) = return $ Builder.toByteString b
-toBS (RequestBodyStream _ givesPopper) = toBS' givesPopper
-toBS (RequestBodyStreamChunked givesPopper) = toBS' givesPopper
-
--- COPIED
-toBS' :: MonadIO m => GivesPopper () -> m SB.ByteString
-toBS' gp = liftIO $ do
-    ref <- I.newIORef SB.empty
-    gp (go ref)
-    I.readIORef ref
-  where
-    go ref popper =
-        loop id
-      where
-        loop front = do
-            bs <- popper
-            if SB.null bs
-                then I.writeIORef ref $ SB.concat $ front []
-                else loop (front . (bs:))
 
 encodeTemplate :: [Node] -> SB.ByteString
 encodeTemplate (NodeElement el :_) = LB.toStrict . renderLBS def{rsPretty = False} $ Document (Prologue [] Nothing []) el []
@@ -219,10 +220,6 @@ readResultTemplate imsxMessageId sourceId = encodeTemplate
 
 t_oauth_consumer_key :: SB.ByteString
 t_oauth_consumer_key = "test_lti_key"
-
-t_url :: String
-t_url = "https://courses.edx.org/courses/course-v1:ETHx+FC-01x+2T2015/xblock/block-v1:ETHx+FC-01x+2T2015+type@lti_consumer+block@2fc0ef710f2c4e9ca6d2c31fc5731ff5/handler_noauth/outcome_service_handler"
-
 
 t_oauth_secret :: SB.ByteString
 t_oauth_secret = "test_lti_secret"

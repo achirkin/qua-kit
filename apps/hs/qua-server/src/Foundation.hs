@@ -60,6 +60,9 @@ instance Yesod App where
   defaultLayout widget = do
     pc <- widgetToPageContent $ $(widgetFileNoReload def "default-layout")
     withUrlRenderer $(hamletFile "templates/default-layout-wrapper.hamlet")
+--  makeSessionBackend _ = do
+--        backend <- defaultClientSessionBackend 1 "keyfile.aes"
+--        return $ Just backend
 
 instance RenderMessage App FormMessage where
     renderMessage _ _ = defaultFormMessage
