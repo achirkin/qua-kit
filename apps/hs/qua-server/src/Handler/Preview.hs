@@ -21,6 +21,7 @@ import qualified Data.ByteString as SB
 import qualified Data.ByteString.Char8 as SBC
 import qualified Data.Foldable as F
 import Data.Default
+import qualified Data.Map as Map
 import Data.Maybe (fromJust)
 import Data.Text (Text)
 import           Data.List                    as List (find)
@@ -69,70 +70,16 @@ postLtiR = getLtiR
 
 getLtiR :: Handler Html
 getLtiR = do
-    (curReq, curBody) <- waiRequest >>= convert
-    checkedReq <- checkOAuth ltiOAuth emptyCredential curReq
-    (renderReq, medxRequest, medxRB) <- case checkedReq of
-      Left err -> return ([whamlet| Incoming msg error: #{show $ err} |], Nothing, Nothing)
-      Right req -> let pams = parseSimpleQuery (LB.toStrict curBody)
-                       outcome_url = fmap (SBC.unpack . snd)
-                                   . List.find ( ("lis_outcome_service_url" ==) . fst) $  pams
-                       lis_result_sourcedid = fmap (SBC.unpack . snd)
-                                   . List.find ( ("lis_result_sourcedid" ==) . fst) $  pams
-                       msg_content = replaceResultTemplate
-                                           "161346234345"
-                                           (Text.pack $ fromJust lis_result_sourcedid)
-                                           0.86
-                                           "This is a text result data. Nothing interesting, just data"
-            in if outcome_url == Nothing || lis_result_sourcedid == Nothing
-            then return ([whamlet| Incoming msg error: failed to get some params |], Nothing, Nothing)
-            else do
-        ereq0 <- parseUrl $ fromJust outcome_url
-        let ereq = ereq0 { method = "POST"
-                         , requestBody = RequestBodyBS msg_content
-                         , requestHeaders = [ ("Content-Type", "application/xml")]
-                         }
-        return ([whamlet|
-            <h1>Incoming request
-            Request URI:
-            <pre>#{show $ getUri req}
-            Request headers:
+    (grade, pams) <- waiRequest >>= gradeRequest ltiProvider processWaiRequest
+    response <- grade 0.75 >>= withManager . httpLbs
+    defaultLayout $ do
+      setTitle "LTI test"
+      [whamlet|
+            EdX request parameters:
             <pre>
-              $forall (pamn,pamv) <- requestHeaders req
-                #{show pamn}: #{SBC.unpack pamv ++ "\n"}
-            Request query parameters:
-            <pre>
-              $forall (pamn,pamv) <- parseSimpleQuery (queryString req)
+              $forall (pamn,pamv) <- Map.toList pams
                 #{SBC.unpack pamn}: #{SBC.unpack pamv ++ "\n"}
-            Response body:
-            <pre>
-              $forall (pamn,pamv) <- parseSimpleQuery (LB.toStrict curBody)
-                #{SBC.unpack pamn}: #{SBC.unpack pamv ++ "\n"}
-            |], Just ereq, Just msg_content)
-    renderAns <- case (medxRequest, medxRB) of
-     (Nothing, _) -> return [whamlet| Incoming msg error: no request |]
-     (_, Nothing) -> return [whamlet| Incoming msg error: no request body |]
-     (Just edxRequest, Just edxRB) -> do
-      srequest <- signOAuth ltiOAuth emptyCredential edxRequest
-      erequest <-checkOAuth ltiOAuth emptyCredential srequest
-      case erequest of
-       Left err -> return [whamlet| Outcoming msg error: #{show $ err} |]
-       Right req -> do
-        response <- withManager $ httpLbs srequest
-        return [whamlet|
-            <h1>EdX request
-            Request URI:
-            <pre>#{show $ getUri req}
-            Request headers:
-            <pre>
-              $forall (pamn,pamv) <- requestHeaders req
-                #{show pamn}: #{SBC.unpack pamv ++ "\n"}
-            Request query parameters:
-            <pre>
-              $forall (pamn,pamv) <- parseSimpleQuery (queryString req)
-                #{SBC.unpack pamn}: #{SBC.unpack pamv ++ "\n"}
-            Request body:
-            <pre>#{Text.decodeUtf8 $ edxRB}
-            <br>
+            EdX response<br/>
             Response headers:
             <pre>
               $forall (pamn,pamv) <- responseHeaders response
@@ -140,35 +87,106 @@ getLtiR = do
             Response body:
             <pre>#{LT.decodeUtf8 $ responseBody response}
         |]
-    defaultLayout $ do
-        setTitle "LTI test"
-        renderReq
-        renderAns
+--    (curReq, curBody) <- waiRequest >>= convert
+--    checkedReq <- checkOAuth ltiOAuth emptyCredential curReq
+--    (renderReq, medxRequest, medxRB) <- case checkedReq of
+--      Left err -> return ([whamlet| Incoming msg error: #{show $ err} |], Nothing, Nothing)
+--      Right req -> let pams = parseSimpleQuery (LB.toStrict curBody)
+--                       outcome_url = fmap (SBC.unpack . snd)
+--                                   . List.find ( ("lis_outcome_service_url" ==) . fst) $  pams
+--                       lis_result_sourcedid = fmap (SBC.unpack . snd)
+--                                   . List.find ( ("lis_result_sourcedid" ==) . fst) $  pams
+--                       msg_content = replaceResultTemplate
+--                                           "161346234345"
+--                                           (Text.pack $ fromJust lis_result_sourcedid)
+--                                           0.86
+--                                           "This is a text result data. Nothing interesting, just data"
+--            in if outcome_url == Nothing || lis_result_sourcedid == Nothing
+--            then return ([whamlet| Incoming msg error: failed to get some params |], Nothing, Nothing)
+--            else do
+--        ereq0 <- parseUrl $ fromJust outcome_url
+--        let ereq = ereq0 { method = "POST"
+--                         , requestBody = RequestBodyBS msg_content
+--                         , requestHeaders = [ ("Content-Type", "application/xml")]
+--                         }
+--        return ([whamlet|
+--            <h1>Incoming request
+--            Request URI:
+--            <pre>#{show $ getUri req}
+--            Request headers:
+--            <pre>
+--              $forall (pamn,pamv) <- requestHeaders req
+--                #{show pamn}: #{SBC.unpack pamv ++ "\n"}
+--            Request query parameters:
+--            <pre>
+--              $forall (pamn,pamv) <- parseSimpleQuery (queryString req)
+--                #{SBC.unpack pamn}: #{SBC.unpack pamv ++ "\n"}
+--            Response body:
+--            <pre>
+--              $forall (pamn,pamv) <- parseSimpleQuery (LB.toStrict curBody)
+--                #{SBC.unpack pamn}: #{SBC.unpack pamv ++ "\n"}
+--            |], Just ereq, Just msg_content)
+--    renderAns <- case (medxRequest, medxRB) of
+--     (Nothing, _) -> return [whamlet| Incoming msg error: no request |]
+--     (_, Nothing) -> return [whamlet| Incoming msg error: no request body |]
+--     (Just edxRequest, Just edxRB) -> do
+--      srequest <- signOAuth ltiOAuth emptyCredential edxRequest
+--      erequest <-checkOAuth ltiOAuth emptyCredential srequest
+--      case erequest of
+--       Left err -> return [whamlet| Outcoming msg error: #{show $ err} |]
+--       Right req -> do
+--        response <- withManager $ httpLbs srequest
+--        return [whamlet|
+--            <h1>EdX request
+--            Request URI:
+--            <pre>#{show $ getUri req}
+--            Request headers:
+--            <pre>
+--              $forall (pamn,pamv) <- requestHeaders req
+--                #{show pamn}: #{SBC.unpack pamv ++ "\n"}
+--            Request query parameters:
+--            <pre>
+--              $forall (pamn,pamv) <- parseSimpleQuery (queryString req)
+--                #{SBC.unpack pamn}: #{SBC.unpack pamv ++ "\n"}
+--            Request body:
+--            <pre>#{Text.decodeUtf8 $ edxRB}
+--            <br>
+--            Response headers:
+--            <pre>
+--              $forall (pamn,pamv) <- responseHeaders response
+--                #{show pamn}: #{SBC.unpack pamv ++ "\n"}
+--            Response body:
+--            <pre>#{LT.decodeUtf8 $ responseBody response}
+--        |]
+--    defaultLayout $ do
+--        setTitle "LTI test"
+--        renderReq
+--        renderAns
     where ltiProvider = newLTIProvider t_oauth_consumer_key t_oauth_secret
-          ltiOAuth = newOAuth
-            { oauthServerName      = "test LTI oauth"
-            , oauthSignatureMethod = HMACSHA1
-            , oauthConsumerKey     = t_oauth_consumer_key
-            , oauthConsumerSecret  = t_oauth_secret
-            , oauthVersion         = OAuth10
-            }
-          convert wr = do
-            body <- liftIO $ Wai.strictRequestBody wr
-            return $ (def
-                { method = Wai.requestMethod wr
-                , secure = Wai.isSecure wr
-                , host = whost
-                , port = wport
-                , path = Wai.rawPathInfo wr
-                , queryString = Wai.rawQueryString wr
-                , requestBody = RequestBodyLBS body
-                , requestHeaders = Wai.requestHeaders wr
-                }, body)
-            where
-              (whost,wport) = case SBC.span (':' /=) <$> Wai.requestHeaderHost wr of
-                 Just (h, "") -> (h, if Wai.isSecure wr then 443 else 80)
-                 Just (h, p)  -> (h, read . SBC.unpack $ SB.drop 1 p)
-                 _ -> ("localhost", 80)
+--          ltiOAuth = newOAuth
+--            { oauthServerName      = "test LTI oauth"
+--            , oauthSignatureMethod = HMACSHA1
+--            , oauthConsumerKey     = t_oauth_consumer_key
+--            , oauthConsumerSecret  = t_oauth_secret
+--            , oauthVersion         = OAuth10
+--            }
+--          convert wr = do
+--            body <- liftIO $ Wai.strictRequestBody wr
+--            return $ (def
+--                { method = Wai.requestMethod wr
+--                , secure = Wai.isSecure wr
+--                , host = whost
+--                , port = wport
+--                , path = Wai.rawPathInfo wr
+--                , queryString = Wai.rawQueryString wr
+--                , requestBody = RequestBodyLBS body
+--                , requestHeaders = Wai.requestHeaders wr
+--                }, body)
+--            where
+--              (whost,wport) = case SBC.span (':' /=) <$> Wai.requestHeaderHost wr of
+--                 Just (h, "") -> (h, if Wai.isSecure wr then 443 else 80)
+--                 Just (h, p)  -> (h, read . SBC.unpack $ SB.drop 1 p)
+--                 _ -> ("localhost", 80)
 
 
 encodeTemplate :: [Node] -> SB.ByteString
