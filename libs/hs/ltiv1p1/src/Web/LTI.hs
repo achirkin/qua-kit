@@ -14,8 +14,10 @@
 
 module Web.LTI
     ( -- * Data types
-      LTIProvider, ltiOAuth
+      LTIProvider, ltiOAuth, newLTIProvider
     , LTIException (..)
+      -- * simplifiers
+    , gradeRequest
       -- * Incoming requests
     , processRequest, processWaiRequest
       -- * Outgoing requests
@@ -36,7 +38,7 @@ import           Data.Map.Strict                      (Map)
 import qualified Data.Map.Strict             as Map
 import           Data.Text                            (Text)
 import qualified Data.Text                   as Text
---import qualified Data.Text.Encoding          as Text
+import qualified Data.Text.Encoding          as Text
 import           Data.Time.Clock.POSIX                (getPOSIXTime)
 import           Web.Authenticate.OAuth               (OAuth)
 import qualified Web.Authenticate.OAuth      as OAuth
@@ -52,32 +54,44 @@ import           System.Random                        (Random(..))
 
 
 -- | LTI 1.1 Service provider
-data LTIProvider = LTIProvider
+newtype LTIProvider = LTIProvider
     { ltiOAuth :: OAuth
     }
 
 instance Default LTIProvider where
   def = LTIProvider
     { ltiOAuth = def
+      { OAuth.oauthServerName      = "LTI 1.1 consumer"
+      , OAuth.oauthSignatureMethod = OAuth.HMACSHA1
+      , OAuth.oauthVersion         = OAuth.OAuth10
+      }
     }
+
+-- | Create a new default LTIProvider with given provider token and secret
+newLTIProvider :: ByteString
+               -> ByteString
+               -> LTIProvider
+newLTIProvider token secret = p
+    { ltiOAuth = (ltiOAuth p)
+      { OAuth.oauthConsumerKey     = token
+      , OAuth.oauthConsumerSecret  = secret
+      }
+    } where p = def
 
 newtype LTIException = LTIException String
                     deriving (Show, Eq, Data, Typeable)
 
 instance Exception LTIException
 
+----------------------------------------------------------------------------------------------------
+
 -- | Get url encoded data from Network.HTTP.Client.Request
 processRequest :: MonadIO m
                => LTIProvider
                -> Request
                -> m (Map ByteString ByteString)
-processRequest prov req = do
-    echeckedReq <- OAuth.checkOAuth (ltiOAuth prov) OAuth.emptyCredential req
-    case echeckedReq of
-      Left  err        -> liftIO $ throwIO err
-      Right checkedReq -> do
-        rbody <- toBS $ requestBody checkedReq
-        return . Map.fromList $ parseSimpleQuery rbody
+processRequest prov req = toBS (requestBody req)
+                        >>= processRequest' prov req
 
 -- | Get url encoded data from Network.Wai.Request
 processWaiRequest :: MonadIO m
@@ -86,10 +100,7 @@ processWaiRequest :: MonadIO m
                   -> m (Map ByteString ByteString)
 processWaiRequest prov wreq = do
     (req, rbody) <- convert wreq
-    echeckedReq  <- OAuth.checkOAuth (ltiOAuth prov) OAuth.emptyCredential req
-    case echeckedReq of
-      Left err -> liftIO $ throwIO err
-      Right _  -> return . Map.fromList . parseSimpleQuery $ LB.toStrict rbody
+    processRequest' prov req $ LB.toStrict rbody
   where
     convert wr = do
         body <- liftIO $ Wai.strictRequestBody wr
@@ -109,6 +120,47 @@ processWaiRequest prov wreq = do
            Just (h, po)  -> (h, read . SBC.unpack $ SB.drop 1 po)
            _ -> ("localhost", 80)
 
+
+processRequest' :: MonadIO m
+                => LTIProvider
+                -> Request
+                -> ByteString
+                -> m (Map ByteString ByteString)
+processRequest' prov req rbody = do
+    echeckedReq  <- OAuth.checkOAuth (ltiOAuth prov) OAuth.emptyCredential req
+    case echeckedReq of
+      Left err -> liftIO $ throwIO err
+      Right _  -> return . Map.fromList $ parseSimpleQuery rbody
+
+
+----------------------------------------------------------------------------------------------------
+
+-- | Being supplied with processRequest function
+--   creates a proper grade response to the service consumer.
+gradeRequest :: MonadIO m
+             => LTIProvider
+             -> (LTIProvider -> request -> m (Map ByteString ByteString))
+             -- ^ processRequest or processWaiRequest
+             -> request
+             -- ^ request value (e.g. from Network.HTTP.Client or Network.Wai)
+             -> m ( Double -> m Request
+                  , Map ByteString ByteString
+                  )
+             -- ^ returns a grading function and a request parameter map
+gradeRequest prov proc req = do
+    pams <- proc prov req
+    let murl = SBC.unpack      <$> Map.lookup "lis_outcome_service_url" pams
+        msid = Text.decodeUtf8 <$> Map.lookup "lis_result_sourcedid" pams
+    case (murl,msid) of
+      (Nothing, _) -> liftIO . throwIO $ LTIException
+            "Client request does not contain lis_outcome_service_url."
+      (_, Nothing) -> liftIO . throwIO $ LTIException
+            "Client request does not contain lis_result_sourcedid."
+      (Just url, Just sid) ->
+        return (\r -> replaceResultRequest prov url sid r Nothing, pams)
+
+
+----------------------------------------------------------------------------------------------------
 
 -- | Create a replaceResult request to send it to an LTI consumer
 replaceResultRequest :: MonadIO m
@@ -133,6 +185,8 @@ replaceResultRequest prov url sourceId resultScore resultData = do
                     Just da -> da)
   OAuth.signOAuth (ltiOAuth prov) OAuth.emptyCredential req
 
+
+----------------------------------------------------------------------------------------------------
 
 encodeTemplate :: [Node] -> ByteString
 encodeTemplate (NodeElement el :_) = LB.toStrict
@@ -169,7 +223,7 @@ replaceResultTemplate imsxMessageId sourceId resultScore resultData = encodeTemp
 --            <imsx_statusInfo>
 --                <imsx_codeMajor>success</imsx_codeMajor>
 --                <imsx_severity>status</imsx_severity>
---                <imsx_description>Score for course-v1%3AETHx%2BFC-01x%2B2T2015:courses.edx.org-2fc0ef710f2c4e9ca6d2c31fc5731ff5:a9f4ca11f3b686a7bf12812326dfcb1c is now 0.7</imsx_description>
+--                <imsx_description>Score for course-v1%3...c is now 0.7</imsx_description>
 --                <imsx_messageRefIdentifier>
 --                </imsx_messageRefIdentifier>
 --            </imsx_statusInfo>
@@ -191,7 +245,7 @@ replaceResultTemplate imsxMessageId sourceId resultScore resultData = encodeTemp
 --                   <sourcedId>#{sourceId}
 --  |]
 
--------------------------------------------------------
+----------------------------------------------------------------------------------------------------
 -- Copied from Web.Authenticate.OAuth
 toBS :: MonadIO m => RequestBody -> m ByteString
 toBS (RequestBodyLBS l) = return $ LB.toStrict l

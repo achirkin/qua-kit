@@ -42,6 +42,8 @@ import qualified Network.Wai as Wai
 import Foundation
 import Model
 
+import Web.LTI
+
 getPreviewR :: Key StoredFile -> Handler Html
 getPreviewR ident = do
     StoredFile filename contentType bytes <- getById ident
@@ -142,7 +144,8 @@ getLtiR = do
         setTitle "LTI test"
         renderReq
         renderAns
-    where ltiOAuth = newOAuth
+    where ltiProvider = newLTIProvider t_oauth_consumer_key t_oauth_secret
+          ltiOAuth = newOAuth
             { oauthServerName      = "test LTI oauth"
             , oauthSignatureMethod = HMACSHA1
             , oauthConsumerKey     = t_oauth_consumer_key
