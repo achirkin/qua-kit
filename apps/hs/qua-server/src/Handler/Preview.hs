@@ -69,18 +69,22 @@ getLtiR :: Handler Html
 getLtiR = do
     (curReq, curBody) <- waiRequest >>= convert
     checkedReq <- checkOAuth ltiOAuth emptyCredential curReq
-    (renderReq, edxRequest, edxRB) <- case checkedReq of
-      Left err -> return ([whamlet| Incoming msg error: #{show $ err} |], undefined, undefined)
-      Right req -> do
-        let pams = parseSimpleQuery (LB.toStrict curBody)
-            outcome_url = SBC.unpack . snd . fromJust . List.find ( ("lis_outcome_service_url" ==) . fst) $  pams
-            lis_result_sourcedid = SBC.unpack . snd . fromJust . List.find ( ("lis_result_sourcedid" ==) . fst) $  pams
-            msg_content = replaceResultTemplate
-                                "161346234345"
-                                (Text.pack lis_result_sourcedid)
-                                0.86
-                                "This is a text result data. Nothing interesting, just data"
-        ereq0 <- parseUrl outcome_url
+    (renderReq, medxRequest, medxRB) <- case checkedReq of
+      Left err -> return ([whamlet| Incoming msg error: #{show $ err} |], Nothing, Nothing)
+      Right req -> let pams = parseSimpleQuery (LB.toStrict curBody)
+                       outcome_url = fmap (SBC.unpack . snd)
+                                   . List.find ( ("lis_outcome_service_url" ==) . fst) $  pams
+                       lis_result_sourcedid = fmap (SBC.unpack . snd)
+                                   . List.find ( ("lis_result_sourcedid" ==) . fst) $  pams
+                       msg_content = replaceResultTemplate
+                                           "161346234345"
+                                           (Text.pack $ fromJust lis_result_sourcedid)
+                                           0.86
+                                           "This is a text result data. Nothing interesting, just data"
+            in if outcome_url == Nothing || lis_result_sourcedid == Nothing
+            then return ([whamlet| Incoming msg error: failed to get some params |], Nothing, Nothing)
+            else do
+        ereq0 <- parseUrl $ fromJust outcome_url
         let ereq = ereq0 { method = "POST"
                          , requestBody = RequestBodyBS msg_content
                          , requestHeaders = [ ("Content-Type", "application/xml")]
@@ -101,12 +105,16 @@ getLtiR = do
             <pre>
               $forall (pamn,pamv) <- parseSimpleQuery (LB.toStrict curBody)
                 #{SBC.unpack pamn}: #{SBC.unpack pamv ++ "\n"}
-            |], ereq, msg_content)
-    srequest <- signOAuth ltiOAuth emptyCredential edxRequest
-    erequest <-checkOAuth ltiOAuth emptyCredential srequest
-    renderAns <- case erequest of
-      Left err -> return [whamlet| Outcoming msg error: #{show $ err} |]
-      Right req -> do
+            |], Just ereq, Just msg_content)
+    renderAns <- case (medxRequest, medxRB) of
+     (Nothing, _) -> return [whamlet| Incoming msg error: no request |]
+     (_, Nothing) -> return [whamlet| Incoming msg error: no request body |]
+     (Just edxRequest, Just edxRB) -> do
+      srequest <- signOAuth ltiOAuth emptyCredential edxRequest
+      erequest <-checkOAuth ltiOAuth emptyCredential srequest
+      case erequest of
+       Left err -> return [whamlet| Outcoming msg error: #{show $ err} |]
+       Right req -> do
         response <- withManager $ httpLbs srequest
         return [whamlet|
             <h1>EdX request
