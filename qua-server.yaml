@@ -3,6 +3,8 @@ extra-deps:
 flags: {}
 packages:
   - apps/hs/qua-server
+  - location: libs/hs/ltiv1p1
+    extra-dep: true
 resolver: lts-5.8
 compiler: ghc-7.10.3
 system-ghc: false

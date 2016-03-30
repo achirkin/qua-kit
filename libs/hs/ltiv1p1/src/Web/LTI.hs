@@ -27,6 +27,7 @@ module Web.LTI
 import           Blaze.ByteString.Builder             (toByteString)
 import           Control.Exception
 import           Control.Monad.IO.Class               (MonadIO, liftIO)
+import           Control.Monad.Trans.Except
 import           Data.ByteString                      (ByteString)
 import qualified Data.ByteString             as SB
 import qualified Data.ByteString.Char8       as SBC
@@ -40,15 +41,12 @@ import           Data.Text                            (Text)
 import qualified Data.Text                   as Text
 import qualified Data.Text.Encoding          as Text
 import           Data.Time.Clock.POSIX                (getPOSIXTime)
-import           Web.Authenticate.OAuth               (OAuth)
+import           Web.Authenticate.OAuth               (OAuth, OAuthException)
 import qualified Web.Authenticate.OAuth      as OAuth
 import           Text.Hamlet.XML
 import           Text.XML
-import           Network.HTTP.Client                  ( Request (..)
-                                                      , RequestBody (..)
-                                                      , GivesPopper
-                                                      , parseUrl)
-import           Network.HTTP.Types                   (parseSimpleQuery)
+import qualified Network.HTTP.Client         as HTTP
+import qualified Network.HTTP.Types          as HTTP  (parseSimpleQuery)
 import qualified Network.Wai                 as Wai
 import           System.Random                        (Random(..))
 
@@ -78,8 +76,10 @@ newLTIProvider token secret = p
       }
     } where p = def
 
-newtype LTIException = LTIException String
-                    deriving (Show, Eq, Data, Typeable)
+data LTIException
+    = LTIOAuthException OAuthException
+    | LTIException String
+    deriving (Show, Eq, Data, Typeable)
 
 instance Exception LTIException
 
@@ -88,16 +88,16 @@ instance Exception LTIException
 -- | Get url encoded data from Network.HTTP.Client.Request
 processRequest :: MonadIO m
                => LTIProvider
-               -> Request
-               -> m (Map ByteString ByteString)
-processRequest prov req = toBS (requestBody req)
+               -> HTTP.Request
+               -> ExceptT LTIException m (Map ByteString ByteString)
+processRequest prov req = toBS (HTTP.requestBody req)
                         >>= processRequest' prov req
 
 -- | Get url encoded data from Network.Wai.Request
 processWaiRequest :: MonadIO m
                   => LTIProvider
                   -> Wai.Request
-                  -> m (Map ByteString ByteString)
+                  -> ExceptT LTIException m (Map ByteString ByteString)
 processWaiRequest prov wreq = do
     (req, rbody) <- convert wreq
     processRequest' prov req $ LB.toStrict rbody
@@ -105,14 +105,14 @@ processWaiRequest prov wreq = do
     convert wr = do
         body <- liftIO $ Wai.strictRequestBody wr
         return $ (def
-            { method = Wai.requestMethod wr
-            , secure = Wai.isSecure wr
-            , host = whost
-            , port = wport
-            , path = Wai.rawPathInfo wr
-            , queryString = Wai.rawQueryString wr
-            , requestBody = RequestBodyLBS body
-            , requestHeaders = Wai.requestHeaders wr
+            { HTTP.method = Wai.requestMethod wr
+            , HTTP.secure = Wai.isSecure wr
+            , HTTP.host = whost
+            , HTTP.port = wport
+            , HTTP.path = Wai.rawPathInfo wr
+            , HTTP.queryString = Wai.rawQueryString wr
+            , HTTP.requestBody = HTTP.RequestBodyLBS body
+            , HTTP.requestHeaders = Wai.requestHeaders wr
             }, body)
       where
         (whost,wport) = case SBC.span (':' /=) <$> Wai.requestHeaderHost wr of
@@ -123,15 +123,12 @@ processWaiRequest prov wreq = do
 
 processRequest' :: MonadIO m
                 => LTIProvider
-                -> Request
+                -> HTTP.Request
                 -> ByteString
-                -> m (Map ByteString ByteString)
-processRequest' prov req rbody = do
-    echeckedReq  <- OAuth.checkOAuth (ltiOAuth prov) OAuth.emptyCredential req
-    case echeckedReq of
-      Left err -> liftIO $ throwIO err
-      Right _  -> return . Map.fromList $ parseSimpleQuery rbody
-
+                -> ExceptT LTIException m (Map ByteString ByteString)
+processRequest' prov req rbody = Map.fromList (HTTP.parseSimpleQuery rbody) <$
+    withExceptT LTIOAuthException
+                (OAuth.checkOAuth (ltiOAuth prov) OAuth.emptyCredential req)
 
 ----------------------------------------------------------------------------------------------------
 
@@ -139,11 +136,12 @@ processRequest' prov req rbody = do
 --   creates a proper grade response to the service consumer.
 gradeRequest :: MonadIO m
              => LTIProvider
-             -> (LTIProvider -> request -> m (Map ByteString ByteString))
+             -> (LTIProvider -> request -> ExceptT LTIException m (Map ByteString ByteString))
              -- ^ processRequest or processWaiRequest
              -> request
              -- ^ request value (e.g. from Network.HTTP.Client or Network.Wai)
-             -> m ( Double -> m Request
+             -> ExceptT LTIException m
+                  ( Double -> HTTP.Manager -> m (HTTP.Response LB.ByteString)
                   , Map ByteString ByteString
                   )
              -- ^ returns a grading function and a request parameter map
@@ -157,7 +155,10 @@ gradeRequest prov proc req = do
       (_, Nothing) -> liftIO . throwIO $ LTIException
             "Client request does not contain lis_result_sourcedid."
       (Just url, Just sid) ->
-        return (\r -> replaceResultRequest prov url sid r Nothing, pams)
+        return ( \r m -> do
+                   gr <- replaceResultRequest prov url sid r Nothing
+                   liftIO $ HTTP.httpLbs gr m
+               , pams)
 
 
 ----------------------------------------------------------------------------------------------------
@@ -169,14 +170,14 @@ replaceResultRequest :: MonadIO m
                      -> Text         -- ^ sourcedId (student id)
                      -> Double       -- ^ resultScore (grade between 0.0 and 1.0)
                      -> Maybe Text   -- ^ resultData (not sure if edX stores it though)
-                     -> m Request
+                     -> m HTTP.Request
 replaceResultRequest prov url sourceId resultScore resultData = do
   ctime <- liftIO $ getPOSIXTime
   crand <- liftIO (randomIO :: IO Word)
-  req0 <- liftIO $ parseUrl url
-  let req = req0 { method = "POST"
-                 , requestBody = RequestBodyBS rbody
-                 , requestHeaders = [ ("Content-Type", "application/xml")]
+  req0 <- liftIO $ HTTP.parseUrl url
+  let req = req0 { HTTP.method = "POST"
+                 , HTTP.requestBody = HTTP.RequestBodyBS rbody
+                 , HTTP.requestHeaders = [ ("Content-Type", "application/xml")]
                  }
       imsxMessageId = Text.pack $ show ctime ++ show crand
       rbody = replaceResultTemplate imsxMessageId sourceId resultScore
@@ -247,14 +248,14 @@ replaceResultTemplate imsxMessageId sourceId resultScore resultData = encodeTemp
 
 ----------------------------------------------------------------------------------------------------
 -- Copied from Web.Authenticate.OAuth
-toBS :: MonadIO m => RequestBody -> m ByteString
-toBS (RequestBodyLBS l) = return $ LB.toStrict l
-toBS (RequestBodyBS s) = return s
-toBS (RequestBodyBuilder _ b) = return $ toByteString b
-toBS (RequestBodyStream _ givesPopper) = toBS' givesPopper
-toBS (RequestBodyStreamChunked givesPopper) = toBS' givesPopper
+toBS :: MonadIO m => HTTP.RequestBody -> m ByteString
+toBS (HTTP.RequestBodyLBS l) = return $ LB.toStrict l
+toBS (HTTP.RequestBodyBS s) = return s
+toBS (HTTP.RequestBodyBuilder _ b) = return $ toByteString b
+toBS (HTTP.RequestBodyStream _ givesPopper) = toBS' givesPopper
+toBS (HTTP.RequestBodyStreamChunked givesPopper) = toBS' givesPopper
 
-toBS' :: MonadIO m => GivesPopper () -> m ByteString
+toBS' :: MonadIO m => HTTP.GivesPopper () -> m ByteString
 toBS' gp = liftIO $ do
     ref <- I.newIORef SB.empty
     gp (go ref)

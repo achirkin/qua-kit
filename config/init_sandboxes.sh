@@ -34,6 +34,10 @@ popd
 pushd "${PROJDIR}/apps/hs/qua-server"
 echo "compiler: ghc" > cabal.config
 cabal sandbox init --sandbox "${PROJDIR}/.ghc-sandbox"
+CSOURCES=`cabal sandbox list-sources`
+if [ `echo "${CSOURCES}" | grep -c "${PROJDIR}/libs/hs/ltiv1p1"` -eq "0" ]; then
+    cabal sandbox add-source "${PROJDIR}/libs/hs/ltiv1p1"
+fi
 cabal install --dependencies-only
 cabal configure
 popd
