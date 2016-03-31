@@ -1,0 +1,4 @@
+/* Set a proper size for comment section */
+#imageCommentArea
+    width: 100%
+    min-height: 200px

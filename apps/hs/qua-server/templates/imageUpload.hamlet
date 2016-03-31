@@ -1,0 +1,4 @@
+<h2>Share your story
+<form method=post action=@{HomeR} enctype=#{formEncType}>
+    ^{formWidget}
+    <input type="submit" value="Upload">

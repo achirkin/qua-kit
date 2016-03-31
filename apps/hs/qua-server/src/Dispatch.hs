@@ -24,6 +24,7 @@ import Foundation
 import Handler.Download
 import Handler.Home
 import Handler.Preview
+import Handler.ImageUpload
 import Yesod.Auth
 
 

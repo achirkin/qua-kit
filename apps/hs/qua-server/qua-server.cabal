@@ -65,6 +65,7 @@ executable qua-server
         Foundation.OAuth
         Handler.Download
         Handler.Home
+        Handler.ImageUpload
         Handler.Preview
         Model
     ghc-options: -Wall -ferror-spans
