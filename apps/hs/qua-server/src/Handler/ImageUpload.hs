@@ -71,6 +71,10 @@ uploadForm extra = do
     (cityRes,   cityView   ) <- mreq textField     reqs Nothing
     (commentRes,commentView) <- mreq textareaField reqs Nothing
     (agreeRes,  agreeView  ) <- mreq checkBoxField reqs Nothing
+    storyDataDiv  <- newIdent
+    imgPreviewDiv <- newIdent
+    topDiv    <- newIdent
+    bottomDiv <- newIdent
     let mustAgree s = case agreeRes of
                 FormSuccess False ->
                     FormFailure ["You must agree the terms of use (check the checkbox)."] *> s
