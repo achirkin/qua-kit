@@ -1,4 +1,7 @@
 /* Set a proper size for comment section */
-#imageCommentArea
+##{fvId commentView}
     width: 100%
     min-height: 200px
+
+##{fvId agreeView}
+    display: inline

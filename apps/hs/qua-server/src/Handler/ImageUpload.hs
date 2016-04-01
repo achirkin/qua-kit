@@ -13,68 +13,88 @@
 -----------------------------------------------------------------------------
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE QuasiQuotes #-}
 
 module Handler.ImageUpload where
 
-import Control.Monad.Trans.Resource (runResourceT)
-import Data.Conduit
-import Data.Conduit.Binary
+--import Control.Monad.Trans.Resource (runResourceT)
+--import Data.Conduit
+--import Data.Conduit.Binary
 import Data.Default
 import Data.Text (Text)
-import qualified Data.ByteString as S
-import qualified Data.ByteString.Lazy as L
+--import qualified Data.ByteString as S
+--import qualified Data.ByteString.Lazy as L
 import Yesod
 import Yesod.Default.Util
-import Yesod.Auth
+--import Yesod.Auth
 
 import Foundation
-import Model
+--import Model
 
 
-postImageUploadR :: Handler Html
-postImageUploadR = getImageUploadR
+data Story = Story
+    { storyAuthor  :: Maybe Text
+    , storyImage   :: FileInfo
+    , storyCountry :: Text
+    , storyCity    :: Text
+    , storyComment :: Textarea
+    }
+
+instance Show Story where
+    show s = "Your story:\n"
+        ++ "Author:  " ++ show (storyAuthor s) ++ "\n"
+        ++ "Country: " ++ show (storyCountry s) ++ "\n"
+        ++ "City:    " ++ show (storyCity s) ++ "\n"
+        ++ "Comment: " ++ show (storyComment s)
 
 getImageUploadR :: Handler Html
-getImageUploadR = do
-    maid <- maybeAuthId
-    (formWidget, formEncType) <- generateFormPost uploadForm
-    storedFiles <- getList
+getImageUploadR = postImageUploadR
+
+postImageUploadR :: Handler Html
+postImageUploadR = do
+    ((res, widget), formEncType) <- runFormPost uploadForm
     defaultLayout $ do
         setTitle "Share your story"
-        $(widgetFileNoReload def "imageUpload")
+        [whamlet|
+            <p>Result: #{show res}
+            <form method=post action=@{ImageUploadR}  enctype=#{formEncType}>
+                ^{widget}
+        |]
 
-uploadForm :: Html -> MForm Handler (FormResult
-        ( Maybe Text
-        , FileInfo
-        , Text
-        , Text
-        , Textarea
-        , Bool), Widget)
-uploadForm = renderDivs $ (,,,,,)
-  <$> aopt textField "You may type your name, if you want" Nothing
-  <*> fileAFormReq FieldSettings
-        { fsLabel   = "Select an image file for upload"
+
+uploadForm :: Html -> MForm Handler (FormResult Story, Widget)
+uploadForm extra = do
+    (authorRes, authorView ) <- mopt textField     opts Nothing
+    (imageRes,  imageView  ) <- mreq fileField     reqs
+       { fsAttrs = ("accept","image/*") : fsAttrs reqs} Nothing
+    (countryRes,countryView) <- mreq textField     reqs Nothing
+    (cityRes,   cityView   ) <- mreq textField     reqs Nothing
+    (commentRes,commentView) <- mreq textareaField reqs Nothing
+    (agreeRes,  agreeView  ) <- mreq checkBoxField reqs Nothing
+    let mustAgree s = case agreeRes of
+                FormSuccess False ->
+                    FormFailure ["You must agree the terms of use (check the checkbox)."] *> s
+                x -> x *> s
+        storyRes = mustAgree $ Story
+            <$> authorRes
+            <*> imageRes
+            <*> countryRes
+            <*> cityRes
+            <*> commentRes
+    return (storyRes, $(widgetFileNoReload def "imageUpload"))
+  where
+    reqs = FieldSettings
+        { fsLabel   = ""
         , fsTooltip = Nothing
         , fsId      = Nothing
         , fsName    = Nothing
         , fsAttrs   = [("required","true")]
         }
-  <*> areq textField "Country" Nothing
-  <*> areq textField "City" Nothing
-  <*> areq textareaField FieldSettings
-        { fsLabel   = "Commentary"
-        , fsTooltip = Nothing
-        , fsId      = Just "imageCommentArea"
-        , fsName    = Nothing
-        , fsAttrs   = [("required","true")]
-        } Nothing
-  <*> areq checkBoxField FieldSettings
-        { fsLabel   = "I confirm that I own the uploaded image\
-                      \ and allow the Chair for Information Architecture to use the image\
-                      \ and expose it to public."
+    opts = FieldSettings
+        { fsLabel   = ""
         , fsTooltip = Nothing
         , fsId      = Nothing
         , fsName    = Nothing
-        , fsAttrs   = [("required","true")]
-        } Nothing
+        , fsAttrs   = []
+        }
 

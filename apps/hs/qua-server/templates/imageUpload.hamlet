@@ -1,4 +1,17 @@
-<h2>Share your story
-<form method=post action=@{HomeR} enctype=#{formEncType}>
-    ^{formWidget}
-    <input type="submit" value="Upload">
+#{extra}
+<div style="width: 49%">
+    Select an image to share<br>
+    ^{fvInput imageView}
+    ^{fvInput agreeView}I confirm that the image is taken by me, and I allow the teaching team and the Chair iA to use and publish it.
+    <br>
+    Country
+    ^{fvInput countryView}
+    City
+    ^{fvInput cityView}
+Share your thoughts
+^{fvInput commentView}
+<br>
+You may enter here your name, so we can show it together with your image
+^{fvInput authorView}
+<br>
+<input type=submit value="Submit the story">
