@@ -24,6 +24,8 @@
         color: #444
         font-size: 0.9em
         font-variant: all-small-caps
+    span
+        width: 100%
 
 
 /* checkbox with rules */
@@ -46,7 +48,9 @@
 /* the comment and other things are on bottom */
 ##{bottomDiv}
     width: 100%
-
+    input[type=submit]
+        float: right
+        margin: 3px 2%
 
 /* Set a proper size for comment section */
 ##{fvId commentView}

@@ -4,13 +4,19 @@
 ^{idataView}
 <div ##{topDiv}>
   <div ##{storyDataDiv}>
-    Select an image to share<br>
+    $case inameRes
+      $of Nothing
+        Select an image to share
+      $of Just iname
+        You have uploaded an image "#{iname}", but you may change it here
+    <br>
     ^{fvInput imageView}
     <span>
         ^{fvInput agreeView}
         <label for=#{fvId agreeView}>
           I confirm that the image is taken by me,
           and I allow the teaching team and the Chair iA to use and publish it.
+    <br>
     You may enter here your name, so we can show it together with your image
     ^{fvInput authorView}
     Country
