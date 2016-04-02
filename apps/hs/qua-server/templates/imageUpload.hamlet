@@ -1,4 +1,7 @@
 #{extra}
+^{inameView}
+^{itypeView}
+^{idataView}
 <div ##{topDiv}>
   <div ##{storyDataDiv}>
     Select an image to share<br>
@@ -8,26 +11,29 @@
         <label for=#{fvId agreeView}>
           I confirm that the image is taken by me,
           and I allow the teaching team and the Chair iA to use and publish it.
-    <br>
+    You may enter here your name, so we can show it together with your image
+    ^{fvInput authorView}
     Country
     ^{fvInput countryView}
     City
     ^{fvInput cityView}
     <br>
 
-  <div ##{imgPreviewDiv}>
+  $case imageBytes
+    $of Just ib
+      <div ##{imgPreviewDiv} style="background-image: url(#{ib})">
+    $of Nothing
+      <div ##{imgPreviewDiv}>
+
 
 <div ##{bottomDiv}>
   Share your thoughts
   ^{fvInput commentView}
-  <br>
-  You may enter here your name, so we can show it together with your image
-  ^{fvInput authorView}
-  <br>
   <input type=submit value="Submit the story">
 
-<script>
+<script type="text/javascript">
   document.getElementById('#{fvId imageView}').addEventListener('change', function(e){
-    var imgPreview = document.getElementById('#{imgPreviewDiv}');
-    imgPreview.style.backgroundImage = 'url("' + URL.createObjectURL(e.target.files[0]) + '")';
+    document.getElementById('#{imgPreviewDiv}').style.backgroundImage
+        = 'url("' + URL.createObjectURL(e.target.files[0]) + '")';
   });
+
