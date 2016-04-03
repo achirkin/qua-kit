@@ -1,3 +1,15 @@
+html
+    height: 100%
+    padding: 0
+    margin: 0
+
+body
+    height: 98%
+    padding: 0
+    margin: 5px
+
+body form
+    height: 85%
 
 /* two-column top part of the widget */
 ##{topDiv}
@@ -9,7 +21,7 @@
 
 /* align story input fields */
 ##{storyDataDiv}
-    width: 40%
+    width: 45%
     padding: 0
     margin: 0
     display: table-cell
@@ -34,7 +46,7 @@
 
 /* image preview on the right side from storyDataDiv */
 ##{imgPreviewDiv}
-    width: 60%
+    width: 54%
     padding: 0
     margin: 0
     display: table-cell
@@ -48,6 +60,7 @@
 /* the comment and other things are on bottom */
 ##{bottomDiv}
     width: 100%
+    height: 65%
     input[type=submit]
         float: right
         margin: 3px 2%
@@ -55,4 +68,5 @@
 /* Set a proper size for comment section */
 ##{fvId commentView}
     width: 99%
+    height: 99%
     min-height: 200px

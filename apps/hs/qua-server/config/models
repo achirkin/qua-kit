@@ -1,4 +1,13 @@
-StoredFile
-    name Text
-    contentType Text
-    content ByteString
+UserStory
+    edxUserId     Text
+    edxContextId  Text
+    edxResLink    Text
+    edxOutcomeUrl Text Maybe
+    edxResultId   Text Maybe
+    author        Text Maybe
+    imageName     Text
+    imageType     Text
+    imageData     ByteString
+    country       Text
+    city          Text
+    comment       Text

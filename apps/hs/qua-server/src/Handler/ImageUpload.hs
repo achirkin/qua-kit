@@ -17,6 +17,7 @@
 
 module Handler.ImageUpload where
 
+import Control.Monad (when)
 import Control.Monad.Trans.Resource (runResourceT)
 import Data.Conduit
 import Data.Conduit.Binary
@@ -24,26 +25,27 @@ import Data.Conduit.Binary
 import Data.Default
 import Data.Text (Text)
 import qualified Data.Text as Text
-import qualified Data.Text.Encoding as Text
+--import qualified Data.Text.Encoding as Text
 import qualified Data.Text.Lazy as LText
 import qualified Data.Text.Lazy.Encoding as LText
 import qualified Data.ByteString as BS
---import qualified Data.ByteString.Lazy as BSL
+--import qualified Data.ByteString.Char8       as BSC
+import qualified Data.ByteString.Lazy as BSL
 import Yesod
 import Yesod.Default.Util
 import Yesod.Core.Types
 
-import qualified Text.Blaze as Blaze
+import Text.Blaze (ToMarkup)
 --import qualified Data.ByteString.Base64 as Base64
 import qualified Data.ByteString.Base64.Lazy as Base64L
 
 import Foundation
---import Model
+import Model
 
 
 import Web.LTI
 import Control.Monad.Trans.Except (runExceptT)
-import qualified Data.Map as Map
+
 
 t_oauth_consumer_key :: BS.ByteString
 t_oauth_consumer_key = "test_lti_key"
@@ -55,11 +57,16 @@ t_lti :: LTIProvider
 t_lti = newLTIProvider t_oauth_consumer_key t_oauth_secret
 
 data Story = Story
-    { storyAuthor  :: Maybe Text
-    , storyImage   :: FileInfo
-    , storyCountry :: Text
-    , storyCity    :: Text
-    , storyComment :: Textarea
+    { edxUserId     :: Text
+    , edxContextId  :: Text
+    , edxResLink    :: Text
+    , edxOutcomeUrl :: Maybe Text
+    , edxResultId   :: Maybe Text
+    , storyAuthor   :: Maybe Text
+    , storyImage    :: FileInfo
+    , storyCountry  :: Text
+    , storyCity     :: Text
+    , storyComment  :: Textarea
     }
 
 instance Show Story where
@@ -73,15 +80,35 @@ getImageUploadR :: Handler Html
 getImageUploadR = postImageUploadR
 
 postImageUploadR :: Handler Html
-postImageUploadR = setupSession $ \userId -> do
+postImageUploadR = setupSession $ do
     ((res, widget), formEncType) <- runFormPost uploadForm
-    defaultLayout $ do
-      setTitle "Share your story"
-      case res of
-        FormFailure msgs -> showFormError msgs
-        _ -> return ()
-      [whamlet|<p>#{userId}|]
-      showFormWidget widget formEncType
+    case res of
+      FormFailure msgs -> defaultLayout $ do
+        setTitle "Share your story"
+        when (length msgs < 5) $ showFormError msgs
+        showFormWidget widget formEncType
+      FormMissing ->defaultLayout $ do
+        setTitle "Share your story"
+        showFormWidget widget formEncType
+      FormSuccess story -> do
+        fb <- runResourceT $ fileSource (storyImage story) $$ sinkLbs
+        runDB . insert_ $ UserStory
+            { userStoryEdxUserId     = edxUserId story
+            , userStoryEdxContextId  = edxContextId story
+            , userStoryEdxResLink    = edxResLink story
+            , userStoryEdxOutcomeUrl = edxOutcomeUrl story
+            , userStoryEdxResultId   = edxResultId story
+            , userStoryAuthor        = storyAuthor story
+            , userStoryImageName     = fileName $ storyImage story
+            , userStoryImageType     = fileContentType $ storyImage story
+            , userStoryImageData     = BSL.toStrict fb
+            , userStoryCountry       = storyCountry story
+            , userStoryCity          = storyCity story
+            , userStoryComment       = unTextarea $ storyComment story
+            }
+        defaultLayout $ do
+          setTitle "Share your story"
+          showFormSuccess story
   where
     showFormError :: [Text] -> Widget
     showFormError msgs = do
@@ -103,29 +130,55 @@ postImageUploadR = setupSession $ \userId -> do
         <form method=post action=@{ImageUploadR} enctype=#{formEncType}>
           ^{widget}
       |]
+    showFormSuccess :: Story -> Widget
+    showFormSuccess story = do
+      successWrapper <- newIdent
+      toWidget [cassius|
+        ##{successWrapper}
+            background-color: #ccf;
+            padding: 5px 5%;
+            margin: 5%;
+            font-variant: all-small-caps;
+      |]
+      [whamlet|
+        <div ##{successWrapper}>
+          Thank you,#
+          $case storyAuthor story
+            $of Just author
+              \ #{author},
+            $of Nothing
+          \ your story is uploaded
+      |]
 
-setupSession :: (Text -> Handler Html) -> Handler Html
-setupSession h = do
-    muid <- lookupSession "lis_result_sourcedid"
-    case muid of
-      Nothing -> do
-        wreq <- waiRequest
-        eltiRequest <- runExceptT $ processWaiRequest t_lti wreq
+-- | Test if current session corresponds to resource_link_id
+--   sent by LTI resource provider (edX).
+--   Create a new session if needed,
+--   otherwise fail.
+setupSession :: Handler Html -> Handler Html
+setupSession continue = do
+    msesResLink <- lookupSession "resource_link_id"
+    postRL <- lookupPostParam "resource_link_id"
+    getRL  <- lookupGetParam "resource_link_id"
+    if msesResLink /= Nothing
+       && (msesResLink == postRL || msesResLink == getRL)
+    then continue
+    else do
+        deleteSession "resource_link_id"
+        yreq <- getRequest
+        eltiRequest <- runExceptT $ processYesodRequest t_lti yreq
         case eltiRequest of
           Left err -> defaultLayout $ do
             setTitle "Error"
             [whamlet|<p>#{show err}|]
-          Right pams -> do
-            let murl = Text.decodeUtf8 <$> Map.lookup "lis_outcome_service_url" pams
-                msid = Text.decodeUtf8 <$> Map.lookup "lis_result_sourcedid" pams
-            Prelude.mapM_ (setSession "lis_outcome_service_url") murl
-            Prelude.mapM_ (setSession "lis_result_sourcedid") msid
-            case msid of
+          Right _ -> do
+            case postRL of
                 Nothing -> defaultLayout $ do
                     setTitle "Error"
-                    [whamlet|<p>Failed to lookup lis_result_sourcedid|]
-                Just uid -> h uid
-      Just uid -> h uid
+                    [whamlet|<p>Failed to check OAuth request from the LTI service consumer|]
+                Just rlink -> do
+                    setSession "resource_link_id" rlink
+                    continue
+
 
 uploadForm :: Html -> MForm Handler (FormResult Story, Widget)
 uploadForm extra = do
@@ -143,6 +196,24 @@ uploadForm extra = do
     (cityRes,   cityView   ) <- mreq textField     reqs Nothing
     (commentRes,commentView) <- mreq textareaField reqs Nothing
     (agreeRes,  agreeView  ) <- mreq checkBoxField reqs Nothing
+
+    -- set up hidden field for edX user-related information
+    (userIdRes,    userIdView    ) <- mreq hiddenField opts
+      { fsName = Just "user_id"                 } Nothing
+    (contextIdRes, contextIdView ) <- mreq hiddenField opts
+      { fsName = Just "context_id"              } Nothing
+    (resLinkRes,   resLinkView   ) <- mreq hiddenField opts
+      { fsName = Just "resource_link_id"        } Nothing
+    (outcomeUrlRes,outcomeUrlView) <- mopt hiddenField opts
+      { fsName = Just "lis_outcome_service_url" } Nothing
+    (resultIdRes,  resultIdView  ) <- mopt hiddenField opts
+      { fsName = Just "lis_result_sourcedid"    } Nothing
+    let edxInfoFields = do
+          fvInput userIdView
+          fvInput contextIdView
+          fvInput resLinkView
+          fvInput outcomeUrlView
+          fvInput resultIdView
 
     -- set up hidden fields for keeping image
     (imgFName, imgFType, imgBase64) <- case mimageRes of
@@ -179,7 +250,12 @@ uploadForm extra = do
             x -> x *> s
 
         storyRes = mustAgree $ Story
-            <$> setErrMsg "Error in the field \"author\"" authorRes
+            <$> setErrMsg "Error in edX-provided field \"user_id\"" userIdRes
+            <*> setErrMsg "Error in edX-provided field \"context_id\"" contextIdRes
+            <*> setErrMsg "Error in edX-provided field \"resource_link_id\"" resLinkRes
+            <*> setErrMsg "Error in edX-provided field \"lis_outcome_service_url\"" outcomeUrlRes
+            <*> setErrMsg "Error in edX-provided field \"lis_result_sourcedid\"" resultIdRes
+            <*> setErrMsg "Error in the field \"author\"" authorRes
             <*> setErrMsg "Error in the field \"image file\"" imageRes
             <*> setErrMsg "Error in the field \"country\"" countryRes
             <*> setErrMsg "Error in the field \"city\"" cityRes
@@ -199,7 +275,7 @@ uploadForm extra = do
         , fsTooltip = Nothing
         , fsId      = Nothing
         , fsName    = Nothing
-        , fsAttrs   = [] -- [("required","required")]
+        , fsAttrs   = [("required","required")]
         }
     opts = FieldSettings
         { fsLabel   = ""
@@ -222,7 +298,7 @@ uploadForm extra = do
 
 -- | Returns default value if it is given,
 --   otherwise returns input value
-addHiddenValueHolder :: (PathPiece p, Blaze.ToMarkup p)
+addHiddenValueHolder :: (PathPiece p, ToMarkup p)
                      => Maybe p
                      -> MForm Handler (Maybe p, Widget)
 addHiddenValueHolder mx = do

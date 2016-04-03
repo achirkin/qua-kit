@@ -22,9 +22,9 @@ import Yesod
 import Foundation
 import Model
 
-getDownloadR :: Key StoredFile -> Handler TypedContent
+getDownloadR :: Key UserStory -> Handler TypedContent
 getDownloadR ident = do
-    StoredFile filename contentType bytes <- getById ident
+    ustory <- getById ident
     addHeader "Content-Disposition" $ Text.concat
-        [ "attachment; filename=\"", filename, "\""]
-    sendResponse (Text.encodeUtf8 contentType, toContent bytes)
+        [ "attachment; filename=\"", userStoryImageName ustory, "\""]
+    sendResponse (Text.encodeUtf8 $ userStoryImageType ustory, toContent $ userStoryImageData ustory)

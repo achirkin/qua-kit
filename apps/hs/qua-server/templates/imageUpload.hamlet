@@ -1,4 +1,5 @@
 #{extra}
+^{edxInfoFields}
 ^{inameView}
 ^{itypeView}
 ^{idataView}
@@ -33,7 +34,7 @@
 
 
 <div ##{bottomDiv}>
-  Share your thoughts
+  Share your thoughts<br>
   ^{fvInput commentView}
   <input type=submit value="Submit the story">
 

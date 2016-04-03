@@ -84,14 +84,14 @@ mkYesodData "App" $(parseRoutesFile "config/routes")
 -- staticFilesList "web" ["qua-view.html", "qua-view.css", "qua-view.js", "numeric.min.js"]
 
 
-getList :: Handler [Entity StoredFile]
+getList :: Handler [Entity UserStory]
 getList = runDB $ selectList [] []
 
 --getList :: Handler [(Key StoredFile, StoredFile)]
 --getList =
 --    getYesod >>= liftIO . liftM IntMap.toList . readTVarIO . tstore
 
-addFile :: StoredFile -> Handler ()
+addFile :: UserStory -> Handler ()
 addFile file = runDB $ insert_ file
 --addFile file = do
 --    app <- getYesod
@@ -99,14 +99,14 @@ addFile file = runDB $ insert_ file
 --        nextId <- getNextId app
 --        modifyTVar (tstore app) $ IntMap.insert nextId file
 
-getById :: Key StoredFile -> Handler StoredFile
+getById :: Key UserStory -> Handler UserStory
 getById ident = do
     mfile <- runDB $ get ident
     case mfile of
       Nothing -> notFound
       Just file -> return file
 
---getById :: Key StoredFile -> Handler StoredFile
+--getById :: Key UserStory -> Handler UserStory
 --getById ident = do
 --    store <- getYesod >>= liftIO . readTVarIO . tstore
 --    case IntMap.lookup ident store of

@@ -39,15 +39,16 @@ import Model
 import Web.LTI
 import Control.Monad.Trans.Except (runExceptT)
 
-getPreviewR :: Key StoredFile -> Handler Html
+getPreviewR :: Key UserStory -> Handler Html
 getPreviewR ident = do
-    StoredFile filename contentType bytes <- getById ident
+    ustory <- getById ident
     defaultLayout $ do
-        setTitle . toMarkup $ "File Processor - " `Text.append` filename
-        previewBlock <- liftIO $ preview ident contentType bytes
+        setTitle . toMarkup $ "File Processor - " `Text.append` userStoryImageName ustory
+        previewBlock <- liftIO $ preview ident (userStoryImageType ustory)
+                                               (userStoryImageData ustory)
         $(widgetFileNoReload def "preview")
 
-preview :: Key StoredFile -> Text -> SB.ByteString -> IO Widget
+preview :: Key UserStory -> Text -> SB.ByteString -> IO Widget
 preview ident contentType bytes
   | "image/" `Text.isPrefixOf` contentType =
     return [whamlet|<img src=@{DownloadR ident} style="width: 100%;">|]

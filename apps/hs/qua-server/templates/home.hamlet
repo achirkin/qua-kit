@@ -1,19 +1,12 @@
-<p>Your current auth ID: #{show maid}
-            $maybe _ <- maid
-                <p>
-                    <a href=@{AuthR LogoutR}>Logout
-            $nothing
-                <p>
-                    <a href=@{AuthR LoginR}>Go to the login page
 $if null storedFiles
     <p>No files have been uploaded yet.
 $else
     <h2>Previously submitted files
     <ul>
-        $forall (Entity ident (StoredFile filename _ _)) <- storedFiles
+        $forall (Entity ident (ustory)) <- storedFiles
           <li>
-              <a href=@{PreviewR ident}>#{filename}
-<h2>Submit new file
-<form method=post action=@{HomeR} enctype=#{formEncType}>
-    ^{formWidget}
-    <input type="submit" value="Upload">
+            <a href="@{DownloadR ident}">#{userStoryCountry ustory} - #{userStoryCity ustory}<br>
+            #{show $ userStoryAuthor ustory}<br>
+            #{userStoryEdxUserId ustory}<br>
+            #{userStoryEdxContextId ustory}<br>
+            <pre>#{userStoryComment ustory}

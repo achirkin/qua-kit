@@ -30,23 +30,26 @@ import Model
 
 getHomeR :: Handler Html
 getHomeR = do
-    maid <- maybeAuthId
-    (formWidget, formEncType) <- generateFormPost uploadForm
-    storedFiles <- getList
+--    maid <- maybeAuthId
+--    (formWidget, formEncType) <- generateFormPost uploadForm
+    storedFiles <- getImages
     defaultLayout $ do
         setTitle "File Processor"
         $(widgetFileNoReload def "home")
 
+getImages :: Handler [Entity UserStory]
+getImages = runDB $ selectList [] []
+
 postHomeR :: Handler Html
 postHomeR = do
     ((result, _), _) <- runFormPost uploadForm
-    case result of
-      FormSuccess fi -> do
-        fileBytes <- runResourceT $ fileSource fi $$ sinkLbs
-        addFile $ StoredFile (fileName fi) (fileContentType fi)
---                              fileBytes
-                             (S.pack . L.unpack $ fileBytes)
-      _ -> return ()
+--    case result of
+--      FormSuccess fi -> do
+--        fileBytes <- runResourceT $ fileSource fi $$ sinkLbs
+--        addFile $ StoredFile (fileName fi) (fileContentType fi)
+----                              fileBytes
+--                             (S.pack . L.unpack $ fileBytes)
+--      _ -> return ()
     redirect HomeR
 
 uploadForm :: Html -> MForm Handler (FormResult FileInfo, Widget)

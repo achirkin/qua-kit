@@ -1,5 +1,5 @@
 <a href=@{HomeR}>home
-<h1>#{filename}
+<h1>#{userStoryImageName ustory}
 <a href=@{DownloadR ident}>download
 <p>
   ^{previewBlock}

@@ -19,12 +19,13 @@ module Web.LTI
       -- * simplifiers
     , gradeRequest
       -- * Incoming requests
-    , processRequest, processWaiRequest
+    , processRequest, processWaiRequest, processYesodRequest
       -- * Outgoing requests
     , replaceResultRequest
     ) where
 
 import           Blaze.ByteString.Builder             (toByteString)
+import           Control.Arrow                        ((***))
 import           Control.Exception
 import           Control.Monad.IO.Class               (MonadIO, liftIO)
 import           Control.Monad.Trans.Except
@@ -46,8 +47,9 @@ import qualified Web.Authenticate.OAuth      as OAuth
 import           Text.Hamlet.XML
 import           Text.XML
 import qualified Network.HTTP.Client         as HTTP
-import qualified Network.HTTP.Types          as HTTP  (parseSimpleQuery)
+import qualified Network.HTTP.Types          as HTTP  (renderSimpleQuery, parseSimpleQuery)
 import qualified Network.Wai                 as Wai
+import qualified Yesod.Core                  as Yesod
 import           System.Random                        (Random(..))
 
 
@@ -104,22 +106,42 @@ processWaiRequest prov wreq = do
   where
     convert wr = do
         body <- liftIO $ Wai.strictRequestBody wr
-        return $ (def
-            { HTTP.method = Wai.requestMethod wr
-            , HTTP.secure = Wai.isSecure wr
-            , HTTP.host = whost
-            , HTTP.port = wport
-            , HTTP.path = Wai.rawPathInfo wr
-            , HTTP.queryString = Wai.rawQueryString wr
-            , HTTP.requestBody = HTTP.RequestBodyLBS body
-            , HTTP.requestHeaders = Wai.requestHeaders wr
-            }, body)
+        return (convertRequest wr $ HTTP.RequestBodyLBS body, body)
+
+-- | Get url encoded data from Network.Wai.Request
+processYesodRequest :: (MonadIO m, Yesod.MonadHandler m)
+                    => LTIProvider
+                    -> Yesod.YesodRequest
+                    -> ExceptT LTIException m (Map ByteString ByteString)
+processYesodRequest prov yreq = ExceptT $ do
+    (req, rbody) <- convert yreq
+    runExceptT $ processRequest' prov req rbody
+  where
+    convert yr = do
+        body <- HTTP.renderSimpleQuery False
+              . map (Text.encodeUtf8 *** Text.encodeUtf8)
+              . fst <$> Yesod.runRequestBody
+        return (convertRequest wr $ HTTP.RequestBodyBS body, body)
       where
+        wr = Yesod.reqWaiRequest yr
+
+convertRequest :: Wai.Request
+               -> HTTP.RequestBody
+               -> HTTP.Request
+convertRequest wr rbody = def
+    { HTTP.method = Wai.requestMethod wr
+    , HTTP.secure = Wai.isSecure wr
+    , HTTP.host = whost
+    , HTTP.port = wport
+    , HTTP.path = Wai.rawPathInfo wr
+    , HTTP.queryString = Wai.rawQueryString wr
+    , HTTP.requestBody = rbody
+    , HTTP.requestHeaders = Wai.requestHeaders wr
+    } where
         (whost,wport) = case SBC.span (':' /=) <$> Wai.requestHeaderHost wr of
            Just (h, "") -> (h, if Wai.isSecure wr then 443 else 80)
            Just (h, po)  -> (h, read . SBC.unpack $ SB.drop 1 po)
            _ -> ("localhost", 80)
-
 
 processRequest' :: MonadIO m
                 => LTIProvider
