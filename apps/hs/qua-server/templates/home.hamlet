@@ -5,8 +5,14 @@ $else
     <ul>
         $forall (Entity ident (ustory)) <- storedFiles
           <li>
-            <a href="@{DownloadR ident}">#{userStoryCountry ustory} - #{userStoryCity ustory}<br>
-            #{show $ userStoryAuthor ustory}<br>
-            #{userStoryEdxUserId ustory}<br>
-            #{userStoryEdxContextId ustory}<br>
-            <pre>#{userStoryComment ustory}
+            <table>
+              <tr>
+                <td>
+                  <img src="@{DownloadR ident}" style="height: 100px;"><br>
+                  #{userStoryCountry ustory} - #{userStoryCity ustory}
+               <td>
+                 #{show $ userStoryAuthor ustory}<br>
+                 #{userStoryEdxUserId ustory}<br>
+                 #{userStoryEdxContextId ustory}
+               <td>
+                 <pre>#{userStoryComment ustory}
