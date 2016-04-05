@@ -37,7 +37,7 @@ getHomeR = do
         setTitle "File Processor"
         $(widgetFileNoReload def "home")
 
-getImages :: Handler [Entity UserStory]
+getImages :: Handler [Entity Story]
 getImages = runDB $ selectList [] []
 
 postHomeR :: Handler Html

@@ -1,13 +1,45 @@
-UserStory
-    edxUserId     Text
-    edxContextId  Text
-    edxResLink    Text
-    edxOutcomeUrl Text Maybe
-    edxResultId   Text Maybe
-    author        Text Maybe
-    imageName     Text
-    imageType     Text
-    imageData     ByteString
+-- | Relate students in the database to edX students.
+--   Assume edxUserId does not change in edX.
+Student
+    edxUserId Text
+    name      Text Maybe
+    EdxUserId edxUserId
+    deriving Show
+
+-- | Normally a course unit
+EdxResource
+    link         Text
+    courseId     EdxCourseId
+    friendlyName Text Maybe
+    EdxResLink   link
+    deriving Show
+
+-- | An edX course
+EdxCourse
+    contextId    Text
+    friendlyName Text Maybe
+    EdxContextId contextId
+    deriving Show
+
+-- | Image preview will always be saved in png
+ImagePreview
+    content     ByteString
+    fullVersion ImageId
+
+-- | Original image submitted by a student
+Image
+    name        Text
+    contentType Text
+    content     ByteString
+
+-- | Student submission
+Story
+    course        EdxCourse
+    resource      EdxResource
+    author        Student
+    image         ImagePreview
     country       Text
     city          Text
     comment       Text
+    edxOutcomeUrl Text Maybe
+    edxResultId   Text Maybe

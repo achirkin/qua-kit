@@ -30,7 +30,7 @@ import qualified Data.Text.Lazy as LText
 import qualified Data.Text.Lazy.Encoding as LText
 import qualified Data.ByteString as BS
 --import qualified Data.ByteString.Char8       as BSC
-import qualified Data.ByteString.Lazy as BSL
+--import qualified Data.ByteString.Lazy as BSL
 import Yesod
 import Yesod.Default.Util
 import Yesod.Core.Types
@@ -56,25 +56,6 @@ t_oauth_secret = "test_lti_secret"
 t_lti :: LTIProvider
 t_lti = newLTIProvider t_oauth_consumer_key t_oauth_secret
 
-data Story = Story
-    { edxUserId     :: Text
-    , edxContextId  :: Text
-    , edxResLink    :: Text
-    , edxOutcomeUrl :: Maybe Text
-    , edxResultId   :: Maybe Text
-    , storyAuthor   :: Maybe Text
-    , storyImage    :: FileInfo
-    , storyCountry  :: Text
-    , storyCity     :: Text
-    , storyComment  :: Textarea
-    }
-
-instance Show Story where
-    show s = "Your story:\n"
-        ++ "Author:  " ++ show (storyAuthor s) ++ "\n"
-        ++ "Country: " ++ show (storyCountry s) ++ "\n"
-        ++ "City:    " ++ show (storyCity s) ++ "\n"
-        ++ "Comment: " ++ show (storyComment s)
 
 getImageUploadR :: Handler Html
 getImageUploadR = postImageUploadR
@@ -91,21 +72,22 @@ postImageUploadR = setupSession $ do
         setTitle "Share your story"
         showFormWidget widget formEncType
       FormSuccess story -> do
-        fb <- runResourceT $ fileSource (storyImage story) $$ sinkLbs
-        runDB . insert_ $ UserStory
-            { userStoryEdxUserId     = edxUserId story
-            , userStoryEdxContextId  = edxContextId story
-            , userStoryEdxResLink    = edxResLink story
-            , userStoryEdxOutcomeUrl = edxOutcomeUrl story
-            , userStoryEdxResultId   = edxResultId story
-            , userStoryAuthor        = storyAuthor story
-            , userStoryImageName     = fileName $ storyImage story
-            , userStoryImageType     = fileContentType $ storyImage story
-            , userStoryImageData     = BSL.toStrict fb
-            , userStoryCountry       = storyCountry story
-            , userStoryCity          = storyCity story
-            , userStoryComment       = unTextarea $ storyComment story
-            }
+--        fb <- runResourceT $ fileSource (storyImage story) $$ sinkLbs
+        persistStory story
+--        UserStory
+--            { userStoryEdxUserId     = edxUserId story
+--            , userStoryEdxContextId  = edxContextId story
+--            , userStoryEdxResLink    = edxResLink story
+--            , userStoryEdxOutcomeUrl = edxOutcomeUrl story
+--            , userStoryEdxResultId   = edxResultId story
+--            , userStoryAuthor        = tstoryAuthor story
+--            , userStoryImageName     = fileName $ storyImage story
+--            , userStoryImageType     = fileContentType $ storyImage story
+--            , userStoryImageData     = BSL.toStrict fb
+--            , userStoryCountry       = tstoryCountry story
+--            , userStoryCity          = tstoryCity story
+--            , userStoryComment       = unTextarea $ storyComment story
+--            }
         defaultLayout $ do
           setTitle "Share your story"
           showFormSuccess story
@@ -130,7 +112,7 @@ postImageUploadR = setupSession $ do
         <form method=post action=@{ImageUploadR} enctype=#{formEncType}>
           ^{widget}
       |]
-    showFormSuccess :: Story -> Widget
+    showFormSuccess :: TStory -> Widget
     showFormSuccess story = do
       successWrapper <- newIdent
       toWidget [cassius|
@@ -143,7 +125,7 @@ postImageUploadR = setupSession $ do
       [whamlet|
         <div ##{successWrapper}>
           Thank you,#
-          $case storyAuthor story
+          $case tstoryAuthor story
             $of Just author
               \ #{author},
             $of Nothing
@@ -180,7 +162,7 @@ setupSession continue = do
                     continue
 
 
-uploadForm :: Html -> MForm Handler (FormResult Story, Widget)
+uploadForm :: Html -> MForm Handler (FormResult TStory, Widget)
 uploadForm extra = do
     -- set up ids of main div elements
     storyDataDiv  <- newIdent
@@ -249,7 +231,7 @@ uploadForm extra = do
                 FormFailure ["You must agree the terms of use (check the checkbox)"] *> s
             x -> x *> s
 
-        storyRes = mustAgree $ Story
+        storyRes = mustAgree $ TStory
             <$> setErrMsg "Error in edX-provided field \"user_id\"" userIdRes
             <*> setErrMsg "Error in edX-provided field \"context_id\"" contextIdRes
             <*> setErrMsg "Error in edX-provided field \"resource_link_id\"" resLinkRes

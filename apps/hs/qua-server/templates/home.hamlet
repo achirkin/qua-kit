@@ -9,10 +9,9 @@ $else
               <tr>
                 <td>
                   <img src="@{DownloadR ident}" style="height: 100px;"><br>
-                  #{userStoryCountry ustory} - #{userStoryCity ustory}
+                  #{storyCountry ustory} - #{storyCity ustory}
                <td>
-                 #{show $ userStoryAuthor ustory}<br>
-                 #{userStoryEdxUserId ustory}<br>
-                 #{userStoryEdxContextId ustory}
+                 #{show $ storyAuthor ustory}<br>
+                 #{show $ storyCourse ustory}
                <td>
-                 <pre>#{userStoryComment ustory}
+                 <pre>#{storyComment ustory}

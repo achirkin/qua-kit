@@ -1,3 +1,4 @@
+{-# LANGUAGE FlexibleContexts #-}
 -----------------------------------------------------------------------------
 -- |
 -- Module      :  Foundation
@@ -84,14 +85,14 @@ mkYesodData "App" $(parseRoutesFile "config/routes")
 -- staticFilesList "web" ["qua-view.html", "qua-view.css", "qua-view.js", "numeric.min.js"]
 
 
-getList :: Handler [Entity UserStory]
+getList :: Handler [Entity Story]
 getList = runDB $ selectList [] []
 
 --getList :: Handler [(Key StoredFile, StoredFile)]
 --getList =
 --    getYesod >>= liftIO . liftM IntMap.toList . readTVarIO . tstore
 
-addFile :: UserStory -> Handler ()
+addFile :: Story -> Handler ()
 addFile file = runDB $ insert_ file
 --addFile file = do
 --    app <- getYesod
@@ -99,7 +100,7 @@ addFile file = runDB $ insert_ file
 --        nextId <- getNextId app
 --        modifyTVar (tstore app) $ IntMap.insert nextId file
 
-getById :: Key UserStory -> Handler UserStory
+--getById :: Key a -> Handler a
 getById ident = do
     mfile <- runDB $ get ident
     case mfile of
@@ -142,3 +143,38 @@ data MyAuthException = MyCredentialError String Credential
                            deriving (Show)
 
 instance Exception MyAuthException
+
+
+
+
+
+
+data TStory = TStory
+    { edxUserId     :: Text
+    , edxContextId  :: Text
+    , edxResLink    :: Text
+    , edxOutcomeUrl :: Maybe Text
+    , edxResultId   :: Maybe Text
+    , tstoryAuthor   :: Maybe Text
+    , tstoryImage    :: FileInfo
+    , tstoryCountry  :: Text
+    , tstoryCity     :: Text
+    , tstoryComment  :: Textarea
+    }
+
+persistStory :: TStory -> Handler ()
+persistStory story = runDB $ do
+    mstudent <- getBy . EdxUserId $ edxUserId story
+    mresource <- getBy . EdxResLink $ edxResLink story
+    mcourse <- getBy . EdxContextId $ edxContextId story
+    let student = case mstudent of
+           Nothing -> Student
+             { studentEdxUserId = edxUserId story
+             , studentName      = tstoryAuthor story
+             }
+           Just st -> st
+             { studentName = case tstoryAuthor story of
+                Nothing -> studentName st
+                Just na -> Just na
+             }
+    return ()

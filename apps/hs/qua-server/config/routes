@@ -1,8 +1,8 @@
 /home                        HomeR        GET POST
 /lti-test1                   LtiR         GET POST
 /lti-test                    ImageUploadR GET POST
-/file/#UserStoryId           PreviewR     GET
-/file/#UserStoryId/download  DownloadR    GET
+/file/#StoryId           PreviewR     GET
+/file/#StoryId/download  DownloadR    GET
 
 /auth                        AuthR     Auth getAuth
 
