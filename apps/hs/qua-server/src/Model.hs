@@ -21,8 +21,10 @@ module Model where
 
 import Data.ByteString (ByteString)
 import Data.Text (Text)
+import Data.Time
 import Database.Persist.Quasi
 import Yesod
+
 --import Data.Typeable (Typeable)
 
 share [mkPersist sqlSettings, mkMigrate "migrateAll"]

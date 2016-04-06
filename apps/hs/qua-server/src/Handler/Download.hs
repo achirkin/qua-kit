@@ -25,7 +25,8 @@ import Model
 getDownloadR :: Key Story -> Handler TypedContent
 getDownloadR ident = do
     ustory <- getById ident
-    img <- getById . imagePreviewFullVersion $ storyImage ustory
+    upreview <- getById $ storyImage ustory
+    img <- getById $ imagePreviewFullVersion upreview
     addHeader "Content-Disposition" $ Text.concat
         [ "attachment; filename=\"", imageName img, "\""]
-    sendResponse (Text.encodeUtf8 $ imageContentType img, toContent $ imageContent img)
+    sendResponse (Text.encodeUtf8 $ imageContentType img, toContent $ imageData img)

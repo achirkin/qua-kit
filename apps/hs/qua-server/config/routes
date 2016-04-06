@@ -4,9 +4,10 @@
 /file/#StoryId           PreviewR     GET
 /file/#StoryId/download  DownloadR    GET
 
-/auth                        AuthR     Auth getAuth
-
 /                            QuaViewR  GET
 /qua-view.css                QuaViewCSSR   GET
 /qua-view.js                 QuaViewJSR    GET
 /numeric.min.js              NumericMinJSR GET
+
+
+/country FindCountryR GET

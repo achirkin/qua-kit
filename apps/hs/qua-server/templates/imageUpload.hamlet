@@ -32,11 +32,24 @@
     $of Nothing
       <div ##{imgPreviewDiv}>
 
-
 <div ##{bottomDiv}>
   Share your thoughts<br>
   ^{fvInput commentView}
   <input type=submit value="Submit the story">
+
+
+<div ##{creditsDiv}>
+  Service developed at the #
+  <a href="https://ia.arch.ethz.ch">
+    Chair of Information Architecture at ETH Zurich
+  .
+  <br>
+  Locations data are provided by #
+  <a href="http://www.geonames.org">GeoNames
+  \ licensed under a #
+  <a href="http://creativecommons.org/licenses/by/3.0/">
+    Creative Commons Attribution 3.0 License
+  .
 
 <script type="text/javascript">
   document.getElementById('#{fvId imageView}').addEventListener('change', function(e){

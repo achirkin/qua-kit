@@ -19,7 +19,7 @@ import Control.Monad.Trans.Resource
 --import qualified Data.IntMap as IntMap
 import Database.Persist.Sql
 import Network.HTTP.Client.Conduit (newManager)
-import Web.Authenticate.OAuth
+--import Web.Authenticate.OAuth
 import Yesod
 
 import Config
@@ -36,20 +36,20 @@ main = do
     warpEnv App
         { connPool = pool
         , httpManager = man
-        , oauthData = oauth
+--        , oauthData = oauth
         }
-    where oauth = newOAuth
-            { oauthServerName      = "testOAuth"
-            , oauthRequestUri      = "http://term.ie/oauth/example/request_token.php"
-            , oauthAccessTokenUri  = "http://term.ie/oauth/example/access_token.php"
---            , oauthAuthorizeUri    = "http://term.ie/oauth/example/echo_api.php"
-            , oauthAuthorizeUri    = "/auth/page/testOAuth"
-            , oauthSignatureMethod = HMACSHA1
-            , oauthConsumerKey     = "key"
-            , oauthConsumerSecret  = "secret"
-            , oauthVersion         = OAuth10
-            , oauthCallback        = Just "/"
-            }
+--    where oauth = newOAuth
+--            { oauthServerName      = "testOAuth"
+--            , oauthRequestUri      = "http://term.ie/oauth/example/request_token.php"
+--            , oauthAccessTokenUri  = "http://term.ie/oauth/example/access_token.php"
+----            , oauthAuthorizeUri    = "http://term.ie/oauth/example/echo_api.php"
+--            , oauthAuthorizeUri    = "/auth/page/testOAuth"
+--            , oauthSignatureMethod = HMACSHA1
+--            , oauthConsumerKey     = "key"
+--            , oauthConsumerSecret  = "secret"
+--            , oauthVersion         = OAuth10
+--            , oauthCallback        = Just "/"
+--            }
 
 
 --pk = "-----BEGIN PRIVATE KEY-----\

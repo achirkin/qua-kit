@@ -42,11 +42,12 @@ import Control.Monad.Trans.Except (runExceptT)
 getPreviewR :: Key Story -> Handler Html
 getPreviewR ident = do
     ustory <- getById ident
-    img <- getById . imagePreviewFullVersion $ storyImage ustory
+    upreview <- getById $ storyImage ustory
+    img <- getById $ imagePreviewFullVersion upreview
     defaultLayout $ do
         setTitle . toMarkup $ "File Processor - " `Text.append` imageName img
         previewBlock <- liftIO $ preview ident (imageContentType img)
-                                               (imageContent img)
+                                               (imageData img)
         $(widgetFileNoReload def "preview")
 
 preview :: Key Story -> Text -> SB.ByteString -> IO Widget

@@ -70,3 +70,28 @@ body form
     width: 99%
     height: 99%
     min-height: 200px
+
+
+/* Footer with credits */
+##{creditsDiv}
+    color: #777
+    font-size: 0.75em
+    position: fixed
+    bottom: 3px
+    left: 5px
+    a
+        color: #447
+        text-decoration: none
+    a:link
+        color: #447
+        text-decoration: none
+    a:visited
+        color: #447
+        text-decoration: none
+    a:hover
+        color: #44a
+        text-decoration: underline
+    a:active
+        color: #447
+        text-decoration: underline
+

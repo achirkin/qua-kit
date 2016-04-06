@@ -15,15 +15,15 @@
 module Handler.Home where
 
 
-import Control.Monad.Trans.Resource (runResourceT)
-import Data.Conduit
-import Data.Conduit.Binary
+--import Control.Monad.Trans.Resource (runResourceT)
+--import Data.Conduit
+--import Data.Conduit.Binary
 import Data.Default
-import qualified Data.ByteString as S
-import qualified Data.ByteString.Lazy as L
+--import qualified Data.ByteString as S
+--import qualified Data.ByteString.Lazy as L
 import Yesod
 import Yesod.Default.Util
-import Yesod.Auth
+--import Yesod.Auth
 
 import Foundation
 import Model
@@ -42,7 +42,7 @@ getImages = runDB $ selectList [] []
 
 postHomeR :: Handler Html
 postHomeR = do
-    ((result, _), _) <- runFormPost uploadForm
+    ((_result, _), _) <- runFormPost uploadForm
 --    case result of
 --      FormSuccess fi -> do
 --        fileBytes <- runResourceT $ fileSource fi $$ sinkLbs

@@ -40,7 +40,7 @@ import Text.Blaze (ToMarkup)
 import qualified Data.ByteString.Base64.Lazy as Base64L
 
 import Foundation
-import Model
+--import Model
 
 
 import Web.LTI
@@ -73,7 +73,7 @@ postImageUploadR = setupSession $ do
         showFormWidget widget formEncType
       FormSuccess story -> do
 --        fb <- runResourceT $ fileSource (storyImage story) $$ sinkLbs
-        persistStory story
+        _ <- persistStory story
 --        UserStory
 --            { userStoryEdxUserId     = edxUserId story
 --            , userStoryEdxContextId  = edxContextId story
@@ -169,6 +169,7 @@ uploadForm extra = do
     imgPreviewDiv <- newIdent
     topDiv    <- newIdent
     bottomDiv <- newIdent
+    creditsDiv <- newIdent
 
     -- set up all input
     (authorRes, authorView ) <- mopt textField     opts Nothing

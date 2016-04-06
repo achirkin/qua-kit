@@ -19,27 +19,30 @@
 
 module Foundation where
 
-import Control.Arrow ((***))
+import Control.Monad.Trans.Resource (runResourceT)
+import Data.Conduit
+import Data.Conduit.Binary
+import qualified Data.ByteString.Lazy as BSL
+
+--import Control.Arrow ((***))
 --import Control.Concurrent.STM
-import Control.Exception (Exception, throwIO)
+--import Control.Exception (Exception, throwIO)
 --import Control.Monad (liftM)
 --import Data.ByteString.Lazy (ByteString)
 --import Data.ByteString (ByteString)
 import Data.Default
 import Data.Text (Text)
-import Data.Text.Encoding (encodeUtf8, decodeUtf8With)
-import Data.Text.Encoding.Error (lenientDecode)
-import qualified Data.Text as Text
+--import Data.Text.Encoding (encodeUtf8, decodeUtf8With)
+--import Data.Text.Encoding.Error (lenientDecode)
+--import qualified Data.Text as Text
 import Database.Persist.Sql
 --import Data.IntMap (IntMap)
 --import qualified Data.IntMap as IntMap
 import Network.HTTP.Client.Conduit (Manager)
 import Text.Hamlet
 import Yesod
-import Yesod.Auth
-import Yesod.Auth.OAuth
---import Web.Authenticate.OAuth
 import Yesod.Default.Util
+import Data.Time.Clock
 
 --import Foundation.OAuth
 
@@ -54,7 +57,6 @@ import Model
 data App = App
     { connPool    :: ConnectionPool
     , httpManager :: Manager
-    , oauthData   :: OAuth
     }
 
 instance Yesod App where
@@ -100,7 +102,9 @@ addFile file = runDB $ insert_ file
 --        nextId <- getNextId app
 --        modifyTVar (tstore app) $ IntMap.insert nextId file
 
---getById :: Key a -> Handler a
+
+getById :: (PersistEntity b, YesodPersistBackend App ~ PersistEntityBackend b)
+        =>  Key b -> Handler b
 getById ident = do
     mfile <- runDB $ get ident
     case mfile of
@@ -113,36 +117,6 @@ getById ident = do
 --    case IntMap.lookup ident store of
 --      Nothing -> notFound
 --      Just bytes -> return bytes
-
-
-
-
-instance YesodAuth App where
-    type AuthId App = Text
-    getAuthId = return . Just . credsIdent
-    loginDest _ = HomeR
-    logoutDest _ = HomeR
-    authPlugins app =
-        [ authOAuth (oauthData app)
-            (mkExtractCreds "testOAuth" "oauth_token")
-           -- unCredential $ getAccessToken (oauthData app) cred (httpManager app))
-        ]
-    authHttpManager = httpManager
-    maybeAuthId = lookupSession "_ID"
-
-mkExtractCreds :: YesodAuth m => Text -> String -> Credential -> IO (Creds m)
-mkExtractCreds name idName (Credential dic) = do
-  let mcrId = bsToText <$> lookup (encodeUtf8 $ Text.pack idName) dic
-  case mcrId of
-    Just crId -> return $ Creds name crId $ map (bsToText *** bsToText) dic
-    Nothing -> throwIO $ MyCredentialError ("key not found: " ++ idName) (Credential dic)
-  where bsToText = decodeUtf8With lenientDecode
-
-data MyAuthException = MyCredentialError String Credential
-                         | MySessionError String
-                           deriving (Show)
-
-instance Exception MyAuthException
 
 
 
@@ -162,19 +136,71 @@ data TStory = TStory
     , tstoryComment  :: Textarea
     }
 
-persistStory :: TStory -> Handler ()
+persistStory :: TStory -> Handler (Entity Story)
 persistStory story = runDB $ do
-    mstudent <- getBy . EdxUserId $ edxUserId story
-    mresource <- getBy . EdxResLink $ edxResLink story
-    mcourse <- getBy . EdxContextId $ edxContextId story
-    let student = case mstudent of
-           Nothing -> Student
-             { studentEdxUserId = edxUserId story
-             , studentName      = tstoryAuthor story
-             }
-           Just st -> st
-             { studentName = case tstoryAuthor story of
-                Nothing -> studentName st
-                Just na -> Just na
-             }
-    return ()
+    studentId  <- saveStudent
+    resourceId <- saveResource
+    previewId  <- saveImgPreview
+    placeId <- lookupPlace
+    time <- liftIO getCurrentTime
+    let r = Story
+          { storyResource = resourceId
+          , storyAuthor   = studentId
+          , storyImage    = previewId
+          , storyPlace    = placeId
+          , storyComment  = unTextarea $ tstoryComment story
+          , storyEdxOutcomeUrl = edxOutcomeUrl story
+          , storyEdxResultId   = edxResultId story
+          , storyCreationTime  = time
+          }
+    i <- insert r
+    return $ Entity i r
+  where
+    saveStudent = do
+      mEstudent <- getBy . EdxUserId $ edxUserId story
+      case (mEstudent, tstoryAuthor story) of
+       (Nothing, mauthor) -> insert Student
+         { studentEdxUserId = edxUserId story
+         , studentName      = mauthor
+         }
+       (Just (Entity stId _), Nothing) -> return stId
+       (Just (Entity stId _), Just name) ->
+            stId <$ update stId [StudentName =. Just name]
+
+    saveCourse mEcourse = case mEcourse of
+        Nothing -> insert $ EdxCourse (edxContextId story) Nothing
+        Just (Entity i _) -> return i
+
+    saveResource = do
+      mEresource <- getBy . EdxResLink $ edxResLink story
+      case mEresource of
+        Nothing -> do
+            mEcourse <- getBy . EdxContextId $ edxContextId story
+            cId <- saveCourse mEcourse
+            insert $ EdxResource (edxResLink story) cId Nothing
+        Just (Entity i _) -> return i
+
+    saveImage name ctype content =
+        insert $ Image name ctype content
+
+    saveImgPreview = do
+        fb <- runResourceT $ fileSource (tstoryImage story) $$ sinkLbs
+        let content = BSL.toStrict fb
+            ctype   = fileContentType $ tstoryImage story
+            name    = fileName $ tstoryImage story
+        imgId <- saveImage name ctype content
+        -- TODO: format conversion here!
+        insert $ ImagePreview content imgId
+
+    lookupPlace = do
+      mcountry <- selectFirst [CountryName ==. tstoryCountry story] []
+      cId <- case mcountry of
+        Nothing -> notFound
+        Just (Entity i _) -> return i
+      mplace <- selectFirst [ PlaceAsciiName ==. tstoryCity story
+                            , PlaceCountry ==. cId] []
+      case mplace of
+        Nothing -> notFound
+        Just (Entity i _) -> return i
+
+

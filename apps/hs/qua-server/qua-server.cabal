@@ -65,9 +65,42 @@ executable qua-server
         Foundation
         Foundation.OAuth
         Handler.Download
+        Handler.FindCountry
         Handler.Home
         Handler.ImageUpload
         Handler.Preview
+        Model
+    ghc-options: -Wall -ferror-spans
+
+executable location-import
+    main-is: Main.hs
+    build-depends:
+        base -any,
+        time >=1.5.0.1 && <1.6,
+        filepath >=1.4.0.0 && <1.5,
+        directory >=1.2.2.0 && <1.3,
+        text >=1.2.1.3 && <1.3,
+        bytestring >=0.10.6.0 && <0.11,
+        conduit >=1.2.5 && <1.3,
+        persistent >=2.2 && <2.3,
+        persistent-sqlite >=2.2 && <2.3,
+        data-default >=0.5.3 && <0.6,
+        stm >=2.4.4 && <2.5,
+        conduit-extra >=1.1.9.1 && <1.2,
+        resourcet >=1.1.6 && <1.2,
+        blaze-markup >=0.7.0.2 && <0.8,
+        shakespeare >=2.0.5 && <2.1,
+        containers >=0.5.6.2 && <0.6,
+        base64-bytestring >=1.0.0.1 && <1.1,
+        blaze-builder >=0.4.0.1 && <0.5,
+        transformers >=0.4.2.0 && <0.5,
+        yesod >=1.4.2 && <1.5
+    default-language: Haskell2010
+    hs-source-dirs: locations src
+    other-modules:
+        Config
+        InsertCountries
+        InsertPlaces
         Model
     ghc-options: -Wall -ferror-spans
 

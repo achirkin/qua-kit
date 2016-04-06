@@ -48,4 +48,4 @@ cp $QVDIR/web/qua-view.css web/
 cp $QVDIR/web/numeric.min.js web/
 
 # finally run the project using cabal
-env PORT=8070 cabal run
+env PORT=8070 cabal run qua-server

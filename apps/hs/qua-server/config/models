@@ -30,16 +30,33 @@ ImagePreview
 Image
     name        Text
     contentType Text
-    content     ByteString
+    data        ByteString
 
 -- | Student submission
 Story
-    course        EdxCourse
-    resource      EdxResource
-    author        Student
-    image         ImagePreview
-    country       Text
-    city          Text
+    resource      EdxResourceId
+    author        StudentId
+    image         ImagePreviewId
+    place         PlaceId
     comment       Text
     edxOutcomeUrl Text Maybe
     edxResultId   Text Maybe
+    creationTime  UTCTime default=CURRENT_TIME
+
+Country
+    fips   Text sqltype=varchar(2)
+    iso    Text sqltype=varchar(2)
+    domain Text sqltype=varchar(3)
+    name   Text
+    FipsCode fips
+    IsoCode iso
+
+Place
+    geonameId      Int
+    country        CountryId
+    name           Text
+    asciiName      Text
+    alternateNames Text
+    latitude       Double
+    longitude      Double
+    GeonameId      geonameId
