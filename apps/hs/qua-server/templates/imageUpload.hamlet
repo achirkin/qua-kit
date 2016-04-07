@@ -1,8 +1,10 @@
-       #{extra}
+#{extra}
 ^{edxInfoFields}
 ^{inameView}
 ^{itypeView}
 ^{idataView}
+^{fvInput countryIdView}
+^{fvInput placeIdView}
 <div ##{topDiv}>
   <div ##{storyDataDiv}>
     $case inameRes
@@ -22,13 +24,9 @@
     ^{fvInput authorView}
     Country
     ^{fvInput countryView}
-    City
-    ^{fvInput cityView}
+    Place
+    ^{fvInput placeView}
     <br>
-    <input type="text" id="countryname"/>
-    <input type="hidden" id="countryval"/>
-    <input type="text" id="placename" disabled="true"/>
-    <input type="hidden" id="placeval"/>
 
   $case imageBytes
     $of Just ib
@@ -56,9 +54,21 @@
   .
 
 <script type="text/javascript">
-  document.getElementById('#{fvId imageView}').addEventListener('change', function(e){
-    document.getElementById('#{imgPreviewDiv}').style.backgroundImage
+  \$(window).load(function(){
+
+    document.getElementById('#{fvId imageView}').addEventListener('change', function(e){
+      document.getElementById('#{imgPreviewDiv}').style.backgroundImage
         = 'url("' + URL.createObjectURL(e.target.files[0]) + '")';
+    });
+
+    autoCountry( $('##{fvId countryView}')
+               , $('##{fvId countryIdView}')
+               , '@{FindCountryR}'
+               , '##{fvId placeView}'
+               , '##{fvId placeIdView}');
+
+    autoPlace( $('##{fvId placeView}')
+             , $('##{fvId placeIdView}')
+             , '@{FindPlaceR}');
+
   });
-
-

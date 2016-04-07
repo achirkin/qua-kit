@@ -141,11 +141,10 @@ data TStory = TStory
     , edxResLink    :: Text
     , edxOutcomeUrl :: Maybe Text
     , edxResultId   :: Maybe Text
-    , tstoryAuthor   :: Maybe Text
-    , tstoryImage    :: FileInfo
-    , tstoryCountry  :: Text
-    , tstoryCity     :: Text
-    , tstoryComment  :: Textarea
+    , tstoryAuthor  :: Maybe Text
+    , tstoryImage   :: FileInfo
+    , tstoryPlace   :: PlaceId
+    , tstoryComment :: Textarea
     }
 
 persistStory :: TStory -> Handler (Entity Story)
@@ -153,7 +152,7 @@ persistStory story = runDB $ do
     studentId  <- saveStudent
     resourceId <- saveResource
     previewId  <- saveImgPreview
-    placeId <- lookupPlace
+    let placeId = tstoryPlace story
     time <- liftIO getCurrentTime
     let r = Story
           { storyResource = resourceId
@@ -204,15 +203,5 @@ persistStory story = runDB $ do
         -- TODO: format conversion here!
         insert $ ImagePreview content imgId
 
-    lookupPlace = do
-      mcountry <- selectFirst [CountryName ==. tstoryCountry story] []
-      cId <- case mcountry of
-        Nothing -> notFound
-        Just (Entity i _) -> return i
-      mplace <- selectFirst [ PlaceAsciiName ==. tstoryCity story
-                            , PlaceCountry ==. cId] []
-      case mplace of
-        Nothing -> notFound
-        Just (Entity i _) -> return i
 
 

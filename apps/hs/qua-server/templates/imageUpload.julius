@@ -47,31 +47,31 @@ var setAutocomplete = function(autoField,autoHidden,autoUrl,autoParams,afterActi
   });
 }
 
-var modPlace = function(c){
+var modPlace = function(c, placeName, placeView){
   if (c <= 0) {
-    $('#placename').prop('disabled', true);
-    $('#placename').val('');
-    $('#placeval').val();
+    $(placeName).prop('disabled', true);
+    $(placeName).val('');
+    $(placeView).val();
   } else {
-    $('#placename').prop('disabled', false);
-    $('#placename').val('');
-    $('#placeval').val();
-    $('#placename').autocomplete().options.params['c'] = c;
+    $(placeName).prop('disabled', false);
+    $(placeName).val('');
+    $(placeView).val();
+    $(placeName).autocomplete().options.params['c'] = c;
   }
 }
 
+var autoCountry = function(autoField,autoHidden,autoUrl,placeName,placeView){
+    setAutocomplete(autoField, autoHidden, autoUrl
+      , [["n",10]]
+      , function(c){return modPlace(c,placeName,placeView);}
+      , function(x) {return { value: x[2], data: x[0] };});
+}
 
-setAutocomplete( $('#countryname')
-               , $('#countryval')
-               , '@{FindCountryR}'
-               , [["n",10]]
-               , modPlace
-               , function(x) {return { value: x[2], data: x[0] };});
+var autoPlace = function(autoField,autoHidden,autoUrl){
+    setAutocomplete(autoField, autoHidden, autoUrl
+      , [["n",10]]
+      , function(c){return;}
+      , function(x) {return { value: x[1], data: x[0] };});
+}
 
-setAutocomplete( $('#placename')
-               , $('#placeval')
-               , '@{FindPlaceR}'
-               , [["n",10]]
-               , function(c){return;}
-               , function(x) {return { value: x[1], data: x[0] };});
 

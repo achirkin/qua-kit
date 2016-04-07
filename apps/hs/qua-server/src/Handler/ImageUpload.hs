@@ -40,7 +40,7 @@ import Text.Blaze (ToMarkup)
 import qualified Data.ByteString.Base64.Lazy as Base64L
 
 import Foundation
---import Model
+import Model
 
 
 import Web.LTI
@@ -66,7 +66,7 @@ postImageUploadR = setupSession $ do
     case res of
       FormFailure msgs -> defaultLayout $ do
         setTitle "Share your story"
-        when (length msgs < 5) $ showFormError msgs
+        when (length msgs < 4) $ showFormError msgs
         showFormWidget widget formEncType
       FormMissing ->defaultLayout $ do
         setTitle "Share your story"
@@ -183,10 +183,17 @@ uploadForm extra = do
     (authorRes, authorView ) <- mopt textField     opts Nothing
     (mimageRes, imageView  ) <- mopt fileField     reqs
        { fsAttrs = ("accept","image/*") : fsAttrs reqs} Nothing
-    (countryRes,countryView) <- mreq textField     reqs Nothing
-    (cityRes,   cityView   ) <- mreq textField     reqs Nothing
+    (countryRes,countryView)  <- mreq textField    reqs Nothing
+    (placeRes,  placeView   ) <- mreq textField    reqs
+       { fsAttrs = ("disabled","true") : fsAttrs reqs}  Nothing
     (commentRes,commentView) <- mreq textareaField reqs Nothing
     (agreeRes,  agreeView  ) <- mreq checkBoxField reqs Nothing
+
+    (countryIdRes, countryIdView ) <- mreq hiddenField opts
+      { fsName = Just "country_id"} (Nothing :: Maybe CountryId)
+    (placeIdRes,   placeIdView   ) <- mreq hiddenField opts
+      { fsName = Just "place_id"  } Nothing
+
 
     -- set up hidden field for edX user-related information
     (userIdRes,    userIdView    ) <- mreq hiddenField opts
@@ -248,8 +255,7 @@ uploadForm extra = do
             <*> setErrMsg "Error in edX-provided field \"lis_result_sourcedid\"" resultIdRes
             <*> setErrMsg "Error in the field \"author\"" authorRes
             <*> setErrMsg "Error in the field \"image file\"" imageRes
-            <*> setErrMsg "Error in the field \"country\"" countryRes
-            <*> setErrMsg "Error in the field \"city\"" cityRes
+            <*> setErrMsg "Error in the field \"city\"" placeIdRes
             <*> setErrMsg "Error in the field \"commentary\"" commentRes
 
         -- insert the image encoded data into the page later

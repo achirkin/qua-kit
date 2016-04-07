@@ -32,7 +32,17 @@ getHomeR :: Handler Html
 getHomeR = do
 --    maid <- maybeAuthId
 --    (formWidget, formEncType) <- generateFormPost uploadForm
-    storedFiles <- getImages
+    storedFiles <- getImages >>= mapM (\(Entity i story) -> runDB $ do
+        place <- get404 $ storyPlace story
+        country <- get404 $ placeCountry place
+        student <- get404 $ storyAuthor story
+        return (i, studentName student
+               , storyComment story
+               , storyCreationTime story
+               , countryName country
+               , placeName place)
+      )
+
     defaultLayout $ do
         setTitle "File Processor"
         $(widgetFileNoReload def "home")

@@ -3,15 +3,16 @@ $if null storedFiles
 $else
     <h2>Previously submitted files
     <ul>
-        $forall (Entity ident (ustory)) <- storedFiles
+        $forall (i, student, comment, createTime, country, place) <- storedFiles
           <li>
             <table>
               <tr>
                 <td>
-                  <img src="@{DownloadR ident}" style="height: 100px;"><br>
-                  #{show $ storyPlace ustory}
+                  <img src="@{DownloadR i}" style="height: 100px;"><br>
+                  #{country} - #{place}
+                  <br>
+                  #{show student}
+                  <br>
+                  #{show createTime}
                <td>
-                 #{show $ storyAuthor ustory}<br>
-                 #{show $ storyResource ustory}
-               <td>
-                 <pre>#{storyComment ustory}
+                 <pre>#{comment}
