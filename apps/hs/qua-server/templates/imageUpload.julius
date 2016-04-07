@@ -1,0 +1,77 @@
+var setAutocomplete = function(autoField,autoHidden,autoUrl,autoParams,afterAction,selectorFunc){
+
+  var selectSomething = function(){
+    var idx = Math.max(autoField.autocomplete().selectedIndex, 0);
+    if (autoHidden.val()){
+      autoField.val(autoField.autocomplete().lastval);
+    } else {
+      if (autoField.autocomplete().suggestions[0] != null) {
+        autoField.autocomplete().select(idx);
+      } else {
+        autoField.val('');
+        autoHidden.val();
+        afterAction(-1);
+      }
+    }
+  };
+
+  autoField.autocomplete({
+      paramName: 'q',
+      serviceUrl: autoUrl,
+      onSelect: function (suggestion) {
+        autoField.val(suggestion.value);
+        autoHidden.val(suggestion.data);
+        autoField.autocomplete().lastval = suggestion.value;
+        afterAction(suggestion.data);
+      },
+      transformResult: function(response) {
+        return {
+          suggestions: $.map(JSON.parse(response), selectorFunc)
+        };
+      },
+      autoSelectFirst: true
+  });
+
+  autoField.on("focusout", selectSomething)
+           .on("keydown", function (event) {
+      if ( (event.keyCode === 13 || event.keyCode === 9) // ENTER or TAB
+         && autoField.autocomplete().selectedIndex < 0
+         ) {
+          selectSomething();
+          event.preventDefault();
+      }
+  });
+
+  autoParams.forEach(function(e){
+    autoField.autocomplete().options.params[e[0]] = e[1];
+  });
+}
+
+var modPlace = function(c){
+  if (c <= 0) {
+    $('#placename').prop('disabled', true);
+    $('#placename').val('');
+    $('#placeval').val();
+  } else {
+    $('#placename').prop('disabled', false);
+    $('#placename').val('');
+    $('#placeval').val();
+    $('#placename').autocomplete().options.params['c'] = c;
+  }
+}
+
+
+setAutocomplete( $('#countryname')
+               , $('#countryval')
+               , '@{FindCountryR}'
+               , [["n",10]]
+               , modPlace
+               , function(x) {return { value: x[2], data: x[0] };});
+
+setAutocomplete( $('#placename')
+               , $('#placeval')
+               , '@{FindPlaceR}'
+               , [["n",10]]
+               , function(c){return;}
+               , function(x) {return { value: x[1], data: x[0] };});
+

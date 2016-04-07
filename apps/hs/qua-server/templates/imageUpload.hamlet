@@ -1,4 +1,4 @@
-#{extra}
+       #{extra}
 ^{edxInfoFields}
 ^{inameView}
 ^{itypeView}
@@ -25,6 +25,10 @@
     City
     ^{fvInput cityView}
     <br>
+    <input type="text" id="countryname"/>
+    <input type="hidden" id="countryval"/>
+    <input type="text" id="placename" disabled="true"/>
+    <input type="hidden" id="placeval"/>
 
   $case imageBytes
     $of Just ib
@@ -56,4 +60,5 @@
     document.getElementById('#{imgPreviewDiv}').style.backgroundImage
         = 'url("' + URL.createObjectURL(e.target.files[0]) + '")';
   });
+
 

@@ -8,6 +8,11 @@
 /qua-view.css                QuaViewCSSR   GET
 /qua-view.js                 QuaViewJSR    GET
 /numeric.min.js              NumericMinJSR GET
+/test              TestR GET
 
-
+-- JSON handlers
 /country FindCountryR GET
+/place   FindPlaceR   GET
+
+-- static sources
+/static StaticR EmbeddedStatic getStatic

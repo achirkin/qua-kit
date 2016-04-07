@@ -18,15 +18,14 @@ module Dispatch where
 
 import Yesod
 
---import Data.Text (Text)
---import qualified Data.Text as Text
 import Foundation
 import Handler.Download
 import Handler.Home
 import Handler.Preview
 import Handler.ImageUpload
 import Handler.FindCountry
---import Yesod.Auth
+import Handler.FindPlace
+
 
 
 mkYesodDispatch "App" resourcesApp

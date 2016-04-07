@@ -41,6 +41,7 @@ import Database.Persist.Sql
 import Network.HTTP.Client.Conduit (Manager)
 import Text.Hamlet
 import Yesod
+import Yesod.EmbeddedStatic
 import Yesod.Default.Util
 import Data.Time.Clock
 
@@ -51,18 +52,28 @@ import Model
 --import Debug.Trace (traceShow)
 --import Data.Maybe (fromMaybe)
 
+-- | Add all files from folder "static"
+mkEmbeddedStatic True "appStatic" [embedDir "static"]
+-- | Generate routes
+mkYesodData "App" $(parseRoutesFile "config/routes")
+
 --newtype MIME = MIME Text
 --newtype FileName = FileName Text
 --data StoredFile = StoredFile !FileName !MIME !ByteString
 data App = App
     { connPool    :: ConnectionPool
     , httpManager :: Manager
+    , getStatic   :: EmbeddedStatic
     }
+
+
 
 instance Yesod App where
   defaultLayout widget = do
     pc <- widgetToPageContent $ $(widgetFileNoReload def "default-layout")
     withUrlRenderer $(hamletFile "templates/default-layout-wrapper.hamlet")
+  addStaticContent = embedStaticContent getStatic StaticR Right
+--    where mini = if development then Right else minifym
 --  makeSessionBackend _ = do
 --        backend <- defaultClientSessionBackend 1 "keyfile.aes"
 --        return $ Just backend
@@ -77,7 +88,8 @@ instance YesodPersist App where
 instance YesodPersistRunner App where
     getDBRunner = defaultGetDBRunner connPool
 
-mkYesodData "App" $(parseRoutesFile "config/routes")
+
+
 
 --mkEmbeddedStatic False "quaViewHtml" [embedFileAt "/" "web/qua-view.html"]
 --mkEmbeddedStatic False "quaViewCss" [embedFileAt "/qua-view.css" "web/qua-view.css"]

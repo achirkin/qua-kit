@@ -108,7 +108,15 @@ postImageUploadR = setupSession $ do
             <div>#{msg}
       |]
     showFormWidget :: Widget -> Enctype -> Widget
-    showFormWidget widget formEncType = [whamlet|
+    showFormWidget widget formEncType = do
+--      addStylesheet $ StaticR awesomplete_css
+      -- addScript
+      toWidgetHead $
+        [hamlet|
+            <script src="@{StaticR jquery_2_2_3_min_js}" type="text/javascript">
+            <script src="@{StaticR jquery_autocomplete_min_js}" type="text/javascript">
+        |]
+      [whamlet|
         <form method=post action=@{ImageUploadR} enctype=#{formEncType}>
           ^{widget}
       |]

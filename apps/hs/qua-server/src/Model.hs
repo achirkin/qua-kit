@@ -25,7 +25,5 @@ import Data.Time
 import Database.Persist.Quasi
 import Yesod
 
---import Data.Typeable (Typeable)
-
 share [mkPersist sqlSettings, mkMigrate "migrateAll"]
     $(persistFileWith lowerCaseSettings "config/models")

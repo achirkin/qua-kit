@@ -69,3 +69,5 @@ getNumericMinJSR :: Handler ()
 getNumericMinJSR = sendFile "text/javascript" "web/numeric.min.js"
 
 
+getTestR :: Handler ()
+getTestR = sendFile "text/html" "static/page.html"

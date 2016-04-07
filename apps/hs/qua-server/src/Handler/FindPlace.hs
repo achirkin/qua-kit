@@ -1,6 +1,6 @@
 -----------------------------------------------------------------------------
 -- |
--- Module      :  Handler.FindCountry
+-- Module      :  Handler.FindPlace
 -- Copyright   :  (c) Artem Chirkin
 -- License     :  BSD3
 --
@@ -10,8 +10,8 @@
 -----------------------------------------------------------------------------
 {-# LANGUAGE OverloadedStrings #-}
 
-module Handler.FindCountry
-    ( getFindCountryR
+module Handler.FindPlace
+    ( getFindPlaceR
     ) where
 
 import Data.Conduit
@@ -34,50 +34,55 @@ ndef = 10
 nmax :: Int
 nmax = 100
 
-getFindCountryR :: Handler TypedContent
-getFindCountryR = do
+getFindPlaceR :: Handler TypedContent
+getFindPlaceR = do
+    -- country id
+    mcid   <- maybeId <$> lookupGetParam "c"
     -- query string
     mquery <- maybeQuery <$> lookupGetParam "q"
     -- maximum number of elements to return in JSON result
     n      <- maybeLimit <$> lookupGetParam "n"
-    case mquery of
-      Nothing            -> return $ TypedContent typeJson "[]"
-      Just (query, qlen) -> respondSourceDB typeJson $ do
-        countryQuery n query qlen
-                   $= CL.map (toFlushBuilder . Aeson.encodeToBuilder . toJSON . parseDBCountry)
+    case (,) <$> mcid <*> mquery of
+      Nothing                   -> return $ TypedContent typeJson "[]"
+      Just (cid, (query, qlen)) -> respondSourceDB typeJson $ do
+        placeQuery cid n query qlen
+                   $= CL.map (toFlushBuilder . Aeson.encodeToBuilder . toJSON . parseDBPlace)
                   =$= streamJSONArray
 
 
-countryQuery :: PersistValue
-             -> PersistValue
-             -> Int
-             -> Source (YesodDB App) [PersistValue]
-countryQuery _ _     0 = mempty
-countryQuery n query 1 = rawQuery sql1 [query,n]
-countryQuery n query 2 = rawQuery sql2 [query,query,n]
-countryQuery n query _ = rawQuery sqlx [query,query,query,query,n]
+placeQuery :: PersistValue
+           -> PersistValue
+           -> PersistValue
+           -> Int
+           -> Source (YesodDB App) [PersistValue]
+placeQuery c n q l | l <= 0    = rawQuery sql0 [c,n]
+                   | l <= 3    = rawQuery sql3 [c,q,n]
+                   | otherwise = rawQuery sqlx [c,q,q,q,q,n]
 
-sql1 :: Text
-sql1 = "SELECT id,iso,name FROM country WHERE iso LIKE ?||'%' ORDER BY name ASC LIMIT ?"
 
-sql2 :: Text
-sql2 = "SELECT id,iso,name FROM country WHERE iso = ? OR name LIKE ?||'%' ORDER BY name ASC LIMIT ?"
+sql0 :: Text
+sql0 = "SELECT id,ascii_name FROM place WHERE country = ? ORDER BY ascii_name ASC LIMIT ?"
+
+sql3 :: Text
+sql3 = "SELECT id,ascii_name FROM place WHERE country = ? AND ascii_name LIKE ?||'%' \
+       \ORDER BY ascii_name ASC LIMIT ?"
 
 sqlx :: Text
-sqlx = "SELECT id,iso,name FROM country WHERE name LIKE ?||'%' OR name LIKE '%'||?||'%' \
+sqlx = "SELECT id,ascii_name FROM place WHERE country = ? AND \
+       \(ascii_name LIKE ?||'%' OR ascii_name LIKE '%'||?||'%') \
        \ORDER BY case\n\
-       \  WHEN name LIKE ?||'%' THEN 1\n\
-       \  WHEN name LIKE '%'||?||'%' THEN 2\n\
+       \  WHEN ascii_name LIKE ?||'%' THEN 1\n\
+       \  WHEN ascii_name LIKE '%'||?||'%' THEN 2\n\
        \  ELSE 3\n\
-       \end,name ASC \
+       \end,ascii_name ASC \
        \LIMIT ?"
 
 -- utilities
 
-parseDBCountry :: [PersistValue] -> (Int,Text,Text)
-parseDBCountry (PersistInt64 i : PersistText iso : PersistText name : _)
-                 = (fromIntegral i, iso, name)
-parseDBCountry _ = (0, "", "")
+parseDBPlace :: [PersistValue] -> (Int,Text)
+parseDBPlace (PersistInt64 i : PersistText name : _)
+               = (fromIntegral i, name)
+parseDBPlace _ = (0, "")
 
 maybeLimit :: Maybe Text -> PersistValue
 maybeLimit Nothing = toPersistValue ndef
@@ -88,6 +93,12 @@ maybeLimit (Just m) = case Text.decimal m of
 maybeQuery :: Maybe Text -> Maybe (PersistValue, Int)
 maybeQuery Nothing = Nothing
 maybeQuery (Just q) = Just (PersistText q, Text.length q)
+
+maybeId :: Maybe Text -> Maybe (PersistValue)
+maybeId Nothing = Nothing
+maybeId (Just m) = case Text.decimal m of
+    Left _ -> Nothing
+    Right (n,_) -> Just $ PersistInt64 n
 
 
 streamJSONArray :: Monad m
