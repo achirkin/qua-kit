@@ -57,7 +57,9 @@ executable qua-server
         wai >=3.2.0 && <3.3,
         ltiv1p1 >=0.0.1 && <0.1,
         yesod-core >=1.4.19 && <1.5,
-        aeson >=0.11.1.1 && <0.12
+        aeson >=0.11.1.1 && <0.12,
+        persistent-postgresql >= 2.2 && <3,
+        JuicyPixels >=3.2 && <4
     default-language: Haskell2010
     hs-source-dirs: src
     other-modules:
@@ -97,7 +99,8 @@ executable location-import
         blaze-builder >=0.4.0.1 && <0.5,
         transformers >=0.4.2.0 && <0.5,
         yesod >=1.4.2 && <1.5,
-        aeson >=0.11.1.1 && <0.12
+        aeson >=0.11.1.1 && <0.12,
+        persistent-postgresql >= 2.2 && < 3
     default-language: Haskell2010
     hs-source-dirs: locations src
     other-modules:

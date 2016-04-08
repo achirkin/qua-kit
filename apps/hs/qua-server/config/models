@@ -41,7 +41,7 @@ Story
     comment       Text
     edxOutcomeUrl Text Maybe
     edxResultId   Text Maybe
-    creationTime  UTCTime default=CURRENT_TIME
+    creationTime  UTCTime default=CURRENT_TIMESTAMP
 
 Country
     fips   Text sqltype=varchar(2)

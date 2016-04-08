@@ -56,7 +56,7 @@
 <script type="text/javascript">
   \$(window).load(function(){
 
-    document.getElementById('#{fvId imageView}').addEventListener('change', function(e){
+    \$('##{fvId imageView}').on('change', function(e){
       document.getElementById('#{imgPreviewDiv}').style.backgroundImage
         = 'url("' + URL.createObjectURL(e.target.files[0]) + '")';
     });

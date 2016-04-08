@@ -17,10 +17,11 @@
 
 module Handler.ImageUpload where
 
-import Control.Monad (when)
+import Control.Monad (unless)
 import Control.Monad.Trans.Resource (runResourceT)
 import Data.Conduit
 import Data.Conduit.Binary
+import Data.Maybe (isJust)
 
 import Data.Default
 import Data.Text (Text)
@@ -61,37 +62,20 @@ getImageUploadR :: Handler Html
 getImageUploadR = postImageUploadR
 
 postImageUploadR :: Handler Html
-postImageUploadR = setupSession $ do
+postImageUploadR = setupSession $ \isNewSession -> do
     ((res, widget), formEncType) <- runFormPost uploadForm
     case res of
-      FormFailure msgs -> defaultLayout $ do
-        setTitle "Share your story"
-        when (length msgs < 4) $ showFormError msgs
+      FormFailure msgs -> uploadFormLayout $ do
+        unless isNewSession $ showFormError msgs
         showFormWidget widget formEncType
-      FormMissing ->defaultLayout $ do
-        setTitle "Share your story"
+      FormMissing -> uploadFormLayout $
         showFormWidget widget formEncType
       FormSuccess story -> do
---        fb <- runResourceT $ fileSource (storyImage story) $$ sinkLbs
         _ <- persistStory story
---        UserStory
---            { userStoryEdxUserId     = edxUserId story
---            , userStoryEdxContextId  = edxContextId story
---            , userStoryEdxResLink    = edxResLink story
---            , userStoryEdxOutcomeUrl = edxOutcomeUrl story
---            , userStoryEdxResultId   = edxResultId story
---            , userStoryAuthor        = tstoryAuthor story
---            , userStoryImageName     = fileName $ storyImage story
---            , userStoryImageType     = fileContentType $ storyImage story
---            , userStoryImageData     = BSL.toStrict fb
---            , userStoryCountry       = tstoryCountry story
---            , userStoryCity          = tstoryCity story
---            , userStoryComment       = unTextarea $ storyComment story
---            }
-        defaultLayout $ do
-          setTitle "Share your story"
+        uploadFormLayout $
           showFormSuccess story
   where
+    uploadFormLayout c = defaultLayout $ setTitle "Share your story" >> c
     showFormError :: [Text] -> Widget
     showFormError msgs = do
       errorWrapper <- newIdent
@@ -144,14 +128,14 @@ postImageUploadR = setupSession $ do
 --   sent by LTI resource provider (edX).
 --   Create a new session if needed,
 --   otherwise fail.
-setupSession :: Handler Html -> Handler Html
+setupSession :: (Bool -> Handler Html) -> Handler Html
 setupSession continue = do
     msesResLink <- lookupSession "resource_link_id"
     postRL <- lookupPostParam "resource_link_id"
     getRL  <- lookupGetParam "resource_link_id"
     if msesResLink /= Nothing
        && (msesResLink == postRL || msesResLink == getRL)
-    then continue
+    then continue False
     else do
         deleteSession "resource_link_id"
         yreq <- getRequest
@@ -167,7 +151,7 @@ setupSession continue = do
                     [whamlet|<p>Failed to check OAuth request from the LTI service consumer|]
                 Just rlink -> do
                     setSession "resource_link_id" rlink
-                    continue
+                    continue True
 
 
 uploadForm :: Html -> MForm Handler (FormResult TStory, Widget)
@@ -178,22 +162,6 @@ uploadForm extra = do
     topDiv    <- newIdent
     bottomDiv <- newIdent
     creditsDiv <- newIdent
-
-    -- set up all input
-    (authorRes, authorView ) <- mopt textField     opts Nothing
-    (mimageRes, imageView  ) <- mopt fileField     reqs
-       { fsAttrs = ("accept","image/*") : fsAttrs reqs} Nothing
-    (countryRes,countryView)  <- mreq textField    reqs Nothing
-    (placeRes,  placeView   ) <- mreq textField    reqs
-       { fsAttrs = ("disabled","true") : fsAttrs reqs}  Nothing
-    (commentRes,commentView) <- mreq textareaField reqs Nothing
-    (agreeRes,  agreeView  ) <- mreq checkBoxField reqs Nothing
-
-    (countryIdRes, countryIdView ) <- mreq hiddenField opts
-      { fsName = Just "country_id"} (Nothing :: Maybe CountryId)
-    (placeIdRes,   placeIdView   ) <- mreq hiddenField opts
-      { fsName = Just "place_id"  } Nothing
-
 
     -- set up hidden field for edX user-related information
     (userIdRes,    userIdView    ) <- mreq hiddenField opts
@@ -212,6 +180,22 @@ uploadForm extra = do
           fvInput resLinkView
           fvInput outcomeUrlView
           fvInput resultIdView
+
+    -- set up all input
+    (authorRes, authorView ) <- tryFillUserName userIdRes $ mopt textField opts
+    (mimageRes, imageView  ) <- mopt fileField     reqs
+       { fsAttrs = ("accept","image/*") : fsAttrs reqs} Nothing
+    (countryRes,countryView)  <- mreq textField    reqs Nothing
+    (placeRes,  placeView   ) <- mreq textField    reqs
+       { fsAttrs = ("disabled","true") : fsAttrs reqs}  Nothing
+    (commentRes,commentView) <- mreq textareaField reqs Nothing
+    (agreeRes,  agreeView  ) <- mreq checkBoxField reqs Nothing
+
+    (_countryIdRes, countryIdView ) <- mreq hiddenField opts
+      { fsName = Just "country_id"} (Nothing :: Maybe CountryId)
+    (placeIdRes,   placeIdView   ) <- mreq hiddenField opts
+      { fsName = Just "place_id"  } Nothing
+
 
     -- set up hidden fields for keeping image
     (imgFName, imgFType, imgBase64) <- case mimageRes of
@@ -247,7 +231,14 @@ uploadForm extra = do
                 FormFailure ["You must agree the terms of use (check the checkbox)"] *> s
             x -> x *> s
 
-        storyRes = mustAgree $ TStory
+        storyRes' =
+          if all not -- ^ test if we illed anything
+            [ hasValue imageRes
+            , hasValue placeRes
+            , hasValue countryRes
+            , hasValue commentRes]
+          then FormMissing
+          else mustAgree $ TStory
             <$> setErrMsg "Error in edX-provided field \"user_id\"" userIdRes
             <*> setErrMsg "Error in edX-provided field \"context_id\"" contextIdRes
             <*> setErrMsg "Error in edX-provided field \"resource_link_id\"" resLinkRes
@@ -255,7 +246,7 @@ uploadForm extra = do
             <*> setErrMsg "Error in edX-provided field \"lis_result_sourcedid\"" resultIdRes
             <*> setErrMsg "Error in the field \"author\"" authorRes
             <*> setErrMsg "Error in the field \"image file\"" imageRes
-            <*> setErrMsg "Error in the field \"city\"" placeIdRes
+            <*> setErrMsg "Error in the field \"place\"" placeIdRes
             <*> setErrMsg "Error in the field \"commentary\"" commentRes
 
         -- insert the image encoded data into the page later
@@ -265,6 +256,9 @@ uploadForm extra = do
                 `Text.append` ";base64,"
                 `Text.append` (LText.toStrict dat)
           _ -> Nothing
+
+    storyRes <- testPlaceExist placeIdRes storyRes'
+
     return (storyRes, $(widgetFileNoReload def "imageUpload"))
   where
     reqs = FieldSettings
@@ -317,3 +311,45 @@ addHiddenValueHolder mx = do
         [whamlet|<input type="hidden" ##{fvId xView} name="#{xName}" value="#{x}">|]
     _ -> return ()
 
+hasValue :: FormResult a -> Bool
+hasValue (FormSuccess _) = True
+hasValue (FormFailure _) = False
+hasValue FormMissing = False
+
+
+testPlaceExist :: FormResult PlaceId
+               -> FormResult a
+               -> MForm Handler (FormResult a)
+testPlaceExist (FormSuccess pid) v
+  = fmap (test v) . lift . runDB $ do
+    mplace   <- get pid
+    return . isJust $ mplace
+  where
+    msg = "Invalid place value! Re-enter country and place fields."
+    test (FormSuccess _) False = FormFailure [msg]
+    test  FormMissing    False = FormMissing
+    test (FormFailure e) False = FormFailure $ msg:e
+    test x               True  = x
+testPlaceExist _ v = return v
+
+
+tryFillUserName :: FormResult Text
+                -> (Maybe (Maybe Text) -> MForm Handler (FormResult (Maybe Text),w))
+                -> MForm Handler (FormResult (Maybe Text), w)
+tryFillUserName FormMissing        f = f Nothing
+tryFillUserName (FormFailure _)    f = f Nothing
+tryFillUserName (FormSuccess euid) f = do
+  mmval <- lift . runDB $ do
+    muser <- getBy $ EdxUserId euid
+    return $ case muser of
+      Nothing -> Nothing
+      Just (Entity _ user) -> Just $ studentName user
+  (res',w) <- f mmval
+  let res = case (res', mmval) of
+        (_, Nothing) -> res'
+        (_, Just Nothing) -> res'
+        (r@(FormSuccess (Just _)), _) -> r
+        (FormSuccess Nothing, Just (Just x)) -> FormSuccess $ Just x
+        (FormFailure _, Just (Just x)) -> FormSuccess $ Just x
+        (FormMissing, Just (Just x)) -> FormSuccess $ Just x
+  return (res,w)

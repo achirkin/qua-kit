@@ -115,13 +115,13 @@ addFile file = runDB $ insert_ file
 --        modifyTVar (tstore app) $ IntMap.insert nextId file
 
 
-getById :: (PersistEntity b, YesodPersistBackend App ~ PersistEntityBackend b)
-        =>  Key b -> Handler b
-getById ident = do
-    mfile <- runDB $ get ident
-    case mfile of
-      Nothing -> notFound
-      Just file -> return file
+--getById :: (PersistEntity b, YesodPersistBackend App ~ PersistEntityBackend b)
+--        =>  Key b -> Handler b
+--getById ident = do
+--    mfile <- runDB $ get ident
+--    case mfile of
+--      Nothing -> notFound
+--      Just file -> return file
 
 --getById :: Key UserStory -> Handler UserStory
 --getById ident = do

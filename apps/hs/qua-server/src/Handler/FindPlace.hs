@@ -64,15 +64,15 @@ sql0 :: Text
 sql0 = "SELECT id,ascii_name FROM place WHERE country = ? ORDER BY ascii_name ASC LIMIT ?"
 
 sql3 :: Text
-sql3 = "SELECT id,ascii_name FROM place WHERE country = ? AND ascii_name LIKE ?||'%' \
+sql3 = "SELECT id,ascii_name FROM place WHERE country = ? AND LOWER(ascii_name) LIKE ?||'%' \
        \ORDER BY ascii_name ASC LIMIT ?"
 
 sqlx :: Text
 sqlx = "SELECT id,ascii_name FROM place WHERE country = ? AND \
-       \(ascii_name LIKE ?||'%' OR ascii_name LIKE '%'||?||'%') \
+       \(LOWER(ascii_name) LIKE ?||'%' OR LOWER(ascii_name) LIKE '%'||?||'%') \
        \ORDER BY case\n\
-       \  WHEN ascii_name LIKE ?||'%' THEN 1\n\
-       \  WHEN ascii_name LIKE '%'||?||'%' THEN 2\n\
+       \  WHEN LOWER(ascii_name) LIKE ?||'%' THEN 1\n\
+       \  WHEN LOWER(ascii_name) LIKE '%'||?||'%' THEN 2\n\
        \  ELSE 3\n\
        \end,ascii_name ASC \
        \LIMIT ?"
@@ -92,7 +92,7 @@ maybeLimit (Just m) = case Text.decimal m of
 
 maybeQuery :: Maybe Text -> Maybe (PersistValue, Int)
 maybeQuery Nothing = Nothing
-maybeQuery (Just q) = Just (PersistText q, Text.length q)
+maybeQuery (Just q) = Just (PersistText $ Text.toLower q, Text.length q)
 
 maybeId :: Maybe Text -> Maybe (PersistValue)
 maybeId Nothing = Nothing

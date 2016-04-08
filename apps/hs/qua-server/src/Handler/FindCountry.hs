@@ -58,16 +58,16 @@ countryQuery n query 2 = rawQuery sql2 [query,query,n]
 countryQuery n query _ = rawQuery sqlx [query,query,query,query,n]
 
 sql1 :: Text
-sql1 = "SELECT id,iso,name FROM country WHERE iso LIKE ?||'%' ORDER BY name ASC LIMIT ?"
+sql1 = "SELECT id,iso,name FROM country WHERE LOWER(iso) LIKE ?||'%' ORDER BY name ASC LIMIT ?"
 
 sql2 :: Text
-sql2 = "SELECT id,iso,name FROM country WHERE iso = ? OR name LIKE ?||'%' ORDER BY name ASC LIMIT ?"
+sql2 = "SELECT id,iso,name FROM country WHERE iso = ? OR LOWER(name) LIKE ?||'%' ORDER BY name ASC LIMIT ?"
 
 sqlx :: Text
-sqlx = "SELECT id,iso,name FROM country WHERE name LIKE ?||'%' OR name LIKE '%'||?||'%' \
+sqlx = "SELECT id,iso,name FROM country WHERE LOWER(name) LIKE ?||'%' OR LOWER(name) LIKE '%'||?||'%' \
        \ORDER BY case\n\
-       \  WHEN name LIKE ?||'%' THEN 1\n\
-       \  WHEN name LIKE '%'||?||'%' THEN 2\n\
+       \  WHEN LOWER(name) LIKE ?||'%' THEN 1\n\
+       \  WHEN LOWER(name) LIKE '%'||?||'%' THEN 2\n\
        \  ELSE 3\n\
        \end,name ASC \
        \LIMIT ?"
@@ -87,7 +87,7 @@ maybeLimit (Just m) = case Text.decimal m of
 
 maybeQuery :: Maybe Text -> Maybe (PersistValue, Int)
 maybeQuery Nothing = Nothing
-maybeQuery (Just q) = Just (PersistText q, Text.length q)
+maybeQuery (Just q) = Just (PersistText $ Text.toLower q, Text.length q)
 
 
 streamJSONArray :: Monad m

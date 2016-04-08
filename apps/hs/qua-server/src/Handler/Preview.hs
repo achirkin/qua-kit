@@ -41,9 +41,11 @@ import Control.Monad.Trans.Except (runExceptT)
 
 getPreviewR :: Key Story -> Handler Html
 getPreviewR ident = do
-    ustory <- getById ident
-    upreview <- getById $ storyImage ustory
-    img <- getById $ imagePreviewFullVersion upreview
+    img <- runDB $ do
+        ustory <- get404 ident
+        upreview <- get404 $ storyImage ustory
+        img <- get404 $ imagePreviewFullVersion upreview
+        return img
     defaultLayout $ do
         setTitle . toMarkup $ "File Processor - " `Text.append` imageName img
         previewBlock <- liftIO $ preview ident (imageContentType img)
