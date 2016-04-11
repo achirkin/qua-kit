@@ -2,7 +2,8 @@
 /lti-test1                   LtiR         GET POST
 /lti-test                    ImageUploadR GET POST
 /file/#StoryId           PreviewR     GET
-/file/#StoryId/download  DownloadR    GET
+/file/#StoryId/image     ImageR    GET
+/file/#StoryId/preview   ImgPreviewR    GET
 
 /                            QuaViewR  GET
 /qua-view.css                QuaViewCSSR   GET

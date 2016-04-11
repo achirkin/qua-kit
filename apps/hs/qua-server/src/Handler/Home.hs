@@ -44,7 +44,7 @@ getHomeR = do
       )
 
     defaultLayout $ do
-        setTitle "File Processor"
+        setTitle "Uploaded imagess"
         $(widgetFileNoReload def "home")
 
 getImages :: Handler [Entity Story]

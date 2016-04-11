@@ -23,6 +23,7 @@ import Control.Monad.Trans.Resource (runResourceT)
 import Data.Conduit
 import Data.Conduit.Binary
 import qualified Data.ByteString.Lazy as BSL
+import Graphics.GD.ByteString.Lazy
 
 --import Control.Arrow ((***))
 --import Control.Concurrent.STM
@@ -34,7 +35,7 @@ import Data.Default
 import Data.Text (Text)
 --import Data.Text.Encoding (encodeUtf8, decodeUtf8With)
 --import Data.Text.Encoding.Error (lenientDecode)
---import qualified Data.Text as Text
+import qualified Data.Text as Text
 import Database.Persist.Sql
 --import Data.IntMap (IntMap)
 --import qualified Data.IntMap as IntMap
@@ -77,6 +78,9 @@ instance Yesod App where
 --  makeSessionBackend _ = do
 --        backend <- defaultClientSessionBackend 1 "keyfile.aes"
 --        return $ Just backend
+  maximumContentLength _ (Just ImageUploadR) = Just 20000000
+  maximumContentLength _ _ = Just 2000000
+
 
 instance RenderMessage App FormMessage where
     renderMessage _ _ = defaultFormMessage
@@ -147,6 +151,10 @@ data TStory = TStory
     , tstoryComment :: Textarea
     }
 
+
+previewSize :: Int
+previewSize = 400
+
 persistStory :: TStory -> Handler (Entity Story)
 persistStory story = runDB $ do
     studentId  <- saveStudent
@@ -196,12 +204,30 @@ persistStory story = runDB $ do
 
     saveImgPreview = do
         fb <- runResourceT $ fileSource (tstoryImage story) $$ sinkLbs
+        let mime = fileContentType $ tstoryImage story
+        preview <- liftIO $ do
+          pimg <- newImage (previewSize, previewSize)
+          img <- if "jpeg" `Text.isSuffixOf` mime
+            then loadJpegByteString fb
+            else if "png" `Text.isSuffixOf` mime
+            then loadPngByteString fb
+            else if "gif" `Text.isSuffixOf` mime
+            then loadGifByteString fb
+            else return pimg  -- TODO: make a proper error generation.
+          (w,h) <- imageSize img
+          let ssize  = min w h
+              spoint = ((w - ssize) `div` 2, (h-ssize) `div` 2)
+              dpoint = (0,0)
+          copyRegionScaled spoint (ssize,ssize) img
+                           dpoint (previewSize, previewSize) pimg
+          savePngByteString pimg
+        liftIO $ BSL.writeFile (Text.unpack (fileName $ tstoryImage story) ++ ".png") preview
         let content = BSL.toStrict fb
-            ctype   = fileContentType $ tstoryImage story
+            ctype   = mime
             name    = fileName $ tstoryImage story
         imgId <- saveImage name ctype content
-        -- TODO: format conversion here!
-        insert $ ImagePreview content imgId
+        insert $ ImagePreview (BSL.toStrict preview) imgId
+
 
 
 

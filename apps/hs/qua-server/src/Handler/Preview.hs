@@ -55,7 +55,7 @@ getPreviewR ident = do
 preview :: Key Story -> Text -> SB.ByteString -> IO Widget
 preview ident contentType bytes
   | "image/" `Text.isPrefixOf` contentType =
-    return [whamlet|<img src=@{DownloadR ident} style="width: 100%;">|]
+    return [whamlet|<img src=@{ImageR ident} style="width: 100%;">|]
   | otherwise = do
     eText <- try . evaluate $ Text.decodeUtf8 bytes :: IO (Either SomeException Text)
     return $ case eText of

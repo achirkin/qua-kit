@@ -19,7 +19,8 @@ module Dispatch where
 import Yesod
 
 import Foundation
-import Handler.Download
+import Handler.Image
+import Handler.ImgPreview
 import Handler.Home
 import Handler.Preview
 import Handler.ImageUpload

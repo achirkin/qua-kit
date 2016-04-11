@@ -1,0 +1,17 @@
+pre
+  white-space: pre-wrap
+
+ul
+  list-style-type: none
+  background-color: #ffffff
+
+li
+  background-color: #eef
+  margin: 3px
+
+img
+  width: 10em
+  height: 10em
+
+td
+  vertical-align: top

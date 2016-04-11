@@ -1,14 +1,15 @@
 $if null storedFiles
-    <p>No files have been uploaded yet.
+    <p>No stories have been uploaded yet.
 $else
-    <h2>Previously submitted files
     <ul>
         $forall (i, student, comment, createTime, country, place) <- storedFiles
           <li>
             <table>
               <tr>
                 <td>
-                  <img src="@{DownloadR i}" style="height: 100px;"><br>
+                  <a href="@{ImageR i}">
+                    <img src="@{ImgPreviewR i}">
+                  <br>
                   #{country} - #{place}
                   <br>
                   #{show student}

@@ -9,9 +9,10 @@
   <div ##{storyDataDiv}>
     $case inameRes
       $of Nothing
-        Select an image to share
+        Select an image to share.
       $of Just iname
-        You have uploaded an image "#{iname}", but you may change it here
+        You have uploaded an image "#{iname}", but you may change it here.
+    The image type must be JPG/JPEG, PNG, or GIF.
     <br>
     ^{fvInput imageView}
     <span>
