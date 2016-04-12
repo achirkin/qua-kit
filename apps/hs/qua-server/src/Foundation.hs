@@ -221,7 +221,6 @@ persistStory story = runDB $ do
           copyRegionScaled spoint (ssize,ssize) img
                            dpoint (previewSize, previewSize) pimg
           savePngByteString pimg
-        liftIO $ BSL.writeFile (Text.unpack (fileName $ tstoryImage story) ++ ".png") preview
         let content = BSL.toStrict fb
             ctype   = mime
             name    = fileName $ tstoryImage story

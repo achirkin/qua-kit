@@ -1,19 +1,54 @@
-$if null storedFiles
-    <p>No stories have been uploaded yet.
-$else
-    <ul>
-        $forall (i, student, comment, createTime, country, place) <- storedFiles
-          <li>
-            <table>
-              <tr>
-                <td>
-                  <a href="@{ImageR i}">
-                    <img src="@{ImgPreviewR i}">
-                  <br>
-                  #{country} - #{place}
-                  <br>
-                  #{show student}
-                  <br>
-                  #{show createTime}
-               <td>
-                 <pre>#{comment}
+<!-- css -->
+<link href="@{StaticR css_base_min_css}" rel="stylesheet">
+<link href="@{StaticR css_project_min_css}" rel="stylesheet">
+<!-- favicon -->
+<!-- ... -->
+<header class="header header-transparent header-waterfall ui-header">
+
+<main class="content">
+  <div class="content-header ui-content-header">
+    <div class="container">
+      <h1 class="content-heading">EdX User Stories
+  <div class="container">
+    <section class="content-inner margin-top-no">
+
+      <div class="row">
+        <div class="col-lg-8 col-md-9">
+          <div class="card margin-bottom-no">
+            <div class="card-main">
+              <div class="card-inner">
+                $if null storedFiles
+                  <p>No stories have been uploaded yet.
+                $else
+                  <p>On this page you will find a list of stories uploaded by edX students.
+
+      <div class="ui-card-wrap">
+        <div class="row">
+          <div class="col-lg-8 col-md-9">
+            $if null storedFiles
+            $else
+              $forall (i, student, comment, createTime, country, place) <- storedFiles
+                <div class="card">
+                  <aside class="card-side card-side-img pull-left">
+                    <img src="@{ImgPreviewR i}" width="200px" height="200px">
+                  <div class="card-main">
+                    <div class="card-inner">
+                      <p class="card-heading">
+                        #{country} - #{place}
+                      <p>
+                        #{show student}<br>
+                        #{show createTime}
+                        <pre id="comment-preview">
+                          #{shortenText comment}
+                    <div class="card-action">
+                      <div class="card-action-btn pull-left">
+                        <a class="btn btn-flat waves-attach" href="javascript:void(0)">
+                          <span class="icon">check
+                          \ Read more
+
+
+
+<!-- js -->
+<script type="text/javascript" src="@{StaticR jquery_2_2_3_min_js}">
+<script type="text/javascript" src="@{StaticR js_base_min_js}">
+<script type="text/javascript" src="@{StaticR js_project_min_js}">

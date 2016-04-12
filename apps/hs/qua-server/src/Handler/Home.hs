@@ -19,6 +19,8 @@ module Handler.Home where
 --import Data.Conduit
 --import Data.Conduit.Binary
 import Data.Default
+import Data.Text (Text)
+import qualified Data.Text as Text
 --import qualified Data.ByteString as S
 --import qualified Data.ByteString.Lazy as L
 import Yesod
@@ -46,6 +48,23 @@ getHomeR = do
     defaultLayout $ do
         setTitle "Uploaded imagess"
         $(widgetFileNoReload def "home")
+
+shortLength :: Int
+shortLength = 200
+
+maxLines :: Int
+maxLines = 3
+
+shortenText :: Text -> Text
+shortenText t = if Text.length t < shortLength then t
+  else (remNewLines $ remLong t) `Text.append` "..."
+  where remLong = Text.dropEnd 1
+                . Text.dropWhileEnd (\c -> c /= ' ' && c /= '\n' && c /= '\t')
+                . Text.take shortLength
+        remNewLines = Text.dropWhileEnd (\c -> c == ' ' || c == '\n' || c == '\r' || c == '\t')
+                    . Text.unlines
+                    . take maxLines
+                    . Text.lines
 
 getImages :: Handler [Entity Story]
 getImages = runDB $ selectList [] []
