@@ -13,7 +13,7 @@
     <section class="content-inner margin-top-no">
 
       <div class="row">
-        <div class="col-lg-8 col-md-9">
+        <div class="col-lg-7 col-md-8 col-sm-9">
           <div class="card margin-bottom-no">
             <div class="card-main">
               <div class="card-inner">
@@ -24,28 +24,47 @@
 
       <div class="ui-card-wrap">
         <div class="row">
-          <div class="col-lg-8 col-md-9">
-            $if null storedFiles
-            $else
-              $forall (i, student, comment, createTime, country, place) <- storedFiles
+          $if null storedFiles
+          $else
+            $forall (i, student, comment, createTime, country, place) <- storedFiles
+              <div class="col-lg-4 col-md-6 col-sm-9 col-xs-9">
                 <div class="card">
-                  <aside class="card-side card-side-img pull-left">
+                  <aside class="card-side card-side-img pull-left card-side-moocimg">
                     <img src="@{ImgPreviewR i}" width="200px" height="200px">
                   <div class="card-main">
                     <div class="card-inner">
                       <p class="card-heading">
-                        #{country} - #{place}
+                        #{country}, #{place}
                       <p>
-                        #{show student}<br>
-                        #{show createTime}
-                        <pre id="comment-preview">
-                          #{shortenText comment}
-                    <div class="card-action">
-                      <div class="card-action-btn pull-left">
-                        <a class="btn btn-flat waves-attach" href="javascript:void(0)">
-                          <span class="icon">check
-                          \ Read more
+                        $case student
+                          $of Nothing
+                          $of Just sname
+                            #{sname}<br>
+                        #{show $ utctDay createTime}
+                      <p style="white-space: pre-line">
+                        #{shortenText comment}
+                <div class="hoverbutton">
+                  <a class="btn btn-flat waves-attach" href="#story-modal-#{fromSqlKey i}" data-toggle="modal">
 
+$forall (i, student, comment, createTime, country, place) <- storedFiles
+  <div aria-hidden="true" class="modal fade" tabindex="-1" role="dialog" id="story-modal-#{fromSqlKey i}">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-heading">
+          <a class="modal-close icon-4x" data-dismiss="modal">×</a>
+          <p class="modal-title">
+            #{country}, #{place}
+        <div style="margin: 0 10px 0 10px; text-align: center">
+          <img src="@{ImageR i}" style="max-width: 100%; max-height: 60vh">
+        <div class="modal-inner">
+          <p style="font-style: italic">
+            Uploaded on #{show $ utctDay createTime}
+            $case student
+              $of Nothing
+              $of Just sname
+                \ by #{sname}
+          <p style="white-space: pre-line">
+            #{comment}
 
 
 <!-- js -->

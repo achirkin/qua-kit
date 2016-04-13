@@ -19,7 +19,9 @@ module Handler.Home where
 --import Data.Conduit
 --import Data.Conduit.Binary
 import Data.Default
+import Data.Time
 import Data.Text (Text)
+import Database.Persist.Sql (fromSqlKey)
 import qualified Data.Text as Text
 --import qualified Data.ByteString as S
 --import qualified Data.ByteString.Lazy as L
@@ -46,18 +48,20 @@ getHomeR = do
       )
 
     defaultLayout $ do
-        setTitle "Uploaded imagess"
+        setTitle "EdX User Stories"
         $(widgetFileNoReload def "home")
 
 shortLength :: Int
-shortLength = 200
+shortLength = 140
 
 maxLines :: Int
 maxLines = 3
 
 shortenText :: Text -> Text
-shortenText t = if Text.length t < shortLength then t
-  else (remNewLines $ remLong t) `Text.append` "..."
+shortenText t = dropInitSpace . remNewLines $
+  if Text.length t < shortLength
+    then t
+    else remLong t `Text.append` "..."
   where remLong = Text.dropEnd 1
                 . Text.dropWhileEnd (\c -> c /= ' ' && c /= '\n' && c /= '\t')
                 . Text.take shortLength
@@ -65,9 +69,10 @@ shortenText t = if Text.length t < shortLength then t
                     . Text.unlines
                     . take maxLines
                     . Text.lines
+        dropInitSpace = Text.dropWhile (\c -> c == ' ' || c == '\n' || c == '\r' || c == '\t')
 
 getImages :: Handler [Entity Story]
-getImages = runDB $ selectList [] []
+getImages = runDB $ selectList [] [Desc StoryCreationTime]
 
 postHomeR :: Handler Html
 postHomeR = do

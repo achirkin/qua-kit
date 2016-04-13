@@ -1,5 +1,23 @@
-#comment-preview
-  white-space: pre-wrap
+/* transparent button on top of card, so we can click on it */
+.hoverbutton
+  padding: 0 16px 24px 16px
+  top: 0px
+  left: 0px
+  position: absolute
+  width: 100%
+  height: 100%
+  a
+    width: 100%
+    height: 100%
+
+
+/* overwrite some nicies */
+
+.card .card-side-moocimg
+  max-width: 50%
   background-color: #FFFFFF
-  padding: 0
-  border: 0
+
+.card-inner .card-heading
+  line-height: inherit
+  margin-top: auto
+  margin-bottom: auto
