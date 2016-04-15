@@ -49,6 +49,7 @@ import           Text.XML
 import qualified Network.HTTP.Client         as HTTP
 import qualified Network.HTTP.Types          as HTTP  (renderSimpleQuery, parseSimpleQuery)
 import qualified Network.Wai                 as Wai
+import qualified Network.Wai.Request         as Wai
 import qualified Yesod.Core                  as Yesod
 import           System.Random                        (Random(..))
 
@@ -130,7 +131,7 @@ convertRequest :: Wai.Request
                -> HTTP.Request
 convertRequest wr rbody = def
     { HTTP.method = Wai.requestMethod wr
-    , HTTP.secure = Wai.isSecure wr
+    , HTTP.secure = Wai.appearsSecure wr
     , HTTP.host = whost
     , HTTP.port = wport
     , HTTP.path = Wai.rawPathInfo wr
@@ -139,7 +140,7 @@ convertRequest wr rbody = def
     , HTTP.requestHeaders = Wai.requestHeaders wr
     } where
         (whost,wport) = case SBC.span (':' /=) <$> Wai.requestHeaderHost wr of
-           Just (h, "") -> (h, if Wai.isSecure wr then 443 else 80)
+           Just (h, "") -> (h, if Wai.appearsSecure wr then 443 else 80)
            Just (h, po)  -> (h, read . SBC.unpack $ SB.drop 1 po)
            _ -> ("localhost", 80)
 
