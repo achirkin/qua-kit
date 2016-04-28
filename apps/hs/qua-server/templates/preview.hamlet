@@ -1,5 +1,0 @@
-<a href=@{HomeR}>home
-<h1>#{imageName img}
-<a href=@{ImageR ident}>download
-<p>
-  ^{previewBlock}

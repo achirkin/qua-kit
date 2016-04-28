@@ -1,19 +1,12 @@
-/home                        HomeR        GET POST
-/lti-test1                   LtiR         GET POST
-/lti-test                    ImageUploadR GET POST
-/file/#StoryId           PreviewR     GET
-/file/#StoryId/image     ImageR    GET
-/file/#StoryId/preview   ImgPreviewR    GET
-
-/                            QuaViewR  GET
-/qua-view.css                QuaViewCSSR   GET
-/qua-view.js                 QuaViewJSR    GET
-/numeric.min.js              NumericMinJSR GET
-/test              TestR GET
-
--- JSON handlers
-/country FindCountryR GET
-/place   FindPlaceR   GET
+-- Main page
+/home HomeR GET
 
 -- static sources
 /static StaticR EmbeddedStatic getStatic
+
+
+-- Test qua-view static page
+/       QuaViewR      GET
+/qua-view.css   QuaViewCSSR   GET
+/qua-view.js    QuaViewJSR    GET
+/numeric.min.js NumericMinJSR GET

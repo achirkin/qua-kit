@@ -2,7 +2,7 @@
 -- |
 -- Module      :  Main
 -- Copyright   :  (c) Artem Chirkin
--- License     :  BSD3
+-- License     :  MIT
 --
 -- Maintainer  :  Artem Chirkin <chirkin@arch.ethz.ch>
 -- Stability   :  experimental
@@ -11,7 +11,7 @@
 -----------------------------------------------------------------------------
 {-# LANGUAGE OverloadedStrings #-}
 
-module Main where
+module Main (main) where
 
 --import Control.Concurrent.STM
 import Control.Monad.Logger
@@ -19,7 +19,6 @@ import Control.Monad.Trans.Resource
 --import qualified Data.IntMap as IntMap
 import Database.Persist.Sql
 import Network.HTTP.Client.Conduit (newManager)
---import Web.Authenticate.OAuth
 import Yesod
 
 import Config

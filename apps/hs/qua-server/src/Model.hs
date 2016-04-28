@@ -2,7 +2,7 @@
 -- |
 -- Module      :  Model
 -- Copyright   :  (c) Artem Chirkin
--- License     :  BSD3
+-- License     :  MIT
 --
 -- Maintainer  :  Artem Chirkin <chirkin@arch.ethz.ch>
 -- Stability   :  experimental
@@ -19,9 +19,9 @@
 
 module Model where
 
-import Data.ByteString (ByteString)
+--import Data.ByteString (ByteString)
 import Data.Text (Text)
-import Data.Time
+--import Data.Time
 import Database.Persist.Quasi
 import Yesod
 

@@ -6,4 +6,4 @@ cabal build
 cp dist/build/qua-server/qua-server .
 tar czpf qua-server.keter qua-server web static config/keter.yaml
 rm qua-server
-scp qua-server.keter achirkin@mooc.ia.arch.ethz.ch:/opt/keter/incoming
+scp qua-server.keter qua-kit.ethz.ch:/opt/keter/incoming

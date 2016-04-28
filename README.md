@@ -3,6 +3,7 @@
 =================================================
 
 Qua-Kit is a client-server system that aims at assisting urban designers in their design process.
+Try it on our web server at [qua-kit.ethz.ch](http://qua-kit.ethz.ch).
 
 Qua-View (`apps/hs/qua-view`) is a WebGL-base browser viewer and editor for building geometry. It is based on Haskell GHCJS.
 
