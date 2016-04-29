@@ -1,12 +1,8 @@
 -- Main page
-/home HomeR GET
+/ HomeR GET
 
 -- static sources
 /static StaticR EmbeddedStatic getStatic
 
-
--- Test qua-view static page
-/       QuaViewR      GET
-/qua-view.css   QuaViewCSSR   GET
+-- Test qua-view.js static source
 /qua-view.js    QuaViewJSR    GET
-/numeric.min.js NumericMinJSR GET

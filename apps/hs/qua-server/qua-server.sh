@@ -43,9 +43,6 @@ if [ -d "web" ]; then
 fi
 mkdir web
 cp $QVDIR/web/qua-view.js web/
-cp $QVDIR/web/qua-view.html web/
-cp $QVDIR/web/qua-view.css web/
-cp $QVDIR/web/numeric.min.js web/
 
 # finally run the project using cabal
 env PORT=8070 cabal run qua-server

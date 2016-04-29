@@ -11,13 +11,11 @@
 -----------------------------------------------------------------------------
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE QuasiQuotes #-}
 
 module Handler.Home
     ( getHomeR
-    , getQuaViewR
-    , getQuaViewCSSR
     , getQuaViewJSR
-    , getNumericMinJSR
     ) where
 
 
@@ -40,19 +38,15 @@ import Foundation
 getHomeR :: Handler Html
 getHomeR = do
     defaultLayout $ do
+        -- add javascript dependencies to header
+        toWidgetHead $
+          [hamlet|
+            <script src="@{StaticR numeric_min_js}" type="text/javascript">
+          |]
         setTitle "qua-view"
-        $(widgetFileNoReload def "home")
-
-
-getQuaViewR :: Handler Html
-getQuaViewR = sendFile "text/html" "web/qua-view.html"
-
-getQuaViewCSSR :: Handler ()
-getQuaViewCSSR = sendFile "text/css" "web/qua-view.css"
+        $(widgetFileNoReload def "qua-view")
 
 getQuaViewJSR :: Handler ()
 getQuaViewJSR = sendFile "text/javascript" "web/qua-view.js"
 
-getNumericMinJSR :: Handler ()
-getNumericMinJSR = sendFile "text/javascript" "web/numeric.min.js"
 

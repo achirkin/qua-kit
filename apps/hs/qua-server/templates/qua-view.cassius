@@ -1,0 +1,650 @@
+/* latin */
+@font-face
+  font-family: 'Roboto Regular'
+  font-style: normal
+  /*font-weight: 400*/
+  src: local('Roboto Regular'), local('Roboto'), url('Roboto-Regular.ttf')
+  /*unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2212, U+2215, U+E0FF, U+EFFD, U+F000*/
+
+
+
+body
+    font-family: 'Roboto Regular', 'Lucida Sans', 'Lucida Sans Regular', 'Lucida Grande', 'Lucida Sans Unicode', Geneva, Verdana, sans-serif
+    position: fixed
+    left: 0
+    top: 0
+    padding: 0
+    margin: 0
+    width: 100%
+    height: 100%
+    overflow: hidden
+    background-color: #FFFFFF
+    touch-action: none
+    color: #BF360C
+
+
+#loadingSplash
+    z-index: 777
+    display: block
+    position: fixed
+    height: 40%
+    padding: 0
+    top: 50%
+    left: 50%
+    margin: 0 -50% 0 0
+    transform: translate(-50%, -50%)
+
+
+/*
+@media (max-width: 400px)
+  #loadingSplash
+    right: -95%
+
+
+@media (min-width: 401px)
+  #loadingSplash
+    box-shadow: 0
+    right: -400px
+
+} */
+
+#glcanvas
+    position: fixed
+    left: 0
+    top: 0
+    padding: 0
+    margin: 0
+    z-index: 2
+    overflow: hidden
+    width: 100%
+    height: 100%
+
+
+/* GUI icons */
+
+.guiElement
+    fill: #FF8A65 /* #FFAB91 */
+    stroke: #FFFFFF
+    stroke-width: 0.0
+
+
+.uibutton:hover
+    cursor: pointer
+
+.uibutton:hover .guiElement
+    fill: #FF5722
+
+.uibutton:active .guiElement
+    fill: #FF5722
+
+
+.uibutton
+    position: relative
+    padding: 0
+    margin: 0
+    z-index: 10
+    overflow: hidden
+    width: 64px
+    height: 64px
+
+
+rect.btn
+    stroke: #FFFFFF
+    fill: #FFFFFF
+    fill-opacity: 0
+    stroke-opacity: 0
+
+
+/* GUI panel */
+
+#guipanel
+    position: fixed
+    opacity: 0.95
+    top: 0
+    padding: 0
+    margin: 0
+    z-index: 3
+    overflow: visible
+    max-width: 95%
+    width: 400px
+    height: 100%
+    background-color: #FFFFFF
+    -webkit-transition: right 300ms ease-in-out,min-width 300ms ease-in-out
+    -moz-transition: right 300ms ease-in-out,min-width 300ms ease-in-out
+    -o-transition: right 300ms ease-in-out,min-width 300ms ease-in-out
+    transition: right 300ms ease-in-out,min-width 300ms ease-in-out
+
+
+/* GUI panel - title bar */
+
+/*.idleguipanel > #tabsbar
+    box-shadow: 0px 0px 0px 0px #FFFFFF
+
+
+.activeguipanel > #tabsbar
+    box-shadow: 0px 5px 10px 0px #999999
+}*/
+
+#tabsbar
+    position: relative
+    display: table
+    color: #FFFFFF
+    z-index: 5
+    background-color: #FF5722
+    padding: 0
+    margin: 0
+    width: 100%
+    height: 48px
+    max-height: 5%
+    font-size: 14px
+    table-layout: fixed
+
+
+.tabitem
+    display: table-cell
+    margin: 0
+    padding: 0
+    vertical-align: middle
+    text-align: center
+    cursor: pointer
+    white-space: initial
+    box-sizing: border-box
+    width: 1%
+
+
+.tabpane
+    margin: 15px 5px 0px 32px
+    padding-top: 0px
+
+
+.tabitemactive
+    font-weight: bold
+    border-bottom: 4px solid #BF360C
+    padding-top: 4px
+
+
+.tabitemidle
+    opacity: 0.6
+
+
+#titlebar
+    position: relative
+    z-index: 6
+    background-color: #FF5722
+    padding: 0
+    margin: 0
+    width: 100%
+    height: 200px
+    max-height: 10%
+
+
+
+.titlediv
+    position: absolute
+    left: 10%
+    bottom: 20%
+    color: #FFFFFF
+    padding: 0
+    margin: 0
+    height: 60%
+
+.logodiv
+    position: absolute
+    right: 0%
+    bottom: 20%
+    color: #FFFFFF
+    padding: 0
+    margin: 0
+    height: 60%
+
+.iaLogo
+    overflow: visible
+    stroke: none
+    fill: #FFFFFF
+    fill-opacity: 1
+
+#titlebar a:link
+    color: #FFFFFF
+    text-decoration: none
+
+#titlebar a:visited
+    color: #FFFFFF
+    text-decoration: none
+
+.logodiv:hover .iaLogo
+    fill: #FBE9E7
+
+#titlebar a:hover
+    color: #FFFFFF
+    text-decoration: none
+
+#titlebar a:active
+    color: #FFFFFF
+    text-decoration: none
+
+
+/* GUI panel & on-canvas buttons transition */
+
+#guiplaceholder
+    position: absolute
+    bottom: 0
+    padding: 0
+    margin: 0
+    z-index: 4
+    overflow: visible
+/*    height: 256px */
+    width: 64px
+    -webkit-transition: width 300ms ease-in-out, left 300ms ease-in-out
+    -moz-transition: width 300ms ease-in-out, left 300ms ease-in-out
+    -o-transition: width 300ms ease-in-out, left 300ms ease-in-out
+    transition: width 300ms ease-in-out, left 300ms ease-in-out
+
+
+.activeplaceholder
+    left: -32px
+
+
+.idleplaceholder
+    left: -64px
+
+
+.activeguipanel
+    box-shadow: 15px 15px 15px 15px #999999
+    min-width: 20%
+    right: 0px
+
+
+
+.idleguipanel
+    min-width: 0%
+    box-shadow: 0
+
+
+@media (max-width: 400px)
+  .idleguipanel
+    right: -95%
+
+
+@media (min-width: 401px)
+  .idleguipanel
+    box-shadow: 0
+    right: -400px
+
+
+
+/* console */
+#consolediv
+    z-index: 4
+    width: 100%
+    text-align: justify
+    line-height: 100%
+    font-size: 9pt
+    position: absolute
+    bottom: 0
+    left: 0
+    overflow: hidden
+    padding: 0
+    margin: 0
+
+
+#consolecontent
+    z-index: 4
+    height: 100%
+    overflow: hidden
+    padding: 0
+    margin: 0 5px 3px 32px
+
+
+#consolecontent div
+    z-index: 4
+    padding: 0
+    margin: 0 0 5px 0
+
+
+.consolem0
+    color: #EFEBE9
+
+.consolem1
+    color: #D7CCC8
+
+.consolem2
+    color: #BCAAA4
+
+.consolem3
+    color: #A1887F
+
+.consolem4
+    color: #8D6E63
+
+.consolem5
+    color: #795548
+
+.consolem6
+    color: #6D4C41
+
+.consolem7
+    color: #5D4037
+
+.consolem8
+    color: #4E342E
+
+.consolem9
+    color: #3E2723
+
+
+
+
+/* control panel */
+
+.pheading
+    z-index: 5
+    position: relative
+    font-size: 18px
+    margin: 10px auto 0px 0px
+
+
+.pnormal
+    z-index: 5
+    font-size: 14px
+    margin: auto 5px auto 5px
+    line-height: 12px
+
+
+.group
+    z-index: 5
+    position: relative
+    margin: 20px auto 10px 0px
+    width: 60%
+    border-bottom: 1px solid #757575
+
+
+.pinput
+    z-index: 5
+    font-size: 16px
+    padding: 4px 0px 0px 5px
+    margin: 0
+    -webkit-appearance: none
+    display: block
+    background: #FFFFFF
+    color: #636363
+    width: 100%
+    border: none
+    border-radius: 0
+
+
+.pinput:focus
+    outline: none
+
+
+
+/* Label */
+
+.plabel
+    z-index: 5
+    white-space: nowrap
+    color: #999
+    font-size: 16px
+    font-weight: normal
+    position: absolute
+    pointer-events: none
+    left: 5px
+    top: 3px
+    width: 20px
+    overflow: visible
+    transition: all 0.2s ease
+
+
+
+/* active */
+
+.pinput:focus ~ .plabel, .pinput.used ~ .plabel
+    transform: matrix(0.75,0,0,0.75,-2,-18)
+    color: #BF360C
+
+
+
+/* Underline */
+
+.pbar
+    position: relative
+    display: block
+    width: 100%
+
+
+.pbar:before, .pbar:after
+    content: ''
+    height: 2px
+    width: 0
+    bottom: -1px
+    position: absolute
+    background: #BF360C
+    transition: all 0.2s ease
+
+
+.pbar:before
+    left: 50%
+
+
+.pbar:after
+    right: 50%
+
+
+
+/* active */
+
+.pinput:focus ~ .pbar:before, .pinput:focus ~ .pbar:after
+    width: 50%
+
+
+
+/* Highlight */
+
+.phighlight
+    position: absolute
+    height: 60%
+    width: 100px
+    top: 25%
+    left: 0
+    pointer-events: none
+    opacity: 0.5
+
+
+
+/* active */
+
+.pinput:focus ~ .phighlight
+    animation: inputHighlighter 0.3s ease
+
+
+
+/* Animations */
+
+@keyframes inputHighlighter
+    from
+        background: #FBE9E7
+    to
+        width: 0
+        background: transparent
+
+
+
+/* Button */
+
+.pbutdiv
+    position: relative
+    margin: 0px auto 5px 0px
+    width: 60%
+    text-align: center
+
+
+.pleftbutdiv
+    position: relative
+    margin: 0px auto 5px 0px
+    width: 100%
+    text-align: left
+
+
+.button
+    position: relative
+    display: inline-block
+    padding: 6px 12px 4px 12px
+    margin: 0
+    color: #FFFFFF
+    font-size: 14px
+    line-height: 18px
+    webkit-font-smoothing: antialiased
+    text-align: center
+    text-decoration: none
+    letter-spacing: 1px
+    background: #FF5722
+    border: 0
+    border-bottom: 2px solid #BF360C
+    cursor: pointer
+    transition: all 0.15s ease
+
+.button:focus
+    outline: 0
+
+
+.button:hover
+    background: #BF360C
+
+
+
+/* Switchers */
+
+.label
+  width: 50px
+  height: 14px
+  background: #BF360C
+  box-shadow: inset 0 0 0 20px #4a4a4a,0 0 1px 0 #000
+  border-radius: 14px
+  display: inline-block
+  margin: 10px 5px 5px 5px
+  padding: 0px
+  z-index: 5
+  transition: all 200ms ease-in 0s
+  cursor: pointer
+
+input[type=checkbox]
+  display: none
+
+
+input[type=checkbox] + .label:before
+  content: ""
+  position: absolute
+  top: -3px
+  left: -3px
+  height: 20px
+  width: 20px
+  border-radius: 50%
+  display: block
+  background: #FF5722
+  border: none
+  margin: 10px 5px 5px 5px
+  padding: 0px
+  z-index: 6
+  box-shadow: inset 0 0 0 20px #5f5f5f,0 0 1px 0 #000
+  transition: box-shadow 300ms ease-in 0s, left 200ms ease-in 0s
+  cursor: pointer
+
+input[type=checkbox]:checked + .label:before
+  left: 33px
+  box-shadow: inset 0 0 0 0px #FF5722,0 0 1px 0 #000
+
+input[type=checkbox]:checked + .label
+  box-shadow: inset 0 0 0 0 #4a4a4a,0 0 1px 0 #000
+
+#dynamicstaticswitcher + .label:after
+  content: "Static geometry"
+  display: block
+  white-space: nowrap
+  overflow: visible
+  position: absolute
+  margin: 10px 5px 5px 5px
+  padding: 0px
+  left: 60px
+  top: 2px
+
+#dynamicstaticswitcher:checked + .label:after
+  content: "Dynamic geometry"
+
+
+
+
+/* Pop-up windows */
+
+#popupbg
+  width: 100vw
+  height: 100vh
+  position: fixed
+  top: 0
+  left: 0
+  background-color: #FFFFFF
+  opacity: 0.4
+  z-index: 999
+  display: block
+
+
+
+.popupdiv
+  /* position */
+  z-index: 1000
+  position: fixed
+  top: 50%
+  left: 50%
+  transform: translate(-50%, -50%)
+  /* size */
+  width: 40rem
+  max-width: 90%
+  max-height: 90%
+  overflow: auto
+  /* styling */
+  font-size: 75%
+  margin: 0
+  padding: 10px
+  background-color: #FFFFFF
+  border: 1px solid #FF5722
+  box-shadow: 0px 0px 15px 0px #999999
+
+
+.popupdiv hr
+  color: #FF5722
+  background-color: #FF5722
+  border: 0
+  height: 1px
+  width: 90%
+
+
+.popupdiv table
+  padding: 0
+  margin: 0 auto
+  border: 0
+
+
+.popupdiv .notes
+  padding: 0
+  margin: 0
+  table-layout: fixed
+  width: inherit
+
+
+.popupdiv table td
+  padding: 0
+  margin: 0
+  border: 0
+
+
+.popupdiv table tr
+  padding: 0
+  margin: 0
+  border: 0
+
+
+
+.helpIcons
+    display: inline
+    height: 32px
+    padding: 0
+    margin: 0
+    vertical-align: middle

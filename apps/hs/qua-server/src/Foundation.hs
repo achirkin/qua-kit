@@ -19,13 +19,13 @@
 
 module Foundation where
 
-import Data.Default
+--import Data.Default
 import Database.Persist.Sql
 import Network.HTTP.Client.Conduit (Manager)
 import Text.Hamlet
 import Yesod
 import Yesod.EmbeddedStatic
-import Yesod.Default.Util
+--import Yesod.Default.Util
 
 import Config
 --import Model
@@ -49,13 +49,9 @@ data App = App
 
 instance Yesod App where
   defaultLayout widget = do
-    pc <- widgetToPageContent $ $(widgetFileNoReload def "default-layout")
-    withUrlRenderer $(hamletFile "templates/default-layout-wrapper.hamlet")
+    pc <- widgetToPageContent widget
+    withUrlRenderer $(hamletFile "templates/site-layout.hamlet")
   addStaticContent = embedStaticContent getStatic StaticR Right
---    where mini = if development then Right else minifym
---  makeSessionBackend _ = do
---        backend <- defaultClientSessionBackend 1 "keyfile.aes"
---        return $ Just backend
   maximumContentLength _ _ = Just 2000000
 
 
