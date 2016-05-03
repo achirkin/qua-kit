@@ -1,0 +1,47 @@
+name: ghcjs-hs-interop
+version: 0.0.1
+cabal-version: 1.22
+build-type: Simple
+license: MIT
+license-file: LICENSE
+copyright: Artem Chirkin
+maintainer: Artem Chirkin
+stability: experimental
+homepage: http://ia.arch.ethz.ch/achirkin
+bug-reports: mailto:chirkin@arch.ethz.ch
+synopsis: A set of tools for easier interoperobility between Haskell and JS
+description:
+    A set of tools for easier interoperobility between Haskell and JS
+category: OpenGL, WebGL
+author: Artem Chirkin
+
+library
+    exposed-modules:
+        GHCJS.LikeJS.Class
+    build-depends:
+        base -any,
+        ghcjs-base -any
+    cpp-options: -DGHCJS_BROWSER
+    js-sources:
+        jsbits/LikeHS.js
+    default-language: Haskell2010
+    hs-source-dirs: src
+    ghc-options: -Wall -ferror-spans
+
+test-suite AllTests
+    type: exitcode-stdio-1.0
+    main-is: AllTests.hs
+    build-depends:
+        base -any,
+        ghcjs-base -any,
+        HTF -any,
+        template-haskell >=2.10.0.0 && <2.11
+    js-sources:
+        jsbits/LikeHS.js
+        jsbits/Tests.js
+    default-language: Haskell2010
+    hs-source-dirs: src test
+    other-modules:
+        GHCJS.LikeJS.Test.TestBasicTypes
+        GHCJS.LikeJS.Test.TH
+    ghc-options: -Wall -ferror-spans

@@ -102,3 +102,6 @@ cabal.config
 *-shm
 *-wal
 *.aes
+
+# JetBrains
+.idea
