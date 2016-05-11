@@ -20,7 +20,9 @@ library
         GHCJS.LikeJS.Class
     build-depends:
         base -any,
-        ghcjs-base -any
+        ghc-prim -any,
+        ghcjs-base -any,
+        deepseq -any
     cpp-options: -DGHCJS_BROWSER
     js-sources:
         jsbits/LikeHS.js
@@ -33,15 +35,18 @@ test-suite AllTests
     main-is: AllTests.hs
     build-depends:
         base -any,
+        ghc-prim -any,
         ghcjs-base -any,
         HTF -any,
-        template-haskell >=2.10.0.0 && <2.11
+        deepseq -any,
+        template-haskell -any
     js-sources:
         jsbits/LikeHS.js
         jsbits/Tests.js
     default-language: Haskell2010
     hs-source-dirs: src test
     other-modules:
+        GHCJS.LikeJS.Test.Debug
         GHCJS.LikeJS.Test.TestBasicTypes
         GHCJS.LikeJS.Test.TH
-    ghc-options: -Wall -ferror-spans
+    ghc-options: -Wall -ferror-spans -O2

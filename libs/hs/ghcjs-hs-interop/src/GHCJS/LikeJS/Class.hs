@@ -18,30 +18,33 @@
 {-# LANGUAGE FlexibleContexts, FlexibleInstances #-}
 {-# LANGUAGE FunctionalDependencies #-}
 {-# LANGUAGE JavaScriptFFI, GHCForeignImportPrim #-}
-{-# LANGUAGE MagicHash #-}
+{-# LANGUAGE MagicHash, UnboxedTuples, UnliftedFFITypes #-}
 
 module GHCJS.LikeJS.Class
     ( LikeJS (..)
+    , jsTypeName
     ) where
 
 -- for Number types
 import Data.Int
 import Data.Word
-import Foreign.C.Types
 
 --
 import GHC.TypeLits
-import Data.Coerce (Coercible ()) --, coerce)
+import GHC.Prim
+--import Data.Coerce (Coercible ()) --, coerce)
 import Data.JSString
 --import GHC.Exts (Any)
 import GHCJS.Types (JSVal) --, IsJSVal)
 import Unsafe.Coerce (unsafeCoerce)
+import Control.DeepSeq (deepseq)
 
 
 
 
--- | Describes direct representation of data types in JS and HS
---   Default implementation works for anything coercible to JSVal
+-- | Describes direct representation of data types in JS and HS.
+--   Default implementation works for anything coercible to JSVal.
+--   Name in LikeJS 'Name' must correspond to JS ($1).constructor.name
 class LikeJS (jstype :: Symbol) a | a -> jstype where
     asJSVal :: a -> JSVal
     asLikeJS :: JSVal -> a
@@ -53,8 +56,28 @@ class LikeJS (jstype :: Symbol) a | a -> jstype where
     default asLikeJS :: Coercible JSVal a => JSVal -> a
     asLikeJS =  unsafeCoerce
 
+-- | Show the name of a corresponding JavaScript type
+{-# INLINE jsTypeName #-}
+jsTypeName :: (KnownSymbol jstype, LikeJS jstype a) => a -> String
+jsTypeName x = symbolVal' (jsTypeProxy x)
 
--- | Popular basic types
+{-# INLINE jsTypeProxy #-}
+jsTypeProxy :: (KnownSymbol jstype, LikeJS jstype a) => a -> Proxy# jstype
+jsTypeProxy _ = proxy#
+
+
+
+-------------------------------------------------------------------------------------
+-- Basic Haskell value types
+-------------------------------------------------------------------------------------
+
+-- Damn String overlaps with [Char]
+--instance LikeJS "String" String where
+--    {-# INLINE asJSVal #-}
+--    asJSVal  = asJSVal . pack
+--    {-# INLINE asLikeJS #-}
+--    asLikeJS =  unpack . asLikeJS
+
 instance LikeJS "String" JSString where
     {-# INLINE asJSVal #-}
     asJSVal x = x `seq` unsafeCoerce x
@@ -70,11 +93,14 @@ instance LikeJS "Boolean" Bool where
     asLikeJS  =  js_asLikeJSBool
 
 foreign import javascript unsafe "$r = $1" js_asLikeJSChar :: JSVal -> Char
-foreign import javascript unsafe "$r = $1" js_asJSValChar :: Char -> JSVal
 {-# INLINE js_asLikeJSChar #-}
-instance LikeJS "Symbol" Char where
+foreign import javascript unsafe "$r = $1" js_asJSValChar :: Char -> JSVal
+{-# INLINE js_asJSValChar #-}
+instance LikeJS "Number" Char where
     asJSVal x = x `seq` js_asJSValChar x
     asLikeJS  =  js_asLikeJSChar
+
+
 
 -- | convert Number types
 #define LIKEJSNum(T) \
@@ -86,27 +112,40 @@ instance LikeJS "Symbol" Char where
         asJSVal x = x `seq` asJSVal/**/T x; {-# INLINE asJSVal #-}; \
         asLikeJS  = js_asLikeJS/**/T; {-# INLINE asLikeJS #-}; }
 
+
+{-# WARNING js_asLikeJSInt "JavaScript will produce an incorrect result on numbers longer than 32 bit" #-}
+{-# WARNING asJSValInt     "JavaScript will produce an incorrect result on numbers longer than 32 bit" #-}
 LIKEJSNum(Int)
+-- LIKEJSNum(Int64)  -- stored differently
 LIKEJSNum(Int32)
 LIKEJSNum(Int16)
 LIKEJSNum(Int8)
 LIKEJSNum(Word)
+-- LIKEJSNum(Word64) -- stored differently
 LIKEJSNum(Word32)
 LIKEJSNum(Word16)
 LIKEJSNum(Word8)
 LIKEJSNum(Float)
 LIKEJSNum(Double)
-LIKEJSNum(CChar)
-LIKEJSNum(CSChar)
-LIKEJSNum(CUChar)
-LIKEJSNum(CShort)
-LIKEJSNum(CUShort)
-LIKEJSNum(CInt)
-LIKEJSNum(CUInt)
-LIKEJSNum(CLong)
-LIKEJSNum(CULong)
-LIKEJSNum(CFloat)
-LIKEJSNum(CDouble)
+
+
+-- have to convert to BigInteger if the value is less than 32 bit width
+-- to preserve JS type name
+foreign import javascript unsafe "$1.d2 == null ? h$bigFromInt($1.d1) : $1.d2"
+    js_asJSValInteger :: Any -> JSVal
+{-# INLINE js_asJSValInteger #-}
+foreign import javascript unsafe "$r = h$integer_mpzToInteger($1)"
+    js_asLikeJSInteger :: JSVal -> Any
+{-# INLINE js_asLikeJSInteger #-}
+instance LikeJS "BigInteger" Integer where
+    asJSVal x = x `deepseq` js_asJSValInteger (unsafeCoerce x)
+    asLikeJS = unsafeCoerce . js_asLikeJSInteger
+
+
+-------------------------------------------------------------------------------------
+-- Basic Haskell container types
+-------------------------------------------------------------------------------------
+
 
 instance (LikeJS ta a, LikeJS tb b) => LikeJS "LikeHS.Either" (Either a b) where
     asJSVal (Left a)  = js_Either (asJSVal a) True
@@ -115,11 +154,11 @@ instance (LikeJS ta a, LikeJS tb b) => LikeJS "LikeHS.Either" (Either a b) where
                    then Right . asLikeJS $ js_Either_right val
                    else Left . asLikeJS $ js_Either_left val
 
-
 foreign import javascript unsafe "new LikeHS.Either($1, $2)" js_Either :: JSVal -> Bool -> JSVal
 foreign import javascript unsafe "$1.isRight()" js_Either_isRight :: JSVal -> Bool
 foreign import javascript unsafe "$1.right" js_Either_right :: JSVal -> JSVal
 foreign import javascript unsafe "$1.left"  js_Either_left  :: JSVal -> JSVal
+
 
 instance (LikeJS ta a) => LikeJS ta (Maybe a) where
     asJSVal Nothing  = js_null
@@ -128,12 +167,29 @@ instance (LikeJS ta a) => LikeJS ta (Maybe a) where
                    then Nothing
                    else Just $ asLikeJS val
 
---
---debugVal :: JSVal -> a -> a
---debugVal v a = v `seq` debugVal' v `seq` a
---
---{-# NOINLINE debugVal' #-}
---foreign import javascript unsafe "console.log($1)" debugVal' :: JSVal -> ()
+instance (LikeJS ta a) => LikeJS "Array" [a] where
+    asJSVal xs = f xs js_empty_array
+      where f [] a = a
+            f (e:es) a = case js_push a (asJSVal e) of
+                             a1 -> f es a1
+    asLikeJS val = if js_isNullOrUndef val || n <= 0
+                   then []
+                   else f val [] (n-1)
+      where f js xs i = case asLikeJS (js_getArrIdx js i) : xs of
+                          ys -> if i <= 0
+                                then ys
+                                else f js ys (i-1)
+            n = js_getArrLength val
+
+foreign import javascript unsafe "$r = new Array();"
+    js_empty_array :: JSVal
+foreign import javascript unsafe "$r = $1; $r.push($2);"
+    js_push :: JSVal -> JSVal -> JSVal
+foreign import javascript unsafe "$r = $1[$2];"
+    js_getArrIdx :: JSVal  -> Int -> JSVal
+foreign import javascript unsafe "$r = $1.length;"
+    js_getArrLength :: JSVal -> Int
+
 
 -------------------------------------------------------------------------------------
 -- Primititive js functions that most likely exist in GHCJS.Prim or elseware,
@@ -142,4 +198,3 @@ instance (LikeJS ta a) => LikeJS ta (Maybe a) where
 
 foreign import javascript unsafe "$r = null" js_null :: JSVal
 foreign import javascript unsafe "$1 == null" js_isNullOrUndef :: JSVal -> Bool
-
