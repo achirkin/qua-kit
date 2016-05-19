@@ -15,6 +15,11 @@ description:
 category: OpenGL, WebGL
 author: Artem Chirkin
 
+source-repository head
+  type:     git
+  location: https://github.com/achirkin/qua-kit
+  subdir:   libs/hs/ghcjs-hs-interop
+
 library
     exposed-modules:
         JsHs.Debug
