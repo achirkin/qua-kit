@@ -17,17 +17,33 @@ author: Artem Chirkin
 
 library
     exposed-modules:
-        GHCJS.LikeJS.Class
+        JsHs.Debug
+        JsHs.JSString
+        JsHs.JSString.Int
+        JsHs.JSString.Read
+        JsHs.JSString.RealFloat
+        JsHs.JSString.RegExp
+        JsHs.JSString.Text
+        JsHs.LikeJS.Class
+        JsHs.Types
+        JsHs.TypedArray
+        JsHs.TypedArray.IO
+        JsHs.TypedArray.ST
     build-depends:
         base -any,
         ghc-prim -any,
         ghcjs-base -any,
-        deepseq -any
+        deepseq -any,
+        primitive -any
     cpp-options: -DGHCJS_BROWSER
     js-sources:
         jsbits/LikeHS.js
     default-language: Haskell2010
     hs-source-dirs: src
+    other-modules:
+        JsHs.Internal.Types
+        JsHs.TypedArray.Types
+        JsHs.TypedArray.Internal
     ghc-options: -Wall -ferror-spans
 
 test-suite AllTests
@@ -39,14 +55,15 @@ test-suite AllTests
         ghcjs-base -any,
         HTF -any,
         deepseq -any,
-        template-haskell -any
+        template-haskell -any,
+        primitive -any
     js-sources:
         jsbits/LikeHS.js
         jsbits/Tests.js
     default-language: Haskell2010
     hs-source-dirs: src test
     other-modules:
-        GHCJS.LikeJS.Test.Debug
-        GHCJS.LikeJS.Test.TestBasicTypes
-        GHCJS.LikeJS.Test.TH
+        JsHs.LikeJS.Test.TestBasicTypes
+        JsHs.LikeJS.Test.TestTypedArrays
+        JsHs.LikeJS.Test.TH
     ghc-options: -Wall -ferror-spans -O2

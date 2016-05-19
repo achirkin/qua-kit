@@ -2,11 +2,13 @@ module Main (main) where
 
 import Test.Framework
 
-import qualified GHCJS.LikeJS.Test.TestBasicTypes
+import qualified JsHs.LikeJS.Test.TestBasicTypes
+import qualified JsHs.LikeJS.Test.TestTypedArrays
 
---import GHCJS.LikeJS.Test.Debug
---import GHCJS.LikeJS.Class
-
+--import JsHs.Debug
+--import JsHs.LikeJS.Class
+--
+--import JsHs.TypedArray
 
 main :: IO ()
 main = do
@@ -20,7 +22,7 @@ main = do
 --  printJSVal xjsval
 --  printAny xback
 --  print xback
-
+--
 --  let s = [11..15] :: [Int]
 --      sjs = asJSVal s
 --      sback = asLikeJS sjs :: [Int]
@@ -34,6 +36,15 @@ main = do
 --  printAny sjs
 --  printAny sback
 
-  htfMain
-    GHCJS.LikeJS.Test.TestBasicTypes.tests
+--  let a = fromList [0, 345.23, 22, -0.23412262, 333] :: TypedArray Double
+--      j = asJSVal a
+--      b = asLikeJS j :: TypedArray Double
+--  print a
+--  printAny a
+--  printJSVal j
+--  printAny b
 
+  htfMain
+    [ JsHs.LikeJS.Test.TestBasicTypes.tests
+    , JsHs.LikeJS.Test.TestTypedArrays.tests
+    ]

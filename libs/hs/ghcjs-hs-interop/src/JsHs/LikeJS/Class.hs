@@ -1,16 +1,5 @@
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE CPP #-}
------------------------------------------------------------------------------
--- |
--- Module      :  GHCJS.LikeJS.Class
--- Copyright   :  Artem Chirkin
--- License     :  MIT
---
--- Maintainer  :  Artem Chirkin
--- Stability   :  experimental
---
---
------------------------------------------------------------------------------
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE KindSignatures, DataKinds #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
@@ -19,8 +8,19 @@
 {-# LANGUAGE FunctionalDependencies #-}
 {-# LANGUAGE JavaScriptFFI, GHCForeignImportPrim #-}
 {-# LANGUAGE MagicHash, UnboxedTuples, UnliftedFFITypes #-}
+-----------------------------------------------------------------------------
+-- |
+-- Module      :  JsHs.LikeJS.Class
+-- Copyright   :  Artem Chirkin
+-- License     :  MIT
+--
+-- Maintainer  :  Artem Chirkin
+-- Stability   :  experimental
+--
+--
+-----------------------------------------------------------------------------
 
-module GHCJS.LikeJS.Class
+module JsHs.LikeJS.Class
     ( LikeJS (..)
     , jsTypeName
     ) where
@@ -56,7 +56,7 @@ class LikeJS (jstype :: Symbol) a | a -> jstype where
     default asLikeJS :: Coercible JSVal a => JSVal -> a
     asLikeJS =  unsafeCoerce
 
--- | Show the name of a corresponding JavaScript type
+-- | Show the name of a corresponding JsHs.type
 {-# INLINE jsTypeName #-}
 jsTypeName :: (KnownSymbol jstype, LikeJS jstype a) => a -> String
 jsTypeName x = symbolVal' (jsTypeProxy x)
@@ -113,8 +113,8 @@ instance LikeJS "Number" Char where
         asLikeJS  = js_asLikeJS/**/T; {-# INLINE asLikeJS #-}; }
 
 
-{-# WARNING js_asLikeJSInt "JavaScript will produce an incorrect result on numbers longer than 32 bit" #-}
-{-# WARNING asJSValInt     "JavaScript will produce an incorrect result on numbers longer than 32 bit" #-}
+{-# WARNING js_asLikeJSInt "JsHs.will produce an incorrect result on numbers longer than 32 bit" #-}
+{-# WARNING asJSValInt     "JsHs.will produce an incorrect result on numbers longer than 32 bit" #-}
 LIKEJSNum(Int)
 -- LIKEJSNum(Int64)  -- stored differently
 LIKEJSNum(Int32)
@@ -192,7 +192,7 @@ foreign import javascript unsafe "$r = $1.length;"
 
 
 -------------------------------------------------------------------------------------
--- Primititive js functions that most likely exist in GHCJS.Prim or elseware,
+-- Primititive js functions that most likely exist in JsHs.Prim or elseware,
 -- but too simple to import from outside
 -------------------------------------------------------------------------------------
 

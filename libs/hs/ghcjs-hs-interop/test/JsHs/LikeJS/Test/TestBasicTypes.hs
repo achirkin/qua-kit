@@ -1,30 +1,30 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE JavaScriptFFI, GHCForeignImportPrim #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
-module GHCJS.LikeJS.Test.TestBasicTypes
+module JsHs.LikeJS.Test.TestBasicTypes
     ( tests
     ) where
 
 
 
-import GHCJS.Types (JSVal)
+import JsHs.Types (JSVal)
 
 import Data.Int
 import Data.Word
-import Data.JSString
+import JsHs.JSString
 
 import Test.Framework
-import GHCJS.LikeJS.Test.TH (writeTests)
+import JsHs.LikeJS.Test.TH (writeTests)
 
-import GHCJS.LikeJS.Class
+import JsHs.LikeJS.Class
 import GHC.TypeLits (KnownSymbol)
 
---import GHCJS.LikeJS.Test.Debug
+--import JsHs.LikeJS.Test.Debug
 
 instance Arbitrary JSString where
     arbitrary = pack <$> arbitrary
 
---import GHCJS.LikeJS.Test.Debug
+--import JsHs.LikeJS.Test.Debug
 --
 --doubleConversion :: (LikeJS ta a, Eq a, Show a) => a -> Bool
 --doubleConversion x = traceShow "Testing values" . traceShow x . debugAny x . debugJSVal y . debugAny z . traceShow z $ z == x

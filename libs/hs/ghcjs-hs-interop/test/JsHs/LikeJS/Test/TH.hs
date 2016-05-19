@@ -1,5 +1,5 @@
 {-# LANGUAGE TemplateHaskell #-}
-module GHCJS.LikeJS.Test.TH (writeTests) where
+module JsHs.LikeJS.Test.TH (writeTests) where
 
 import Control.Arrow (second)
 import Test.Framework
