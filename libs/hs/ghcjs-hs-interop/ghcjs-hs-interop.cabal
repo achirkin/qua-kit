@@ -31,6 +31,7 @@ library
         JsHs.JSString.Text
         JsHs.LikeJS.Class
         JsHs.Types
+        JsHs.Types.Prim
         JsHs.TypedArray
         JsHs.TypedArray.IO
         JsHs.TypedArray.ST
@@ -38,6 +39,7 @@ library
         base -any,
         ghc-prim -any,
         ghcjs-base -any,
+        ghcjs-prim -any,
         deepseq -any,
         primitive -any
     cpp-options: -DGHCJS_BROWSER
@@ -58,6 +60,7 @@ test-suite AllTests
         base -any,
         ghc-prim -any,
         ghcjs-base -any,
+        ghcjs-prim -any,
         HTF -any,
         deepseq -any,
         template-haskell -any,
