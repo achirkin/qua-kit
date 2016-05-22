@@ -35,11 +35,12 @@ import GHC.Prim
 --import Data.Coerce (Coercible ()) --, coerce)
 import Data.JSString
 --import GHC.Exts (Any)
-import GHCJS.Types (JSVal) --, IsJSVal)
+import JsHs.Types.Prim (JSVal, jsNull, jsIsNullOrUndef)
 import Unsafe.Coerce (unsafeCoerce)
 import Control.DeepSeq (deepseq)
 
 
+--import Data.Foldable (foldr')
 
 
 -- | Describes direct representation of data types in JS and HS.
@@ -51,10 +52,10 @@ class LikeJS (jstype :: Symbol) a | a -> jstype where
 
     {-# INLINE asJSVal #-}
     default asJSVal :: Coercible a JSVal => a -> JSVal
-    asJSVal x = x `seq` unsafeCoerce x
+    asJSVal x = x `seq` coerce x
     {-# INLINE asLikeJS #-}
     default asLikeJS :: Coercible JSVal a => JSVal -> a
-    asLikeJS =  unsafeCoerce
+    asLikeJS =  coerce
 
 -- | Show the name of a corresponding JsHs.type
 {-# INLINE jsTypeName #-}
@@ -161,9 +162,9 @@ foreign import javascript unsafe "$1.left"  js_Either_left  :: JSVal -> JSVal
 
 
 instance (LikeJS ta a) => LikeJS ta (Maybe a) where
-    asJSVal Nothing  = js_null
+    asJSVal Nothing  = jsNull
     asJSVal (Just a) = asJSVal a
-    asLikeJS val = if js_isNullOrUndef val
+    asLikeJS val = if jsIsNullOrUndef val
                    then Nothing
                    else Just $ asLikeJS val
 
@@ -172,7 +173,7 @@ instance (LikeJS ta a) => LikeJS "Array" [a] where
       where f [] a = a
             f (e:es) a = case js_push a (asJSVal e) of
                              a1 -> f es a1
-    asLikeJS val = if js_isNullOrUndef val || n <= 0
+    asLikeJS val = if jsIsNullOrUndef val || n <= 0
                    then []
                    else f val [] (n-1)
       where f js xs i = case asLikeJS (js_getArrIdx js i) : xs of
@@ -190,11 +191,21 @@ foreign import javascript unsafe "$r = $1[$2];"
 foreign import javascript unsafe "$r = $1.length;"
     js_getArrLength :: JSVal -> Int
 
-
--------------------------------------------------------------------------------------
--- Primititive js functions that most likely exist in JsHs.Prim or elseware,
--- but too simple to import from outside
--------------------------------------------------------------------------------------
-
-foreign import javascript unsafe "$r = null" js_null :: JSVal
-foreign import javascript unsafe "$1 == null" js_isNullOrUndef :: JSVal -> Bool
+-- convert Strings and JSStrings
+--
+--{-# RULES
+--"asJSVal/String"   asJSVal = js_toJSString . unsafeCoerce . seqList :: String -> JSVal
+--"asLikeJS/String" asLikeJS = unsafeCoerce . js_fromJSString :: JSVal -> String
+--    #-}
+--
+--{-# INLINE js_fromJSString #-}
+--foreign import javascript unsafe "h$toHsString($1)"
+--  js_fromJSString :: JSVal -> Any
+--
+--{-# INLINE js_toJSString #-}
+--foreign import javascript unsafe "h$fromHsString($1)"
+--  js_toJSString :: Any -> JSVal
+--
+---- reduce the spine and all list elements to whnf
+--seqList :: [a] -> [a]
+--seqList xs = foldr' seq () xs `seq` xs

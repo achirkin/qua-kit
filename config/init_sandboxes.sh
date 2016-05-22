@@ -17,8 +17,8 @@ pushd "${PROJDIR}/apps/hs/qua-view"
 echo "compiler: ghcjs" > cabal.config
 cabal sandbox init --sandbox "${PROJDIR}/.ghcjs-sandbox"
 CSOURCES=`cabal sandbox list-sources`
-if [ `echo "${CSOURCES}" | grep -c "${PROJDIR}/libs/hs/ghcjs-base-alt"` -eq "0" ]; then
-    cabal sandbox add-source "${PROJDIR}/libs/hs/ghcjs-base-alt"
+if [ `echo "${CSOURCES}" | grep -c "${PROJDIR}/libs/hs/ghcjs-hs-interop"` -eq "0" ]; then
+    cabal sandbox add-source "${PROJDIR}/libs/hs/ghcjs-hs-interop"
 fi
 if [ `echo "${CSOURCES}" | grep -c "${PROJDIR}/libs/hs/ghcjs-webgl"` -eq "0" ]; then
     cabal sandbox add-source "${PROJDIR}/libs/hs/ghcjs-webgl"

@@ -16,12 +16,14 @@ category: OpenGL, WebGL
 author: Artem Chirkin
 
 source-repository head
-  type:     git
-  location: https://github.com/achirkin/qua-kit
-  subdir:   libs/hs/ghcjs-hs-interop
+    type: git
+    location: https://github.com/achirkin/qua-kit
+    subdir: libs/hs/ghcjs-hs-interop
 
 library
     exposed-modules:
+        JsHs.Array
+        JsHs.Callback
         JsHs.Debug
         JsHs.JSString
         JsHs.JSString.Int
@@ -30,6 +32,7 @@ library
         JsHs.JSString.RegExp
         JsHs.JSString.Text
         JsHs.LikeJS.Class
+        JsHs.Nullable
         JsHs.Types
         JsHs.Types.Prim
         JsHs.TypedArray
@@ -45,6 +48,7 @@ library
     cpp-options: -DGHCJS_BROWSER
     js-sources:
         jsbits/LikeHS.js
+        jsbits/unsafeRuntime.js
     default-language: Haskell2010
     hs-source-dirs: src
     other-modules:
@@ -68,10 +72,12 @@ test-suite AllTests
     js-sources:
         jsbits/LikeHS.js
         jsbits/Tests.js
+        jsbits/unsafeRuntime.js
     default-language: Haskell2010
     hs-source-dirs: src test
     other-modules:
         JsHs.LikeJS.Test.TestBasicTypes
         JsHs.LikeJS.Test.TestTypedArrays
         JsHs.LikeJS.Test.TH
+        JsHs.Nullable
     ghc-options: -Wall -ferror-spans -O2

@@ -15,4 +15,4 @@ module JsHs.Types
     ) where
 
 
-import GHCJS.Types
+import GHCJS.Types hiding (nullRef)
