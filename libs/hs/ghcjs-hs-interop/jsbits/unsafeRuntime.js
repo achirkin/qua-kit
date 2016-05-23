@@ -1,5 +1,25 @@
 #include <ghcjs/rts.h>
 
+#ifdef GHCJS_TRACE_SCHEDULER
+function h$logSched() { if(arguments.length == 1) {
+                          if(h$currentThread != null) {
+                            h$log((Date.now()/1000) + " sched: " + h$threadString(h$currentThread) +
+                                "[" + h$currentThread.mask + "," +
+                                (h$currentThread.interruptible?1:0) + "," +
+                                h$currentThread.excep.length +
+                                "] -> " + arguments[0]);
+                          } else {
+                            h$log("sched: " + h$threadString(h$currentThread) + " -> " + arguments[$
+                          }
+                        } else {
+                          h$log.apply(log,arguments);
+                        }
+                      }
+#define TRACE_SCHEDULER(args...) h$logSched(args)
+#else
+#define TRACE_SCHEDULER(args...)
+#endif
+
 /*
    The same as h$runSyncAction, but does not throw errors and bypasses the scheduler
  */

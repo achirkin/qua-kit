@@ -66,6 +66,10 @@ jsTypeName x = symbolVal' (jsTypeProxy x)
 jsTypeProxy :: (KnownSymbol jstype, LikeJS jstype a) => a -> Proxy# jstype
 jsTypeProxy _ = proxy#
 
+-- | Not sure if this is a good solution, because JSVal may be not an object
+instance LikeJS "Object" JSVal where
+    asJSVal = id
+    asLikeJS = id
 
 
 -------------------------------------------------------------------------------------
