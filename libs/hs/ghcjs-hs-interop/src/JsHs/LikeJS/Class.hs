@@ -152,19 +152,22 @@ instance LikeJS "BigInteger" Integer where
 -------------------------------------------------------------------------------------
 
 
-instance (LikeJS ta a, LikeJS tb b) => LikeJS "LikeHS.Either" (Either a b) where
+instance (LikeJS ta a, LikeJS tb b) => LikeJS "Either" (Either a b) where
     asJSVal (Left a)  = js_Either (asJSVal a) True
     asJSVal (Right b) = js_Either (asJSVal b) False
     asLikeJS val = if js_Either_isRight val
                    then Right . asLikeJS $ js_Either_right val
                    else Left . asLikeJS $ js_Either_left val
 
-foreign import javascript unsafe "new LikeHS.Either($1, $2)" js_Either :: JSVal -> Bool -> JSVal
+{-# NOINLINE js_Either #-}
+foreign import javascript unsafe "$r = new LikeHS.Either($1, $2);" js_Either :: JSVal -> Bool -> JSVal
 foreign import javascript unsafe "$1.isRight()" js_Either_isRight :: JSVal -> Bool
 foreign import javascript unsafe "$1.right" js_Either_right :: JSVal -> JSVal
 foreign import javascript unsafe "$1.left"  js_Either_left  :: JSVal -> JSVal
 
 
+-- | Make Nothing represent null, and leave anything else as is.
+--   Note: asLikeJS . asJSVal (Just Nothing) == Nothing
 instance (LikeJS ta a) => LikeJS ta (Maybe a) where
     asJSVal Nothing  = jsNull
     asJSVal (Just a) = asJSVal a

@@ -51,7 +51,6 @@ import Foreign.C.Types
 import Unsafe.Coerce (unsafeCoerce)
 
 import JsHs.Internal.Types
-import JsHs.LikeJS.Class
 
 
 import JsHs.TypedArray.Internal
@@ -96,40 +95,6 @@ instance Show (SomeTypedArray m t) where
 instance Eq (TypedArray t) where
     (==) = js_compareArrays
 
------------------------------------------------------------------------------
--- Our types look LikeJS TypedArrays
------------------------------------------------------------------------------
-
-
-#define TYPEDARRAYLIKEJS(T,JSArrayType)\
-instance LikeJS "JSArrayType" (SomeTypedArray m T) where{\
-    {-# INLINE asJSVal #-};\
-    asJSVal x = x `seq` coerce x;\
-    {-# INLINE asLikeJS #-};\
-    asLikeJS  = coerce}
-
-TYPEDARRAYLIKEJS(Int,Int32Array)
-TYPEDARRAYLIKEJS(Int32,Int32Array)
-TYPEDARRAYLIKEJS(Int16,Int16Array)
-TYPEDARRAYLIKEJS(Int8,Int8Array)
-TYPEDARRAYLIKEJS(Word,Uint32Array)
-TYPEDARRAYLIKEJS(Word32,Uint32Array)
-TYPEDARRAYLIKEJS(Word16,Uint16Array)
-TYPEDARRAYLIKEJS(Word8,Uint8Array)
-TYPEDARRAYLIKEJS(Word8Clamped,Uint8ClampedArray)
-TYPEDARRAYLIKEJS(Float,Float32Array)
-TYPEDARRAYLIKEJS(Double,Float64Array)
-TYPEDARRAYLIKEJS(CChar,Int8Array)
-TYPEDARRAYLIKEJS(CSChar,Int8Array)
-TYPEDARRAYLIKEJS(CUChar,Uint8Array)
-TYPEDARRAYLIKEJS(CShort,Int16Array)
-TYPEDARRAYLIKEJS(CUShort,Uint16Array)
-TYPEDARRAYLIKEJS(CInt,Int32Array)
-TYPEDARRAYLIKEJS(CUInt,Uint32Array)
-TYPEDARRAYLIKEJS(CLong,Int32Array)
-TYPEDARRAYLIKEJS(CULong,Uint32Array)
-TYPEDARRAYLIKEJS(CFloat,Float32Array)
-TYPEDARRAYLIKEJS(CDouble,Float64Array)
 
 -----------------------------------------------------------------------------
 -- | Convert data to primitive arrays

@@ -25,7 +25,7 @@ import Data.Word
 import Data.Int
 import Foreign.C.Types
 
-import GHCJS.Types
+import JsHs.Types
 
 import JsHs.TypedArray.Types
 

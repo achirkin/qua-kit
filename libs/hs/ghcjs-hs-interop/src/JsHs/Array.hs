@@ -40,15 +40,14 @@ import Prelude hiding (map, foldl, foldr, foldl1, foldr1
                       , zip, take, drop, concat, filter, length)
 
 
---import Data.Foldable (foldr')
-import JsHs.JSString (JSString, pack, unpack')
 import Data.Coerce (Coercible (), coerce)
---import GHC.Exts (Any)
+import Control.Monad (void)
+import System.IO.Unsafe (unsafePerformIO)
+
+import JsHs.JSString (JSString, pack, unpack')
 import JsHs.Callback
 import JsHs.Types (JSVal, IsJSVal, jsval)
 import JsHs.LikeJS.Class
-import System.IO.Unsafe (unsafePerformIO)
-import Control.Monad (void)
 
 
 -- | JavaScript array containing elements of single type

@@ -3,6 +3,7 @@ module Main (main) where
 import Test.Framework
 
 import qualified JsHs.LikeJS.Test.TestBasicTypes
+import qualified JsHs.LikeJS.Test.TestCommonContainers
 import qualified JsHs.LikeJS.Test.TestTypedArrays
 
 --import JsHs.Debug
@@ -43,8 +44,21 @@ main = do
 --  printAny a
 --  printJSVal j
 --  printAny b
+--    let x0 = Left "Hello!" :: Either String Double
+--        x1 = Right 1.234   :: Either String Double
+--        x0' = asJSVal x0
+--        x1' = asJSVal x1
+--        x0'' = asLikeJS x0' :: Either String Double
+--        x1'' = asLikeJS x1' :: Either String Double
+--    print x0
+--    print x1
+--    printJSVal x0'
+--    printJSVal x1'
+--    print x0''
+--    print x1''
 
   htfMain
     [ JsHs.LikeJS.Test.TestBasicTypes.tests
+    , JsHs.LikeJS.Test.TestCommonContainers.tests
     , JsHs.LikeJS.Test.TestTypedArrays.tests
     ]
