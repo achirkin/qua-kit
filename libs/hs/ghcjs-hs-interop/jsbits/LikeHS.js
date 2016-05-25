@@ -11,9 +11,9 @@ var DEBUG = true;
 var LikeHS = (function () {
     'use strict';
 
-    // return object Either, default - Right, if isLeft === true then Left
-    var Either = function Either(value, isLeft) {
-        if (isLeft) {
+    // return object Either, default - Right, if isright === false then Left
+    var Either = function Either(value, isright) {
+        if (isright === false) {
             this.left = value;
         } else {
             this.right = value;

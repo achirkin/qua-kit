@@ -153,8 +153,8 @@ instance LikeJS "BigInteger" Integer where
 
 
 instance (LikeJS ta a, LikeJS tb b) => LikeJS "Either" (Either a b) where
-    asJSVal (Left a)  = js_Either (asJSVal a) True
-    asJSVal (Right b) = js_Either (asJSVal b) False
+    asJSVal (Left a)  = js_Either (asJSVal a) False
+    asJSVal (Right b) = js_Either (asJSVal b) True
     asLikeJS val = if js_Either_isRight val
                    then Right . asLikeJS $ js_Either_right val
                    else Left . asLikeJS $ js_Either_left val

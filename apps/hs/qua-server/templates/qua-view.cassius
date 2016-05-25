@@ -186,7 +186,8 @@ rect.btn
     color: #FFFFFF
     padding: 0
     margin: 0
-    height: 60%
+    width: 60%
+    height: 100%
 
 .logodiv
     position: absolute
@@ -195,7 +196,8 @@ rect.btn
     color: #FFFFFF
     padding: 0
     margin: 0
-    height: 60%
+    width: 60%
+    height: 100%
 
 .iaLogo
     overflow: visible
