@@ -42,6 +42,7 @@ getHomeR = do
         toWidgetHead $
           [hamlet|
             <script src="@{StaticR numeric_min_js}" type="text/javascript">
+            <script src="@{StaticR misc_js}" type="text/javascript">
           |]
         setTitle "qua-view"
         $(widgetFileNoReload def "qua-view")

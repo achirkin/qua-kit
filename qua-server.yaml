@@ -3,8 +3,19 @@ extra-deps:
 flags: {}
 packages:
   - apps/hs/qua-server
+
+    # ltiv1p1 package is an LTI 1.1 provider partial implementation
   - location: libs/hs/ltiv1p1
     extra-dep: true
+
+    # authenticate-oauth patched package, remains here until my patch is merged
+  - location:
+      git: https://github.com/achirkin/authenticate.git
+      commit: 3e150189eaeb56d26f453f1258e8fe8f7f9a795a
+    extra-dep: true
+    subdirs:
+    - authenticate-oauth
+
 resolver: lts-5.8
 compiler: ghc-7.10.3
 system-ghc: false
