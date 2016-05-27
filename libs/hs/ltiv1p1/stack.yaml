@@ -1,0 +1,17 @@
+flags: {}
+packages:
+  - .
+    # authenticate-oauth patched package, remains here until my patch is merged
+  - location:
+      git: https://github.com/achirkin/authenticate.git
+      commit: 3e150189eaeb56d26f453f1258e8fe8f7f9a795a
+    extra-dep: true
+    subdirs:
+    - authenticate-oauth
+
+resolver: lts-5.8
+compiler: ghc-7.10.3
+system-ghc: false
+install-ghc: true
+require-stack-version: ">= 1.0.2"
+extra-package-dbs: []
