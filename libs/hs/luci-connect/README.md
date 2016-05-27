@@ -95,3 +95,14 @@ In order to support this the Luci network protocol reserves two additional keywo
 
 * **run**: {'run':'ServiceBRemote'}; sent by clients and eventually forwarded by Luci to the remote service.
 * **cancel**: {'cancel':callID}; sent by clients and eventually forwarded by Luci to the remote service.
+
+## Common key/type names:
+
+* `serviceName: string` - name of a Luci service.
+* `callID: number (java long)` - id of a service execution given by Luci. 
+* `run: serviceName` - run a service, its value is a string, service name.
+* `cancel: callID` - cancel running service by its id.
+* `result: object` - generic json object - successfull result of a service execution.
+* `error: string` - erroneous result of a service execution **need to check whether it is always string**.
+* `taskID: ?string ?number` - **not sure; how it relates to callID and to services?**
+* `duration: number (java long)` - execution time, computed by Luci **what are the units?**.
