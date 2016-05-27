@@ -15,11 +15,38 @@ author: Artem Chirkin
 library
     exposed-modules:
         Luci.Connect
+        Luci.Messages
     build-depends:
-        base >=4.8 && <4.9,
-        network-conduit -any,
+        base >=4.8.2 && <4.9,
+        conduit -any,
+        conduit-extra -any,
+        binary >=0.8.1,
+        resourcet -any,
+        bytestring -any,
+        text -any,
         aeson -any,
+        transformers -any,
         geojson -any
     default-language: Haskell2010
     hs-source-dirs: src
+    ghc-options: -Wall -ferror-spans
+
+executable luci-client
+    main-is: LuciClient.hs
+    build-depends:
+        base >=4.8.2 && <4.9,
+        conduit -any,
+        conduit-extra -any,
+        binary >=0.8.1,
+        resourcet -any,
+        bytestring -any,
+        text -any,
+        aeson -any,
+        transformers -any,
+        geojson -any
+    default-language: Haskell2010
+    hs-source-dirs: src
+    other-modules:
+        Luci.Messages
+    ghc-options: -Wall -ferror-spans
 
