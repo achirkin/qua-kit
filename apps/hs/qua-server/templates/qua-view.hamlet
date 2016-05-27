@@ -24,77 +24,74 @@
       -o-animation: rotGrey 8s linear infinite;
       animation: rotGrey 8s linear infinite;
     }
-
-    @-webkit-keyframes rotRed /* Safari and Chrome */ {
+    
+    @-webkit-keyframes rotRed {
       from {
-      -ms-transform: rotate(0deg);
-      -moz-transform: rotate(0deg);
-      -webkit-transform: rotate(0deg);
-      -o-transform: rotate(0deg);
-      transform: rotate(0deg);
+        -ms-transform: rotate(0deg);
+        -moz-transform: rotate(0deg);
+        -webkit-transform: rotate(0deg);
+        -o-transform: rotate(0deg);
+        transform: rotate(0deg);
       }
       to {
-      -ms-transform: rotate(360deg);
-      -moz-transform: rotate(360deg);
-      -webkit-transform: rotate(360deg);
-      -o-transform: rotate(360deg);
-      transform: rotate(360deg);
+        -ms-transform: rotate(360deg);
+        -moz-transform: rotate(360deg);
+        -webkit-transform: rotate(360deg);
+        -o-transform: rotate(360deg);
+        transform: rotate(360deg);
       }
     }
     @keyframes rotRed {
       from {
-      -ms-transform: rotate(0deg);
-      -moz-transform: rotate(0deg);
-      -webkit-transform: rotate(0deg);
-      -o-transform: rotate(0deg);
-      transform: rotate(0deg);
+        -ms-transform: rotate(0deg);
+        -moz-transform: rotate(0deg);
+        -webkit-transform: rotate(0deg);
+        -o-transform: rotate(0deg);
+        transform: rotate(0deg);
       }
       to {
-      -ms-transform: rotate(360deg);
-      -moz-transform: rotate(360deg);
-      -webkit-transform: rotate(360deg);
-      -o-transform: rotate(360deg);
-      transform: rotate(360deg);
+        -ms-transform: rotate(360deg);
+        -moz-transform: rotate(360deg);
+        -webkit-transform: rotate(360deg);
+        -o-transform: rotate(360deg);
+        transform: rotate(360deg);
       }
     }
-    @-webkit-keyframes rotGrey /* Safari and Chrome */ {
+    @-webkit-keyframes rotGrey {
       from {
-      -ms-transform: rotate(360deg);
-      -moz-transform: rotate(360deg);
-      -webkit-transform: rotate(360deg);
-      -o-transform: rotate(360deg);
-      transform: rotate(360deg);
+        -ms-transform: rotate(360deg);
+        -moz-transform: rotate(360deg);
+        -webkit-transform: rotate(360deg);
+        -o-transform: rotate(360deg);
+        transform: rotate(360deg);
       }
       to {
-      -ms-transform: rotate(0deg);
-      -moz-transform: rotate(0deg);
-      -webkit-transform: rotate(0deg);
-      -o-transform: rotate(0deg);
-      transform: rotate(0deg);
+        -ms-transform: rotate(0deg);
+        -moz-transform: rotate(0deg);
+        -webkit-transform: rotate(0deg);
+        -o-transform: rotate(0deg);
+        transform: rotate(0deg);
       }
     }
     @keyframes rotGrey {
       from {
-      -ms-transform: rotate(360deg);
-      -moz-transform: rotate(360deg);
-      -webkit-transform: rotate(360deg);
-      -o-transform: rotate(360deg);
-      transform: rotate(360deg);
+        -ms-transform: rotate(360deg);
+        -moz-transform: rotate(360deg);
+        -webkit-transform: rotate(360deg);
+        -o-transform: rotate(360deg);
+        transform: rotate(360deg);
       }
       to {
-      -ms-transform: rotate(0deg);
-      -moz-transform: rotate(0deg);
-      -webkit-transform: rotate(0deg);
-      -o-transform: rotate(0deg);
-      transform: rotate(0deg);
+        -ms-transform: rotate(0deg);
+        -moz-transform: rotate(0deg);
+        -webkit-transform: rotate(0deg);
+        -o-transform: rotate(0deg);
+        transform: rotate(0deg);
       }
     }
 
-
   <circle cx="36" cy="36" #redCircle r="28" stroke="#FF5722" stroke-dasharray="10, 5, 50, 40, 30.929188601, 40" stroke-opacity="1" stroke-width="16">
-    $#  animate attributeType="CSS" attributeName="stroke-dashoffset" from="175.929188601" to="0" dur="2s" repeatCount="indefinite" begin="0s" /
   <circle cx="36" cy="36" #greyCircle r="28" stroke="#BF360C" stroke-dasharray="38, 14, 8, 14, 65.929188601, 14, 8, 14" stroke-opacity=".2" stroke-width="8">
-    $#  <animate attributeType="CSS" attributeName="stroke-dashoffset" to="175.929188601" from="0" dur="10s" repeatCount="indefinite" begin="0s" />
 
 <canvas #glcanvas>
 <div .idleguipanel #guipanel>
@@ -171,10 +168,8 @@
       <script language="javascript">
         function checkIfUsed(id) {
             var el = document.getElementById(id);
-            if (el.value==null || el.value=="")
-              el.className = "pinput";
-            else
-              el.className = "pinput used";
+            if (el.value==null || el.value=="") { el.className = "pinput"; }
+            else { el.className = "pinput used"; }
           }
 
       <div .pheading>
