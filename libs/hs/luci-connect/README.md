@@ -1,7 +1,9 @@
-## TCP / Websockets
-Luci is primarily intended to connect machines in a LAN. {...}
+## TCP
 
-##JSON
+Luci is primarily intended to connect machines in a LAN. {...}
+Luci works as a TCP services, and all remote services and clients are TCP clients.
+
+## JSON
 Luci's communication protocol is JSON based.
 It's designed for asynchronous execution of remote procedures (services).
 Unlike in RPC protocol, client requests don't include an ID.
@@ -25,12 +27,13 @@ Answers:
 * **Progress**: {'progress':{<intermediate result>},'callID':integer, 'serviceName':string,'taskID':integer,'percentage':integer}
 * **Error**: {'error':string}
 
-Refer to luci.core.ServiceWriterComplete#doNotifications to get a precise idea of Luci's answers.
+Refer to [`luci.core.ServiceWriterComplete#doNotification`]
+(https://bitbucket.org/treyerl/luci2/src/master/core/src/main/java/luci/core/ServiceWriterComplete.java) to get a precise idea of Luci's answers.
 
 Luci sends a progress answer whenever a service is being started with percentage being 0.
 This is how a client is being notified of service execution start events.
 
-###JSON input/output parameter description
+### JSON input/output parameter description
 While services expect inputs to be json formatted (with binary attachments described below) its specification is described using an additional rules set on top of json as follows:
 
 * JSON keys can have one of the **modifiers** *XOR*, *OPT*, *ANY*.
@@ -40,7 +43,7 @@ While services expect inputs to be json formatted (with binary attachments descr
 
 * Type specification: Input/Output specifications are allowed to consist of arbitrary levels of hierarchy (both nested objects as well as nested arrays). The leafs nevertheless must denote one of the types *json*, *list*, *string*, *number*, *boolean*, *attachment*, *jsongeometry*, *any* or a list with a selection of these types like [*attachment*, *jsongeometry*].
 
-##Attachments (TCP)
+## Attachments (TCP)
 Luci messages can contain binary data.
 It is attached to messages as byte arrays.
 Every message must contain a JSON "header", attachments are optional.
@@ -69,9 +72,9 @@ Attachments must be referenced in the json header by a json object that is struc
 
 Attachments can be referenced multiple times in a JSON header.
 Attachments - if they need to be forwarded to only one service - are forwarded directly to remote services,
-i.e. LUCI will not wait until the whole attachment is being transferred to LUCI before sending it to a remote service.
+i.e. Luci will not wait until the whole attachment is being transferred to Luci before sending it to a remote service.
 
-##JSONGeometry
+## JSONGeometry
 Similar to attachments a JSON header can also contain JSON encoded geometry like GeoJSON. Since there are several JSON based geometry formats (e.g. TopoJSON) a JSONGeometry object must follow this structure:
 
 ```
@@ -84,7 +87,7 @@ Similar to attachments a JSON header can also contain JSON encoded geometry like
 }
 ```
 
-##Remote Services
+## Remote Services
 Luci allows a client to be registered as a service that is promoted by Luci as a regular service, that by clients is indistinguishable from services loaded by Luci locally.
 In order to support this the Luci network protocol reserves two additional keywords in JSON headers:
 
