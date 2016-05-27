@@ -1,7 +1,9 @@
 ## TCP
 
 Luci is primarily intended to connect machines in a LAN. {...}
-Luci works as a TCP services, and all remote services and clients are TCP clients.
+Luci works as a TCP server, and all remote services and clients are TCP clients.
+In the beginning, a service registers itself in Luci,
+and then Luci sends run requests to the service from time to time.
 
 ## JSON
 Luci's communication protocol is JSON based.
