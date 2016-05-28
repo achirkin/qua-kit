@@ -56,7 +56,7 @@ import           Data.Conduit
 import qualified Data.Conduit.Binary as ConB
 import           Data.HashMap.Strict (HashMap)
 import qualified Data.HashMap.Strict as HashMap
-import           Data.List ((\\), sortOn)
+import           Data.List ((\\), sortOn, sort)
 import qualified Data.Foldable as Fold
 
 import Luci.Connect.Internal
@@ -65,8 +65,8 @@ import Luci.Connect.Internal
 -- | Conduit pipe that receives Luci messages, encodes them,
 --   and outputs plain bytestring.
 --
---   * Connect its input to a luci message producer
---   * Connect its output to a TCP sink
+--   * Connect its input to a luci message producer.
+--   * Connect its output to a TCP sink.
 writeMessages :: (ToJSON a, Monad m)
               => Conduit (a, [ByteString]) m ByteString
 writeMessages = do
@@ -78,28 +78,28 @@ writeMessages = do
           attSize = if null atts
                     then 0
                     else 8 * (length atts + 1) + foldr (\a s -> s + BS.length a) 0 atts
-      writeInt64be (fromIntegral $ BS.length mainpart)
-      writeInt64be (fromIntegral attSize)
+      yieldInt64be (fromIntegral $ BS.length mainpart)
+      yieldInt64be (fromIntegral attSize)
       yield mainpart
       if attSize == 0
       then return ()
       else do
-        writeInt64be (fromIntegral $ length atts)
+        yieldInt64be (fromIntegral $ length atts)
         mapM_ writeAtt atts
       writeMessages
   where
     writeAtt bs = do
-      writeInt64be (fromIntegral $ BS.length bs)
+      yieldInt64be (fromIntegral $ BS.length bs)
       yield bs
-    writeInt64be = yield . BSL.toStrict . BSB.toLazyByteString . BSB.int64BE
+    yieldInt64be = yield . BSL.toStrict . BSB.toLazyByteString . BSB.int64BE
 
 
 -- | Conduit pipe that receives binary data, parses it,
 --   and outputs understandable Luci messages.
 --   Messages may fail to read; in that case @Left error@ is returned instead of a message.
 --
---   * Connect its input to a TCP source
---   * Connect its output to a luci message consumer
+--   * Connect its input to a TCP source.
+--   * Connect its output to a luci message consumer.
 --
 -- There are validation requirements that a message must satisfy
 -- (overwise, 'MsgValidationError' is returned):
@@ -128,7 +128,7 @@ parseMessages = do
             mapM (\(aref,att) -> if checkAttachment aref att
                                  then return att
                                  else throwE . MsgValidationError $
-                                    "Error validaring attachment " ++ show (toEncoding aref)
+                                    "Error validating attachment " ++ show (toEncoding aref)
                  ) $ zip arefs atts
       -- decode JSON value to FromJSON a
       case JSON.fromJSON emsgVal of
@@ -170,11 +170,11 @@ parseMessages = do
 --   Here we ignore @ANY key@, because it does not seem to be useful.
 --
 data AttachmentReference = AttachmentReference
-  { attFormat :: !Text         -- ^ Hint for a client telling which data type represents the ByteString
-  , attLength :: !Int          -- ^ Bytelength of an attachment
-  , attMD5    :: !String       -- ^ MD5 hash value of an attachment
-  , attIndex  :: !Int          -- ^ Position of an attachment in a luci protocol message
-  , attName   :: !(Maybe Text) -- ^ Optional name of an attachment
+  { attFormat :: !Text         -- ^ Hint for a client telling which data type represents the ByteString.
+  , attLength :: !Int          -- ^ Bytelength of an attachment.
+  , attMD5    :: !String       -- ^ MD5 hash value of an attachment.
+  , attIndex  :: !Int          -- ^ Position of an attachment in a luci protocol message.
+  , attName   :: !(Maybe Text) -- ^ Optional name of an attachment.
   }
 
 -- | Check an attachment;
@@ -184,7 +184,7 @@ checkAttachment aref bs = BS.length bs == attLength aref
                         && attMD5 aref == show computedHash
   where computedHash = Hash.hash bs :: Hash.Digest MD5
 
--- | Make a valid reference to an attachment
+-- | Make a valid reference to an attachment.
 makeAReference :: ByteString  -- ^ attachment content
                -> Text        -- ^ attFormat
                -> Int         -- ^ attIndex - position of the attachment
@@ -198,7 +198,7 @@ makeAReference bs format idx mname = AttachmentReference
   , attName   = mname
   }
 
--- | This instance ignores @ANY key@ when converts from JSON
+-- | This instance ignores @ANY key@ when converts from JSON.
 instance FromJSON AttachmentReference where
   parseJSON (Object v) = AttachmentReference
       <$> v .: "format"
@@ -210,7 +210,7 @@ instance FromJSON AttachmentReference where
       att = v .: "attachment"
   parseJSON invalid = JSON.typeMismatch "AttachmentReference" invalid
 
--- | This instance does not provide a way to add @ANY key@
+-- | This instance does not provide a way to add @ANY key@.
 instance ToJSON AttachmentReference where
   toJSON AttachmentReference{..} = objectM
     [ "format"     .=! attFormat
@@ -222,11 +222,11 @@ instance ToJSON AttachmentReference where
     , "name" .=? attName
     ]
 
--- | Errors that may occur while getting messages from remote side
+-- | Errors that may occur while getting messages from remote side.
 data ComError
-  = ByteReadingError !String    -- ^ Failed to read data from source
-  | MsgValidationError !String  -- ^ The message is corrupted or invalid
-  | UnexpectedJSONError !String -- ^ Could not convert JSON to a requested data type
+  = ByteReadingError !String    -- ^ Failed to read data from source.
+  | MsgValidationError !String  -- ^ The message is corrupted or invalid.
+  | UnexpectedJSONError !String -- ^ Could not convert JSON to a requested data type.
   deriving (Eq, Show)
 
 
@@ -234,6 +234,7 @@ data ComError
 -- Internal supplementary stuff
 ----------------------------------------------------------------------------------------------------
 
+-- | Parse JSON Value to get a sorted list of attachment references.
 lookupARefs :: Monad m => Int -> JSON.Value -> ExceptT ComError m [AttachmentReference]
 lookupARefs n v = case JSON.fromJSON v of
   JSON.Error err -> throwE $ MsgValidationError err
@@ -241,14 +242,14 @@ lookupARefs n v = case JSON.fromJSON v of
                              . HashMap.toList $ f [1..n]
 
 
--- | Lookup requested references
+-- | Lookup requested references.
 newtype GetARefs = GetARefs ([Int] -> HashMap Int AttachmentReference)
 
 -- | Zero value for `GetARefs`
 noARefs :: GetARefs
 noARefs = GetARefs $ \_ -> HashMap.empty
 
--- | Actual lookup of requested references
+-- | Actual lookup of requested references.
 instance FromJSON GetARefs where
   parseJSON (Object o) =
     let maybeARef = do
@@ -267,13 +268,13 @@ instance FromJSON GetARefs where
   parseJSON (Array vals) = Fold.foldl' updateARefs (pure noARefs) vals
   parseJSON _ = pure noARefs
 
--- | Supplementary function to fold JSON arrays and objects
+-- | Supplementary function to fold JSON arrays and objects.
 updateARefs :: JSON.Parser GetARefs -> JSON.Value -> JSON.Parser GetARefs
 updateARefs pGAR v = pGAR >>= \(GetARefs f) -> do
         GetARefs g <- parseJSON v
         return . GetARefs $ \xs ->
             let hm1 = f xs
-                found = HashMap.keys hm1
+                found = sort $ HashMap.keys hm1
                 rems = xs \\ found
             in case rems of
                 [] -> hm1
