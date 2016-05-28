@@ -15,9 +15,9 @@ module Luci.Messages
       RemoteRegister (..)
     ) where
 
-import Data.Text
-import Data.Aeson
+import Luci.Connect.Internal
 
+-- | Register a service in Luci
 data RemoteRegister = RemoteRegister
   { exampleCall :: !Value
   , serviceName :: !Text
@@ -26,13 +26,18 @@ data RemoteRegister = RemoteRegister
   }
 
 instance ToJSON RemoteRegister where
-  toJSON RemoteRegister{..} = object $
-      "exampleCall" .= exampleCall
-    : "serviceName" .= serviceName
-    : ( maybeAdd ( ( "inputs"  .=) <$> inputs)
-      $ maybeAdd ( ( "outputs" .=) <$> outputs) [])
+  toJSON RemoteRegister{..} = objectM
+    [ "run"         .=! ("RemoteRegister" :: Text)
+    , "exampleCall" .=! exampleCall
+    , "serviceName" .=! serviceName
+    , "inputs"      .=? inputs
+    , "outputs"     .=? outputs
+    ]
 
 
-maybeAdd :: Maybe a -> [a] -> [a]
-maybeAdd Nothing = id
-maybeAdd (Just x) = (x:)
+
+--Right (Object (fromList [("newCallID",Number 10.0)]),[])
+--Right (Object (fromList [("instanceID",Number 0.0),("progress",Object (fromList [])),("callID",Number 10.0),("serviceName",String "RemoteRegister"),("percentage",Number 0.0)]),[])
+--Right (Object (fromList [("instanceID",Number 0.0),("result",Object (fromList [("registeredName",String "CoolTestService")])),("callID",Number 10.0),("serviceName",String "RemoteRegister")]),[])
+
+
