@@ -7,7 +7,7 @@
 -- Maintainer  :  Artem Chirkin
 -- Stability   :  experimental
 --
--- Decode and encode abstract Luci protocol messages.
+-- Decode and encode arbitrary <https://bitbucket.org/treyerl/luci2 Luci> protocol messages.
 --
 -- Luci message is a binary data, sequence of bytes sent through TCP sockets.
 -- Structure of a message:
@@ -30,45 +30,118 @@
 --
 -----------------------------------------------------------------------------
 {-# LANGUAGE RecordWildCards, OverloadedStrings #-}
+{-# LANGUAGE DeriveDataTypeable, GeneralizedNewtypeDeriving #-}
 
 module Luci.Connect.Base
-    ( -- * Reading & writing functionality
-      writeMessages
+    ( -- * Basic types
+      LuciMessage, MessageHeader (..)
+    , toMsgHead, fromMsgHead
+      -- * Reading & writing functionality
+      -- | Combine conduits for reading and writing arbitrary Luci messages.
+      --   Connect the provided conduits to corresponding TCP sink and source conduits
+      --   from @conduit-network@ package.
+      --   For testing purposes, you can short-circuit the conduits
+      --   and write-read @ByteString@ messages:
+      --
+      -- @
+      --   runConduit $ (yield ...) =$= writeMessages =$= parseMessages =$= ...await...
+      -- @
+    , writeMessages
     , parseMessages
-      -- * Basic data types
+    , ComError (..)
+      -- * Attachment references
+      -- | Helper functions to check and make references for attachments in JSON message header.
     , AttachmentReference (..)
     , checkAttachment, makeAReference
-    , ComError (..)
+      -- * Panic recovery procedure
+      -- | If a client become uncertain whether it has read all bytes of previous message or not,
+      --   it can initiate a /panic recovery procedure/.
+      --   The panic recovery procedure may be initiated by either side of a communication session.
+      --
+      --   1. Initiator generates __32 bytes of random binary data__, let call it @panicID@.
+      --   2. Initiator sends a luci message without attachments,
+      --      with a following header content
+      --      (/encode @panicID@ as/
+      --        <https://en.wikipedia.org/wiki/Base64#RFC_4648 Base64 (RFC 4648)>):
+      --
+      -- @
+      --        { \'panic\': /Base64-encoded/ panicID /as a string/ }
+      -- @
+      --   3. Responder receives the message and decodes @panicID@.
+      --   4. Responder sends a raw binary sequence: 32-byte message with @panicID@.
+      --      /Note: this is not a luci message, but a raw byte stream/.
+      --   5. Initiator listens for a binary data byte-by-byte until finds @panicID@.
+      --      Since this moment, initiator knows for sure that
+      --        binary stream is aligned according to their expectations;
+      --      both sides switch to a normal communication mode.
+      --
+      --   The panic recovery procedure complements the validation mechanism of Luci messages:
+      --   an initiator should initiate the panic if
+      --   it faces unexpected input or message parts' sizes do not agree.
+    , panicPipe
+    , panicResponsePipe
     ) where
 
 import           Control.Monad
 import           Control.Monad.Trans.Except
 import           Control.Monad.Trans.Class
+import qualified Control.Monad.ST as ST
 import qualified Crypto.Hash as Hash
 import           Crypto.Hash.Algorithms (MD5)
+import           Crypto.Random (getRandomBytes, MonadRandom)
 import qualified Data.Aeson as JSON
 import qualified Data.Aeson.Types as JSON
 import qualified Data.Binary.Get as Binary
 import qualified Data.ByteString as BS
+import qualified Data.ByteString.Base64 as BS
 import qualified Data.ByteString.Lazy as BSL
+import qualified Data.ByteString.Lazy.Char8 as BSLC
 import qualified Data.ByteString.Builder as BSB
 import           Data.Conduit
 import qualified Data.Conduit.Binary as ConB
+import           Data.Data (Data)
 import           Data.HashMap.Strict (HashMap)
 import qualified Data.HashMap.Strict as HashMap
 import           Data.List ((\\), sortOn, sort)
 import qualified Data.Foldable as Fold
+import qualified Data.Primitive.Array as Prim
+import           Data.String (IsString)
+import           Data.Word
 
 import Luci.Connect.Internal
+
+
+-- | Alias for Luci message containing a header and attachments
+type LuciMessage = (MessageHeader, [ByteString])
+
+-- | Luci message header is a JSON value
+newtype MessageHeader = MessageHeader Value
+  deriving (Eq, JSON.FromJSON, JSON.ToJSON, IsString, Data)
+
+-- | Show actual fromatted JSON, rather than Aeson's 'Value'
+instance Show MessageHeader where
+  show (MessageHeader val) = ("Luci MessageHeader: " ++) . BSLC.unpack $ JSON.encode val
+
+
+-- | Wrapper for 'toJSON'
+toMsgHead :: ToJSON a => a -> MessageHeader
+toMsgHead = MessageHeader . toJSON
+
+-- | Wrapper for 'fromJSON'
+fromMsgHead :: FromJSON a => MessageHeader -> Either String a
+fromMsgHead (MessageHeader v) = case JSON.fromJSON v of
+  JSON.Error msg -> Left msg
+  JSON.Success a -> Right a
+
 
 
 -- | Conduit pipe that receives Luci messages, encodes them,
 --   and outputs plain bytestring.
 --
---   * Connect its input to a luci message producer.
+--   * Connect its input to a Luci message producer.
 --   * Connect its output to a TCP sink.
-writeMessages :: (ToJSON a, Monad m)
-              => Conduit (a, [ByteString]) m ByteString
+writeMessages :: Monad m
+              => Conduit LuciMessage m ByteString
 writeMessages = do
   minput <- await
   case minput of
@@ -99,7 +172,7 @@ writeMessages = do
 --   Messages may fail to read; in that case @Left error@ is returned instead of a message.
 --
 --   * Connect its input to a TCP source.
---   * Connect its output to a luci message consumer.
+--   * Connect its output to a Luci message consumer.
 --
 -- There are validation requirements that a message must satisfy
 -- (overwise, 'MsgValidationError' is returned):
@@ -107,61 +180,71 @@ writeMessages = do
 -- * A message header must be a valid JSON.
 -- * Overall attachment size must be equal to the sum of attachment sizes + (n+1)*8.
 -- * All attachments must be referenced in a header at least once via 'AttachmentReference'.
-parseMessages :: (FromJSON a, Monad m)
-              => Conduit ByteString m (Either ComError (a, [ByteString]))
+parseMessages :: Monad m
+              => Conduit ByteString m (Either ComError LuciMessage)
 parseMessages = do
-    r <- runExceptT $ do
-      hSize <- lift (ConB.take 8) >>= tryReadInt64be
-      aSize <- lift (ConB.take 8) >>= tryReadInt64be
-      emsgVal <- lift (ConB.take (fromIntegral hSize)) >>= tryDecode
-      atts <- case aSize of
-        0 -> return []
-        s -> do
-          hANum <- lift (ConB.take 8) >>= tryReadInt64be
-          (ss, atts) <- unzip <$> replicateM (fromIntegral hANum) tryReadAttachment
-          -- check attachment sizes!
-          if s /= sum ss + (hANum + 1) * 8
-          then throwE . MsgValidationError $ "Attachment sizes mismatch"
-          else do
-            arefs <- lookupARefs (fromIntegral hANum) emsgVal
-            -- whether all attachments are correct
-            mapM (\(aref,att) -> if checkAttachment aref att
-                                 then return att
-                                 else throwE . MsgValidationError $
-                                    "Error validating attachment " ++ show (toEncoding aref)
-                 ) $ zip arefs atts
-      -- decode JSON value to FromJSON a
-      case JSON.fromJSON emsgVal of
-        JSON.Error err   -> throwE . UnexpectedJSONError $ err
-        JSON.Success msg -> return (msg, atts)
-    yield r
-    parseMessages
+    hSizeBuf <- ConB.take 8
+    if BSL.null hSizeBuf
+    then return ()
+    else do
+      r <- runExceptT $ do
+        hSize <- tryReadInt64be "header size int" hSizeBuf
+        aSize <- lift (ConB.take 8)>>= tryReadInt64be "body size int"
+        emsgVal <- tryYield (fromIntegral hSize) >>= tryDecode
+        atts <- case aSize of
+          0 -> return []
+          s -> do
+            hANum <- lift (ConB.take 8) >>= tryReadInt64be "attachment number int"
+            (ss, atts) <- unzip <$> replicateM (fromIntegral hANum) tryReadAttachment
+            -- check attachment sizes!
+            if s /= sum ss + (hANum + 1) * 8
+            then throwE . MsgValidationError $ "Attachment sizes mismatch"
+            else do
+              arefs <- lookupARefs (fromIntegral hANum) emsgVal
+              when (length arefs /= length atts)
+                . throwE . MsgValidationError $ "Found " ++
+                    show (length atts)  ++ " attachments, but " ++
+                    show (length arefs) ++ " references in a header"
+              -- whether all attachments are correct
+              mapM (\(aref,att) -> if checkAttachment aref att
+                                   then return att
+                                   else throwE . MsgValidationError $
+                                      "Error validating attachment " ++ show (toEncoding aref)
+                   ) $ zip arefs atts
+        return (MessageHeader emsgVal, atts)
+      yield r
+      parseMessages
   where
     -- wrapper around Binary's runGetOrFail
-    tryReadInt64be bs = case Binary.runGetOrFail Binary.getInt64be bs of
-                 Left  (_,_,msg) -> throwE . ByteReadingError $ msg
+    tryReadInt64be name bs = case Binary.runGetOrFail Binary.getInt64be bs of
+                 Left  (_,_,msg) -> throwE . ByteReadingError $ "Decoding " ++ name ++ ": " ++ msg
                  Right (_,_,val) -> if val >= 0 then return val
                     else throwE . MsgValidationError
                          $ "Unexpected negative integer!"
     -- wrapper around Aeson's decode
     tryDecode bs = case JSON.eitherDecode' bs of
-                 Left  msg -> throwE . MsgValidationError $ msg
+                 Left  msg -> throwE . MsgValidationError $ "JSON decoding: " ++ msg
                  Right val -> return val
     tryReadAttachment = do
-      hSize <- lift (ConB.take 8) >>= tryReadInt64be
-      a <- lift (BSL.toStrict <$> ConB.take (fromIntegral hSize))
+      hSize <- lift (ConB.take 8) >>= tryReadInt64be "i-th attachment size int"
+      a <- BSL.toStrict <$> tryYield (fromIntegral hSize)
       return (hSize, a)
+    tryYield n = do
+      bs <- lift (ConB.take n)
+      if BSL.length bs < fromIntegral n
+      then throwE . ByteReadingError $ "Not enough bytes available."
+      else return bs
 
 -- | All message attachments must be specified in JSON header of the message.
 --   However, one attachment may be referred in more than one place in the header.
 --   Luci specifies a special format for the attachments:
 --
 -- @
---  { 'format'    : String,
---  , 'attachment':
---       { 'length'  : Number
---       , 'checksum': String
---       , 'position': Number (starting at 1; 0 = undefined position)
+--  { \'format\'    : String,
+--  , \'attachment\':
+--       { \'length\'  : Number
+--       , \'checksum\': String
+--       , \'position\': Number (starting at 1; 0 = undefined position)
 --       }
 --  , 'OPT name'  : String
 --  , 'ANY key'   : String
@@ -173,7 +256,7 @@ data AttachmentReference = AttachmentReference
   { attFormat :: !Text         -- ^ Hint for a client telling which data type represents the ByteString.
   , attLength :: !Int          -- ^ Bytelength of an attachment.
   , attMD5    :: !String       -- ^ MD5 hash value of an attachment.
-  , attIndex  :: !Int          -- ^ Position of an attachment in a luci protocol message.
+  , attIndex  :: !Int          -- ^ Position of an attachment in a Luci protocol message.
   , attName   :: !(Maybe Text) -- ^ Optional name of an attachment.
   }
 
@@ -226,13 +309,81 @@ instance ToJSON AttachmentReference where
 data ComError
   = ByteReadingError !String    -- ^ Failed to read data from source.
   | MsgValidationError !String  -- ^ The message is corrupted or invalid.
-  | UnexpectedJSONError !String -- ^ Could not convert JSON to a requested data type.
   deriving (Eq, Show)
 
+
+
+-- | Initiate a Luci panic recovery procedure:
+--
+-- 1. send /panic/ message;
+-- 2. scan input for /panicID/;
+-- 3. switch to normal mode when faces /panicID/.
+-- Searching for /panicID/ is done using
+-- <https://en.wikipedia.org/wiki/Boyer%E2%80%93Moore%E2%80%93Horspool_algorithm Boyer-Moore-Horspool algorithm>
+panicPipe :: MonadRandom m
+          => Conduit ByteString m ByteString -- ^ /normal mode/: conduit to switch to
+          -> Conduit ByteString m ByteString
+panicPipe normalPipe = do
+    panicID <- lift $ getRandomBytes 32
+    yield $ "{'panic':'" `BS.append` BS.encode panicID `BS.append` "'}"
+    let -- length of pattern to search (BTW, must be 32)
+        n = BS.length panicID
+        -- shift values table
+        ss = ST.runST $ do
+          arr <- Prim.newArray 256 (fromIntegral n :: Word8)
+          forM_ [1..n-1] $ \i ->
+            Prim.writeArray arr (fromIntegral . BS.index panicID $ i-1) (fromIntegral $ n - i)
+          Prim.unsafeFreezeArray arr
+        -- calculate the shift according to a code of a symbol
+        shift i = fromIntegral $ Prim.indexArray ss (fromIntegral i)
+        -- search for the pattern (panicID), and then return to normal mode (normalPipe)
+        search bs = do
+          if BS.length bs < n
+          then do
+            mbs <- await
+            case mbs of
+              Nothing -> return ()
+              Just bs1 -> search (bs `BS.append` bs1)
+          else do
+            if BS.isPrefixOf panicID bs
+            then do
+              leftover (BS.drop n bs)
+              normalPipe
+            else do
+              search (BS.drop (shift $ BS.index bs (n-1)) bs)
+    search BS.empty
+
+-- | Calm down Luci panic (response in panic recovery procedure):
+--
+-- 1. wait for /panic/ message;
+-- 2. decode /panicID/ from Base64, and send it in raw binary;
+-- 3. switch to normal mode.
+panicResponsePipe :: Monad m
+                  => Conduit (Either ComError LuciMessage) m LuciMessage
+                     -- ^ Pass message further if it is not a panic
+                  -> Conduit (Either ComError LuciMessage) m ByteString
+panicResponsePipe normalPipe = await >>= \m ->
+  case m of
+    -- no input - just finish
+    Nothing -> return ()
+    -- error is passed further
+    Just (Left err) -> yield (Left err) =$= normalPipe =$= writeMessages
+    -- need to inspect the message
+    Just (Right msg@(MessageHeader val, _)) -> case findPanicId val of
+      Nothing -> yield (Right msg) =$= normalPipe =$= writeMessages
+      Just panicID -> yield panicID >> (normalPipe =$= writeMessages)
+  where
+    findPanicId (Object o) = case HashMap.lookup "panic" o of
+      Nothing -> Nothing
+      Just v  -> case JSON.fromJSON v of
+         JSON.Error _ -> Nothing
+         JSON.Success str -> Just . BS.decodeLenient $ BS.pack str
+    findPanicId _ = Nothing
 
 ----------------------------------------------------------------------------------------------------
 -- Internal supplementary stuff
 ----------------------------------------------------------------------------------------------------
+
 
 -- | Parse JSON Value to get a sorted list of attachment references.
 lookupARefs :: Monad m => Int -> JSON.Value -> ExceptT ComError m [AttachmentReference]
@@ -245,7 +396,7 @@ lookupARefs n v = case JSON.fromJSON v of
 -- | Lookup requested references.
 newtype GetARefs = GetARefs ([Int] -> HashMap Int AttachmentReference)
 
--- | Zero value for `GetARefs`
+-- | Zero value for GetARefs
 noARefs :: GetARefs
 noARefs = GetARefs $ \_ -> HashMap.empty
 

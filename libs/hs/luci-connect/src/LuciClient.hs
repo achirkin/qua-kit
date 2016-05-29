@@ -13,53 +13,93 @@
 {-# LANGUAGE OverloadedStrings, Rank2Types #-}
 module Main (main) where
 
+import           Control.Monad.IO.Class
 import           Data.Conduit
-import qualified Data.Conduit.Network as Network
-import qualified Data.Aeson as JSON
+import           Data.Aeson as JSON
 import qualified Data.Conduit.List as Conduit
-import qualified Data.ByteString.Lazy.Char8 as BSL
+import           Data.Text (Text)
+import           Data.ByteString (ByteString)
 
 import Luci.Messages
+import Luci.Connect
 import Luci.Connect.Base
-import Luci.Connect.Internal
+
 
 main :: IO ()
 main = do
-    Network.runTCPClient connSettings luciSession
-  where
-    connSettings = Network.clientSettings 7654 "127.0.1.1" -- "129.132.6.33"
 
-luciSession :: Network.AppData -> IO ()
-luciSession appdata = do
-    putStrLn $ "Remote address is " ++ show (Network.appSockAddr appdata)
-    case Network.appLocalAddr appdata of
-      Nothing -> putStrLn "Could not get local address"
-      Just ad -> putStrLn $ "Local address is " ++ show ad
-    runConduit $ (yield testFileEcho >> yield (JSON.toJSON regMsg, [])) $$ writeMessages =$= outgoing
-    putStrLn "Sent request!"
-    runConduit inPipe
+    -- Test using Luci.Connect.Base
+    putStrLn "\nRun short-circuited conduit pipe..."
+    runConduit $ (yield testFileEcho >> yield remoteRegister)
+      =$= writeMessages =$= parseMessages =$= Conduit.mapM_ (logMsgE . Just)
+
+    -- Connect using Luci.Connect
+    putStrLn "\n\nRun conduit pipes connected to Luci..."
+    talkToLuciExt 7654 "127.0.1.1" $ do
+      -- send test message
+      yield testFileEcho
+      -- easily interleave sending-receiving with 'yield' and 'await'
+      answer1 <- await
+      answer2 <- await
+      -- also print answers via lifting into IO monad
+      liftIO $ logMsg answer1
+      -- send RemoteRegister request
+      yield remoteRegister
+      answer3 <- await
+      answer4 <- await
+      liftIO $ logMsg answer2
+      liftIO $ logMsg answer3
+      liftIO $ logMsg answer4
+
+--    -- Connect using Luci.Connect
+--    putStrLn "\n\nRun conduit pipes connected to Luci..."
+--    talkToLuci 7654 "127.0.1.1" $ do
+--      -- send test message
+--      yield testFileEcho
+--      -- easily interleave sending-receiving with 'yield' and 'await'
+--      answer1 <- await
+--      answer2 <- await
+--      -- also print answers via lifting into IO monad
+--      liftIO $ logMsgE answer1
+--      -- send RemoteRegister request
+--      yield remoteRegister
+--      answer3 <- await
+--      answer4 <- await
+--      liftIO $ logMsgE answer2
+--      liftIO $ logMsgE answer3
+--      liftIO $ logMsgE answer4
+--
+
+
+logMsgE :: Maybe (Either ComError LuciMessage) -> IO ()
+logMsgE Nothing = putStrLn "\nFinished session."
+logMsgE (Just (Left err)) = putStrLn "\nError occured!" >> print err
+logMsgE (Just (Right (val, bss))) = do
+  putStrLn "\nReceived:"
+  print val
+  mapM_ print bss
+
+logMsg :: Maybe LuciMessage -> IO ()
+logMsg Nothing = putStrLn "\nFinished session."
+logMsg (Just (val, bss)) = do
+  putStrLn "\nReceived:"
+  print val
+  mapM_ print bss
+
+-- | Use "Luci.Messages" to construct a valid message
+remoteRegister :: (MessageHeader, [ByteString])
+remoteRegister = (toMsgHead jsv, [])
   where
-    regMsg = RemoteRegister
+    jsv = RemoteRegister
         { exampleCall = JSON.object []
         , serviceName = "CoolTestService"
         , inputs  = Nothing
         , outputs = Nothing
         }
-    outgoing = Network.appSink appdata
-    incoming = Network.appSource appdata
-    inPipe = incoming =$= parseMessages =$= Conduit.mapM_ logMsg
 
-
-logMsg :: Either ComError (JSON.Value, [ByteString]) -> IO ()
-logMsg (Left err) = putStrLn "\nError occured!" >> print err
-logMsg (Right (val, bss)) = do
-  putStrLn "\nSuccesful message"
-  putStrLn . BSL.unpack $ JSON.encode val
-  mapM_ print bss
-
-
-testFileEcho :: (JSON.Value, [ByteString])
-testFileEcho = (msg,[bs0, bs1])
+-- | Construct a message inplace
+testFileEcho :: (MessageHeader, [ByteString])
+testFileEcho = (MessageHeader msg,[bs0, bs1])
   where
     bs0 = "Hello byte world!"
     bs0ref = makeAReference bs0 "ByteString" 1 (Just "Hello.world")

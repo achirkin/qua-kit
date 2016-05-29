@@ -7,15 +7,20 @@
 -- Stability   :  experimental
 --
 --
+-- Collection of data types with converters from\/to JSON
+-- for common Luci messages.
 --
 -----------------------------------------------------------------------------
 {-# LANGUAGE RecordWildCards, OverloadedStrings #-}
 module Luci.Messages
-    ( -- * Messages
-      RemoteRegister (..)
+    ( RemoteRegister (..)
     ) where
 
+import Data.Aeson as JSON
+
 import Luci.Connect.Internal
+
+
 
 -- | Register a service in Luci
 data RemoteRegister = RemoteRegister
@@ -33,7 +38,6 @@ instance ToJSON RemoteRegister where
     , "inputs"      .=? inputs
     , "outputs"     .=? outputs
     ]
-
 
 
 --Right (Object (fromList [("newCallID",Number 10.0)]),[])
