@@ -13,7 +13,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Main (main) where
 
-import           Control.Monad (forever)
 import           Control.Monad.IO.Class
 import           Data.Conduit
 import           Data.Aeson as JSON

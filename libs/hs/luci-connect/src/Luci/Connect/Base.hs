@@ -117,7 +117,6 @@ import           Data.Word
 import Luci.Connect.Internal
 
 import Control.Monad.IO.Class
-import Debug.Trace
 
 -- | Alias for Luci message containing a header and attachments
 type LuciMessage = (MessageHeader, [ByteString])
@@ -166,7 +165,8 @@ ConduitM left0 =&= ConduitM right0 = ConduitM $ \rest ->
         goLeft rp rc final left =
             case left of
                 HaveOutput left' final' (Right o) -> goRight final' left' (rp o)
-                HaveOutput left' final' (Left  e) -> HaveOutput (goRight final' left' (Done ())) (final' >> final) (Left e)
+                HaveOutput left' final' (Left  e) ->
+                      HaveOutput (goRight final' left' $ NeedInput rp rc) final (Left e)
                 NeedInput left' lc        -> NeedInput (recurse . left') (recurse . lc)
                 Done r1                   -> goRight (return ()) (Done r1) (rc r1)
                 PipeM mp                  -> PipeM (liftM recurse mp)
@@ -178,11 +178,11 @@ ConduitM left0 =&= ConduitM right0 = ConduitM $ \rest ->
 {-# INLINE [1] (=&=) #-}
 infixr 3 =&=
 
---(=&&=) ::  Conduit A IO (Either E B)
+--(=&&=) :: Conduit A IO (Either E B)
 --       -> Conduit B IO (Either E C)
 --       -> Conduit A IO (Either E C)
 --ConduitM left0 =&&= ConduitM right0 = ConduitM $ \rest ->
---    let
+--    let -- goRight :: IO () -> PipeA () -> PipeB () -> PipeC ()
 --        goRight final left right =
 --            case right of
 --                HaveOutput p c o  -> HaveOutput (recurse p) (c >> final) o
@@ -193,10 +193,12 @@ infixr 3 =&=
 --          where
 --            recurse = goRight final left
 --
+--        -- goLeft :: (B -> PipeB ()) -> (() -> PipeB ()) -> IO () -> PipeA () -> PipeC ()
 --        goLeft rp rc final left =
 --            case left of
 --                HaveOutput left' final' (Right o) -> goRight final' left' (rp o)
---                HaveOutput left' final' (Left  e) -> HaveOutput (goRight final' left' (Done ())) (final' >> final) (Left e)
+--                HaveOutput left' final' (Left  e) ->
+--                      HaveOutput (goRight final left' $ NeedInput rp rc) final' (Left e)
 --                NeedInput left' lc        -> NeedInput (recurse . left') (recurse . lc)
 --                Done r1                   -> goRight (return ()) (Done r1) (rc r1)
 --                PipeM mp                  -> PipeM (liftM recurse mp)
@@ -206,7 +208,9 @@ infixr 3 =&=
 --
 --     in goRight (return ()) (left0 Done) (right0 Done)
 --
---
+--type PipeA u = Pipe A A (Either E B) u IO ()
+--type PipeB u = Pipe B B (Either E C) u IO ()
+--type PipeC u = Pipe A A (Either E C) u IO ()
 --
 --
 --data A = A
@@ -412,7 +416,7 @@ data ComError
 -- <https://en.wikipedia.org/wiki/Boyer%E2%80%93Moore%E2%80%93Horspool_algorithm Boyer-Moore-Horspool algorithm>
 --
 -- This conduit finishes its work when consumes /panicID/.
-panicConduit :: MonadRandom m
+panicConduit :: (MonadRandom m, MonadIO m)
              => Conduit ByteString m ByteString
 panicConduit = do
 --    liftIO . putStrLn $ "PANIC: Starting panic!"
@@ -443,7 +447,7 @@ panicConduit = do
             if BS.isPrefixOf panicID bs
             then do
               leftover (BS.drop n bs)
---              liftIO . putStrLn $ "PANIC: calming! Put leftover back and finish"
+              liftIO . putStrLn $ "PANIC: calming! Put leftover back and finish"
             else do
               search (BS.drop (shift $ BS.index bs (n-1)) bs)
     search BS.empty
