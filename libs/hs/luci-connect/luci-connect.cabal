@@ -19,7 +19,7 @@ library
         Luci.Messages
     build-depends:
         base >=4.8.2 && <4.9,
-        conduit -any,
+        conduit >=1.0.0 && <1.3,
         conduit-extra -any,
         monad-control -any,
         binary >=0.8.1,
@@ -43,7 +43,7 @@ executable luci-client
     main-is: LuciClient.hs
     build-depends:
         base >=4.8.2 && <4.9,
-        conduit -any,
+        conduit >=1.0.0 && <1.3,
         conduit-extra -any,
         monad-control -any,
         binary >=0.8.1,

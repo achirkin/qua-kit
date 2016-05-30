@@ -34,8 +34,12 @@
 
 module Luci.Connect.Base
     ( -- * Basic types
-      LuciMessage, MessageHeader (..)
+      LuciMessage, LuciProcessing, MessageHeader (..)
     , toMsgHead, fromMsgHead
+      -- * Message processing
+      -- | Write conduits for message processing and connect them using
+      --   the following combinators.
+    , (=$=), (=&=), (=*=)
       -- * Reading & writing functionality
       -- | Combine conduits for reading and writing arbitrary Luci messages.
       --   Connect the provided conduits to corresponding TCP sink and source conduits
@@ -78,8 +82,8 @@ module Luci.Connect.Base
       --   The panic recovery procedure complements the validation mechanism of Luci messages:
       --   an initiator should initiate the panic if
       --   it faces unexpected input or message parts' sizes do not agree.
-    , panicPipe
-    , panicResponsePipe
+    , panicConduit
+    , panicResponseConduit
     ) where
 
 import           Control.Monad
@@ -93,11 +97,13 @@ import qualified Data.Aeson as JSON
 import qualified Data.Aeson.Types as JSON
 import qualified Data.Binary.Get as Binary
 import qualified Data.ByteString as BS
+import qualified Data.ByteString.Char8 as BSC
 import qualified Data.ByteString.Base64 as BS
 import qualified Data.ByteString.Lazy as BSL
 import qualified Data.ByteString.Lazy.Char8 as BSLC
 import qualified Data.ByteString.Builder as BSB
 import           Data.Conduit
+import           Data.Conduit.Internal (ConduitM (ConduitM), Pipe (..))
 import qualified Data.Conduit.Binary as ConB
 import           Data.Data (Data)
 import           Data.HashMap.Strict (HashMap)
@@ -110,9 +116,16 @@ import           Data.Word
 
 import Luci.Connect.Internal
 
+import Control.Monad.IO.Class
+import Debug.Trace
 
 -- | Alias for Luci message containing a header and attachments
 type LuciMessage = (MessageHeader, [ByteString])
+
+-- | Alias for a processing state:
+--   The data is either processed and ready for sending (Left ByteString),
+--   or is not processed yet and carries input message (Right LuciMessage).
+type LuciProcessing = Either ByteString LuciMessage
 
 -- | Luci message header is a JSON value
 newtype MessageHeader = MessageHeader Value
@@ -133,6 +146,83 @@ fromMsgHead (MessageHeader v) = case JSON.fromJSON v of
   JSON.Error msg -> Left msg
   JSON.Success a -> Right a
 
+-- | Fusion operator, combining two Conduits together into a new Conduit.
+--
+--   If output of the left is (Left x) then pass it further.
+--   If output of the left is (Right y) then pass y to the right conduit.
+(=&=) :: Monad m => Conduit a m (Either e b) -> Conduit b m (Either e c) -> Conduit a m (Either e c)
+ConduitM left0 =&= ConduitM right0 = ConduitM $ \rest ->
+    let
+        goRight final left right =
+            case right of
+                HaveOutput p c o  -> HaveOutput (recurse p) (c >> final) o
+                NeedInput rp rc   -> goLeft rp rc final left
+                Done r2           -> PipeM (final >> return (rest r2))
+                PipeM mp          -> PipeM (liftM recurse mp)
+                Leftover right' i -> goRight final (HaveOutput left final $ Right i) right'
+          where
+            recurse = goRight final left
+
+        goLeft rp rc final left =
+            case left of
+                HaveOutput left' final' (Right o) -> goRight final' left' (rp o)
+                HaveOutput left' final' (Left  e) -> HaveOutput (goRight final' left' (Done ())) (final' >> final) (Left e)
+                NeedInput left' lc        -> NeedInput (recurse . left') (recurse . lc)
+                Done r1                   -> goRight (return ()) (Done r1) (rc r1)
+                PipeM mp                  -> PipeM (liftM recurse mp)
+                Leftover left' i          -> Leftover (recurse left') i
+          where
+            recurse = goLeft rp rc final
+
+     in goRight (return ()) (left0 Done) (right0 Done)
+{-# INLINE [1] (=&=) #-}
+infixr 3 =&=
+
+--(=&&=) ::  Conduit A IO (Either E B)
+--       -> Conduit B IO (Either E C)
+--       -> Conduit A IO (Either E C)
+--ConduitM left0 =&&= ConduitM right0 = ConduitM $ \rest ->
+--    let
+--        goRight final left right =
+--            case right of
+--                HaveOutput p c o  -> HaveOutput (recurse p) (c >> final) o
+--                NeedInput rp rc   -> goLeft rp rc final left
+--                Done r2           -> PipeM (final >> return (rest r2))
+--                PipeM mp          -> PipeM (liftM recurse mp)
+--                Leftover right' i -> goRight final (HaveOutput left final $ Right i) right'
+--          where
+--            recurse = goRight final left
+--
+--        goLeft rp rc final left =
+--            case left of
+--                HaveOutput left' final' (Right o) -> goRight final' left' (rp o)
+--                HaveOutput left' final' (Left  e) -> HaveOutput (goRight final' left' (Done ())) (final' >> final) (Left e)
+--                NeedInput left' lc        -> NeedInput (recurse . left') (recurse . lc)
+--                Done r1                   -> goRight (return ()) (Done r1) (rc r1)
+--                PipeM mp                  -> PipeM (liftM recurse mp)
+--                Leftover left' i          -> Leftover (recurse left') i
+--          where
+--            recurse = goLeft rp rc final
+--
+--     in goRight (return ()) (left0 Done) (right0 Done)
+--
+--
+--
+--
+--data A = A
+--data B = B
+--data C = C
+--data E = E
+
+
+-- | Fusion operator, combining two Conduits together into a new Conduit.
+--
+--   Map the right conduit over the output of the left.
+--   Leaves a value on the Left of Either unmodified.
+(=*=) :: Monad m => Conduit a m (Either e b) -> Conduit b m c -> Conduit a m (Either e c)
+a =*= b = a =&= mapOutput Right b
+{-# INLINE [1] (=*=) #-}
+infixr 4 =*=
 
 
 -- | Conduit pipe that receives Luci messages, encodes them,
@@ -320,12 +410,17 @@ data ComError
 -- 3. switch to normal mode when faces /panicID/.
 -- Searching for /panicID/ is done using
 -- <https://en.wikipedia.org/wiki/Boyer%E2%80%93Moore%E2%80%93Horspool_algorithm Boyer-Moore-Horspool algorithm>
-panicPipe :: MonadRandom m
-          => Conduit ByteString m ByteString -- ^ /normal mode/: conduit to switch to
-          -> Conduit ByteString m ByteString
-panicPipe normalPipe = do
+--
+-- This conduit finishes its work when consumes /panicID/.
+panicConduit :: MonadRandom m
+             => Conduit ByteString m ByteString
+panicConduit = do
+--    liftIO . putStrLn $ "PANIC: Starting panic!"
     panicID <- lift $ getRandomBytes 32
-    yield $ "{'panic':'" `BS.append` BS.encode panicID `BS.append` "'}"
+--    liftIO . putStrLn $ "PANIC: panicID: " ++ show panicID
+    let panicMSG = MessageHeader $ object
+           [ "panic" .= BSC.unpack (BS.encode panicID)]
+    yield (panicMSG,[]) =$= writeMessages =$= awaitForever yield
     let -- length of pattern to search (BTW, must be 32)
         n = BS.length panicID
         -- shift values table
@@ -336,7 +431,7 @@ panicPipe normalPipe = do
           Prim.unsafeFreezeArray arr
         -- calculate the shift according to a code of a symbol
         shift i = fromIntegral $ Prim.indexArray ss (fromIntegral i)
-        -- search for the pattern (panicID), and then return to normal mode (normalPipe)
+        -- search for the pattern (panicID), and then finish
         search bs = do
           if BS.length bs < n
           then do
@@ -348,36 +443,35 @@ panicPipe normalPipe = do
             if BS.isPrefixOf panicID bs
             then do
               leftover (BS.drop n bs)
-              normalPipe
+--              liftIO . putStrLn $ "PANIC: calming! Put leftover back and finish"
             else do
               search (BS.drop (shift $ BS.index bs (n-1)) bs)
     search BS.empty
 
 -- | Calm down Luci panic (response in panic recovery procedure):
 --
--- 1. wait for /panic/ message;
--- 2. decode /panicID/ from Base64, and send it in raw binary;
--- 3. switch to normal mode.
-panicResponsePipe :: Monad m
-                  => Conduit (Either ComError LuciMessage) m LuciMessage
-                     -- ^ Pass message further if it is not a panic
-                  -> Conduit (Either ComError LuciMessage) m ByteString
-panicResponsePipe normalPipe = await >>= \m ->
+-- 1. wait for /panic/ message (pass by other messages);
+-- 2. decode /panicID/ from Base64, and send it in raw binary.
+panicResponseConduit :: Monad m
+                     => Conduit LuciMessage m LuciProcessing
+panicResponseConduit = await >>= \m ->
   case m of
     -- no input - just finish
     Nothing -> return ()
-    -- error is passed further
-    Just (Left err) -> yield (Left err) =$= normalPipe =$= writeMessages
     -- need to inspect the message
-    Just (Right msg@(MessageHeader val, _)) -> case findPanicId val of
-      Nothing -> yield (Right msg) =$= normalPipe =$= writeMessages
-      Just panicID -> yield panicID >> (normalPipe =$= writeMessages)
+    Just msg@(MessageHeader val, _) -> do
+      case findPanicId val of
+        Nothing      -> yield (Right msg)
+        Just panicID -> do
+--          traceM $ "PANIC: Got a panic ID; send it back and continue."
+          yield (Left panicID)
+      panicResponseConduit
   where
     findPanicId (Object o) = case HashMap.lookup "panic" o of
       Nothing -> Nothing
       Just v  -> case JSON.fromJSON v of
          JSON.Error _ -> Nothing
-         JSON.Success str -> Just . BS.decodeLenient $ BS.pack str
+         JSON.Success str -> Just . BS.decodeLenient $ BSC.pack str
     findPanicId _ = Nothing
 
 ----------------------------------------------------------------------------------------------------
