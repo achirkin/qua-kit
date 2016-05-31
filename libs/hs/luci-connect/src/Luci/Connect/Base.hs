@@ -29,17 +29,17 @@
 -- @
 --
 -----------------------------------------------------------------------------
-{-# LANGUAGE RecordWildCards, OverloadedStrings #-}
+{-# LANGUAGE RecordWildCards, OverloadedStrings, Rank2Types #-}
 {-# LANGUAGE DeriveDataTypeable, GeneralizedNewtypeDeriving #-}
 
 module Luci.Connect.Base
     ( -- * Basic types
-      LuciMessage, LuciProcessing, MessageHeader (..)
+      LuciMessage, LuciProcessing, MessageHeader (..), LuciConduit
     , toMsgHead, fromMsgHead
       -- * Message processing
       -- | Write conduits for message processing and connect them using
-      --   the following combinators.
-    , (=$=), (=&=), (=*=)
+      --   the '=$=' combinator and 'await' helpers.
+    , (=$=), awaitMsgIf, awaitMsg, yieldMsg
       -- * Reading & writing functionality
       -- | Combine conduits for reading and writing arbitrary Luci messages.
       --   Connect the provided conduits to corresponding TCP sink and source conduits
@@ -126,6 +126,9 @@ type LuciMessage = (MessageHeader, [ByteString])
 --   or is not processed yet and carries input message (Right LuciMessage).
 type LuciProcessing = Either ByteString LuciMessage
 
+-- | Alias for a processing conduit.
+type LuciConduit m r = ConduitM LuciProcessing LuciProcessing m r
+
 -- | Luci message header is a JSON value
 newtype MessageHeader = MessageHeader Value
   deriving (Eq, JSON.FromJSON, JSON.ToJSON, IsString, Data)
@@ -145,117 +148,33 @@ fromMsgHead (MessageHeader v) = case JSON.fromJSON v of
   JSON.Error msg -> Left msg
   JSON.Success a -> Right a
 
--- | Fusion operator, combining two Conduits together into a new Conduit.
---
---   If output of the left is (Left x) then pass it further.
---   If output of the left is (Right y) then pass y to the right conduit.
-(=&=) :: Monad m => Conduit a m (Either e b) -> Conduit b m (Either e c) -> Conduit a m (Either e c)
-ConduitM left0 =&= ConduitM right0 = ConduitM $ \rest ->
-    let
-        goRight final left right =
-          case left of
-           HaveOutput left' final' (Left e) -> HaveOutput (goRight final left' right) final' (Left e)
-           _ ->
-            case right of
-                HaveOutput p c o  -> goLeft' p c o final left
-                NeedInput rp rc   -> goLeft rp rc final left
-                Done r2           -> PipeM (final >> return (rest r2))
-                PipeM mp          -> PipeM (liftM recurse mp)
-                Leftover right' i -> goRight final (HaveOutput left final $ Right i) right'
-          where
-            recurse = goRight final left
 
-        -- go here if we need more input
-        goLeft rp rc final left =
-            case left of
-                HaveOutput left' final' (Right o) -> goRight final' left' (rp o)
-                HaveOutput left' final' (Left  e) ->
-                      HaveOutput (goRight final' left' $ NeedInput rp rc) final (Left e)
-                NeedInput left' lc        -> NeedInput (recurse . left') (recurse . lc)
-                Done r1                   -> goRight (return ()) (Done r1) (rc r1)
-                PipeM mp                  -> PipeM (liftM recurse mp)
-                Leftover left' i          -> Leftover (recurse left') i
-          where
-            recurse = goLeft rp rc final
+-- | Works similar to 'await'.
+--   Checks if input values satisfies a given condition,
+--   and sends the data downstream otherwise.
+awaitMsgIf :: Monad m => (LuciMessage -> Bool) -> LuciConduit m (Maybe LuciMessage)
+awaitMsgIf pass = ConduitM needInput
+  where
+    goRight f (Right i) | pass i    = f . Just $ i
+                        | otherwise = HaveOutput (needInput f) (return ()) (Right i)
+    goRight f (Left e) = HaveOutput (needInput f) (return ()) (Left e)
+    needInput f = NeedInput (goRight f) (const $ f Nothing)
+{-# INLINE [0] awaitMsgIf #-}
 
-        -- go here if we have output, but want to send everything on the left first
-        goLeft' hp hc ho final left =
-            case left of
-                HaveOutput _ _         (Right _) -> rightOutput
-                HaveOutput left' final' (Left e) -> HaveOutput (recurse left') final' (Left e)
-                NeedInput left' lc        -> rightOutput
-                Done _                    -> rightOutput
-                PipeM _                   -> rightOutput
-                Leftover left' i          -> Leftover (recurse left') i
-          where
-            recurse = goLeft' hp hc ho final
-            rightOutput = HaveOutput (goRight final left hp) (hc >> final) ho
+-- | Works similar to 'await'.
+--   Returns if input is unprocessed (Right) and passes it further otherwise (Left).
+awaitMsg :: Monad m => LuciConduit m (Maybe LuciMessage)
+awaitMsg = ConduitM needInput
+  where
+    goRight f (Right i) = f . Just $ i
+    goRight f (Left  e) = HaveOutput (needInput f) (return ()) (Left e)
+    needInput f = NeedInput (goRight f) (const $ f Nothing)
+{-# INLINE [0] awaitMsg #-}
 
-     in goRight (return ()) (left0 Done) (right0 Done)
-{-# INLINE [1] (=&=) #-}
-infixr 3 =&=
-
---(=&&=) :: Conduit A IO (Either E B)
---       -> Conduit B IO (Either E C)
---       -> Conduit A IO (Either E C)
---ConduitM left0 =&&= ConduitM right0 = ConduitM $ \rest ->
---    let --goRight :: IO () -> PipeA () -> PipeB () -> PipeC ()
---        goRight final left right =
---            case right of
---                HaveOutput p c o  -> goLeft' p c o final left
---                NeedInput rp rc   -> goLeft rp rc final left
---                Done r2           -> PipeM (final >> return (rest r2))
---                PipeM mp          -> PipeM (liftM recurse mp)
---                Leftover right' i -> goRight final (HaveOutput left final $ Right i) right'
---          where
---            recurse = goRight final left
---
---        --goLeft :: (B -> PipeB ()) -> (() -> PipeB ()) -> IO () -> PipeA () -> PipeC ()
---        goLeft rp rc final left =
---            case left of
---                HaveOutput left' final' (Right o) -> goRight final' left' (rp o)
---                HaveOutput left' final' (Left  e) ->
---                      HaveOutput (goRight final left' $ NeedInput rp rc) final' (Left e)
---                NeedInput left' lc        -> NeedInput (recurse . left') (recurse . lc)
---                Done r1                   -> goRight (return ()) (Done r1) (rc r1)
---                PipeM mp                  -> PipeM (liftM recurse mp)
---                Leftover left' i          -> Leftover (recurse left') i
---          where
---            recurse = goLeft rp rc final
---
---        goLeft' hp hc ho final left =
---            case left of
---                HaveOutput _ _ (Right _)  -> rightOutput
---                HaveOutput left' final' (Left  e) -> HaveOutput (recurse left') final' (Left e)
---                NeedInput _ _             -> rightOutput
---                Done _                    -> rightOutput
---                PipeM mp                  -> PipeM (liftM recurse mp)
---                Leftover left' i          -> Leftover (recurse left') i
---          where
---            recurse = goLeft' hp hc ho final
---            rightOutput = HaveOutput (goRight final left hp) (hc >> final) ho
---
---     in goRight (return ()) (left0 Done) (right0 Done)
---
---type PipeA u = Pipe A A (Either E B) u IO ()
---type PipeB u = Pipe B B (Either E C) u IO ()
---type PipeC u = Pipe A A (Either E C) u IO ()
---
---
---data A = A
---data B = B
---data C = C
---data E = E
-
-
--- | Fusion operator, combining two Conduits together into a new Conduit.
---
---   Map the right conduit over the output of the left.
---   Leaves a value on the Left of Either unmodified.
-(=*=) :: Monad m => Conduit a m (Either e b) -> Conduit b m c -> Conduit a m (Either e c)
-a =*= b = a =&= mapOutput Right b
-{-# INLINE [1] (=*=) #-}
-infixr 4 =*=
+-- | Works similar to 'yield'.
+--   Yield a message converted to ByteString.
+yieldMsg :: Monad m => LuciMessage -> LuciConduit m ()
+yieldMsg msg = yield msg =$= mapOutput Left writeMessages
 
 
 -- | Conduit pipe that receives Luci messages, encodes them,
@@ -485,20 +404,13 @@ panicConduit = do
 --
 -- 1. wait for /panic/ message (pass by other messages);
 -- 2. decode /panicID/ from Base64, and send it in raw binary.
+--
+-- This function also get an error action callback to execute when panic recovery is finished.
+-- For convenience, it keeps the last processed message and returns it into the callback.
 panicResponseConduit :: Monad m
-                     => Conduit LuciMessage m LuciProcessing
-panicResponseConduit = await >>= \m ->
-  case m of
-    -- no input - just finish
-    Nothing -> return ()
-    -- need to inspect the message
-    Just msg@(MessageHeader val, _) -> do
-      case findPanicId val of
-        Nothing      -> yield (Right msg)
-        Just panicID -> do
---          traceM $ "PANIC: Got a panic ID; send it back and continue."
-          yield (Left panicID)
-      panicResponseConduit
+                     => (Maybe LuciMessage -> LuciConduit m ()) -- ^ action to do when faces an error
+                     -> LuciConduit m ()
+panicResponseConduit errAction = prc Nothing
   where
     findPanicId (Object o) = case HashMap.lookup "panic" o of
       Nothing -> Nothing
@@ -506,6 +418,18 @@ panicResponseConduit = await >>= \m ->
          JSON.Error _ -> Nothing
          JSON.Success str -> Just . BS.decodeLenient $ BSC.pack str
     findPanicId _ = Nothing
+    prc lmsg = awaitMsg >>= \m ->
+      case m of
+        -- no input - just finish
+        Nothing -> return ()
+        -- need to inspect the message
+        Just msg@(MessageHeader val, _) -> do
+          case findPanicId val of
+            Nothing      -> yield (Right msg) >> prc (Just msg)
+            Just panicID -> do
+              yield (Left panicID)
+              errAction lmsg
+              prc lmsg
 
 ----------------------------------------------------------------------------------------------------
 -- Internal supplementary stuff

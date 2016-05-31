@@ -64,4 +64,3 @@ executable luci-client
         Luci.Connect.Internal
         Luci.Messages
     ghc-options: -Wall -ferror-spans
-

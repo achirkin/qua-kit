@@ -21,7 +21,7 @@ module Luci.Connect
     , talkToLuciExt
     , talkAsLuciExt
       -- * Message processing
-    , parseMsgsErrCatching, discardUnprocessed
+    , parseMsgsErrCatching, discardUnprocessed, writeUnprocessed
       -- * Logging helpers
     , logBytes, logMessages, logProcessing
     ) where
@@ -61,9 +61,10 @@ talkToLuci' pipe appData =
 -- | Mimic Luci server - just run a TCP server processing messages
 talkAsLuciExt :: (MonadBaseControl IO m, MonadIO m, MonadRandom m)
               => Int         -- ^ Port
-              -> Conduit LuciMessage m LuciProcessing
+              -> (Maybe LuciMessage -> LuciConduit m ()) -- ^ panic action takes the last good image received
+              -> LuciConduit m ()
               -> m ()
-talkAsLuciExt port pipe = Network.runGeneralTCPServer connSettings (talkToLuciExt' pipe)
+talkAsLuciExt port ea pipe = Network.runGeneralTCPServer connSettings (talkToLuciExt' ea pipe)
   where
     connSettings = Network.serverSettings port "*4"
 
@@ -73,20 +74,22 @@ talkAsLuciExt port pipe = Network.runGeneralTCPServer connSettings (talkToLuciEx
 talkToLuciExt :: (MonadBaseControl IO m, MonadIO m, MonadRandom m)
               => Int         -- ^ Port
               -> ByteString  -- ^ Host
-              -> Conduit LuciMessage m LuciProcessing
+              -> (Maybe LuciMessage -> LuciConduit m ()) -- ^ panic action takes the last good image received
+              -> LuciConduit m ()
               -> m ()
-talkToLuciExt port host pipe = Network.runGeneralTCPClient connSettings (talkToLuciExt' pipe)
+talkToLuciExt port host ea pipe = Network.runGeneralTCPClient connSettings (talkToLuciExt' ea pipe)
   where
     connSettings = Network.clientSettings port host
 
 -- | Use existing connection to run a message-processing conduit
 talkToLuciExt' :: (MonadIO m, MonadRandom m)
-               => Conduit LuciMessage m LuciProcessing
+               => (Maybe LuciMessage -> LuciConduit m ()) -- ^ panic action takes the last good image received
+               -> LuciConduit m ()
                -> Network.AppData
                -> m ()
-talkToLuciExt' userPipe appData = runConduit
+talkToLuciExt' ea userPipe appData = runConduit
     $ incoming
-   =$= parseMsgsErrCatching =&= panicResponseConduit =&= userPipe
+   =$= parseMsgsErrCatching =$= panicResponseConduit ea =$= userPipe
    =$= discardUnprocessed
    =$= outgoing
   where
@@ -104,12 +107,22 @@ discardUnprocessed = do
     Just (Right msg ) -> liftIO (putStrLn ("MESSAGE IGNORED: " ++ show msg)) >> discardUnprocessed
     Just (Left bytes) -> yield bytes >> discardUnprocessed
 
+-- | Write all unprocessed messages
+writeUnprocessed :: MonadIO m
+                 => Conduit LuciProcessing m ByteString
+writeUnprocessed = do
+  memsg <- await
+  case memsg of
+    Nothing -> return ()
+    Just (Right msg ) -> yield msg =$= writeMessages >> writeUnprocessed
+    Just (Left bytes) -> yield bytes >> writeUnprocessed
+
 
 
 -- | The same as 'parseMessages', but includes
 --   panic recovery procedure using 'panicConduit'
 parseMsgsErrCatching :: (MonadIO m, MonadRandom m)
-                         => Conduit ByteString m LuciProcessing
+                     => Conduit ByteString m LuciProcessing
 parseMsgsErrCatching = do
   memsg <- parseMessages =$= await
   case memsg of
