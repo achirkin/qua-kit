@@ -32,6 +32,7 @@ import           Crypto.Random (MonadRandom (..))
 import           Data.Conduit
 import qualified Data.Conduit.Network as Network
 import qualified Data.ByteString.Char8 as BS
+--import qualified Data.ByteString as BSB
 
 import Luci.Connect.Base
 import Luci.Connect.Internal
@@ -89,7 +90,8 @@ talkToLuciExt' :: (MonadIO m, MonadRandom m)
                -> m ()
 talkToLuciExt' ea userPipe appData = runConduit
     $ incoming
-   =$= parseMsgsErrCatching =$= panicResponseConduit ea =$= userPipe
+   =$= parseMsgsErrCatching =$= panicResponseConduit ea
+   =$= userPipe
    =$= discardUnprocessed
    =$= outgoing
   where
@@ -116,7 +118,6 @@ writeUnprocessed = do
     Nothing -> return ()
     Just (Right msg ) -> yield msg =$= writeMessages >> writeUnprocessed
     Just (Left bytes) -> yield bytes >> writeUnprocessed
-
 
 
 -- | The same as 'parseMessages', but includes
@@ -150,6 +151,19 @@ logBytes label = do
         liftIO . putStrLn $ label ++ ": " ++ showBytes bt
         yield bt
         logBytes label
+
+---- | Log raw bytes to see what happens on output and input
+--logBytes' :: MonadIO m
+--         => String -- ^ Label for logging
+--         -> Conduit ByteString m ByteString
+--logBytes' label = do
+--    mbytes <- await
+--    case mbytes of
+--      Nothing -> liftIO . putStrLn $ label ++ ": no more data"
+--      Just bt -> do
+--        liftIO . putStrLn $ label ++ ": " ++ showBytes' bt
+--        yield bt
+--        logBytes' label
 
 -- | Log luci messages and raw bytes to see what happens on output and input
 logProcessing :: MonadIO m
@@ -196,3 +210,8 @@ showBytes :: ByteString -> String
 showBytes bs = if BS.length bs > 50
     then show (BS.take 20 bs) ++ "... (" ++ show (BS.length bs) ++ " bytes)"
     else show bs
+
+--showBytes' :: ByteString -> String
+--showBytes' bs = if BS.length bs > 50
+--    then BS.unpack bs
+--    else show $ BSB.unpack bs

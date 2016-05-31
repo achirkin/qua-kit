@@ -13,39 +13,55 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Main (main) where
 
-import           Control.Monad.IO.Class
-import           Data.Conduit
-import           Data.Aeson as JSON
-import           Data.Text (Text)
-import           Data.ByteString (ByteString)
+import Control.Monad.IO.Class
+import Data.Conduit
+import Data.Aeson as JSON
+import Data.Text (Text)
+import Data.ByteString (ByteString)
+import qualified Data.ByteString.Char8 as BSC
 
 import Luci.Messages
 import Luci.Connect
 import Luci.Connect.Base
 import System.Environment (getArgs)
-import Control.Concurrent (threadDelay)
-
+import Data.List (stripPrefix)
 
 main :: IO ()
 main = do
     args <- getArgs
-    case args of
-      "server":_ -> runServer 7654
-      _ -> runClient 7654 "127.0.1.1"
---    -- Test using Luci.Connect.Base
---    putStrLn "\nRun short-circuited conduit pipe..."
---    runConduit $ (yield testFileEcho >> yield remoteRegister)
---      =$= writeMessages =$= parseMessages =$= Conduit.mapM_ (logMsgE . Just)
+    let sets = setSettings args RunSettings
+                  { host = "127.0.1.1"
+                  , port = 7654
+                  , run = runClient
+                  }
+    (run sets) (port sets) (host sets)
+  where
+    setSettings [] s = s
+    setSettings ("server":xs) s = setSettings xs s{run = const . runServer}
+    setSettings ("nopanic":xs) s = setSettings xs s{run = runClientNoPanic}
+    setSettings ("panic":xs) s = setSettings xs s{run = runClient}
+    setSettings (par:xs) s = case stripPrefix "port=" par of
+                               Just n -> setSettings xs s{port = read n}
+                               Nothing -> case stripPrefix "host=" par of
+                                   Just h -> setSettings xs s{host = BSC.pack h}
+                                   Nothing -> setSettings xs s
+
+data RunSettings = RunSettings
+  { host :: ByteString
+  , port :: Int
+  , run :: Int -> ByteString -> IO ()
+  }
+
 
 resend :: Maybe LuciMessage -> LuciConduit IO ()
 resend Nothing = return ()
 resend (Just msg) = yieldMsg msg
 
 runServer :: Int -> IO ()
-runServer port = do
+runServer p = do
     -- Connect using Luci.Connect
     putStrLn "Runing echoing server"
-    talkAsLuciExt port resend $ logProcessing "SERVER INPUT LOG"
+    talkAsLuciExt p resend $ logProcessing "SERVER INPUT LOG"
                        =$= processMessages
                        =$= logProcessing "SERVER OUTPUT LOG"
   where
@@ -59,38 +75,58 @@ runServer port = do
           yieldMsg msg
           processMessages
 
--- | Run client sending some amount of staff
-runClient :: Int -> ByteString -> IO ()
-runClient port host = do
+runClientNoPanic :: Int -> ByteString -> IO ()
+runClientNoPanic p h = do
     -- Connect using Luci.Connect
-    putStrLn "\n\nRun conduit pipes connected to Luci..."
-    talkToLuciExt port host resend $ processMessages =$= logProcessing "OUTPUT LOG"
+    putStrLn "\n\nRun conduit pipes connected to Luci (No Panic Recovery Procedure)..."
+    talkToLuci p h $ processMessages -- =$= logProcessing "OUTPUT LOG"
   where
     processMessages = do
-      -- send test message
+--      yieldMsg testFileEcho
+--      yieldMsg remoteRegister
       yieldMsg testFileEcho
-      -- send RemoteRegister request
+      yieldMsg testCorruptedFileEcho
+      yieldMsg testFileEcho
+      -- wait for all other input until the end
+      awaitForever $ \x -> case x of
+                             Left b    -> liftIO $ print b
+                             Right msg -> logMsg $ Just msg
+
+
+-- | Run client sending some amount of staff
+runClient :: Int -> ByteString -> IO ()
+runClient p h = do
+    -- Connect using Luci.Connect
+    putStrLn "\n\nRun conduit pipes connected to Luci..."
+    talkToLuciExt p h resend $ processMessages =$= logProcessing "OUTPUT LOG"
+  where
+    processMessages = do
+--      -- send test message
+      yieldMsg testFileEcho
+--      -- send RemoteRegister request
       yieldMsg remoteRegister
-      -- wait for couple messages for fun
-      awaitMsg >>= logMsg
+--      -- wait for couple messages for fun
+--      awaitMsg >>= logMsg
       awaitMsg >>= logMsg
 
       -- send corrupted message!
       yieldMsg testCorruptedFileEcho
+      awaitMsg >>= logMsg
+      yieldMsg testCorruptedFileEcho
       -- wait for one more message
+--      awaitMsg >>= logMsg
+--
+--      -- right after, send couple more good messages
+      yieldMsg testFileEcho
+--      yieldMsg testFileEcho
       awaitMsg >>= logMsg
-
-      -- right after, send couple more good messages
-      yieldMsg testFileEcho
-      yieldMsg testFileEcho
-      awaitMsg >>= logMsg
-
-      -- wait a bit and send again couple messages
-      liftIO $ putStrLn "Sleep for a second..."
-      liftIO $ threadDelay 1000000
-      liftIO $ putStrLn "            ...wake up!"
-      yieldMsg remoteRegister
-      yieldMsg testFileEcho
+--
+--      -- wait a bit and send again couple messages
+--      liftIO $ putStrLn "Sleep for a second..."
+--      liftIO $ threadDelay 1000000
+--      liftIO $ putStrLn "            ...wake up!"
+--      yieldMsg remoteRegister
+--      yieldMsg testFileEcho
 
 
       -- wait for all other input until the end

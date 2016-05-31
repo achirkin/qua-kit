@@ -173,7 +173,7 @@ awaitMsg = ConduitM needInput
 
 -- | Works similar to 'yield'.
 --   Yield a message converted to ByteString.
-yieldMsg :: Monad m => LuciMessage -> LuciConduit m ()
+yieldMsg :: Monad m => LuciMessage -> Conduit i m LuciProcessing
 yieldMsg msg = yield msg =$= mapOutput Left writeMessages
 
 
