@@ -153,8 +153,11 @@ fromMsgHead (MessageHeader v) = case JSON.fromJSON v of
 ConduitM left0 =&= ConduitM right0 = ConduitM $ \rest ->
     let
         goRight final left right =
+          case left of
+           HaveOutput left' final' (Left e) -> HaveOutput (goRight final left' right) final' (Left e)
+           _ ->
             case right of
-                HaveOutput p c o  -> HaveOutput (recurse p) (c >> final) o
+                HaveOutput p c o  -> goLeft' p c o final left
                 NeedInput rp rc   -> goLeft rp rc final left
                 Done r2           -> PipeM (final >> return (rest r2))
                 PipeM mp          -> PipeM (liftM recurse mp)
@@ -162,6 +165,7 @@ ConduitM left0 =&= ConduitM right0 = ConduitM $ \rest ->
           where
             recurse = goRight final left
 
+        -- go here if we need more input
         goLeft rp rc final left =
             case left of
                 HaveOutput left' final' (Right o) -> goRight final' left' (rp o)
@@ -174,6 +178,19 @@ ConduitM left0 =&= ConduitM right0 = ConduitM $ \rest ->
           where
             recurse = goLeft rp rc final
 
+        -- go here if we have output, but want to send everything on the left first
+        goLeft' hp hc ho final left =
+            case left of
+                HaveOutput _ _         (Right _) -> rightOutput
+                HaveOutput left' final' (Left e) -> HaveOutput (recurse left') final' (Left e)
+                NeedInput left' lc        -> rightOutput
+                Done _                    -> rightOutput
+                PipeM _                   -> rightOutput
+                Leftover left' i          -> Leftover (recurse left') i
+          where
+            recurse = goLeft' hp hc ho final
+            rightOutput = HaveOutput (goRight final left hp) (hc >> final) ho
+
      in goRight (return ()) (left0 Done) (right0 Done)
 {-# INLINE [1] (=&=) #-}
 infixr 3 =&=
@@ -182,10 +199,10 @@ infixr 3 =&=
 --       -> Conduit B IO (Either E C)
 --       -> Conduit A IO (Either E C)
 --ConduitM left0 =&&= ConduitM right0 = ConduitM $ \rest ->
---    let -- goRight :: IO () -> PipeA () -> PipeB () -> PipeC ()
+--    let --goRight :: IO () -> PipeA () -> PipeB () -> PipeC ()
 --        goRight final left right =
 --            case right of
---                HaveOutput p c o  -> HaveOutput (recurse p) (c >> final) o
+--                HaveOutput p c o  -> goLeft' p c o final left
 --                NeedInput rp rc   -> goLeft rp rc final left
 --                Done r2           -> PipeM (final >> return (rest r2))
 --                PipeM mp          -> PipeM (liftM recurse mp)
@@ -193,7 +210,7 @@ infixr 3 =&=
 --          where
 --            recurse = goRight final left
 --
---        -- goLeft :: (B -> PipeB ()) -> (() -> PipeB ()) -> IO () -> PipeA () -> PipeC ()
+--        --goLeft :: (B -> PipeB ()) -> (() -> PipeB ()) -> IO () -> PipeA () -> PipeC ()
 --        goLeft rp rc final left =
 --            case left of
 --                HaveOutput left' final' (Right o) -> goRight final' left' (rp o)
@@ -205,6 +222,18 @@ infixr 3 =&=
 --                Leftover left' i          -> Leftover (recurse left') i
 --          where
 --            recurse = goLeft rp rc final
+--
+--        goLeft' hp hc ho final left =
+--            case left of
+--                HaveOutput _ _ (Right _)  -> rightOutput
+--                HaveOutput left' final' (Left  e) -> HaveOutput (recurse left') final' (Left e)
+--                NeedInput _ _             -> rightOutput
+--                Done _                    -> rightOutput
+--                PipeM mp                  -> PipeM (liftM recurse mp)
+--                Leftover left' i          -> Leftover (recurse left') i
+--          where
+--            recurse = goLeft' hp hc ho final
+--            rightOutput = HaveOutput (goRight final left hp) (hc >> final) ho
 --
 --     in goRight (return ()) (left0 Done) (right0 Done)
 --
