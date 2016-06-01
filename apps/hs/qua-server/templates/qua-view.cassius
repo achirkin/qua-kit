@@ -181,23 +181,23 @@ rect.btn
 
 .titlediv
     position: absolute
-    left: 10%
-    bottom: 20%
+    left: 5%
     color: #FFFFFF
     padding: 0
     margin: 0
     width: 60%
-    height: 100%
+    max-height: 100%
+    bottom: 0
 
 .logodiv
     position: absolute
     right: 0%
-    bottom: 20%
     color: #FFFFFF
     padding: 0
     margin: 0
     width: 60%
-    height: 100%
+    max-height: 100%
+    bottom: 0
 
 .iaLogo
     overflow: visible
@@ -212,6 +212,9 @@ rect.btn
 #titlebar a:visited
     color: #FFFFFF
     text-decoration: none
+
+.titlediv:hover .iaLogo
+    fill: #FBE9E7
 
 .logodiv:hover .iaLogo
     fill: #FBE9E7
