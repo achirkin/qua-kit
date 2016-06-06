@@ -1,15 +1,12 @@
+extra-deps:
+    # authenticate-oauth patched package, remains here until comes to stackage
+  - authenticate-oauth-1.6
+
 flags: {}
 packages:
   - .
-    # authenticate-oauth patched package, remains here until my patch is merged
-  - location:
-      git: https://github.com/yesodweb/authenticate.git
-      commit: e46279688a36098b4307021936bdc5a71a342198
-    extra-dep: true
-    subdirs:
-    - authenticate-oauth
 
-resolver: lts-5.8
+resolver: lts-6.2
 compiler: ghc-7.10.3
 system-ghc: false
 install-ghc: true
