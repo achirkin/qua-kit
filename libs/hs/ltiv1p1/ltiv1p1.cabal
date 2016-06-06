@@ -1,5 +1,5 @@
 name: ltiv1p1
-version: 1.0
+version: 1.0.0.1
 cabal-version: 1.12
 build-type: Simple
 license: MIT
@@ -7,14 +7,18 @@ license-file: LICENSE
 copyright: (c) Artem Chirkin
 maintainer: Artem Chirkin <chirkin@arch.ethz.ch>
 stability: experimental
-homepage: http://ia.arch.ethz.ch/
-bug-reports: mailto:chirkin@arch.ethz.ch
+homepage: https://github.com/achirkin/qua-kit
+bug-reports: https://github.com/achirkin/qua-kit/issues
 synopsis: Partial implementation of a service provider for LTI 1.1.
 description:
     Service provider implementation for IMS Global Learning Tools Interoperability™ 1.1.
     Mean to be used for LTI components at edX.
-category: network
+category: Network, Web
 author: Artem Chirkin
+
+source-repository head
+  type:     git
+  location: https://github.com/achirkin/qua-kit.git
 
 library
     exposed-modules:
