@@ -2,15 +2,16 @@
 -- |
 -- Module      :  Web.LTI
 -- Copyright   :  (c) Artem Chirkin
--- License     :  BSD3
+-- License     :  MIT
 --
 -- Maintainer  :  Artem Chirkin <chirkin@arch.ethz.ch>
 -- Stability   :  experimental
 --
+-- Provide services to LTI 1.1 consumers, such as edX.
 --
 -----------------------------------------------------------------------------
 {-# LANGUAGE TemplateHaskell, OverloadedStrings, QuasiQuotes #-}
-{-# LANGUAGE DeriveDataTypeable #-}
+{-# LANGUAGE CPP, DeriveDataTypeable #-}
 
 module Web.LTI
     ( -- * Data types
@@ -56,7 +57,7 @@ import           System.Random                        (Random(..))
 
 -- | LTI 1.1 Service provider
 newtype LTIProvider = LTIProvider
-    { ltiOAuth :: OAuth
+    { ltiOAuth :: OAuth -- ^ OAuth credentials of provider
     }
 
 instance Default LTIProvider where
@@ -79,6 +80,7 @@ newLTIProvider token secret = p
       }
     } where p = def
 
+-- | Either LTI or OAuth exception
 data LTIException
     = LTIOAuthException OAuthException
     | LTIException String
@@ -277,6 +279,10 @@ toBS (HTTP.RequestBodyBS s) = return s
 toBS (HTTP.RequestBodyBuilder _ b) = return $ toByteString b
 toBS (HTTP.RequestBodyStream _ givesPopper) = toBS' givesPopper
 toBS (HTTP.RequestBodyStreamChunked givesPopper) = toBS' givesPopper
+#if MIN_VERSION_http_client(0, 4, 28)
+toBS (HTTP.RequestBodyIO op) = liftIO op >>= toBS
+#else
+#endif
 
 toBS' :: MonadIO m => HTTP.GivesPopper () -> m ByteString
 toBS' gp = liftIO $ do

@@ -3,8 +3,8 @@ packages:
   - .
     # authenticate-oauth patched package, remains here until my patch is merged
   - location:
-      git: https://github.com/achirkin/authenticate.git
-      commit: 3e150189eaeb56d26f453f1258e8fe8f7f9a795a
+      git: https://github.com/yesodweb/authenticate.git
+      commit: e46279688a36098b4307021936bdc5a71a342198
     extra-dep: true
     subdirs:
     - authenticate-oauth
