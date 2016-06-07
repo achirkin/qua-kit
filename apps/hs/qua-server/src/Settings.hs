@@ -54,6 +54,8 @@ data AppSettings = AppSettings
     -- ^ Copyright text to appear in the footer of the page
     , appAnalytics              :: Maybe Text
     -- ^ Google Analytics code
+    , appLuciAddress            :: Maybe (Text, Int)
+    -- ^ Default address of luci to redirect WebSockets to
     }
 
 instance FromJSON AppSettings where
@@ -80,7 +82,12 @@ instance FromJSON AppSettings where
         appCopyright              <- o .: "copyright"
         appAnalytics              <- o .:? "analytics"
 
+        lhost <- o .:? "luci-host"
+        lport <- o .:? "luci-port"
+        let appLuciAddress = (,) <$> lhost <*> lport
+
         return AppSettings {..}
+
 
 -- | Settings for 'widgetFile', such as which template languages to support and
 -- default Hamlet settings.

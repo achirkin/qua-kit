@@ -28,5 +28,7 @@ database:
   database: "_env:SQLITE_DATABASE:qua-server.sqlite3"
   poolsize: "_env:SQLITE_POOLSIZE:10"
 
-copyright: Insert copyright statement here
+copyright: (c) Artem Chirkin
 #analytics: UA-YOURCODE
+luci-host: 129.132.6.33
+luci-port: 7654

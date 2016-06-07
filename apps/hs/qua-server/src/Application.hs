@@ -73,6 +73,7 @@ makeFoundation appSettings = do
         (sqlDatabase $ appDatabaseConf appSettings)
         (sqlPoolSize $ appDatabaseConf appSettings)
 
+    putStrLn $ "DEFAULT LUCI ADDRESS: " ++ pack (show $ appLuciAddress appSettings)
     -- Perform database migration using our application's logging settings.
     runLoggingT (runSqlPool (runMigration migrateAll) pool) logFunc
 
