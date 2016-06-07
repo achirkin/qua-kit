@@ -6,11 +6,11 @@
 <div .idleguipanel #guipanel>
   $#  title bar
   <div #titlebar>
-    <a href="https://github.com/achirkin/qua-kit">
+    <a target="_blank" href="https://github.com/achirkin/qua-kit">
       <svg .titlediv width="60%" version="1.1" viewBox="0 0 148 48" xmlns="http://www.w3.org/2000/svg">
         <text .iaLogo font-size="16" x="0" y="47">
           QUA-KIT
-    <a href="http://www.ia.arch.ethz.ch/">
+    <a target="_blank" href="http://www.ia.arch.ethz.ch/">
       <svg .logodiv width="60%" version="1.1" viewBox="0 0 148 48" xmlns="http://www.w3.org/2000/svg">
         <path .iaLogo d="m2.8 0v8h10.4v-8h-10.4zm31.78 0l-1.08 8c0.67 0.368 2.69 0.018 2.31 0.943-4.33 10.36-8.67 20.71-13.01 31.06-0.89 0.17-2.17-0.06-2.82 0.36-0.33 2.55-0.65 5.09-0.98 7.64h17.4l0.8-7.8c-1.153-0.018-2.159-0.1251-1.245-1.396 0.4736-0.7363 0.3306-2.367 1.562-2.004h11.98l0.1 3.2c-0.7458 0.3091-2.383-0.3376-2.473 0.6745-0.38 2.45-0.75 4.89-1.13 7.33h17.5c0.17-2.6 0.33-5.2 0.5-7.8-0.88-0.2-2.4 0.24-2.1-1.16l-3.9-39.04h-23.42zm12.92 8c0.5 6.667 1 13.33 1.5 20h-9c2.5-6.667 5-13.33 7.5-20zm-47 3v8.751c0.7393 0.2843 2.548-0.4395 2.3 0.7754v19.47c-0.875 0.1743-2.193-0.064-2.8 0.3601v7.64h16v-7.8c-0.875-0.1743-2.193 0.064-2.8-0.3601v-28.84h-12.7z">
         <text .iaLogo font-size="11" x="68" y="23">
@@ -32,8 +32,7 @@
             ( document.getElementsByClassName('tabitem')
             , function(tab){tab.className = 'tabitem tabitemidle';}
             );
-        document.getElementById('i' + id).className = 'tabitem tabitemactive';
-      }
+        document.getElementById('i' + id).className = 'tabitem tabitemactive'; }
 
     <div .tabitem .tabitemactive #itabGeometry onclick="selectTab('tabGeometry');">
       Geometry
@@ -78,8 +77,7 @@
         function checkIfUsed(id) {
             var el = document.getElementById(id);
             if (el.value==null || el.value=="") { el.className = "pinput"; }
-            else { el.className = "pinput used"; }
-          }
+            else { el.className = "pinput used"; } }
 
       <div .pheading>
         Connect to Luci
@@ -249,10 +247,4 @@ $#  Popup windows
         Submit
     <form>
 
-<script type="text/javascript" defer>
-  window.onload = function() {
-    var mainjs=document.createElement('script')
-    mainjs.setAttribute("type","text/javascript")
-    mainjs.setAttribute("src", "qua-view.js")
-    document.head.appendChild(mainjs);
-  }
+<script type="text/javascript" src="@{StaticR js_qua_view_js}" defer>

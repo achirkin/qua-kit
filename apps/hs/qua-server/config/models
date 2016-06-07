@@ -1,22 +1,17 @@
--- | Relate students in the database to edX students.
---   Assume edxUserId does not change in edX.
-Student
-    edxUserId Text
-    name      Text Maybe
-    EdxUserId edxUserId
+User
+    ident Text
+    password Text Maybe
+    UniqueUser ident
+    deriving Typeable
+Email
+    email Text
+    userId UserId Maybe
+    verkey Text Maybe
+    UniqueEmail email
+Comment json -- Adding "json" causes ToJSON and FromJSON instances to be derived.
+    message Text
+    userId UserId Maybe
+    deriving Eq
     deriving Show
 
--- | Normally a course unit
-EdxResource
-    link         Text
-    courseId     EdxCourseId
-    friendlyName Text Maybe
-    EdxResLink   link
-    deriving Show
-
--- | An edX course
-EdxCourse
-    contextId    Text
-    friendlyName Text Maybe
-    EdxContextId contextId
-    deriving Show
+ -- By default this file is used in Model.hs (which is imported by Foundation.hs)

@@ -1,5 +1,25 @@
-Dependencies:
+## qua-server
+# Quick Urban Analysis Kit - Server
+=================================================
 
-PostgreSQL (if used) -- Ubuntu postgresql
-PostgreSQL client lib -- Ubuntu libpq-dev
-gd -- Ubuntu libgd-dev
+This is a server side of qua-kit projet.
+
+
+#### Using yesod toolset for development and deployment
+
+This requires `yesod-bin` haskell package that is available in hackage and stackage.
+
+Deploy qua-server to a configured keter server:
+```
+yesod keter
+```
+
+Run qua-server in development mode:
+```
+yesod devel
+```
+
+Run test suite:
+```
+yesod test
+```

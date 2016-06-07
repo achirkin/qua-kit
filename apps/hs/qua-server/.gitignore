@@ -1,7 +1,9 @@
 *.sqlite
+*.sqlite3
 *-shm
 *-wal
 *.aes
 *.keter
 
-web/
+tmp/
+yesod-devel/

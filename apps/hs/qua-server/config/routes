@@ -1,8 +1,7 @@
--- Main page
-/ HomeR GET
+/static StaticR Static appStatic
+/auth   AuthR   Auth   getAuth
 
--- static sources
-/static StaticR EmbeddedStatic getStatic
+/favicon.ico FaviconR GET
+/robots.txt RobotsR GET
 
--- Test qua-view.js static source
-/qua-view.js    QuaViewJSR    GET
+/ HomeR GET POST

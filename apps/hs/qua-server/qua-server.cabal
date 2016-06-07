@@ -1,5 +1,5 @@
 name: qua-server
-version: 0.0.1
+version: 0.1
 cabal-version: >=1.22
 build-type: Simple
 license: MIT
@@ -7,49 +7,153 @@ license-file: LICENSE
 copyright: (c) Artem Chirkin
 maintainer: Artem Chirkin <chirkin@arch.ethz.ch>
 stability: experimental
-homepage: http://ia.arch.ethz.ch/achirkin
-bug-reports: mailto:chirkin@arch.ethz.ch
+homepage: https://github.com/achirkin/qua-kit
+bug-reports: https://github.com/achirkin/qua-kit/issues
 synopsis: Quick Urban Analysis Kit - server
 description:
-    Quick Urban Analysis server does the logging and authentification of qua-kit users
+    Quick Urban Analysis server does the logging and authentification of qua-kit users.
+    Many thanks to yesodweb group for project and templates!
 category: Web
 author: Artem Chirkin
 
-executable qua-server
-    main-is: Main.hs
-    build-depends:
-        aeson -any,
-        base >=4.8,
-        base64-bytestring -any,
-        blaze-builder -any,
-        blaze-markup -any,
-        bytestring -any,
-        case-insensitive -any,
-        conduit -any,
-        conduit-extra -any,
-        containers -any,
-        data-default -any,
-        http-conduit -any,
-        ltiv1p1 -any,
-        monad-logger -any,
-        persistent -any,
-        persistent-postgresql -any,
-        persistent-sqlite -any,
-        resourcet -any,
-        shakespeare -any,
-        text -any,
-        time -any,
-        transformers -any,
-        wai -any,
-        yesod -any,
-        yesod-core -any,
-        yesod-static -any
-    default-language: Haskell2010
+source-repository head
+  type:     git
+  location: https://github.com/achirkin/qua-kit.git
+
+Flag dev
+    Description:   Turn on development settings, like auto-reload templates.
+    Default:       False
+
+Flag library-only
+    Description:   Build for use with "yesod devel"
+    Default:       False
+
+library
     hs-source-dirs: src
-    other-modules:
-        Foundation
-        Dispatch
-        Model
-        Config
-        Handler.Home
-    ghc-options: -Wall -ferror-spans
+    default-language: Haskell2010
+    exposed-modules: Application
+                     Foundation
+                     Import
+                     Import.NoFoundation
+                     Model
+                     Settings
+                     Settings.StaticFiles
+                     Handler.Common
+                     Handler.Home
+
+    if flag(dev) || flag(library-only)
+        cpp-options:   -DDEVELOPMENT
+        ghc-options:   -Wall -fwarn-tabs -O0
+    else
+        ghc-options:   -Wall -fwarn-tabs -O2
+
+    default-extensions:
+                TemplateHaskell
+                QuasiQuotes
+                OverloadedStrings
+                NoImplicitPrelude
+                MultiParamTypeClasses
+                TypeFamilies
+                GADTs
+                GeneralizedNewtypeDeriving
+                FlexibleContexts
+                FlexibleInstances
+                EmptyDataDecls
+                NoMonomorphismRestriction
+                DeriveDataTypeable
+                ViewPatterns
+                TupleSections
+                RecordWildCards
+
+    build-depends: base                          >= 4          && < 5
+                 , yesod                         >= 1.4.3      && < 1.5
+                 , yesod-core                    >= 1.4.17     && < 1.5
+                 , yesod-auth                    >= 1.4.0      && < 1.5
+                 , yesod-static                  >= 1.4.0.3    && < 1.6
+                 , yesod-form                    >= 1.4.0      && < 1.5
+                 , classy-prelude                >= 0.10.2
+                 , classy-prelude-conduit        >= 0.10.2
+                 , classy-prelude-yesod          >= 0.10.2
+                 , bytestring                    >= 0.9        && < 0.11
+                 , text                          >= 0.11       && < 2.0
+                 , persistent                    >= 2.0        && < 2.6
+                 , persistent-sqlite             >= 2.1.1      && < 2.6
+                 , persistent-template           >= 2.0        && < 2.6
+                 , template-haskell
+                 , shakespeare                   >= 2.0        && < 2.1
+                 , hjsmin                        >= 0.1        && < 0.3
+                 , monad-control                 >= 0.3        && < 1.1
+                 , wai-extra                     >= 3.0        && < 3.1
+                 , yaml                          >= 0.8        && < 0.9
+                 , http-conduit                  >= 2.1        && < 2.2
+                 , directory                     >= 1.1        && < 1.3
+                 , warp                          >= 3.0        && < 3.3
+                 , data-default
+                 , aeson                         >= 0.6        && < 0.12
+                 , conduit                       >= 1.0        && < 2.0
+                 , monad-logger                  >= 0.3        && < 0.4
+                 , fast-logger                   >= 2.2        && < 2.5
+                 , wai-logger                    >= 2.2        && < 2.3
+                 , file-embed
+                 , safe
+                 , unordered-containers
+                 , containers
+                 , vector
+                 , time
+                 , case-insensitive
+                 , wai
+
+executable         qua-server
+    if flag(library-only)
+        Buildable: False
+
+    main-is:           main.hs
+    hs-source-dirs:    app
+    default-language: Haskell2010
+    build-depends:     base, qua-server
+
+    ghc-options:       -threaded -rtsopts -with-rtsopts=-N
+
+test-suite test
+    type:              exitcode-stdio-1.0
+    main-is:           Spec.hs
+    other-modules:     Handler.CommonSpec
+                       Handler.HomeSpec
+                       TestImport
+    hs-source-dirs:    test
+    default-language: Haskell2010
+    ghc-options:       -Wall
+
+    default-extensions:
+                TemplateHaskell
+                QuasiQuotes
+                OverloadedStrings
+                NoImplicitPrelude
+                CPP
+                MultiParamTypeClasses
+                TypeFamilies
+                GADTs
+                GeneralizedNewtypeDeriving
+                FlexibleContexts
+                FlexibleInstances
+                EmptyDataDecls
+                NoMonomorphismRestriction
+                DeriveDataTypeable
+                ViewPatterns
+                TupleSections
+
+    build-depends: base
+                 , qua-server
+                 , yesod-test >= 1.5.0.1 && < 1.6
+                 , yesod-core
+                 , yesod
+                 , persistent
+                 , persistent-sqlite
+                 , resourcet
+                 , monad-logger
+                 , shakespeare
+                 , transformers
+                 , hspec >= 2.0.0
+                 , classy-prelude
+                 , classy-prelude-yesod
+                 , aeson
