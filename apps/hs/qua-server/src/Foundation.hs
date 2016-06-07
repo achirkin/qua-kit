@@ -1,5 +1,7 @@
 module Foundation where
 
+import Control.Concurrent.STM.TChan
+
 import Import.NoFoundation
 import Database.Persist.Sql (ConnectionPool, runSqlPool)
 import Text.Hamlet          (hamletFile)
@@ -21,6 +23,7 @@ data App = App
     , appConnPool    :: ConnectionPool -- ^ Database connection pool.
     , appHttpManager :: Manager
     , appLogger      :: Logger
+    , appWSChan      :: TChan Text
     }
 
 -- This is where we define all of the routes in our application. For a full
