@@ -6,3 +6,4 @@
 
 / HomeR GET POST
 /luci LuciR GET
+/chat ChatR GET

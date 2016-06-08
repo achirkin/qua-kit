@@ -25,7 +25,7 @@
     });
   }
   
-  function objectLoad(e){
+  function objectLoad(){
     this.contentDocument.defaultView.__resizeTrigger__ = this.__resizeElement__;
     this.contentDocument.defaultView.addEventListener('resize', resizeListener);
   }
@@ -75,7 +75,7 @@
     }
  
     if (!window['requestAnimationFrame'])
-        window['requestAnimationFrame'] = function(callback, element) {
+        window['requestAnimationFrame'] = function(callback) {
             var currTime = new Date().getTime();
             var timeToCall = Math.max(0, 16 - (currTime - lastTime));
             var id = window.setTimeout(function() { callback(currTime + timeToCall); },
@@ -127,7 +127,7 @@ function checkfullscreen() {
     } else {
         document.getElementById('fullscreenbshape').setAttribute('d','M5,5H10V7H7V10H5V5M14,5H19V10H17V7H14V5M17,14H19V19H14V17H17V14M10,17V19H5V14H7V17H10Z');
     }
-};
+}
 document.addEventListener('webkitfullscreenchange', function(e) {checkfullscreen();}, false);
 document.addEventListener('mozfullscreenchange', function(e) {checkfullscreen();}, false);
 document.addEventListener('msfullscreenchange', function(e) {checkfullscreen();}, false);

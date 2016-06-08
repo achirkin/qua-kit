@@ -18,6 +18,7 @@ renderQuaView :: Handler Html
 renderQuaView = defaultLayout $ do
   toWidgetHead $
     [hamlet|
+      <script src="@{StaticR js_LuciClient_js}" type="text/javascript">
       <script src="@{StaticR js_numeric_min_js}" type="text/javascript">
       <script src="@{StaticR js_misc_js}" type="text/javascript">
     |]

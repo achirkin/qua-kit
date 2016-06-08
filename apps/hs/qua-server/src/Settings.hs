@@ -19,6 +19,9 @@ import Yesod.Default.Config2       (applyEnvValue, configSettingsYml)
 import Yesod.Default.Util          (WidgetFileSettings, widgetFileNoReload,
                                     widgetFileReload)
 
+import qualified Data.ByteString.Char8 as BS
+import Data.Conduit.Network
+
 -- | Runtime settings to configure this application. These settings can be
 -- loaded from various sources: defaults, environment variables, config files,
 -- theoretically even a database.
@@ -54,7 +57,7 @@ data AppSettings = AppSettings
     -- ^ Copyright text to appear in the footer of the page
     , appAnalytics              :: Maybe Text
     -- ^ Google Analytics code
-    , appLuciAddress            :: Maybe (Text, Int)
+    , appLuciAddress            :: Maybe ClientSettings
     -- ^ Default address of luci to redirect WebSockets to
     }
 
@@ -84,7 +87,7 @@ instance FromJSON AppSettings where
 
         lhost <- o .:? "luci-host"
         lport <- o .:? "luci-port"
-        let appLuciAddress = (,) <$> lhost <*> lport
+        let appLuciAddress = clientSettings <$> lport <*> (BS.pack <$> lhost)
 
         return AppSettings {..}
 
