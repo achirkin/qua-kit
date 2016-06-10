@@ -16,6 +16,7 @@ library
     exposed-modules:
         Luci.Connect
         Luci.Connect.Base
+        Luci.Connect.UsefulOrphans
         Luci.Messages
     build-depends:
         base >=4.8.2 && <4.9,
@@ -31,8 +32,9 @@ library
         text -any,
         aeson -any,
         unordered-containers -any,
-        transformers -any
---        geojson -any
+        transformers -any,
+        transformers-base -any,
+        monad-logger -any
     default-language: Haskell2010
     hs-source-dirs: src
     other-modules:
@@ -55,12 +57,15 @@ executable luci-client
         text -any,
         aeson -any,
         unordered-containers -any,
-        transformers -any
---        geojson -any
+        transformers -any,
+        transformers-base -any,
+        monad-logger -any
     default-language: Haskell2010
     hs-source-dirs: src
     other-modules:
+        Luci.Connect
         Luci.Connect.Base
-        Luci.Connect.Internal
+        Luci.Connect.UsefulOrphans
         Luci.Messages
     ghc-options: -Wall -ferror-spans
+
