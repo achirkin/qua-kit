@@ -46,6 +46,8 @@ import Control.Monad.Base (MonadBase)
 import Crypto.Random (MonadRandom(..))
 import qualified Data.HashMap.Strict as HashMap
 import Data.Maybe (fromMaybe)
+import Control.Concurrent.MVar
+import Control.Concurrent (threadDelay, forkIO)
 
 
 ----------------------------------------------------------------------------------------------------
@@ -159,7 +161,7 @@ runServer :: Int -> LogLevel -> IO ()
 runServer p llvl = do
     -- Connect using Luci.Connect
     putStrLn "Running echoing server"
-    r <- runLuciProgram llvl $ talkAsLuci p errorResponse simpleServerProcessing
+    r <- runLuciProgram llvl $ talkAsLuci p Nothing errorResponse simpleServerProcessing
     putStrLn "\nLast state:"
     print r
 
@@ -168,102 +170,169 @@ runClient :: Int -> ByteString -> LogLevel -> IO ()
 runClient p h llvl = do
     -- Connect using Luci.Connect
     putStrLn "Running luci-connect client."
-    r <- runLuciProgram llvl $ talkToLuci p h errorResponse processMessages
+    r <- runLuciProgram llvl $ talkToLuciE p h (Just 2) errorResponse processMessages
     putStrLn "\nLast state:"
     print r
   where
     processMessages = do
 
-      logInfoN $ "Sending " <> fromMaybe " a message" (getMessageType msgNoAtts)
-      yieldMessage msgNoAtts
+      testMessage msgNoAtts
 
-      logInfoN $ "Sending an empty message"
-      yieldMessage msgEmpty
+      testMessage msgEmpty
 
+      testMessage msg2Att
 
-      logInfoN $ "Sending " <> fromMaybe " a message" (getMessageType msg2Att)
-      yieldMessage msg2Att
+      testMessage msg5Att
 
-      logInfoN $ "Sending " <> fromMaybe " a message" (getMessageType msg5Att)
-      yieldMessage msg5Att
+      testMessage msgSpecialAtt
 
-      logInfoN $ "Sending " <> fromMaybe " a message" (getMessageType msgSpecialAtt)
-      yieldMessage msgSpecialAtt
+      testMessage msg1Att
 
-      logInfoN $ "Sending a message with corrupted header"
-      yieldMessageCorruptHeader msg1Att
+      testMessage msgCorruptHead
 
-      logInfoN $ "Sending " <> fromMaybe " a message" (getMessageType msg1Att)
-      yieldMessage msg1Att
+      testMessage msg2Att
 
-      logInfoN $ "Sending a corrupted message with longer header"
-      yieldInvalidMessageLongerHeader msg2Att
+      testMessage msgILongerHead
+      testMessage msg2Att
 
-      logInfoN $ "Sending " <> fromMaybe " a message" (getMessageType msg2Att)
-      yieldMessage msg2Att
-      logInfoN $ "Sending " <> fromMaybe " a message" (getMessageType msg2Att)
-      yieldMessage msg2Att
+      testMessage msgIShorterHead
+      testMessage msg2Att
 
-      -- wait for all other input until the end
-      awaitForAWhile
-    awaitForAWhile = do
-      curState <- liftS get
-      case curState of
-        WasInPanic t -> do
-           liftIO . putStrLn $ "WASINPANICSTATE: " ++ Text.unpack t
-           liftS . put $ NormalState 0
-           logInfoN $ "Sending " <> fromMaybe " a message" (getMessageType msg2Att)
-           yieldMessage msg2Att
-        NormalState i -> do
-           mx <- await
-           case mx of
-             Nothing -> return ()
-             Just x  -> do
-                liftIO . putStrLn $ "\nMessage N " ++ show i
-                logMsg $ Just x
-                liftS . put $ NormalState (i+1)
-                awaitForAWhile
+      testMessage msgIWrongNums1
+      testMessage msg2Att
 
+      testMessage msgIWrongNums2
+      testMessage msg2Att
 
+      testMessage msgIForgotAttach
+      testMessage msg2Att
 
-msgNoAtts :: LuciMessage
-msgNoAtts = (MessageHeader msg, [])
-  where
+--      -- wait for all other input until the end
+--      awaitForAWhile
+--    awaitForAWhile = do
+--      curState <- liftS get
+--      case curState of
+--        WasInPanic t -> do
+--           liftIO . putStrLn $ "WASINPANICSTATE: " ++ Text.unpack t
+--           liftS . put $ NormalState 0
+--           logInfoN $ "Sending " <> desc msg2Att
+--           yieldMessage $ message msg2Att
+--        NormalState i -> do
+--           mx <- await
+--           case mx of
+--             Nothing -> return ()
+--             Just (Processing x)  -> do
+--                liftIO . putStrLn $ "\nMessage N " ++ show i
+--                logMsg $ Just x
+--                liftS . put $ NormalState (i+1)
+--                awaitForAWhile
+
+testMessage :: MonadLogger m
+            => MessageTest e m
+            -> LuciConduitE e m
+testMessage m = do
+  logInfoN $ "Sending " <> desc m
+  case corruption m of
+    Nothing -> yieldMessage $ message m
+    Just co -> co $ message m
+  mr <- await
+  case mr of
+    Nothing -> logWarnN "End of input."
+    Just (ProcessingError LuciTimedOut) -> logWarnN "Timed out"
+    Just (Processing r) -> if r == message m || not (valid m)
+      then logInfoN "Test passed."
+      else logErrorN $ "Returned message is different from the message sent! ("
+          <> Text.pack (show r) <> ")"
+    Just (ProcessedData d) -> logDebugN "Passing by processed data" >> yield (ProcessedData d)
+    Just (ProcessingError err) -> if valid m
+      then logErrorN $ "Got error, even though a sent message was valid " <> Text.pack (show err) <> ")"
+      else logInfoN $ "Test passed (" <> Text.pack (show err) <> ")"
+
+--awaitTimeouts :: MonadIO m
+--              => Double
+--              -> Conduit (Maybe a) m b
+--              -> Conduit a m b
+--awaitTimeouts t c = do
+--    x <- liftIO newEmptyMVar
+--    _ <- liftIO . forkIO . runConduit . awaitForever $ liftIO . putMVar x
+--    liftIO . threadDelay $ round (t*1000000)
+--    return undefined
+--  where
+--    yield
+
+data MessageTest e m = MessageTest
+  { message :: LuciMessage
+  , desc    :: Text
+  , valid   :: Bool
+  , corruption :: Maybe (LuciMessage -> LuciConduitE e m)
+  }
+
+msgNoAtts :: MessageTest e m
+msgNoAtts = MessageTest
+ { message = (MessageHeader msg, [])
+ , desc = d
+ , valid = v
+ , corruption = Nothing
+ } where
+    d = "Normal message without attachments"
+    v = True
     msg = object
-      [ "messageType" .= ("Normal message without attachments" :: Text)
-      , "valid" .= True
+      [ "messageType" .= d
+      , "valid" .= v
       ]
 
-msgEmpty :: LuciMessage
-msgEmpty = (MessageHeader msg, [])
-  where
+msgEmpty :: MessageTest e m
+msgEmpty = MessageTest
+ { message = (MessageHeader msg, [])
+ , desc = "Empty message"
+ , valid = True
+ , corruption = Nothing
+ } where
     msg = object []
 
 
-msg1Att :: LuciMessage
-msg1Att = (MessageHeader msg, [bs0])
-  where
+msg1Att :: MessageTest e m
+msg1Att = MessageTest
+ { message = (MessageHeader msg, [bs0])
+ , desc = d
+ , valid = v
+ , corruption = Nothing
+ } where
+    d = "Normal message with 1 attachment"
+    v = True
     bs0 = "Hello byte world!"
     bs0ref = makeAReference bs0 "ByteString" 1 (Just "Hello.world")
     msg = object
-      [ "messageType" .= ("Normal message with 1 attachment" :: Text)
-      , "valid" .= True
+      [ "messageType" .= d
+      , "valid" .= v
       , "file" .= bs0ref
       ]
 
-msg2Att :: LuciMessage
-msg2Att = (MessageHeader msg, [bs0, bs1])
-  where
+msg2Att :: MessageTest e m
+msg2Att = MessageTest
+ { message = (MessageHeader msg, [bs0, bs1])
+ , desc = d
+ , valid = v
+ , corruption = Nothing
+ } where
+    d = "Normal message with 2 attachments"
+    v = True
     bs0 = "Hello byte world!"
     bs1 = "Second good attachment"
     msg = object
-      [ "messageType" .= ("Normal message with 2 attachments" :: Text)
-      , "valid" .= True
+      [ "messageType" .= d
+      , "valid" .= v
       ]
 
-msg5Att :: LuciMessage
-msg5Att = (MessageHeader msg, [bs0, bs1, bs2, bs3, bs4])
-  where
+msg5Att :: MessageTest e m
+msg5Att = MessageTest
+ { message = (MessageHeader msg, [bs0, bs1, bs2, bs3, bs4])
+ , desc = d
+ , valid = v
+ , corruption = Nothing
+ } where
+    d = "Normal message with 5 attachments"
+    v = True
     bs0 = "Hello byte world!"
     bs1 = "Second good attachment"
     bs2 = bs1
@@ -273,18 +342,24 @@ msg5Att = (MessageHeader msg, [bs0, bs1, bs2, bs3, bs4])
               <> BS.pack (join $ replicate 13 [0..255])
               <> ". There was it, we're done!"
     msg = object
-      [ "messageType" .= ("Normal message with 5 attachments" :: Text)
-      , "valid" .= True
+      [ "messageType" .= d
+      , "valid" .= v
       ]
 
-msgSpecialAtt :: LuciMessage
-msgSpecialAtt = (MessageHeader msg, [bs0, bs1])
-  where
+msgSpecialAtt :: MessageTest e m
+msgSpecialAtt = MessageTest
+ { message = (MessageHeader msg, [bs0, bs1])
+ , desc = d
+ , valid = v
+ , corruption = Nothing
+ } where
+    d = "Message with 2 empty attachments. Note, it is valid!"
+    v = True
     bs0 = ""
     bs1 = ""
     msg = object
-      [ "messageType" .= ("Message with 2 empty attachments. Note, it is valid!" :: Text)
-      , "valid" .= True
+      [ "messageType" .= d
+      , "valid" .= v
       ]
 
 
@@ -294,14 +369,6 @@ logMsg (Just (val, bss)) = liftIO $ do
   putStrLn "\nReceived:"
   print val
   mapM_ print bss
-
-
-getMessageType :: LuciMessage -> Maybe Text
-getMessageType (MessageHeader (Object o), _) =
-  case JSON.fromJSON <$> HashMap.lookup "messageType" o of
-    Just (JSON.Success s) -> Just s
-    _                     -> Nothing
-getMessageType _ = Nothing
 
 
 ---- | Use "Luci.Messages" to construct a valid message
@@ -345,10 +412,13 @@ getMessageType _ = Nothing
 --     , "anotherThing" .= bs1ref
 --     ]
 
-
-
+msgCorruptHead :: Monad m => MessageTest e m
+msgCorruptHead = msg1Att
+  { corruption = Just yieldMessageCorruptHeader
+  , desc = "a valid message with corrupted header"
+  }
 yieldMessageCorruptHeader :: Monad m
-                          => LuciMessage -> LuciConduit e m
+                          => LuciMessage -> LuciConduitE e m
 yieldMessageCorruptHeader (msg, atts) =  mapOutput ProcessedData $ do
       let mainpart = BS.map (+1) . BSL.toStrict $ JSON.encode msg
           attSize = 8 * (length atts + 1) + foldr (\a s -> s + BS.length a) 0 atts
@@ -363,8 +433,14 @@ yieldMessageCorruptHeader (msg, atts) =  mapOutput ProcessedData $ do
       yield bs
     yieldInt64be = yield . BSL.toStrict . BSB.toLazyByteString . BSB.int64BE
 
+msgILongerHead :: Monad m => MessageTest e m
+msgILongerHead = msg1Att
+  { corruption = Just yieldInvalidMessageLongerHeader
+  , valid = False
+  , desc = "a corrupted message with longer header"
+  }
 yieldInvalidMessageLongerHeader :: Monad m
-                          => LuciMessage -> LuciConduit e m
+                          => LuciMessage -> LuciConduitE e m
 yieldInvalidMessageLongerHeader (msg, atts) =  mapOutput ProcessedData $ do
       let mainpart = (BSL.toStrict $ JSON.encode msg) <> "!"
           attSize = 8 * (length atts + 1) + foldr (\a s -> s + BS.length a) 0 atts
@@ -379,9 +455,14 @@ yieldInvalidMessageLongerHeader (msg, atts) =  mapOutput ProcessedData $ do
       yield bs
     yieldInt64be = yield . BSL.toStrict . BSB.toLazyByteString . BSB.int64BE
 
-
+msgIShorterHead :: Monad m => MessageTest e m
+msgIShorterHead = msg1Att
+  { corruption = Just yieldInvalidMessageShorterHeader
+  , valid = False
+  , desc = "a corrupted message with shorter header"
+  }
 yieldInvalidMessageShorterHeader :: Monad m
-                          => LuciMessage -> LuciConduit e m
+                          => LuciMessage -> LuciConduitE e m
 yieldInvalidMessageShorterHeader (msg, atts) =  mapOutput ProcessedData $ do
       let mainpart = BS.drop 1 (BSL.toStrict $ JSON.encode msg)
           attSize = 8 * (length atts + 1) + foldr (\a s -> s + BS.length a) 0 atts
@@ -396,8 +477,15 @@ yieldInvalidMessageShorterHeader (msg, atts) =  mapOutput ProcessedData $ do
       yield bs
     yieldInt64be = yield . BSL.toStrict . BSB.toLazyByteString . BSB.int64BE
 
+
+msgIWrongNums1 :: Monad m => MessageTest e m
+msgIWrongNums1 = msg1Att
+  { corruption = Just yieldInvalidMessageWrongNumbers1
+  , valid = False
+  , desc = "a corrupted message with wrong binary numbers (1)"
+  }
 yieldInvalidMessageWrongNumbers1 :: Monad m
-                          => LuciMessage -> LuciConduit e m
+                          => LuciMessage -> LuciConduitE e m
 yieldInvalidMessageWrongNumbers1 (msg, atts) =  mapOutput ProcessedData $ do
       let mainpart = BSL.toStrict $ JSON.encode msg
           attSize = 8 * length atts + foldr (\a s -> s + BS.length a) 0 atts
@@ -412,8 +500,14 @@ yieldInvalidMessageWrongNumbers1 (msg, atts) =  mapOutput ProcessedData $ do
       yield bs
     yieldInt64be = yield . BSL.toStrict . BSB.toLazyByteString . BSB.int64BE
 
+msgIWrongNums2 :: Monad m => MessageTest e m
+msgIWrongNums2 = msg1Att
+  { corruption = Just yieldInvalidMessageWrongNumbers2
+  , valid = False
+  , desc = "a corrupted message with wrong binary numbers (2)"
+  }
 yieldInvalidMessageWrongNumbers2 :: Monad m
-                          => LuciMessage -> LuciConduit e m
+                          => LuciMessage -> LuciConduitE e m
 yieldInvalidMessageWrongNumbers2 (msg, atts) =  mapOutput ProcessedData $ do
       let mainpart = BSL.toStrict $ JSON.encode msg
           attSize = 8 * (length atts + 1) + foldr (\a s -> s + BS.length a) 0 atts
@@ -428,9 +522,14 @@ yieldInvalidMessageWrongNumbers2 (msg, atts) =  mapOutput ProcessedData $ do
       yield bs
     yieldInt64be = yield . BSL.toStrict . BSB.toLazyByteString . BSB.int64BE
 
-
+msgIForgotAttach :: Monad m => MessageTest e m
+msgIForgotAttach = msg1Att
+  { corruption = Just yieldInvalidMessageForgotAttach
+  , valid = False
+  , desc = "a corrupted message with calculated, but not added attachment"
+  }
 yieldInvalidMessageForgotAttach :: Monad m
-                          => LuciMessage -> LuciConduit e m
+                          => LuciMessage -> LuciConduitE e m
 yieldInvalidMessageForgotAttach (msg, atts) =  mapOutput ProcessedData $ do
       let mainpart = BSL.toStrict $ JSON.encode msg
           attSize = 8 * (length atts + 1) + foldr (\a s -> s + BS.length a) 0 atts

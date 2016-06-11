@@ -1,3 +1,4 @@
+{-# LANGUAGE FlexibleContexts #-}
 -----------------------------------------------------------------------------
 -- |
 -- Module      :  Luci.Connect.Base
@@ -49,7 +50,7 @@ module Luci.Connect.Base
     ( -- * Main types
       MessageHeader (..), toMsgHead, fromMsgHead
     , LuciMessage
-    , LuciConduit
+    , LuciConduit, LuciConduitE
       -- * Message processing
       -- | Write conduits for message processing and connect them using
       --   the '=&=' combinator.
@@ -139,6 +140,7 @@ import qualified Data.ByteString.Lazy.Char8 as BSLC
 import qualified Data.ByteString.Builder as BSB
 import           Data.Conduit
 import           Data.Conduit.Internal (ConduitM (ConduitM), Pipe (..))
+--import qualified Data.Conduit.Internal as Pipe
 import qualified Data.Conduit.Binary as ConB
 import qualified Data.Text.Encoding as Text
 import qualified Data.Text as Text
@@ -149,6 +151,8 @@ import qualified Data.HashMap.Strict as HashMap
 import qualified Data.Primitive.Array as Prim
 import           Data.String (IsString)
 import           Data.Word
+
+
 
 import Luci.Connect.Internal
 
@@ -272,7 +276,9 @@ withLuciErrorT :: (Functor m)
 withLuciErrorT = mapLuciProcessingT . fmap . withLuciError
 
 -- | Put raw data into LuciProcessing pipeline
-yieldMessage :: MonadLogger m => LuciMessage -> LuciConduit e m
+yieldMessage :: MonadLogger m
+             => LuciMessage
+             -> Conduit a m (LuciProcessing e LuciMessage)
 yieldMessage msg = yield msg =$= mapOutput ProcessedData writeMessages
 
 
@@ -349,7 +355,8 @@ instance (MonadLogger m) => MonadLogger(LuciProcessingT e m) where
 -- | Alias for a processing conduit.
 type LuciConduit e m = ConduitM LuciMessage (LuciProcessing e LuciMessage) m ()
 
-
+type LuciConduitE e m = Conduit (LuciProcessing ComError LuciMessage) m
+                                (LuciProcessing (LuciError e) LuciMessage)
 
 
 -- | Conduit pipe that receives Luci messages, encodes them,
@@ -452,6 +459,7 @@ data ComError
   = ByteReadingError !String    -- ^ Failed to read data from source.
   | MsgValidationError !String  -- ^ The message is corrupted or invalid.
   | JSONError !String           -- ^ Failed to parse header
+  | LuciTimedOut                -- ^ We have not received an expected message under specified timeout
   deriving (Eq, Show)
 
 -- | All possible errors, customizeable by a user app
@@ -525,7 +533,7 @@ panicConduit = do
     let pIDEnc = Text.decodeUtf8 (BS.encode panicID)
         panicMSG = MessageHeader $ object
            [ "panic" .= pIDEnc]
-    $(logInfo) $ "PANIC: sending panic message; base64 panicID = " <> pIDEnc
+    logInfoN $ "PANIC: sending panic message; base64 panicID = " <> pIDEnc
     yield (panicMSG,[]) =$= writeMessages =$= awaitForever yield
     let -- length of pattern to search (BTW, must be 32)
         n = BS.length panicID
@@ -549,7 +557,7 @@ panicConduit = do
             if BS.isPrefixOf panicID bs
             then do
               leftover (BS.drop n bs)
-              $(logInfo) $ "PANIC: found panicID; calming."
+              logInfoN $ "PANIC: found panicID; calming."
             else do
               let toDrop = shift $ BS.index bs (n-1)
               $(logDebug) $ "PANIC: dropping " <> Text.pack (show toDrop) <> " bytes of data."
@@ -575,7 +583,7 @@ panicResponseConduit = await >>= \m ->
       case findPanicId val of
         Nothing      -> yield $ Processing msg
         Just panicID -> do
-          $(logInfo) "PANIC RESPONSE: found panic message and sending raw paniID back."
+          logInfoN "PANIC RESPONSE: found panic message and sending raw paniID back."
           yield $ ProcessedData panicID
       panicResponseConduit
   where
@@ -585,4 +593,95 @@ panicResponseConduit = await >>= \m ->
          JSON.Error _ -> Nothing
          JSON.Success str -> Just . BS.decodeLenient $ BSC.pack str
     findPanicId _ = Nothing
+
+
+
+--awaitWithTimeout :: MonadBaseControl IO m
+--                 => Double -- ^ timeout in seconds
+--                 -> Consumer i m (Maybe (Maybe i))
+--awaitWithTimeout t = ConduitM $ \f -> PipeM $ do
+--
+--  return $ NeedInput (f . Just . Just) (const $ f Nothing)
+
+--data D = D
+
+
+
+
+---- rest is upstream conduit?
+---- rest :: () -> Pipe D D (Maybe D) () IO b
+---- yieldResults :: forall l i u r. Pipe l i (Maybe D) u IO r
+--
+--sourceWithTimeout :: Double -- ^ timeout in seconds
+--                  -> Source IO D
+--                  -> Source IO (Maybe D)
+--sourceWithTimeout t (ConduitM sourceP) = ConduitM $ \rest -> PipeM $ do
+--    x <- newEmptyMVar
+--    let giveTimeouts = do
+--          threadDelay $ round (t*1000000)
+--          putMVar x $ Right Nothing
+--          giveTimeouts
+----        go :: Pipe () () D () IO () -> Pipe () () Void () IO ()
+--        go (HaveOutput p c o) = PipeM $ do
+--            putMVar x (Right $ Just o)
+--            c
+--            return $ go p
+--        go (NeedInput p c) = NeedInput (go . p) (go . c)
+--        go (Done r) = PipeM $ do
+--            putMVar x $ Left r
+--            return $ Done r
+--        go (PipeM mp) = PipeM (liftM (go) mp)
+--        go (Leftover p i) = Leftover (go p) i
+--        giveInputs = runPipe $ injectLeftovers $ go (sourceP Done)
+----        yieldResults :: Pipe () () (Maybe D) () IO ()
+--        yieldResults = PipeM $ do
+--          mv <- takeMVar x
+--          return $ case mv of
+--            Left r -> Done r
+--            Right v -> HaveOutput yieldResults (return ()) v
+--    _ <- forkIO giveTimeouts
+--    _ <- forkIO giveInputs
+--    return yieldResults
+
+
+
+--yieldOr :: Monad m
+--        => o
+--        -> m () -- ^ finalizer
+--        -> ConduitM i o m ()
+--yieldOr o m = ConduitM $ \rest -> HaveOutput (rest ()) m o
+--awaitForever :: Monad m => (i -> ConduitM i o m r) -> ConduitM i o m ()
+--awaitForever f = ConduitM $ \rest ->
+--    let go = NeedInput (\i -> unConduitM (f i) (const go)) rest
+--     in go
+
+--mapForever :: Monad m => (i -> ConduitM i o m r) -> ConduitM i o m ()
+--mapForever f = ConduitM $ \rest ->
+--    let go = NeedInput (\i -> (\rest -> HaveOutput (rest ()) (return ()) i)) (const go)) rest
+--     in go
+
+
+
+--await :: Monad m => Consumer i m (Maybe i)
+--await = ConduitM $ \rest -> NeedInput (rest . Just) (const $ rest Nothing)
+
+
+--awaitTimeouts :: MonadIO m
+--              => Double
+--              -> Conduit (Maybe a) m b
+--              -> Conduit a m b
+--awaitTimeouts t (ConduitM c0) = ConduitM $ \rest ->
+--    let
+--        go final right =
+--            case right of
+--                NeedInput rp rc   -> PipeM $ do
+--                      return $ NeedInput (rp . Just) rc
+--                PipeM mp          -> PipeM (liftM recurse mp)
+--                HaveOutput p c o  -> HaveOutput (recurse p) (c >> final) o
+--                Done r2           -> Done r2
+--                Leftover right' i -> Leftover right' i
+--          where
+--            recurse = go final
+--
+--     in go (return ()) (c0 Done)
 
