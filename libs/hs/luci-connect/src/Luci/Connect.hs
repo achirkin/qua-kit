@@ -48,6 +48,7 @@ import Control.Concurrent (threadDelay, forkIO)
 
 import Luci.Connect.Base
 import Luci.Connect.Internal
+import Control.Monad (void, unless, when)
 --import Control.Monad (when, unless)
 
 -- | Connect to Luci server and a conduit program that processes messages
@@ -95,10 +96,12 @@ talkToLuci' mt errHandle pipe appData =
                           =$= outgoing
   where
     outgoing = Network.appSink appData
-    incoming = case mt of
+    incoming = case (round . (/ (fromIntegral checkGranularity)) . (1000000 *)) <$> mt of
         Nothing -> mapOutput Processing $ Network.appSource appData
-        Just t -> mapOutput (maybe (ProcessingError $ LuciComError LuciTimedOut) Processing)
-                $ appTimedSource t appData
+        Just t -> if t <= 0
+                  then mapOutput Processing $ Network.appSource appData
+                  else mapOutput (maybe (ProcessingError $ LuciComError LuciTimedOut) Processing)
+                          $ appTimedSource (t*checkGranularity) appData
     handleErrors = do
       x <- await
       case x of
@@ -162,10 +165,12 @@ talkToLuciE' mt errHandle pipe appData =
                           =$= outgoing
   where
     outgoing = Network.appSink appData
-    incoming = case mt of
+    incoming = case (round . (/ (fromIntegral checkGranularity)) . (1000000 *)) <$> mt of
         Nothing -> mapOutput Processing $ Network.appSource appData
-        Just t -> mapOutput (maybe (ProcessingError LuciTimedOut) Processing)
-                $ appTimedSource t appData
+        Just t -> if t <= 0
+                  then mapOutput Processing $ Network.appSource appData
+                  else mapOutput (maybe (ProcessingError LuciTimedOut) Processing)
+                          $ appTimedSource (t*checkGranularity) appData
     handleErrors = do
       x <- await
       case x of
@@ -222,38 +227,50 @@ parseMsgsPanicCatchingE = do
       parseMsgsPanicCatchingE
 
 
+checkGranularity :: Int
+checkGranularity = 10
 
 appTimedSource :: (SN.HasReadWrite ad, MonadIO m)
-               => Double
+               => Int -- ^ timeout in milliseconds
                -> ad
                -> Producer m (Maybe ByteString)
 appTimedSource t ad = do
   x <- liftIO $ newEmptyMVar
-  let giveData = do
-        done <- liftIO $ newEmptyMVar
-        _ <- forkIO $ do
-          threadDelay $ round (t*1000000)
-          tryTakeMVar done >>= \dd -> case dd of
-            Just True -> return ()
-            _ -> do
-              _ <- tryPutMVar done False
-              putMVar x $ Just Nothing
-        bs <- read'
-        _ <- tryPutMVar done True
-        if (BSB.null bs)
-        then
-          putMVar x Nothing
-        else do
-          putMVar x $ Just $ Just bs
-          giveData
+  startD <- liftIO $ newMVar True
+  startT <- liftIO $ newEmptyMVar
+  done <- liftIO $ newMVar False
+  let dt = t `div` checkGranularity
+      waitABit 0 = void . tryPutMVar x $ Just Nothing
+      waitABit n = do
+        threadDelay dt
+        readMVar done >>= flip unless (waitABit $ n-1)
+      giveTimeouts = do
+        start <- takeMVar startT
+        when start $ do
+          waitABit checkGranularity
+          giveTimeouts
+      giveData = do
+        start <- takeMVar startD
+        void $ swapMVar done False
+        void $ tryPutMVar startT start
+        when start $ do
+          bs <- read'
+          void $ swapMVar done True
+          if BSB.null bs
+          then
+            putMVar x Nothing
+          else do
+            putMVar x . Just $ Just bs
+            giveData
       loop = do
         mv <- liftIO $ takeMVar x
         case mv of
           Nothing -> return ()
           Just v -> do
-            yield v
+            yieldOr v (liftIO $ tryPutMVar startD False >> putStrLn "Finished TimedSource!")
+            void . liftIO $ tryPutMVar startD True
             loop
-  _ <- liftIO $ forkIO giveData
+  void . liftIO $ forkIO giveData >> forkIO giveTimeouts
   loop
   where
     read' = SN.appRead ad

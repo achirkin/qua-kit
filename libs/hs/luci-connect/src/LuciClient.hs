@@ -25,9 +25,9 @@ import qualified Data.Text as Text
 import Data.ByteString (ByteString)
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Char8 as BSC
-import qualified Data.ByteString.Base64 as BS
+--import qualified Data.ByteString.Base64 as BS
 import qualified Data.ByteString.Lazy as BSL
-import qualified Data.ByteString.Lazy.Char8 as BSLC
+--import qualified Data.ByteString.Lazy.Char8 as BSLC
 import qualified Data.ByteString.Builder as BSB
 
 import Luci.Messages
@@ -44,10 +44,10 @@ import Data.Monoid ((<>))
 import Control.Monad.Trans.Control
 import Control.Monad.Base (MonadBase)
 import Crypto.Random (MonadRandom(..))
-import qualified Data.HashMap.Strict as HashMap
-import Data.Maybe (fromMaybe)
-import Control.Concurrent.MVar
-import Control.Concurrent (threadDelay, forkIO)
+--import qualified Data.HashMap.Strict as HashMap
+--import Data.Maybe (fromMaybe)
+--import Control.Concurrent.MVar
+--import Control.Concurrent (threadDelay, forkIO)
 
 
 ----------------------------------------------------------------------------------------------------
@@ -62,7 +62,7 @@ data LPState
 initialState :: LPState
 initialState = NormalState 0
 
-simpleServerProcessing :: LuciConduit Text LuciProgram
+simpleServerProcessing :: LuciConduitE Text LuciProgram
 simpleServerProcessing = do
   curState <- liftS get
   -- Just send back each message twice!
@@ -73,9 +73,15 @@ simpleServerProcessing = do
     _ -> return ()
   mmsg <- await
   case mmsg of
-   Nothing -> throwLuciError "Finished connection!"
-   Just msg -> do
+   Nothing -> throwLuciError $ LuciClientError "Finished connection!"
+   Just (Processing msg) -> do
       yieldMessage msg
+      simpleServerProcessing
+   Just (ProcessedData d) -> do
+      yield (ProcessedData d)
+      simpleServerProcessing
+   Just (ProcessingError e) -> do
+      yield (ProcessingError $ LuciComError e)
       simpleServerProcessing
 
 errorResponse :: LuciError Text -> LuciProgram ()
@@ -100,7 +106,7 @@ instance MonadLogger LuciProgram where
   monadLoggerLog a b c d = LuciProgram . lift $ monadLoggerLog a b c d
 
 -- | lift state operations into conduit with our program
-liftS :: StateT LPState (LoggingT IO) t -> ConduitM a (LuciProcessing Text b) LuciProgram t
+liftS :: StateT LPState (LoggingT IO) t -> ConduitM a b LuciProgram t
 liftS f = lift $ LuciProgram f
 
 -- | lift state operations into our program
@@ -119,19 +125,24 @@ main = do
     putStrLn "Luci-connect testing app. Usage:\n\
              \luci-connect [args..]\n\
              \Parameters:\n\
-             \\tserver       - run as server        (default: client)\n\
-             \\tport=x       - choose port          (default: 7654)\n\
-             \\thost=a.b.c.d - choose host          (default: 127.0.1.1)\n\
-             \\tloglevel=lvl - choose logging level (default: info)\n\
+             \\tserver             - run as a server      (default: client)\n\
+             \\tport=x             - choose port          (default: 7654)\n\
+             \\thost=a.b.c.d       - choose host          (default: 127.0.1.1)\n\
+             \\trole=[tester|echo] - choose role          (default: tester)\n\
+             \\t   i.e. role=tester or role=echo\n\
+             \\ttimeout=x          - timeout for messages (default: 2) (in seconds)\n\
+             \\tloglevel=lvl       - choose logging level (default: info)\n\
              \\t   possible levels:  debug, info, warn, error\n"
     args <- getArgs
     let sets = setSettings args RunSettings
                   { host     = "127.0.1.1"
                   , port     = 7654
                   , run      = runClient
+                  , timeout  = 2
+                  , action   = testLuciProcessing
                   , logLevel = LevelInfo
                   }
-    (run sets) (port sets) (host sets) (logLevel sets)
+    (run sets) (port sets) (host sets) (logLevel sets) (timeout sets) (action sets)
   where
     setSettings [] s = s
     setSettings ("server":xs) s = setSettings xs s{run = const . runServer}
@@ -146,86 +157,76 @@ main = do
                Just "warning" -> setSettings xs s{logLevel = LevelWarn}
                Just "error"   -> setSettings xs s{logLevel = LevelError}
                Just h -> setSettings xs s{logLevel = LevelOther $ Text.pack h}
-               Nothing -> setSettings xs s
+               Nothing -> case stripPrefix "timeout=" par of
+                 Just t -> setSettings xs s{timeout = read t}
+                 Nothing -> case stripPrefix "role=" par of
+                   Just "echo" -> setSettings xs s{action = simpleServerProcessing}
+                   Just "tester" -> setSettings xs s{action = testLuciProcessing}
+                   Just _ -> setSettings xs s{action = testLuciProcessing}
+                   Nothing -> setSettings xs s
 
 data RunSettings = RunSettings
   { host :: ByteString
   , port :: Int
-  , run :: Int -> ByteString -> LogLevel -> IO ()
+  , timeout :: Double
+  , action :: LuciConduitE Text LuciProgram
+  , run :: Int -> ByteString -> LogLevel -> Double -> LuciConduitE Text LuciProgram -> IO ()
   , logLevel :: LogLevel
   }
 
 ----------------------------------------------------------------------------------------------------
 
-runServer :: Int -> LogLevel -> IO ()
-runServer p llvl = do
+runServer :: Int -> LogLevel -> Double -> LuciConduitE Text LuciProgram -> IO ()
+runServer p llvl dt act = do
     -- Connect using Luci.Connect
-    putStrLn "Running echoing server"
-    r <- runLuciProgram llvl $ talkAsLuci p Nothing errorResponse simpleServerProcessing
+    putStrLn "Running luci-connect server"
+    r <- runLuciProgram llvl $ talkAsLuciE p (Just dt) errorResponse act
     putStrLn "\nLast state:"
     print r
 
 -- | Run client sending some amount of staff
-runClient :: Int -> ByteString -> LogLevel -> IO ()
-runClient p h llvl = do
+runClient :: Int -> ByteString -> LogLevel -> Double -> LuciConduitE Text LuciProgram -> IO ()
+runClient p h llvl dt act = do
     -- Connect using Luci.Connect
     putStrLn "Running luci-connect client."
-    r <- runLuciProgram llvl $ talkToLuciE p h (Just 2) errorResponse processMessages
+    r <- runLuciProgram llvl $ talkToLuciE p h (Just dt) errorResponse act
     putStrLn "\nLast state:"
     print r
-  where
-    processMessages = do
 
-      testMessage msgNoAtts
 
-      testMessage msgEmpty
+testLuciProcessing :: LuciConduitE Text LuciProgram
+testLuciProcessing = do
+    testMessage msgNoAtts
 
-      testMessage msg2Att
+    testMessage msgEmpty
 
-      testMessage msg5Att
+    testMessage msg2Att
 
-      testMessage msgSpecialAtt
+    testMessage msg5Att
 
-      testMessage msg1Att
+    testMessage msgSpecialAtt
 
-      testMessage msgCorruptHead
+    testMessage msg1Att
 
-      testMessage msg2Att
+    testMessage msgCorruptHead
 
-      testMessage msgILongerHead
-      testMessage msg2Att
+    testMessage msg2Att
 
-      testMessage msgIShorterHead
-      testMessage msg2Att
+    testMessage msgILongerHead
+    testMessage msg2Att
 
-      testMessage msgIWrongNums1
-      testMessage msg2Att
+    testMessage msgIShorterHead
+    testMessage msg2Att
 
-      testMessage msgIWrongNums2
-      testMessage msg2Att
+    testMessage msgIWrongNums1
+    testMessage msg2Att
 
-      testMessage msgIForgotAttach
-      testMessage msg2Att
+    testMessage msgIWrongNums2
+    testMessage msg2Att
 
---      -- wait for all other input until the end
---      awaitForAWhile
---    awaitForAWhile = do
---      curState <- liftS get
---      case curState of
---        WasInPanic t -> do
---           liftIO . putStrLn $ "WASINPANICSTATE: " ++ Text.unpack t
---           liftS . put $ NormalState 0
---           logInfoN $ "Sending " <> desc msg2Att
---           yieldMessage $ message msg2Att
---        NormalState i -> do
---           mx <- await
---           case mx of
---             Nothing -> return ()
---             Just (Processing x)  -> do
---                liftIO . putStrLn $ "\nMessage N " ++ show i
---                logMsg $ Just x
---                liftS . put $ NormalState (i+1)
---                awaitForAWhile
+    testMessage msgIForgotAttach
+    testMessage msg2Att
+
 
 testMessage :: MonadLogger m
             => MessageTest e m
@@ -239,26 +240,19 @@ testMessage m = do
   case mr of
     Nothing -> logWarnN "End of input."
     Just (ProcessingError LuciTimedOut) -> logWarnN "Timed out"
-    Just (Processing r) -> if r == message m || not (valid m)
-      then logInfoN "Test passed."
-      else logErrorN $ "Returned message is different from the message sent! ("
-          <> Text.pack (show r) <> ")"
+    Just (Processing r) -> case (r == message m, valid m) of
+       (True , True ) -> logInfoN "Test passed (messages are equal)."
+       (True , False) -> logWarnN "Very strange! Messages are equal, but marked being not valid."
+       (False, False) -> logInfoN "Test passed (got some response on invalid message)."
+       (False, True ) -> logErrorN $ "Returned message is different from the message sent! ("
+                                   <> Text.pack (show r) <> ")"
     Just (ProcessedData d) -> logDebugN "Passing by processed data" >> yield (ProcessedData d)
     Just (ProcessingError err) -> if valid m
-      then logErrorN $ "Got error, even though a sent message was valid " <> Text.pack (show err) <> ")"
-      else logInfoN $ "Test passed (" <> Text.pack (show err) <> ")"
+      then logErrorN $ "Got error, even though a sent message was valid "
+                    <> Text.pack (show err) <> ")"
+      else logWarnN $ "There is a problem: got an error for invalid message "
+                    <> Text.pack (show err) <> "."
 
---awaitTimeouts :: MonadIO m
---              => Double
---              -> Conduit (Maybe a) m b
---              -> Conduit a m b
---awaitTimeouts t c = do
---    x <- liftIO newEmptyMVar
---    _ <- liftIO . forkIO . runConduit . awaitForever $ liftIO . putMVar x
---    liftIO . threadDelay $ round (t*1000000)
---    return undefined
---  where
---    yield
 
 data MessageTest e m = MessageTest
   { message :: LuciMessage
@@ -362,55 +356,6 @@ msgSpecialAtt = MessageTest
       , "valid" .= v
       ]
 
-
-logMsg :: MonadIO m => Maybe LuciMessage -> m ()
-logMsg Nothing = liftIO $ putStrLn "\nFinished session."
-logMsg (Just (val, bss)) = liftIO $ do
-  putStrLn "\nReceived:"
-  print val
-  mapM_ print bss
-
-
----- | Use "Luci.Messages" to construct a valid message
---remoteRegister :: (MessageHeader, [ByteString])
---remoteRegister = (toMsgHead jsv, [])
---  where
---    jsv = RemoteRegister
---        { exampleCall = JSON.object []
---        , serviceName = "CoolTestService"
---        , inputs  = Nothing
---        , outputs = Nothing
---        }
---
----- | Construct a message inplace
---testFileEcho :: (MessageHeader, [ByteString])
---testFileEcho = (MessageHeader msg,[bs0, bs1])
---  where
---    bs0 = "Hello byte world!"
---    bs0ref = makeAReference bs0 "ByteString" 1 (Just "Hello.world")
---    bs1 = "Second attachment as"
---    bs1ref = makeAReference bs1 "ByteString" 2 Nothing
---    msg = object
---     [ "run" .= ("test.FileEcho" :: Text)
---     , "myCoolFile" .= bs0ref
---     , "myPoorFile" .= bs0ref
---     , "anotherThing" .= bs1ref
---     ]
---
----- | Construct a message inplace
---testCorruptedFileEcho :: (MessageHeader, [ByteString])
---testCorruptedFileEcho = (MessageHeader msg,[bs0, bs1, bs1])
---  where
---    bs0 = "Hello byte world!"
---    bs0ref = makeAReference bs0 "ByteString" 1 (Just "Hello.world")
---    bs1 = "Second attachment as"
---    bs1ref = makeAReference bs1 "ByteString" 2 Nothing
---    msg = object
---     [ "run" .= ("test.FileEcho" :: Text)
---     , "myCoolFile" .= bs0ref
---     , "myPoorFile" .= bs0ref
---     , "anotherThing" .= bs1ref
---     ]
 
 msgCorruptHead :: Monad m => MessageTest e m
 msgCorruptHead = msg1Att
