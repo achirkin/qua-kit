@@ -355,6 +355,7 @@ instance (MonadLogger m) => MonadLogger(LuciProcessingT e m) where
 -- | Alias for a processing conduit.
 type LuciConduit e m = ConduitM LuciMessage (LuciProcessing e LuciMessage) m ()
 
+-- | Alias for a processing conduit (with errors not filtered out from an upstream).
 type LuciConduitE e m = Conduit (LuciProcessing ComError LuciMessage) m
                                 (LuciProcessing (LuciError e) LuciMessage)
 

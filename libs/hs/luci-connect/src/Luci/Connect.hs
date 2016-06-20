@@ -1,5 +1,8 @@
-{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FunctionalDependencies #-}
+{-# LANGUAGE FlexibleContexts, FlexibleInstances, GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE TemplateHaskell, Rank2Types #-}
 -----------------------------------------------------------------------------
 -- |
@@ -17,17 +20,33 @@
 -----------------------------------------------------------------------------
 
 module Luci.Connect
-    ( -- * Simple Luci clients
-      talkToLuci
+    ( -- * Simple program
+      -- | Helper data type for creating simple services.
+      --   The idea is that a user only needs to specify a state data type and message processing pipeline (Conduit).
+      --   `LuciProgram` provides methods to store and read the state.
+      --   Conduit lets user to read upstream messages from the network
+      --     and send new messages downstream back to the network.
+      LuciProgram
+    , runSimpleLuciClient
+    , getProgramState
+    , setProgramState
+    , await
+    , yieldMessage
+    , runLuciProgram
+    , LuciProgramState
+      -- * Simple Luci clients
+    , talkToLuci
     , talkAsLuci
     , talkToLuciE
     , talkAsLuciE
-    , yieldMessage
     ) where
 
+import           Control.Monad.Base (MonadBase)
 import           Control.Monad.IO.Class
 import           Control.Monad.Trans.Control
 import           Control.Monad.Trans.Class
+import           Control.Monad.Trans.State
+--import           Control.Monad.Trans.Control
 import           Control.Monad.Logger
 import           Crypto.Random (MonadRandom (..))
 import           Data.Conduit
@@ -40,16 +59,94 @@ import qualified Data.Text as Text
 
 
 import qualified Data.Streaming.Network as SN
---import Control.Monad.Trans.Control
 import Control.Concurrent.MVar
 import Control.Concurrent (threadDelay, forkIO)
 --import Data.Void (Void)
 
-
 import Luci.Connect.Base
 import Luci.Connect.Internal
 import Control.Monad (void, unless, when)
---import Control.Monad (when, unless)
+
+
+----------------------------------------------------------------------------------------------------
+
+-- | This data type wraps all necessary type transformers to run Luci service.
+--   It has embeded state `s` that is preserved throughout program execution.
+--   The state `s` is a data type defined by a user;
+--   for instance, it can be a unit type @()@ if one does not need to have a state at all.
+newtype LuciProgram s t = LuciProgram { unProgram :: (StateT s (LoggingT IO) t) }
+  deriving (Functor, Applicative, Monad, MonadIO, MonadBase IO)
+
+instance MonadBaseControl IO (LuciProgram s) where
+  type StM (LuciProgram s) a = (a, s)
+  liftBaseWith f = LuciProgram $ liftBaseWith $ \q -> f (q . unProgram)
+  restoreM = LuciProgram . restoreM
+
+instance MonadRandom (LuciProgram s) where
+  getRandomBytes = liftIO . getRandomBytes
+
+instance MonadLogger (LuciProgram s) where
+  monadLoggerLog a b c d = LuciProgram . lift $ monadLoggerLog a b c d
+
+-- | Helper class to access State functionality of LuciProgram within Conduits
+class LuciProgramState p s | p -> s where
+  -- | Get a current state of the program (use `get` in `Control.Monad.Trans.State`)
+  getProgramState :: p s
+  -- | Set a current state of the program (use `put` in `Control.Monad.Trans.State`)
+  setProgramState :: s -> p ()
+
+instance LuciProgramState (LuciProgram s) s where
+  getProgramState = LuciProgram get
+  setProgramState s = LuciProgram (put s)
+
+
+instance LuciProgramState (ConduitM a b (LuciProgram s)) s where
+  getProgramState = lift $ LuciProgram get
+  setProgramState s = lift $ LuciProgram (put s)
+
+
+-- | Run a program in IO monad.
+runLuciProgram :: s -> LogLevel -> LuciProgram s r -> IO s
+runLuciProgram s ll (LuciProgram p) = runStdoutLoggingT
+                                    . filterLogger (\_ l -> l >= ll)
+                                    $ execStateT p s
+
+-- | The simplest possible setting to run a luci service as a conduit with its own state.
+--   The first three parameters are just obvious.
+--   Error handling is optional; the simplest way to use it would be @const (return ())@ or @liftIO . print@.
+--   The most important part is the conduit to process messages.
+--   You have to make a recursive function that reads messages using `await`
+--     and submit answers using `yieldMessage`.
+--   This could be an echoing service, something like:
+--
+-- @
+--   processMessages = do
+--     maybemsg <- await      -- wait for a new message to come
+--     case maybemsg of
+--       Nothing -> return () -- no input means connection is closed
+--       Just msg -> do
+--         yieldMessage msg   -- send back the message received
+--         processMessages    -- recurse to continue listening loop
+-- @
+--   State is a data type fully defined by a client; it can be @()@, for example.
+runSimpleLuciClient :: LogLevel
+                    -- ^ Logging level for debug messages
+                    -> Int
+                    -- ^ Port
+                    -> ByteString
+                    -- ^ Host
+                    -> (LuciError Text -> LuciProgram s ())
+                    -- ^ Do something on error (an error callback that can modify the program state)
+                    -> Conduit LuciMessage (LuciProgram s) (LuciProcessing Text LuciMessage)
+                    -- ^ How to process LuciMessage
+                    -> s
+                    -- ^ Initial state of a program set by user.
+                    -> IO s
+                    -- ^ Program runs and in the end returns a final state.
+runSimpleLuciClient llvl p h erh pipe is = runLuciProgram is llvl $ talkToLuci p h (Just 10.0) erh pipe
+
+
+----------------------------------------------------------------------------------------------------
 
 -- | Connect to Luci server and a conduit program that processes messages
 talkToLuci :: (MonadBaseControl IO m, MonadIO m, MonadRandom m, MonadLogger m)

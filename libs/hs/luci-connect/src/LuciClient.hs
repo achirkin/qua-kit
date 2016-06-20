@@ -1,6 +1,4 @@
 {-# LANGUAGE UndecidableInstances #-}
-{-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE MultiParamTypeClasses #-}
 -----------------------------------------------------------------------------
 -- |
 -- Module      :  Main
@@ -13,7 +11,7 @@
 --
 --
 -----------------------------------------------------------------------------
-{-# LANGUAGE OverloadedStrings, GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE OverloadedStrings #-}
 module Main (main) where
 
 import Control.Monad.IO.Class
@@ -36,14 +34,11 @@ import Luci.Connect.Base
 import System.Environment (getArgs)
 import Data.List (stripPrefix)
 import Control.Monad.Logger
-import Control.Monad.Trans.Class
-import Control.Monad.Trans.State
+--import Control.Monad.Trans.Class
+--import Control.Monad.Trans.State
 import Data.Monoid ((<>))
 
 --import Control.Monad.Logger (LoggingT)
-import Control.Monad.Trans.Control
-import Control.Monad.Base (MonadBase)
-import Crypto.Random (MonadRandom(..))
 --import qualified Data.HashMap.Strict as HashMap
 --import Data.Maybe (fromMaybe)
 --import Control.Concurrent.MVar
@@ -62,14 +57,14 @@ data LPState
 initialState :: LPState
 initialState = NormalState 0
 
-simpleServerProcessing :: LuciConduitE Text LuciProgram
+simpleServerProcessing :: LuciConduitE Text (LuciProgram LPState)
 simpleServerProcessing = do
-  curState <- liftS get
+  curState <- getProgramState
   -- Just send back each message twice!
   case curState of
     WasInPanic t -> do
         yieldMessage (MessageHeader $ object [ "Iwasintrouble" .= t ], [])
-        liftS . put $ NormalState 0
+        setProgramState $ NormalState 0
     _ -> return ()
   mmsg <- await
   case mmsg of
@@ -84,39 +79,11 @@ simpleServerProcessing = do
       yield (ProcessingError $ LuciComError e)
       simpleServerProcessing
 
-errorResponse :: LuciError Text -> LuciProgram ()
+errorResponse :: LuciError Text -> LuciProgram LPState ()
 errorResponse err = do
   liftIO $ print err
-  liftS' . put . WasInPanic . Text.pack $ show err
+  setProgramState . WasInPanic . Text.pack $ show err
 
-----------------------------------------------------------------------------------------------------
-
-newtype LuciProgram t = LuciProgram { unProgram :: (StateT LPState (LoggingT IO) t) }
-  deriving (Functor, Applicative, Monad, MonadIO, MonadBase IO)
-
-instance MonadBaseControl IO LuciProgram where
-  type StM LuciProgram a = (a, LPState)
-  liftBaseWith f = LuciProgram $ liftBaseWith $ \q -> f (q . unProgram)
-  restoreM = LuciProgram . restoreM
-
-instance MonadRandom LuciProgram where
-  getRandomBytes = liftIO . getRandomBytes
-
-instance MonadLogger LuciProgram where
-  monadLoggerLog a b c d = LuciProgram . lift $ monadLoggerLog a b c d
-
--- | lift state operations into conduit with our program
-liftS :: StateT LPState (LoggingT IO) t -> ConduitM a b LuciProgram t
-liftS f = lift $ LuciProgram f
-
--- | lift state operations into our program
-liftS' :: StateT LPState (LoggingT IO) t -> LuciProgram t
-liftS' = LuciProgram
-
-runLuciProgram :: LogLevel -> LuciProgram r -> IO LPState
-runLuciProgram ll (LuciProgram p) = runStdoutLoggingT
-                                  . filterLogger (\_ l -> l >= ll)
-                                  $ execStateT p initialState
 
 ----------------------------------------------------------------------------------------------------
 
@@ -169,32 +136,32 @@ data RunSettings = RunSettings
   { host :: ByteString
   , port :: Int
   , timeout :: Double
-  , action :: LuciConduitE Text LuciProgram
-  , run :: Int -> ByteString -> LogLevel -> Double -> LuciConduitE Text LuciProgram -> IO ()
+  , action :: LuciConduitE Text (LuciProgram LPState)
+  , run :: Int -> ByteString -> LogLevel -> Double -> LuciConduitE Text (LuciProgram LPState) -> IO ()
   , logLevel :: LogLevel
   }
 
 ----------------------------------------------------------------------------------------------------
 
-runServer :: Int -> LogLevel -> Double -> LuciConduitE Text LuciProgram -> IO ()
+runServer :: Int -> LogLevel -> Double -> LuciConduitE Text (LuciProgram LPState) -> IO ()
 runServer p llvl dt act = do
     -- Connect using Luci.Connect
     putStrLn "Running luci-connect server"
-    r <- runLuciProgram llvl $ talkAsLuciE p (Just dt) errorResponse act
+    r <- runLuciProgram initialState llvl $ talkAsLuciE p (Just dt) errorResponse act
     putStrLn "\nLast state:"
     print r
 
 -- | Run client sending some amount of staff
-runClient :: Int -> ByteString -> LogLevel -> Double -> LuciConduitE Text LuciProgram -> IO ()
+runClient :: Int -> ByteString -> LogLevel -> Double -> LuciConduitE Text (LuciProgram LPState) -> IO ()
 runClient p h llvl dt act = do
     -- Connect using Luci.Connect
     putStrLn "Running luci-connect client."
-    r <- runLuciProgram llvl $ talkToLuciE p h (Just dt) errorResponse act
+    r <- runLuciProgram initialState llvl $ talkToLuciE p h (Just dt) errorResponse act
     putStrLn "\nLast state:"
     print r
 
 
-testLuciProcessing :: LuciConduitE Text LuciProgram
+testLuciProcessing :: LuciConduitE Text (LuciProgram LPState)
 testLuciProcessing = do
     testMessage msgNoAtts
 
