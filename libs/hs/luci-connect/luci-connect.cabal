@@ -16,7 +16,6 @@ library
     exposed-modules:
         Luci.Connect
         Luci.Connect.Base
-        Luci.Connect.UsefulOrphans
         Luci.Messages
     build-depends:
         base >=4.8.2 && <4.9,
@@ -40,6 +39,7 @@ library
     hs-source-dirs: src
     other-modules:
         Luci.Connect.Internal
+        Luci.Connect.UsefulOrphans
     ghc-options: -Wall -ferror-spans
 
 executable luci-client
@@ -69,5 +69,16 @@ executable luci-client
         Luci.Connect.Base
         Luci.Connect.UsefulOrphans
         Luci.Messages
+    ghc-options: -Wall -ferror-spans
+
+executable AddingNumbersService
+    main-is: AddingNumbersService.hs
+    build-depends:
+        base >=4.8.2 && <4.9,
+        luci-connect -any,
+        aeson -any,
+        text -any
+    default-language: Haskell2010
+    hs-source-dirs: examples
     ghc-options: -Wall -ferror-spans
 

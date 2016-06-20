@@ -17,6 +17,8 @@ module Luci.Messages
       -- | Helper functions to check and make references for attachments in JSON message header.
       AttachmentReference (..)
     , checkAttachment, makeAReference
+      -- * Helpers
+    , simpleMessage, fromMessage
       -- * Common Messages
     , RemoteRegister (..)
     ) where
@@ -32,9 +34,17 @@ import           Crypto.Hash.Algorithms (MD5)
 import           Data.Aeson as JSON
 import qualified Data.Aeson.Types as JSON
 
+import Luci.Connect.Base
 import Luci.Connect.Internal
 
 
+-- | Make a message without attachments
+simpleMessage :: ToJSON a => a -> LuciMessage
+simpleMessage v = (toMsgHead v, [])
+
+-- | Parse a message header
+fromMessage :: FromJSON a => LuciMessage -> Result a
+fromMessage (MessageHeader v,_) = fromJSON v
 
 -- | Register a service in Luci
 data RemoteRegister = RemoteRegister

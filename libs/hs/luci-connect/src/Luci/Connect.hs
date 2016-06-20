@@ -27,13 +27,18 @@ module Luci.Connect
       --   Conduit lets user to read upstream messages from the network
       --     and send new messages downstream back to the network.
       LuciProgram
+    , runReallySimpleLuciClient
     , runSimpleLuciClient
     , getProgramState
     , setProgramState
-    , await
+    , await, awaitForever
     , yieldMessage
     , runLuciProgram
     , LuciProgramState
+      -- * Logging
+      -- | Re-exported logging facilities from `Control.Monad.Logger`.
+    , LogLevel (..)
+    , logDebugN, logInfoN, logWarnN, logErrorN, logOtherN
       -- * Simple Luci clients
     , talkToLuci
     , talkAsLuci
@@ -53,9 +58,12 @@ import           Data.Conduit
 import           Data.Monoid ((<>))
 import qualified Data.Conduit.List as CList
 import qualified Data.Conduit.Network as Network
---import qualified Data.ByteString.Char8 as BS
-import qualified Data.ByteString as BSB
+import qualified Data.ByteString.Char8 as BSC
+import qualified Data.ByteString as BS
 import qualified Data.Text as Text
+import           System.Environment (getArgs)
+import           Data.List (stripPrefix)
+import qualified Data.Char as Char (toLower)
 
 
 import qualified Data.Streaming.Network as SN
@@ -143,8 +151,69 @@ runSimpleLuciClient :: LogLevel
                     -- ^ Initial state of a program set by user.
                     -> IO s
                     -- ^ Program runs and in the end returns a final state.
-runSimpleLuciClient llvl p h erh pipe is = runLuciProgram is llvl $ talkToLuci p h (Just 10.0) erh pipe
+runSimpleLuciClient llvl p h erh pipe is = runLuciProgram is llvl $ talkToLuci p h Nothing erh pipe
 
+-- | Super-simple luci service template, made on top of `runSimpleLuciClient`
+--     (feel free to look at the source of this function).
+--   You only need to supply a function that processes `LuciMessage`,
+--   and sends zero or more messages in response.
+--   All errors are just logged into stdout.
+--   Host, port, and logging level are obtained through command-line arguments.
+--
+--   Example of a complete program:
+--
+--  @
+--  main :: IO ()
+--  main = runReallySimpleLuciClient () (awaitForever yieldMessage)
+--  @
+--  This program will send all reveived messages back to sender;
+--  it has no state, because state data type is the unit type @()@.
+runReallySimpleLuciClient :: s
+                          -- ^ Initial state of a program set by user.
+                          -> Conduit LuciMessage (LuciProgram s) (LuciProcessing Text LuciMessage)
+                          -- ^ How to process LuciMessage
+                          -> IO s
+                          -- ^ Program runs and in the end returns a final state.
+runReallySimpleLuciClient s0 pipe = do
+    sets <- setSettings defaultRunSettings <$> getArgs
+    putStrLn "[Info] SERVICE START - Running service with following command-line arguments:"
+    putStrLn $ "\tport=" ++ show (portS sets)
+    putStrLn $ "\thost=" ++ BSC.unpack (hostS sets)
+    putStrLn $ "\tloglevel=" ++ showLevel (logLevelS sets)
+    runLuciProgram s0 (logLevelS sets) $
+          talkToLuci (portS sets)
+                     (hostS sets)
+                      Nothing
+                     (logWarnNS "PIPELINE ERROR" . Text.pack . show)
+                     pipe
+  where
+    showLevel (LevelOther l) = Text.unpack l
+    showLevel lvl = map Char.toLower . drop 5 $ show lvl
+    setSettings s [] = s
+    setSettings s (par:xs) | Just x <- stripPrefix "port="     par = setSettings s{portS = read x} xs
+                           | Just x <- stripPrefix "host="     par = setSettings s{hostS = BSC.pack x} xs
+                           | Just x <- stripPrefix "loglevel=" par = case x of
+                                 "debug"   -> setSettings s{logLevelS = LevelDebug} xs
+                                 "info"    -> setSettings s{logLevelS = LevelInfo} xs
+                                 "warn"    -> setSettings s{logLevelS = LevelWarn} xs
+                                 "warning" -> setSettings s{logLevelS = LevelWarn} xs
+                                 "error"   -> setSettings s{logLevelS = LevelError} xs
+                                 h -> setSettings s{logLevelS = LevelOther $ Text.pack h} xs
+                           | otherwise = setSettings s xs
+
+
+data RunSettings = RunSettings
+  { hostS :: ByteString
+  , portS :: Int
+  , logLevelS :: LogLevel
+  }
+
+defaultRunSettings :: RunSettings
+defaultRunSettings = RunSettings
+  { hostS = "localhost"
+  , portS = 7654
+  , logLevelS = LevelInfo
+  }
 
 ----------------------------------------------------------------------------------------------------
 
@@ -353,7 +422,7 @@ appTimedSource t ad = do
         when start $ do
           bs <- read'
           void $ swapMVar done True
-          if BSB.null bs
+          if BS.null bs
           then
             putMVar x Nothing
           else do
