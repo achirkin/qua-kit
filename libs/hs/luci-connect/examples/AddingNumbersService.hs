@@ -7,7 +7,7 @@
 -- Maintainer  :  Artem Chirkin
 -- Stability   :  experimental
 --
---
+-- An implementation of a simple luci service.
 --
 -----------------------------------------------------------------------------
 {-# LANGUAGE OverloadedStrings #-}

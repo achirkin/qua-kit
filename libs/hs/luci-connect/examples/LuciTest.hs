@@ -1,31 +1,27 @@
-{-# LANGUAGE UndecidableInstances #-}
 -----------------------------------------------------------------------------
 -- |
 -- Module      :  Main
 -- Copyright   :  Artem Chirkin
 -- License     :  MIT
 --
--- Maintainer  :  chirkin@arch.ethz.ch
+-- Maintainer  :  Artem Chirkin
 -- Stability   :  experimental
 --
---
+-- An executable for testing luci binary protocol.
 --
 -----------------------------------------------------------------------------
 {-# LANGUAGE OverloadedStrings #-}
 module Main (main) where
 
-import Control.Monad.IO.Class
 import Control.Monad (join)
-import Data.Conduit
+import Data.Conduit (mapOutput)
 import Data.Aeson as JSON
 import Data.Text (Text)
 import qualified Data.Text as Text
 import Data.ByteString (ByteString)
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Char8 as BSC
---import qualified Data.ByteString.Base64 as BS
 import qualified Data.ByteString.Lazy as BSL
---import qualified Data.ByteString.Lazy.Char8 as BSLC
 import qualified Data.ByteString.Builder as BSB
 
 import Luci.Messages
@@ -33,16 +29,7 @@ import Luci.Connect
 import Luci.Connect.Base
 import System.Environment (getArgs)
 import Data.List (stripPrefix)
-import Control.Monad.Logger
---import Control.Monad.Trans.Class
---import Control.Monad.Trans.State
 import Data.Monoid ((<>))
-
---import Control.Monad.Logger (LoggingT)
---import qualified Data.HashMap.Strict as HashMap
---import Data.Maybe (fromMaybe)
---import Control.Concurrent.MVar
---import Control.Concurrent (threadDelay, forkIO)
 
 
 ----------------------------------------------------------------------------------------------------
@@ -59,12 +46,12 @@ initialState = NormalState 0
 
 simpleServerProcessing :: LuciConduitE Text (LuciProgram LPState)
 simpleServerProcessing = do
-  curState <- getProgramState
+  curState <- get
   -- Just send back each message twice!
   case curState of
     WasInPanic t -> do
         yieldMessage (MessageHeader $ object [ "Iwasintrouble" .= t ], [])
-        setProgramState $ NormalState 0
+        put $ NormalState 0
     _ -> return ()
   mmsg <- await
   case mmsg of
@@ -82,15 +69,15 @@ simpleServerProcessing = do
 errorResponse :: LuciError Text -> LuciProgram LPState ()
 errorResponse err = do
   liftIO $ print err
-  setProgramState . WasInPanic . Text.pack $ show err
+  put . WasInPanic . Text.pack $ show err
 
 
 ----------------------------------------------------------------------------------------------------
 
 main :: IO ()
 main = do
-    putStrLn "Luci-connect testing app. Usage:\n\
-             \luci-connect [args..]\n\
+    putStrLn "Luci-test testing app. Usage:\n\
+             \luci-test [args..]\n\
              \Parameters:\n\
              \\tserver             - run as a server      (default: client)\n\
              \\tport=x             - choose port          (default: 7654)\n\
@@ -195,9 +182,8 @@ testLuciProcessing = do
     testMessage msg2Att
 
 
-testMessage :: MonadLogger m
-            => MessageTest e m
-            -> LuciConduitE e m
+testMessage :: MessageTest e (LuciProgram s)
+            -> LuciConduitE e (LuciProgram s)
 testMessage m = do
   logInfoN $ "Sending " <> desc m
   case corruption m of

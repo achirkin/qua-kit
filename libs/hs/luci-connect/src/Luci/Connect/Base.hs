@@ -1,4 +1,3 @@
-{-# LANGUAGE FlexibleContexts #-}
 -----------------------------------------------------------------------------
 -- |
 -- Module      :  Luci.Connect.Base
@@ -106,10 +105,8 @@ module Luci.Connect.Base
     ) where
 
 import Control.Monad.IO.Class
---import Control.Monad.Signatures
 import Control.Monad.Trans.Class
 import Data.Functor.Classes
---import Data.Functor.Identity
 
 import Control.Applicative
 import Control.Monad
@@ -121,11 +118,7 @@ import Control.Monad.Fix
 import Control.Monad.Zip (MonadZip(mzipWith))
 #endif
 
---import           Control.Applicative (Alternative (..))
---import           Control.Monad
---import           Control.Monad.Fix (MonadFix (..))
---import           Control.Monad.Trans.Except
---import           Control.Monad.Trans.Class
+
 import qualified Control.Monad.ST as ST
 import           Control.Monad.Logger
 import           Crypto.Random (getRandomBytes, MonadRandom)
@@ -140,14 +133,11 @@ import qualified Data.ByteString.Lazy.Char8 as BSLC
 import qualified Data.ByteString.Builder as BSB
 import           Data.Conduit
 import           Data.Conduit.Internal (ConduitM (ConduitM), Pipe (..))
---import qualified Data.Conduit.Internal as Pipe
 import qualified Data.Conduit.Binary as ConB
 import qualified Data.Text.Encoding as Text
 import qualified Data.Text as Text
 import           Data.Data (Data)
 import qualified Data.HashMap.Strict as HashMap
---import           Data.List ((\\), sortOn, sort)
---import qualified Data.Foldable as Fold
 import qualified Data.Primitive.Array as Prim
 import           Data.String (IsString)
 import           Data.Word
@@ -155,8 +145,6 @@ import           Data.Word
 
 
 import Luci.Connect.Internal
-
---import Control.Monad.IO.Class
 
 
 

@@ -4,13 +4,32 @@ cabal-version: >=1.10
 build-type: Simple
 license: MIT
 license-file: LICENSE
-copyright: Artem Chirkin
-maintainer: Artem Chirkin
+copyright: (c) Artem Chirkin
+maintainer: Artem Chirkin <chirkin@arch.ethz.ch>
 stability: experimental
-homepage: https://bitbucket.org/treyerl/luci2
-synopsis: implement luci communication protocol
+homepage: https://github.com/achirkin/qua-kit
+bug-reports: https://github.com/achirkin/qua-kit/issues
+description:
+    Implement luci communication protocol
+    https://bitbucket.org/treyerl/luci2 .
+    See the module documentation and README for more information.
+synopsis: Implement luci communication protocol
 category: Network
 author: Artem Chirkin
+
+source-repository head
+    type: git
+    location: https://github.com/achirkin/qua-kit.git
+
+flag luci-test
+    description:
+        Build the luci binary protocol testing program.
+    default: True
+
+flag examples
+    description:
+        Build example executables.
+    default: False
 
 library
     exposed-modules:
@@ -34,50 +53,44 @@ library
         transformers -any,
         transformers-base -any,
         monad-logger -any,
-        streaming-commons -any
+        streaming-commons -any,
+        mtl -any
     default-language: Haskell2010
     hs-source-dirs: src
     other-modules:
         Luci.Connect.Internal
-        Luci.Connect.UsefulOrphans
     ghc-options: -Wall -ferror-spans
 
-executable luci-client
-    main-is: LuciClient.hs
+
+
+executable luci-test
+
+    if !flag(luci-test)
+        buildable: False
+
+    main-is: LuciTest.hs
     build-depends:
         base >=4.8.2 && <4.9,
-        conduit >=1.0.0 && <1.3,
-        conduit-extra -any,
-        monad-control -any,
-        binary >=0.8.1,
-        primitive -any,
-        cryptonite -any,
-        resourcet -any,
-        bytestring >=0.10.6.0,
-        base64-bytestring -any,
-        text -any,
         aeson -any,
-        unordered-containers -any,
-        transformers -any,
-        transformers-base -any,
-        monad-logger -any,
-        streaming-commons -any
+        text -any,
+        bytestring >=0.10.6.0,
+        conduit >=1.0.0 && <1.3,
+        luci-connect -any
     default-language: Haskell2010
-    hs-source-dirs: src
-    other-modules:
-        Luci.Connect
-        Luci.Connect.Base
-        Luci.Connect.UsefulOrphans
-        Luci.Messages
+    hs-source-dirs: examples
     ghc-options: -Wall -ferror-spans
 
-executable AddingNumbersService
+executable adding-numbers-service
+
+    if !flag(examples)
+        buildable: False
+
     main-is: AddingNumbersService.hs
     build-depends:
         base >=4.8.2 && <4.9,
-        luci-connect -any,
         aeson -any,
-        text -any
+        text -any,
+        luci-connect -any
     default-language: Haskell2010
     hs-source-dirs: examples
     ghc-options: -Wall -ferror-spans
