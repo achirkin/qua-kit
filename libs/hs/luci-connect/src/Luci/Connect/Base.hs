@@ -234,7 +234,7 @@ instance (Eq e, Eq1 m) => Eq1 (LuciProcessingT e m) where
 instance (Ord e, Ord1 m) => Ord1 (LuciProcessingT e m) where
     compare1 (LuciProcessingT x) (LuciProcessingT y) = compare1 x y
 instance (Read e, Read1 m) => Read1 (LuciProcessingT e m) where
-    readsPrec1 i = readsData (readsUnary1 "LuciProcessingT" LuciProcessingT) i
+    readsPrec1 = readsData (readsUnary1 "LuciProcessingT" LuciProcessingT)
 instance (Show e, Show1 m) => Show1 (LuciProcessingT e m) where
     showsPrec1 d (LuciProcessingT m) = showsUnary1 "LuciProcessingT" d m
 instance (Eq e, Eq1 m, Eq a) => Eq (LuciProcessingT e m a) where (==) = eq1
@@ -297,11 +297,11 @@ instance Traversable f => Traversable (LuciProcessingT e f) where
 
 instance Applicative m => Applicative (LuciProcessingT e m) where
     pure a = LuciProcessingT $ pure (Processing a)
-    LuciProcessingT f <*> LuciProcessingT v = LuciProcessingT $ (fmap (<*>) f) <*> v
+    LuciProcessingT f <*> LuciProcessingT v = LuciProcessingT $ fmap (<*>) f <*> v
 
 instance (Applicative m, Monoid e) => Alternative (LuciProcessingT e m) where
     empty = LuciProcessingT $ pure empty
-    LuciProcessingT mx <|> LuciProcessingT my = LuciProcessingT $ (fmap (<|>) mx) <*> my
+    LuciProcessingT mx <|> LuciProcessingT my = LuciProcessingT $ fmap (<|>) mx <*> my
 
 instance Monad m => Monad (LuciProcessingT e m) where
     return = LuciProcessingT . return . pure
@@ -326,7 +326,7 @@ instance MonadFix m => MonadFix (LuciProcessingT e m) where
         unProcessing (ProcessedData _) = error "mfix LuciProcessing: ProcessedData"
 
 instance MonadTrans (LuciProcessingT e) where
-    lift = LuciProcessingT . liftM Processing
+    lift = LuciProcessingT . fmap Processing
 
 instance (MonadIO m) => MonadIO (LuciProcessingT e m) where
     liftIO = lift . liftIO
@@ -394,27 +394,28 @@ parseMessages :: MonadLogger m
               => Conduit ByteString m (LuciProcessing ComError LuciMessage)
 parseMessages = do
     hSizeBuf <- ConB.take 8
-    if BSL.null hSizeBuf
-    then return ()
-    else do
-      r <- runLuciProcessingT $ do
-        hSize <- tryReadInt64be "header size int" hSizeBuf
-        aSize <- lift (ConB.take 8)>>= tryReadInt64be "body size int"
-        emsg <- tryAwait (fromIntegral hSize)
-        hANum <- lift (ConB.take 8) >>= tryReadInt64be "attachment number int"
-        -- preliminary check
-        when (aSize < (hANum + 1) * 8)
-          $ throwLuciError' . MsgValidationError $ "Attachment sizes mismatch: aSize < (hANum + 1) * 8"
-        (ss, atts) <- unzip <$> tryReadAttachments (aSize - 8) hANum
-        -- check attachment sizes!
-        when (aSize /= sum ss + (hANum + 1) * 8)
-          $ throwLuciError' . MsgValidationError $ "Attachment sizes mismatch: aSize /= sum ss + (hANum + 1) * 8"
-        emsgVal <- tryDecode emsg
-        $(logDebug) $ "PARSE: parsed msg" <>
-             if hANum == 0 then "." else " (" <> Text.pack (show hANum) <> " atts)."
-        return (MessageHeader emsgVal, atts)
-      yield r
-      parseMessages
+    unless (BSL.null hSizeBuf) $
+      do r <- runLuciProcessingT $
+                do hSize <- tryReadInt64be "header size int" hSizeBuf
+                   aSize <- lift (ConB.take 8) >>= tryReadInt64be "body size int"
+                   emsg <- tryAwait (fromIntegral hSize)
+                   hANum <- lift (ConB.take 8) >>=
+                              tryReadInt64be "attachment number int"
+                   when (aSize < (hANum + 1) * 8) $
+                     throwLuciError' . MsgValidationError $
+                       "Attachment sizes mismatch: aSize < (hANum + 1) * 8"
+                   (ss, atts) <- unzip <$> tryReadAttachments (aSize - 8) hANum
+                   when (aSize /= sum ss + (hANum + 1) * 8) $
+                     throwLuciError' . MsgValidationError $
+                       "Attachment sizes mismatch: aSize /= sum ss + (hANum + 1) * 8"
+                   emsgVal <- tryDecode emsg
+                   $( logDebug ) $
+                     "PARSE: parsed msg" <>
+                       if hANum == 0 then "." else
+                         " (" <> Text.pack (show hANum) <> " atts)."
+                   return (MessageHeader emsgVal, atts)
+         yield r
+         parseMessages
   where
     -- wrapper around Binary's runGetOrFail
     tryReadInt64be name bs = case Binary.runGetOrFail Binary.getInt64be bs of
@@ -477,7 +478,7 @@ ConduitM left0 =&= ConduitM right0 = ConduitM $ \rest ->
                 HaveOutput p c o  -> HaveOutput (recurse p) (c >> final) o
                 NeedInput rp rc   -> goLeft rp rc final left
                 Done r2           -> PipeM (final >> return (rest r2))
-                PipeM mp          -> PipeM (liftM recurse mp)
+                PipeM mp          -> PipeM (fmap recurse mp)
                 Leftover right' i -> goRight final (HaveOutput left final $ Processing i) right'
           where
             recurse = goRight final left
@@ -492,13 +493,12 @@ ConduitM left0 =&= ConduitM right0 = ConduitM $ \rest ->
                       HaveOutput (goRight final' left' $ NeedInput rp rc) final (ProcessingError e)
                 NeedInput left' lc        -> NeedInput (recurse . left') (recurse . lc)
                 Done r1                   -> goRight (return ()) (Done r1) (rc r1)
-                PipeM mp                  -> PipeM (liftM recurse mp)
+                PipeM mp                  -> PipeM (fmap recurse mp)
                 Leftover left' i          -> Leftover (recurse left') i
           where
             recurse = goLeft rp rc final
 
      in goRight (return ()) (left0 Done) (right0 Done)
-  where
 {-# INLINE [1] (=&=) #-}
 
 
@@ -535,22 +535,20 @@ panicConduit = do
         -- calculate the shift according to a code of a symbol
         shift i = fromIntegral $ Prim.indexArray ss (fromIntegral i)
         -- search for the pattern (panicID), and then finish
-        search bs = do
-          if BS.length bs < n
-          then do
-            mbs <- await
-            case mbs of
-              Nothing -> return ()
-              Just bs1 -> search (bs `BS.append` bs1)
-          else do
-            if BS.isPrefixOf panicID bs
-            then do
-              leftover (BS.drop n bs)
-              logInfoN $ "PANIC: found panicID; calming."
-            else do
-              let toDrop = shift $ BS.index bs (n-1)
-              $(logDebug) $ "PANIC: dropping " <> Text.pack (show toDrop) <> " bytes of data."
-              search (BS.drop toDrop bs)
+        search bs
+          | BS.length bs < n =
+            do mbs <- await
+               case mbs of
+                   Nothing -> return ()
+                   Just bs1 -> search (bs `BS.append` bs1)
+          | BS.isPrefixOf panicID bs =
+            do leftover (BS.drop n bs)
+               logInfoN "PANIC: found panicID; calming."
+          | otherwise =
+            do let toDrop = shift $ BS.index bs (n - 1)
+               $( logDebug ) $
+                 "PANIC: dropping " <> Text.pack (show toDrop) <> " bytes of data."
+               search (BS.drop toDrop bs)
     search BS.empty
 
 

@@ -86,7 +86,7 @@ import Luci.Connect.Internal
 --   It has an embeded state `s` that is preserved throughout program execution.
 --   The state `s` is a data type defined by a user;
 --   for instance, it can be a unit type @()@ if one does not need to have a state at all.
-newtype LuciProgram s t = LuciProgram { unProgram :: (StateT s (LoggingT IO) t) }
+newtype LuciProgram s t = LuciProgram { unProgram :: StateT s (LoggingT IO) t }
   deriving (Functor, Applicative, Monad, MonadIO, MonadBase IO)
 
 instance MonadBaseControl IO (LuciProgram s) where
@@ -255,7 +255,7 @@ talkToLuci' mt errHandle pipe appData =
                           =$= outgoing
   where
     outgoing = Network.appSink appData
-    incoming = case (round . (/ (fromIntegral checkGranularity)) . (1000000 *)) <$> mt of
+    incoming = case (round . (/ fromIntegral checkGranularity) . (1000000 *)) <$> mt of
         Nothing -> mapOutput Processing $ Network.appSource appData
         Just t -> if t <= 0
                   then mapOutput Processing $ Network.appSource appData
@@ -324,7 +324,7 @@ talkToLuciE' mt errHandle pipe appData =
                           =$= outgoing
   where
     outgoing = Network.appSink appData
-    incoming = case (round . (/ (fromIntegral checkGranularity)) . (1000000 *)) <$> mt of
+    incoming = case (round . (/ fromIntegral checkGranularity) . (1000000 *)) <$> mt of
         Nothing -> mapOutput Processing $ Network.appSource appData
         Just t -> if t <= 0
                   then mapOutput Processing $ Network.appSource appData
@@ -394,9 +394,9 @@ appTimedSource :: (SN.HasReadWrite ad, MonadIO m)
                -> ad
                -> Producer m (Maybe ByteString)
 appTimedSource t ad = do
-  x <- liftIO $ newEmptyMVar
+  x <- liftIO newEmptyMVar
   startD <- liftIO $ newMVar True
-  startT <- liftIO $ newEmptyMVar
+  startT <- liftIO newEmptyMVar
   done <- liftIO $ newMVar False
   let dt = t `div` checkGranularity
       waitABit 0 = void . tryPutMVar x $ Just Nothing
