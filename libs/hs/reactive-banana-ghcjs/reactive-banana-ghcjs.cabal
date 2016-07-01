@@ -1,0 +1,53 @@
+name: reactive-banana-ghcjs
+version: 0.1.0.0
+cabal-version: >=1.22
+build-type: Simple
+license: MIT
+license-file: LICENSE
+copyright: (c) Artem Chirkin
+maintainer: Artem Chirkin <chirkin@arch.ethz.ch>
+stability: experimental
+homepage: https://github.com/achirkin/qua-kit
+bug-reports: https://github.com/achirkin/qua-kit/issues
+synopsis: GHCJS bindings to reactive-banana
+description:
+    GHCJS bindings to reactive-banana
+category: Web, GHCJS
+author: Artem Chirkin
+
+source-repository head
+    type: git
+    location: https://github.com/achirkin/qua-kit.git
+
+library
+    js-sources:
+        jsbits/ReactiveBanana.js
+        jsbits/pep.js
+    exposed-modules:
+        Reactive.Banana.JsHs
+        Reactive.Banana.JsHs.Pointer
+    build-depends:
+        base >=4.8 && <5,
+        ghcjs-hs-interop -any
+    default-language: Haskell2010
+    default-extensions: JavaScriptFFI, OverloadedStrings
+    hs-source-dirs: src
+    ghc-options: -Wall -ferror-spans
+
+
+executable test
+    main-is: test.hs
+    js-sources:
+        jsbits/ReactiveBanana.js
+        jsbits/pep.js
+    other-modules:
+        Reactive.Banana.JsHs
+        Reactive.Banana.JsHs.Pointer
+    build-depends:
+        base >=4.8 && <5,
+        ghcjs-hs-interop -any
+    default-language: Haskell2010
+    default-extensions: JavaScriptFFI, OverloadedStrings
+    hs-source-dirs: test src
+    ghc-options: -Wall -ferror-spans
+    cpp-options: -DGHCJS_BROWSER
