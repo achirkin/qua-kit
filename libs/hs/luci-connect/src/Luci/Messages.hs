@@ -50,6 +50,7 @@ fromMessage (MessageHeader v,_) = fromJSON v
 data RemoteRegister = RemoteRegister
   { exampleCall :: !Value
   , serviceName :: !Text
+  , description :: !Text
   , inputs  :: !(Maybe Value)
   , outputs :: !(Maybe Value)
   }
@@ -59,6 +60,7 @@ instance ToJSON RemoteRegister where
     [ "run"         .=! ("RemoteRegister" :: Text)
     , "exampleCall" .=! exampleCall
     , "serviceName" .=! serviceName
+    , "description" .=! description
     , "inputs"      .=? inputs
     , "outputs"     .=? outputs
     ]

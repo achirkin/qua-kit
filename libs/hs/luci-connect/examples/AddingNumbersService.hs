@@ -26,10 +26,11 @@ main = runReallySimpleLuciClient () $ do
     yieldMessage $ simpleMessage RemoteRegister
       { exampleCall = object
                 [ "run" .= ("AddingNumbers" :: Text)
-                , "x" .= (5 :: Double)
+                , "x" .= (4 :: Double)
                 , "y" .= (2.5 :: Double)
                 ]
       , serviceName = "AddingNumbers"
+      , description = "adding two numbers together"
       , inputs = Just $ object [ "x" .= ("number" :: Text)
                                , "y" .= ("number" :: Text)
                                , "run" .= ("AddingNumbers" :: Text)
