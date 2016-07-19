@@ -22,7 +22,6 @@ source-repository head
 library
     js-sources:
         jsbits/ReactiveBanana.js
-        jsbits/pep.js
     exposed-modules:
         Reactive.Banana.JsHs
         Reactive.Banana.JsHs.Pointer
@@ -39,7 +38,6 @@ executable test
     main-is: test.hs
     js-sources:
         jsbits/ReactiveBanana.js
-        jsbits/pep.js
     other-modules:
         Reactive.Banana.JsHs
         Reactive.Banana.JsHs.Pointer
