@@ -6,7 +6,18 @@
 var ReactiveBanana = (function () {
     'use strict';
 
-
+    // helper function to enable MouseEvent.buttons
+    function toButtons(btn){
+        switch(btn) {
+            case	0: return 1;
+            case	1: return 4;
+            case	2: return 2;
+            case	3: return 8;
+            case	4: return 16;
+            case	5: return 32;
+            default: return 0;
+        }
+    }
 
     // A pointer represents various kinds of pointer events.
     // eventType:
@@ -16,14 +27,18 @@ var ReactiveBanana = (function () {
     //   3 - pointerCancel;
     var PointerEvent = function(ev, t) {
         this.target = ev.target;
-        this.pointerType = t;
+        this.pointerEventType = t;
+        this.type = ev.type;
+        this.button = ev.button ? ev.button : 0;
+        this.buttons = ev.buttons != undefined ? ev.buttons : toButtons(this.button);
+        this.altKey = ev.altKey ? ev.altKey : false;
+        this.ctrlKey = ev.ctrlKey ? ev.ctrlKey : false;
+        this.metaKey = ev.metaKey ? ev.metaKey : false;
+        this.shiftKey = ev.shiftKey ? ev.shiftKey : false;
         var pk = this.target.pointerKeeper;
-        console.log("some event!",ev);
         if (ev['touches']) {
-            this.pointerState = 99;
             this.pointers = Array.prototype.slice.call(ev['touches']).map(function(t) {return {x: (t.clientX - pk.clientX) * pk.clientScaleX, y: (t.clientY - pk.clientY) * pk.clientScaleY};});
         } else {
-            this.pointerState = ev.button ? ev.button : 0;
             this.pointers = ev.clientX ? [{x: (ev.clientX - pk.clientX) * pk.clientScaleX, y: (ev.clientY - pk.clientY) * pk.clientScaleY}] : [];
         }
     };
@@ -40,6 +55,7 @@ var ReactiveBanana = (function () {
         window.addEventListener('resize',function() { pk.updateLocation.apply(pk, []) });
 
         el.addEventListener('contextmenu',function(ev){var e = window.event||ev; e.preventDefault();e.stopPropagation();return false;});
+        el['style']['touch-action'] = "none";
 
         var pUp = this.convertEvent(pointerUp, 0);
         el.addEventListener('mouseup', pUp);
