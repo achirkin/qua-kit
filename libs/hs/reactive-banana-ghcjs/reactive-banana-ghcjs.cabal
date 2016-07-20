@@ -11,7 +11,13 @@ homepage: https://github.com/achirkin/qua-kit
 bug-reports: https://github.com/achirkin/qua-kit/issues
 synopsis: GHCJS bindings to reactive-banana
 description:
-    GHCJS bindings to reactive-banana
+    GHCJS bindings to reactive-banana.
+    Note, there is a problem with GHCJS GC,
+    reactive-banana requires patched version:
+     https://github.com/alios/shims/blob/cef00640ee1e5981d479c84c36ef7c4aded26b0d/src/gc.js .
+    For details see https://github.com/ghcjs/shims/pull/25
+    and maybe https://github.com/ghcjs/ghcjs/issues/450 .
+    When running this I applied both patches to a garbage collector file ghcjs/shims/src/gc.js
 category: Web, GHCJS
 author: Artem Chirkin
 
@@ -27,7 +33,8 @@ library
         Reactive.Banana.JsHs.Pointer
     build-depends:
         base >=4.8 && <5,
-        ghcjs-hs-interop -any
+        ghcjs-hs-interop -any,
+        reactive-banana >=1.1
     default-language: Haskell2010
     default-extensions: JavaScriptFFI, OverloadedStrings
     hs-source-dirs: src
@@ -43,7 +50,8 @@ executable test
         Reactive.Banana.JsHs.Pointer
     build-depends:
         base >=4.8 && <5,
-        ghcjs-hs-interop -any
+        ghcjs-hs-interop -any,
+        reactive-banana >=1.1
     default-language: Haskell2010
     default-extensions: JavaScriptFFI, OverloadedStrings
     hs-source-dirs: test src

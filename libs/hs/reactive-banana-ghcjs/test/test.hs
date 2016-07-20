@@ -1,15 +1,20 @@
 module Main where
 
-import Data.Coerce
-import Data.Monoid
 
-import qualified JsHs.JSString as JSString
+import Reactive.Banana.Frameworks
+
+--import Data.Coerce
+--import Data.Monoid
+
+--import qualified JsHs.JSString as JSString
 import JsHs.Types
-import JsHs.Debug
-import JsHs.Callback
-import JsHs.LikeJS.Class
+--import JsHs.Debug
+--import JsHs.Callback
+--import JsHs.LikeJS.Class
 import qualified JsHs.Array as JS
 import Reactive.Banana.JsHs.Pointer
+--import Control.Monad (forever)
+--import Control.Concurrent (threadDelay)
 
 palette :: JSString -> JSString
 palette "pointerdown" = "FFFF00"
@@ -24,19 +29,25 @@ main :: IO ()
 main = do
     canvas <- addCanvasToBody
     ctx <- get2dContext canvas
-    _ <- pointerKeeper
-            canvas
-            (pointerUp ctx)
-            (pointerDown ctx)
-            (pointerMove ctx)
-            (pointerCancel ctx)
-    listenToWheel canvas (wheelCallback canvas)
-    putStrLn "Hello world!"
+    heh <- htmlElemHandler canvas
+    network <- compile $ do
+      pointerUpE <- fromAddHandler $ pointerUp heh
+      pointerDownE <- fromAddHandler $ pointerDown heh
+      pointerMoveE <- fromAddHandler $ pointerMove heh
+      pointerCancelE <- fromAddHandler $ pointerCancel heh
+      wheelE <- fromAddHandler $ wheel heh
+      reactimate $ pointerUpC ctx <$> pointerUpE
+      reactimate $ pointerDownC ctx <$> pointerDownE
+      reactimate $ pointerMoveC ctx <$> pointerMoveE
+      reactimate $ pointerCancelC ctx <$> pointerCancelE
+      reactimate $ wheelCallback canvas <$> wheelE
+      return ()
+    actuate network
   where
     wheelCallback c delta | delta > 0 = setBGColor c "FFCCCC"
                           | delta < 0 = setBGColor c "CCCCFF"
                           | otherwise = setBGColor c "FFFFFF"
-    pointerUp ctx event = do
+    pointerUpC ctx event = do
         setStyle ctx "004466"
         JS.mapIO_
           (\p -> fillRect ctx
@@ -45,7 +56,7 @@ main = do
                           5 5
           )
           $ pointers event
-    pointerDown ctx event = do
+    pointerDownC ctx event = do
         setStyle ctx "FFFFAA"
         JS.mapIO_
           (\p -> fillRect ctx
@@ -54,7 +65,7 @@ main = do
                           15 15
           )
           $ pointers event
-    pointerMove ctx event = do
+    pointerMoveC ctx event = do
         setStyle ctx "00FFAA"
         JS.mapIO_
           (\p -> fillRect ctx
@@ -63,7 +74,7 @@ main = do
                           3 3
           )
           $ pointers event
-    pointerCancel ctx event = do
+    pointerCancelC ctx event = do
         setStyle ctx "FF0000"
         JS.mapIO_
           (\p -> fillRect ctx
@@ -99,4 +110,31 @@ foreign import javascript unsafe "var body = document.getElementsByTagName(\"bod
     \ $r = document.getElementById(\"cvn\");"
     addCanvasToBody :: IO JSVal
 
+
+data HtmlElemHandler = HtmlElemHandler
+  { keeper        :: PointerKeeper
+  , pointerUp     :: AddHandler PointerEvent
+  , pointerDown   :: AddHandler PointerEvent
+  , pointerMove   :: AddHandler PointerEvent
+  , pointerCancel :: AddHandler PointerEvent
+  , wheel         :: AddHandler Double
+  }
+
+htmlElemHandler :: JSVal -> IO HtmlElemHandler
+htmlElemHandler el = do
+  (ahUp,     fireUp)     <- newAddHandler
+  (ahDown,   fireDown)   <- newAddHandler
+  (ahMove,   fireMove)   <- newAddHandler
+  (ahCancel, fireCancel) <- newAddHandler
+  (ahWheel,  fireWheel)  <- newAddHandler
+  pk <- pointerKeeper el fireUp fireDown fireMove fireCancel
+  listenToWheel el fireWheel
+  return HtmlElemHandler
+    { keeper        = pk
+    , pointerUp     = ahUp
+    , pointerDown   = ahDown
+    , pointerMove   = ahMove
+    , pointerCancel = ahCancel
+    , wheel         = ahWheel
+    }
 
