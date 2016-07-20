@@ -85,10 +85,6 @@ main = do
           $ pointers event
 
 
---foreign import javascript unsafe "\
---    \ $1.innerHTML = $2;"
---    setText :: JSVal -> JSString -> IO ()
-
 foreign import javascript unsafe "$1.getContext(\"2d\")"
     get2dContext :: JSVal -> IO JSVal
 

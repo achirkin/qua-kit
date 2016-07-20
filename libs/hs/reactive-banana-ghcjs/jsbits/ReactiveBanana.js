@@ -27,26 +27,56 @@ var ReactiveBanana = (function () {
     //   3 - pointerCancel;
     var PointerEvent = function(ev, t) {
         this.target = ev.target;
+        var pk = this.target.pointerKeeper,
+            isTouchEv = !!ev['touches'],
+            touching  = isTouchEv && ev['touches'].length > 0;
         this.pointerEventType = t;
         this.type = ev.type;
-        this.button = ev.button ? ev.button : 0;
-        this.buttons = ev.buttons != undefined ? ev.buttons : toButtons(this.button);
-        this.altKey = ev.altKey ? ev.altKey : false;
-        this.ctrlKey = ev.ctrlKey ? ev.ctrlKey : false;
-        this.metaKey = ev.metaKey ? ev.metaKey : false;
-        this.shiftKey = ev.shiftKey ? ev.shiftKey : false;
-        var pk = this.target.pointerKeeper;
-        if (ev['touches']) {
+        this.button = ev.button != undefined ? ev.button : (touching ? 0 : -1);
+
+        if (isTouchEv) {
+            pk.buttons = touching ? 1 : 0;
+        } else if (ev.buttons != undefined) {
+            pk.buttons = ev.buttons;
+        } else {
+            var b = ev.button ? toButtons(ev.button) : 0;
+            switch(t) {
+                case	0: // pointerUp
+                    pk.buttons = pk.buttons & (~ b);
+                    break;
+                case	1: // pointerDown
+                    pk.buttons = pk.buttons | b;
+                    break;
+                case	3: // pointerCancel
+                    pk.buttons = pk.buttons & (~ b);
+                    break;
+                }
+        }
+
+        pk.altKey = ev.altKey ? ev.altKey : false;
+        pk.ctrlKey = ev.ctrlKey ? ev.ctrlKey : false;
+        pk.metaKey = ev.metaKey ? ev.metaKey : false;
+        pk.shiftKey = ev.shiftKey ? ev.shiftKey : false;
+        if (isTouchEv) {
             this.pointers = Array.prototype.slice.call(ev['touches']).map(function(t) {return {x: (t.clientX - pk.clientX) * pk.clientScaleX, y: (t.clientY - pk.clientY) * pk.clientScaleY};});
         } else {
             this.pointers = ev.clientX ? [{x: (ev.clientX - pk.clientX) * pk.clientScaleX, y: (ev.clientY - pk.clientY) * pk.clientScaleY}] : [];
         }
-    };
 
+        // update keeper's pointer position tracking
+        pk.curPointers = this.pointers;
+        if (t == 1) {
+            pk.downPointers = this.pointers;
+            pk.downTime = performance.now();
+        }
+    };
 
     var PointerKeeper = function PointerKeeper(el, pointerUp, pointerDown, pointerMove, pointerCancel) {
         this.target = el;
         el.pointerKeeper = this;
+        this.downPointers = [];
+        this.curPointers = [];
+        this.downTime = 0;
         this.updateLocation();
         var pk = this;
         var observer = new MutationObserver(function() {pk.updateLocation(); });
@@ -90,7 +120,6 @@ var ReactiveBanana = (function () {
         //console.log(elstyle, pleft, ptop, pright, pbottom, bbox, iwidth, iheight, this.target.width, this.target.height, this.clientX, this.clientY, this.clientScaleX, this.clientScaleY);
     };
 
-
     PointerKeeper.prototype.convertEvent = function (f, pType) {
         return function (ev) {
             var e = window.event || ev;
@@ -100,7 +129,6 @@ var ReactiveBanana = (function () {
             return false;
         };
     };
-
 
     return {
         PointerEvent: PointerEvent,
@@ -113,11 +141,6 @@ var ReactiveBanana = (function () {
                 f(e['wheelDelta'] > 0 || e['detail'] < 0 || e['deltaY'] < 0 ? (1.0) : (-1.0));
                 return false;
             });
-        },
-        getPointers: function (event){
-            return event.target.pointerKeeper
-                ? event.target.pointerKeeper
-                : (event.target.pointerKeeper = new PointerKeeper(event.target));
         }
     };
 }());
