@@ -30,7 +30,7 @@ main :: IO ()
 main = do
     canvas <- addCanvasToBody
     ctx <- get2dContext canvas
-    heh <- canvasHandler canvas
+    heh <- elementHandler canvas
     network <- compile $ do
       pointerE <- pointerEvents heh
       wheelE   <- wheelEvents heh

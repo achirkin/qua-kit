@@ -10,7 +10,7 @@
 
 module Reactive.Banana.JsHs.ElementHandler
   ( -- * JS handler
-    ElementHandler, canvasHandler
+    ElementHandler, elementHandler
     -- * Events
   , pointerEvents, wheelEvents
     -- * Behaviors
@@ -48,8 +48,8 @@ data ElementHandler = ElementHandler
   , downTimeH   :: AddHandler Double
   }
 
-canvasHandler :: JSVal -> IO ElementHandler
-canvasHandler el = do
+elementHandler :: JSVal -> IO ElementHandler
+elementHandler el = do
   (ahP,      fireP)     <- newAddHandler
   (ahWheel,  fireWheel) <- newAddHandler
   pk <- PK.newPointerKeeper el fireP

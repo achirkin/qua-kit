@@ -18,5 +18,5 @@ module Reactive.Banana.JsHs
     ) where
 
 
-import qualified Reactive.Banana.JsHs.ElementHandler as ElementHandler
-import qualified Reactive.Banana.JsHs.Types as Types
+import Reactive.Banana.JsHs.ElementHandler as ElementHandler
+import Reactive.Banana.JsHs.Types as Types
