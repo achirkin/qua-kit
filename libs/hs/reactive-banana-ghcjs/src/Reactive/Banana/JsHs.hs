@@ -11,9 +11,12 @@
 -----------------------------------------------------------------------------
 
 module Reactive.Banana.JsHs
-    ( -- * Pointer actions
-      module Pointer
+    ( -- * Event handler for an html element
+      module ElementHandler
+      -- * Basic types
+    , module Types
     ) where
 
 
-import Reactive.Banana.JsHs.Pointer as Pointer
+import qualified Reactive.Banana.JsHs.ElementHandler as ElementHandler
+import qualified Reactive.Banana.JsHs.Types as Types

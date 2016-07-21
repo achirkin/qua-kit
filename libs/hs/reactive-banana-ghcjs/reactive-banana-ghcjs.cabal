@@ -14,7 +14,7 @@ description:
     GHCJS bindings to reactive-banana.
     Note, there is a problem with GHCJS GC,
     reactive-banana requires patched version:
-     https://github.com/alios/shims/blob/cef00640ee1e5981d479c84c36ef7c4aded26b0d/src/gc.js .
+    https://github.com/alios/shims/blob/cef00640ee1e5981d479c84c36ef7c4aded26b0d/src/gc.js .
     For details see https://github.com/ghcjs/shims/pull/25
     and maybe https://github.com/ghcjs/ghcjs/issues/450 .
     When running this I applied both patches to a garbage collector file ghcjs/shims/src/gc.js
@@ -26,34 +26,40 @@ source-repository head
     location: https://github.com/achirkin/qua-kit.git
 
 library
-    js-sources:
-        jsbits/ReactiveBanana.js
     exposed-modules:
         Reactive.Banana.JsHs
-        Reactive.Banana.JsHs.Pointer
+        Reactive.Banana.JsHs.ElementHandler
+        Reactive.Banana.JsHs.Types
     build-depends:
         base >=4.8 && <5,
         ghcjs-hs-interop -any,
         reactive-banana >=1.1
+    js-sources:
+        jsbits/ReactiveBanana.js
     default-language: Haskell2010
-    default-extensions: JavaScriptFFI, OverloadedStrings
+    default-extensions: JavaScriptFFI OverloadedStrings
     hs-source-dirs: src
+    other-modules:
+        Reactive.Banana.JsHs.PointerKeeper
     ghc-options: -Wall -ferror-spans
-
 
 executable test
     main-is: test.hs
-    js-sources:
-        jsbits/ReactiveBanana.js
-    other-modules:
-        Reactive.Banana.JsHs
-        Reactive.Banana.JsHs.Pointer
     build-depends:
         base >=4.8 && <5,
         ghcjs-hs-interop -any,
         reactive-banana >=1.1
-    default-language: Haskell2010
-    default-extensions: JavaScriptFFI, OverloadedStrings
-    hs-source-dirs: test src
-    ghc-options: -Wall -ferror-spans
     cpp-options: -DGHCJS_BROWSER
+    js-sources:
+        jsbits/ReactiveBanana.js
+    default-language: Haskell2010
+    default-extensions: JavaScriptFFI OverloadedStrings
+    hs-source-dirs: test src
+    other-modules:
+        Reactive.Banana.JsHs
+        Reactive.Banana.JsHs.ElementHandler
+        Reactive.Banana.JsHs.Types
+        Reactive.Banana.JsHs.PointerKeeper
+    build-depends:
+    ghc-options: -Wall -ferror-spans
+
