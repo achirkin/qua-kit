@@ -34,12 +34,17 @@ main = do
     network <- compile $ do
       pointerE <- pointerEvents heh
       wheelE   <- wheelEvents heh
+      updateE <- updateEvents heh
       ctrlKeyB <- ctrlKey heh
       curPointersB <- curPointers heh
-      reactimate . fmap (pointerC ctx) $ ((\c p ev -> (ev,c,p)) <$> ctrlKeyB <*> curPointersB) <@> pointerE
+      reactimate . fmap (pointerC ctx)
+                 $ ((\c p ev -> (ev,c,p)) <$> ctrlKeyB <*> curPointersB)
+                <@> pointerE
       reactimate $ wheelCallback canvas <$> wheelE
+--      reactimate $ print <$> updateE
       return ()
     actuate network
+    play heh
   where
     wheelCallback c delta | delta > 0 = setBGColor c "FFCCCC"
                           | delta < 0 = setBGColor c "CCCCFF"
@@ -81,6 +86,8 @@ main = do
                           25 25
           )
           $ pointers event
+
+
 
 
 foreign import javascript unsafe "$1.getContext(\"2d\")"

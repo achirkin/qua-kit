@@ -71,8 +71,10 @@ var ReactiveBanana = (function () {
         }
     };
 
-    var PointerKeeper = function PointerKeeper(el, pointerUp, pointerDown, pointerMove, pointerCancel) {
+    var PointerKeeper = function PointerKeeper(el, update, pointerUp, pointerDown, pointerMove, pointerCancel) {
         this.target = el;
+        this.running = false;
+        this.update = update;
         el.pointerKeeper = this;
         this.downPointers = [];
         this.curPointers = [];
@@ -118,6 +120,24 @@ var ReactiveBanana = (function () {
         this.clientScaleX = this.target.width ? this.target.width / iwidth : 1;
         this.clientScaleY = this.target.height ? this.target.height / iheight : 1;
         //console.log(elstyle, pleft, ptop, pright, pbottom, bbox, iwidth, iheight, this.target.width, this.target.height, this.clientX, this.clientY, this.clientScaleX, this.clientScaleY);
+    };
+
+    // run animation loop
+    PointerKeeper.prototype.play = function () {
+        this.running = true;
+        var pk = this;
+        function step(timestamp) {
+            if (pk.running) {
+                pk.update(timestamp);
+                window.requestAnimationFrame(step);
+            }
+        }
+        window.requestAnimationFrame(step);
+    };
+
+    // stop animation loop
+    PointerKeeper.prototype.stop = function () {
+        this.running = false;
     };
 
     PointerKeeper.prototype.convertEvent = function (f, pType) {

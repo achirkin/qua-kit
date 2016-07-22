@@ -11,6 +11,7 @@
 module Reactive.Banana.JsHs.ElementHandler
   ( -- * JS handler
     ElementHandler, elementHandler
+  , play, stop, updateEvents
     -- * Events
   , pointerEvents, wheelEvents
     -- * Behaviors
@@ -36,6 +37,9 @@ import qualified Reactive.Banana.JsHs.PointerKeeper as PK
 
 data ElementHandler = ElementHandler
   { state       :: PK.PointerKeeper
+  , play        :: IO () -- ^ start requestAnimationFrame loop
+  , stop        :: IO () -- ^ finish requestAnimationFrame loop
+  , render      :: AddHandler Double
   , pointer     :: AddHandler PointerEvent
   , wheel       :: AddHandler Double
   , shiftKeyH   :: AddHandler Bool
@@ -50,12 +54,16 @@ data ElementHandler = ElementHandler
 
 elementHandler :: JSVal -> IO ElementHandler
 elementHandler el = do
+  (ahRender, fireRender) <- newAddHandler
   (ahP,      fireP)     <- newAddHandler
   (ahWheel,  fireWheel) <- newAddHandler
-  pk <- PK.newPointerKeeper el fireP
+  pk <- PK.newPointerKeeper el fireRender fireP
   listenToWheel el fireWheel
   return ElementHandler
     { state       = pk
+    , play        = PK.play pk
+    , stop        = PK.stop pk
+    , render      = ahRender
     , pointer     = ahP
     , wheel       = ahWheel
     , shiftKeyH   = RB.mapIO (const $ PK.shiftKey pk) ahP
@@ -69,6 +77,12 @@ elementHandler el = do
     }
 
 
+
+-- | This type of events before rendering animation frame.
+--   Event value is a timestamp taken from window.requestAnimationFrame,
+--   which is similar to performance.now()
+updateEvents :: ElementHandler -> MomentIO (Event Double)
+updateEvents = fromAddHandler . render
 
 -- | All pointer events
 pointerEvents :: ElementHandler -> MomentIO (Event PointerEvent)

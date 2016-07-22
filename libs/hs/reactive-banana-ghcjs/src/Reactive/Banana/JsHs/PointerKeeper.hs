@@ -18,6 +18,7 @@ module Reactive.Banana.JsHs.PointerKeeper
   , altKey, ctrlKey, metaKey, shiftKey, modKeys, buttons
   , eventPointerKeeper
   , downTime, downPointers, curPointers
+  , play, stop
   ) where
 
 import Control.Monad (join)
@@ -32,25 +33,31 @@ newtype PointerKeeper = PointerKeeper JSVal
 instance LikeJS "PointerKeeper" PointerKeeper
 
 newPointerKeeper :: JSVal
+                 -> (Double -> IO ())
                  -> (PointerEvent -> IO ())
                  -> IO PointerKeeper
-newPointerKeeper el callback = join
+newPointerKeeper el updateCallback callback = join
      $ js_pointerKeeper el
-    <$> m callback PointerUp
+    <$> JS.asyncCallback1 (updateCallback . asLikeJS)
+    <*> m callback PointerUp
     <*> m callback PointerDown
     <*> m callback PointerMove
     <*> m callback PointerCancel
   where
     m f c = JS.asyncCallback1 $ f . c . asLikeJS
 
-foreign import javascript unsafe "$r = new ReactiveBanana.PointerKeeper($1,$2,$3,$4,$5);"
+foreign import javascript unsafe "$r = new ReactiveBanana.PointerKeeper($1,$2,$3,$4,$5,$6);"
    js_pointerKeeper :: JSVal
+      -> JS.Callback (JSVal -> IO ())
       -> JS.Callback (JSVal -> IO ())
       -> JS.Callback (JSVal -> IO ())
       -> JS.Callback (JSVal -> IO ())
       -> JS.Callback (JSVal -> IO ())
       -> IO PointerKeeper
 
+
+foreign import javascript unsafe "$1.play()" play :: PointerKeeper -> IO ()
+foreign import javascript unsafe "$1.stop()" stop :: PointerKeeper -> IO ()
 foreign import javascript unsafe "$1.altKey"   altKey   :: PointerKeeper -> IO Bool
 foreign import javascript unsafe "$1.ctrlKey"  ctrlKey  :: PointerKeeper -> IO Bool
 foreign import javascript unsafe "$1.metaKey"  metaKey  :: PointerKeeper -> IO Bool
