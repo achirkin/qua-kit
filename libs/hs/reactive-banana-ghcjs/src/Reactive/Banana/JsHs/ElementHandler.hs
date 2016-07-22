@@ -11,7 +11,7 @@
 module Reactive.Banana.JsHs.ElementHandler
   ( -- * JS handler
     ElementHandler, elementHandler
-  , play, stop, updateEvents
+  , play, stop, updateEvents, resizeEvents
     -- * Events
   , pointerEvents, wheelEvents
     -- * Behaviors
@@ -40,6 +40,7 @@ data ElementHandler = ElementHandler
   , play        :: IO () -- ^ start requestAnimationFrame loop
   , stop        :: IO () -- ^ finish requestAnimationFrame loop
   , render      :: AddHandler Double
+  , resizeH     :: AddHandler (Double, Double)
   , pointer     :: AddHandler PointerEvent
   , wheel       :: AddHandler Double
   , shiftKeyH   :: AddHandler Bool
@@ -55,15 +56,17 @@ data ElementHandler = ElementHandler
 elementHandler :: JSVal -> IO ElementHandler
 elementHandler el = do
   (ahRender, fireRender) <- newAddHandler
+  (ahResize, fireResize) <- newAddHandler
   (ahP,      fireP)     <- newAddHandler
   (ahWheel,  fireWheel) <- newAddHandler
-  pk <- PK.newPointerKeeper el fireRender fireP
+  pk <- PK.newPointerKeeper el fireRender fireP (curry fireResize)
   listenToWheel el fireWheel
   return ElementHandler
     { state       = pk
     , play        = PK.play pk
     , stop        = PK.stop pk
     , render      = ahRender
+    , resizeH     = ahResize
     , pointer     = ahP
     , wheel       = ahWheel
     , shiftKeyH   = RB.mapIO (const $ PK.shiftKey pk) ahP
@@ -91,6 +94,10 @@ pointerEvents = fromAddHandler . pointer
 -- | Mouse wheel up or down (arg is +1 or -1 for scroll up or down accordingly)
 wheelEvents :: ElementHandler -> MomentIO (Event Double)
 wheelEvents = fromAddHandler . wheel
+
+-- | when element is resized
+resizeEvents :: ElementHandler -> MomentIO (Event (Double,Double))
+resizeEvents = fromAddHandler . resizeH
 
 shiftKey :: ElementHandler -> MomentIO (Behavior Bool)
 shiftKey = fromChanges False . shiftKeyH

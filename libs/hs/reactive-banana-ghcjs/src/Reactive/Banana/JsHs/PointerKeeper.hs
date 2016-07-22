@@ -35,24 +35,27 @@ instance LikeJS "PointerKeeper" PointerKeeper
 newPointerKeeper :: JSVal
                  -> (Double -> IO ())
                  -> (PointerEvent -> IO ())
+                 -> (Double -> Double -> IO ())
                  -> IO PointerKeeper
-newPointerKeeper el updateCallback callback = join
+newPointerKeeper el updateCallback callback resizeCallback = join
      $ js_pointerKeeper el
     <$> JS.asyncCallback1 (updateCallback . asLikeJS)
     <*> m callback PointerUp
     <*> m callback PointerDown
     <*> m callback PointerMove
     <*> m callback PointerCancel
+    <*> JS.asyncCallback2 (\x y -> resizeCallback (asLikeJS x)  (asLikeJS y))
   where
     m f c = JS.asyncCallback1 $ f . c . asLikeJS
 
-foreign import javascript unsafe "$r = new ReactiveBanana.PointerKeeper($1,$2,$3,$4,$5,$6);"
+foreign import javascript unsafe "$r = new ReactiveBanana.PointerKeeper($1,$2,$3,$4,$5,$6,$7);"
    js_pointerKeeper :: JSVal
       -> JS.Callback (JSVal -> IO ())
       -> JS.Callback (JSVal -> IO ())
       -> JS.Callback (JSVal -> IO ())
       -> JS.Callback (JSVal -> IO ())
       -> JS.Callback (JSVal -> IO ())
+      -> JS.Callback (JSVal -> JSVal -> IO ())
       -> IO PointerKeeper
 
 

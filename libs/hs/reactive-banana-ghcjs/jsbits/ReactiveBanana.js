@@ -71,7 +71,8 @@ var ReactiveBanana = (function () {
         }
     };
 
-    var PointerKeeper = function PointerKeeper(el, update, pointerUp, pointerDown, pointerMove, pointerCancel) {
+    var PointerKeeper = function PointerKeeper(el, update, pointerUp, pointerDown, pointerMove, pointerCancel, resize) {
+        var pk = this;
         this.target = el;
         this.running = false;
         this.update = update;
@@ -80,11 +81,13 @@ var ReactiveBanana = (function () {
         this.curPointers = [];
         this.downTime = 0;
         this.updateLocation();
-        var pk = this;
-        var observer = new MutationObserver(function() {pk.updateLocation(); });
-        observer.observe(el, { attributes : true });
-        window.addEventListener('scroll',function() { pk.updateLocation.apply(pk, []) });
-        window.addEventListener('resize',function() { pk.updateLocation.apply(pk, []) });
+        resize(pk.width, pk.height);
+        var observer = new MutationObserver(function() {pk.updateLocation(); resize(pk.width, pk.height); });
+        var config = {};
+        config['attributes'] = true;
+        observer.observe(el, config);
+        window.addEventListener('scroll',function() { pk.updateLocation.apply(pk, []); });
+        window.addEventListener('resize',function() { pk.updateLocation.apply(pk, []); resize(pk.width, pk.height); });
 
         el.addEventListener('contextmenu',function(ev){var e = window.event||ev; e.preventDefault();e.stopPropagation();return false;});
         el['style']['touch-action'] = "none";
@@ -117,8 +120,13 @@ var ReactiveBanana = (function () {
             iwidth = bbox.width - pleft - pright;
         this.clientX = bbox.left + pleft;
         this.clientY = bbox.top + ptop;
-        this.clientScaleX = this.target.width ? this.target.width / iwidth : 1;
-        this.clientScaleY = this.target.height ? this.target.height / iheight : 1;
+        this.clientScaleX = this.target.hasAttribute('width')  ? this.target.getAttribute('width')  / iwidth : 1;
+        this.clientScaleY = this.target.hasAttribute('height') ? this.target.getAttribute('height') / iheight : 1;
+        this.width  = this.target.hasAttribute('width')  ? this.target.getAttribute('width')  : iwidth;
+        this.height = this.target.hasAttribute('height') ? this.target.getAttribute('height') : iheight;
+        console.log(this.target,
+                    this.clientX, this.clientY, this.clientScaleX, this.clientScaleY, this.width, this.height,
+                    this.target.width, this.target.height, iwidth, iheight);
         //console.log(elstyle, pleft, ptop, pright, pbottom, bbox, iwidth, iheight, this.target.width, this.target.height, this.clientX, this.clientY, this.clientScaleX, this.clientScaleY);
     };
 
