@@ -65,7 +65,7 @@ foreign import javascript unsafe "$1.altKey"   altKey   :: PointerKeeper -> IO B
 foreign import javascript unsafe "$1.ctrlKey"  ctrlKey  :: PointerKeeper -> IO Bool
 foreign import javascript unsafe "$1.metaKey"  metaKey  :: PointerKeeper -> IO Bool
 foreign import javascript unsafe "$1.shiftKey" shiftKey :: PointerKeeper -> IO Bool
-foreign import javascript unsafe "$1.buttons"  buttons  :: PointerKeeper -> IO Int
+foreign import javascript unsafe "$1['buttons']"  buttons  :: PointerKeeper -> IO Int
 foreign import javascript unsafe "$1.downTime" downTime :: PointerKeeper -> IO Double
 foreign import javascript unsafe "$1.downPointers"
     downPointers :: PointerKeeper -> IO (JS.Array PointerPos)

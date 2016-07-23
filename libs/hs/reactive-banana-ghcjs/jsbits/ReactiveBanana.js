@@ -32,23 +32,23 @@ var ReactiveBanana = (function () {
             touching  = isTouchEv && ev['touches'].length > 0;
         this.pointerEventType = t;
         this.type = ev.type;
-        this.button = ev.button != undefined ? ev.button : (touching ? 0 : -1);
+        this['button'] = ev['button'] != undefined ? ev['button'] : (touching ? 0 : -1);
 
         if (isTouchEv) {
-            pk.buttons = touching ? 1 : 0;
-        } else if (ev.buttons != undefined) {
-            pk.buttons = ev.buttons;
+            pk['buttons'] = touching ? 1 : 0;
+        } else if (ev['buttons'] != undefined) {
+            pk['buttons'] = ev['buttons'];
         } else {
-            var b = ev.button ? toButtons(ev.button) : 0;
+            var b = ev['button'] ? toButtons(ev['button']) : 0;
             switch(t) {
                 case	0: // pointerUp
-                    pk.buttons = pk.buttons & (~ b);
+                    pk['buttons'] = pk['buttons'] & (~ b);
                     break;
                 case	1: // pointerDown
-                    pk.buttons = pk.buttons | b;
+                    pk['buttons'] = pk['buttons'] | b;
                     break;
                 case	3: // pointerCancel
-                    pk.buttons = pk.buttons & (~ b);
+                    pk['buttons'] = pk['buttons'] & (~ b);
                     break;
                 }
         }
@@ -80,6 +80,8 @@ var ReactiveBanana = (function () {
         this.downPointers = [];
         this.curPointers = [];
         this.downTime = 0;
+        this.sizeUpdated = false;
+        this.movedInThisFrame = false;
         this.updateLocation();
         resize(pk.width, pk.height);
         var observer = new MutationObserver(function() {pk.updateLocation(); resize(pk.width, pk.height); });
@@ -124,10 +126,13 @@ var ReactiveBanana = (function () {
         this.clientScaleY = this.target.hasAttribute('height') ? this.target.getAttribute('height') / iheight : 1;
         this.width  = this.target.hasAttribute('width')  ? this.target.getAttribute('width')  : iwidth;
         this.height = this.target.hasAttribute('height') ? this.target.getAttribute('height') : iheight;
-        console.log(this.target,
-                    this.clientX, this.clientY, this.clientScaleX, this.clientScaleY, this.width, this.height,
-                    this.target.width, this.target.height, iwidth, iheight);
-        //console.log(elstyle, pleft, ptop, pright, pbottom, bbox, iwidth, iheight, this.target.width, this.target.height, this.clientX, this.clientY, this.clientScaleX, this.clientScaleY);
+        if (!this.sizeUpdated && (this.target.width != this.width && this.target.height != this.height)) {
+            this.target.width = this.width;
+            this.target.height = this.height;
+            this.sizeUpdated = true;
+        } else {
+            this.sizeUpdated = false;
+        }
     };
 
     // run animation loop
@@ -137,6 +142,7 @@ var ReactiveBanana = (function () {
         function step(timestamp) {
             if (pk.running) {
                 pk.update(timestamp);
+                pk.movedInThisFrame = false;
                 window.requestAnimationFrame(step);
             }
         }
@@ -153,8 +159,18 @@ var ReactiveBanana = (function () {
             var e = window.event || ev;
             e.preventDefault();
             e.stopPropagation();
-            f(new PointerEvent(e, pType));
-            return false;
+            if (pType == 2) {
+                if ( e.target.pointerKeeper.movedInThisFrame) {
+                    return false;
+                } else {
+                    f(new PointerEvent(e, pType));
+                    e.target.pointerKeeper.movedInThisFrame = this.running;
+                    return false;
+                }
+            } else {
+                f(new PointerEvent(e, pType));
+                return false;
+            }
         };
     };
 

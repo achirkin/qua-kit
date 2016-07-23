@@ -37,8 +37,9 @@ main = do
       updateE <- updateEvents heh
       ctrlKeyB <- ctrlKey heh
       curPointersB <- curPointers heh
+      buttonsB <- buttons heh
       reactimate . fmap (pointerC ctx)
-                 $ ((\c p ev -> (ev,c,p)) <$> ctrlKeyB <*> curPointersB)
+                 $ ((\c b p ev -> (ev,(c, b),p)) <$> ctrlKeyB <*> buttonsB <*> curPointersB)
                 <@> pointerE
       reactimate $ wheelCallback canvas <$> wheelE
 --      reactimate $ print <$> updateE
@@ -49,7 +50,7 @@ main = do
     wheelCallback c delta | delta > 0 = setBGColor c "FFCCCC"
                           | delta < 0 = setBGColor c "CCCCFF"
                           | otherwise = setBGColor c "FFFFFF"
-    pointerC :: JSVal -> (PointerEvent, Bool, JS.Array PointerPos) -> IO ()
+    pointerC :: JSVal -> (PointerEvent, (Bool, Int), JS.Array PointerPos) -> IO ()
     pointerC ctx (PointerUp event, _, _) = do
         setStyle ctx "004466"
         JS.mapIO_
@@ -68,9 +69,10 @@ main = do
                           15 15
           )
           $ pointers event
-    pointerC ctx (PointerMove _, ctrl, pps) = do
+    pointerC ctx (PointerMove _, (ctrl, b), pps) = do
         if ctrl then setStyle ctx "55FF99"
                 else setStyle ctx "00FFAA"
+--        print b
         JS.mapIO_
           (\p -> fillRect ctx
                           (posX p - 1)
@@ -86,7 +88,6 @@ main = do
                           25 25
           )
           $ pointers event
-
 
 
 
