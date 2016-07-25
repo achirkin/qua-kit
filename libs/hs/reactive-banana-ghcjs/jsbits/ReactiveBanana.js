@@ -7,7 +7,7 @@ var ReactiveBanana = (function () {
     'use strict';
 
     // helper function to enable MouseEvent.buttons
-    function toButtons(btn){
+    var toButtons = function(btn){
         switch(btn) {
             case	0: return 1;
             case	1: return 4;
@@ -17,7 +17,41 @@ var ReactiveBanana = (function () {
             case	5: return 32;
             default: return 0;
         }
-    }
+    };
+    var convertEvent = function(f, pType, g) {
+        return function (ev) {
+            var e = window.event || ev;
+            e.preventDefault();
+            e.stopPropagation();
+            var pk = e.target.pointerKeeper;
+            switch (pType) {
+                case 0:
+                    if (( (performance.now() - pk.downTime)
+                        + (  Math.abs(pk.curPointers[0][0]-pk.downPointers[0][0])
+                           + Math.abs(pk.curPointers[0][1]-pk.downPointers[0][1])
+                          ) * (ev['touches'] ? 3 : 10)
+                        ) < 200) {
+                        g(new PointerEvent(e, pType));
+                    } else {
+                        f(new PointerEvent(e, pType));
+                    }
+                    break;
+                case 2:
+                    if ( pk.movedInThisFrame) {
+                        return false;
+                    } else {
+                        f(new PointerEvent(e, pType));
+                        pk.movedInThisFrame = this.running;
+                        return false;
+                    }
+                    break;
+                default:
+                    f(new PointerEvent(e, pType));
+                    break;
+            }
+            return false;
+        };
+    };
 
     // A pointer represents various kinds of pointer events.
     // eventType:
@@ -58,9 +92,10 @@ var ReactiveBanana = (function () {
         pk.metaKey = ev.metaKey ? ev.metaKey : false;
         pk.shiftKey = ev.shiftKey ? ev.shiftKey : false;
         if (isTouchEv) {
-            this.pointers = Array.prototype.slice.call(ev['touches']).map(function(t) {return {x: (t.clientX - pk.clientX) * pk.clientScaleX, y: (t.clientY - pk.clientY) * pk.clientScaleY};});
+            this.pointers = ev['touches'].length == 0 ? pk.curPointers :
+                 Array.prototype.slice.call(ev['touches']).map(function(t) {return [(t.clientX - pk.clientX) * pk.clientScaleX, (t.clientY - pk.clientY) * pk.clientScaleY];});
         } else {
-            this.pointers = ev.clientX ? [{x: (ev.clientX - pk.clientX) * pk.clientScaleX, y: (ev.clientY - pk.clientY) * pk.clientScaleY}] : [];
+            this.pointers = ev.clientX ? [[(ev.clientX - pk.clientX) * pk.clientScaleX, (ev.clientY - pk.clientY) * pk.clientScaleY]] : [];
         }
 
         // update keeper's pointer position tracking
@@ -71,7 +106,7 @@ var ReactiveBanana = (function () {
         }
     };
 
-    var PointerKeeper = function PointerKeeper(el, update, pointerUp, pointerDown, pointerMove, pointerCancel, resize) {
+    var PointerKeeper = function PointerKeeper(el, update, pointerUp, pointerClick, pointerDown, pointerMove, pointerCancel, resize) {
         var pk = this;
         this.target = el;
         this.running = false;
@@ -81,29 +116,30 @@ var ReactiveBanana = (function () {
         this.curPointers = [];
         this.downTime = 0;
         this.sizeUpdated = false;
+        this.scrolledInThisFrame = false;
         this.movedInThisFrame = false;
         this.updateLocation();
-        resize(pk.width, pk.height);
-        var observer = new MutationObserver(function() {pk.updateLocation(); resize(pk.width, pk.height); });
+        resize([pk.width, pk.height]);
+        var observer = new MutationObserver(function() {pk.updateLocation(); resize([pk.width, pk.height]); });
         var config = {};
         config['attributes'] = true;
         observer.observe(el, config);
         window.addEventListener('scroll',function() { pk.updateLocation.apply(pk, []); });
-        window.addEventListener('resize',function() { pk.updateLocation.apply(pk, []); resize(pk.width, pk.height); });
+        window.addEventListener('resize',function() { pk.updateLocation.apply(pk, []); resize([pk.width, pk.height]); });
 
         el.addEventListener('contextmenu',function(ev){var e = window.event||ev; e.preventDefault();e.stopPropagation();return false;});
         el['style']['touch-action'] = "none";
 
-        var pUp = this.convertEvent(pointerUp, 0);
+        var pUp = convertEvent(pointerUp, 0, pointerClick);
         el.addEventListener('mouseup', pUp);
         el.addEventListener('touchend', pUp);
-        var pDown = this.convertEvent(pointerDown, 1);
+        var pDown = convertEvent(pointerDown, 1, null);
         el.addEventListener('mousedown', pDown);
         el.addEventListener('touchstart', pDown);
-        var pMove = this.convertEvent(pointerMove, 2);
+        var pMove = convertEvent(pointerMove, 2, null);
         el.addEventListener('mousemove', pMove);
         el.addEventListener('touchmove', pMove);
-        var pCancel = this.convertEvent(pointerCancel, 3);
+        var pCancel = convertEvent(pointerCancel, 3, null);
         el.addEventListener('mouseleave', pCancel);
         el.addEventListener('touchcancel', pCancel);
 
@@ -143,6 +179,7 @@ var ReactiveBanana = (function () {
             if (pk.running) {
                 pk.update(timestamp);
                 pk.movedInThisFrame = false;
+                pk.scrolledInThisFrame = false;
                 window.requestAnimationFrame(step);
             }
         }
@@ -154,37 +191,23 @@ var ReactiveBanana = (function () {
         this.running = false;
     };
 
-    PointerKeeper.prototype.convertEvent = function (f, pType) {
-        return function (ev) {
+
+    PointerKeeper.prototype.listenToWheel = function(f) {
+        var pk = this;
+        this.target.addEventListener('wheel', function(ev){
             var e = window.event || ev;
             e.preventDefault();
             e.stopPropagation();
-            if (pType == 2) {
-                if ( e.target.pointerKeeper.movedInThisFrame) {
-                    return false;
-                } else {
-                    f(new PointerEvent(e, pType));
-                    e.target.pointerKeeper.movedInThisFrame = this.running;
-                    return false;
-                }
-            } else {
-                f(new PointerEvent(e, pType));
-                return false;
+            if(!pk.scrolledInThisFrame || !pk.running){
+                f(e['wheelDelta'] > 0 || e['detail'] < 0 || e['deltaY'] < 0 ? (1.0) : (-1.0));
+                pk.scrolledInThisFrame = true;
             }
-        };
+            return false;
+        });
     };
 
     return {
         PointerEvent: PointerEvent,
-        PointerKeeper: PointerKeeper,
-        listenToWheel: function(el, f) {
-            el.addEventListener('wheel', function(ev){
-                var e = window.event || ev;
-                e.preventDefault();
-                e.stopPropagation();
-                f(e['wheelDelta'] > 0 || e['detail'] < 0 || e['deltaY'] < 0 ? (1.0) : (-1.0));
-                return false;
-            });
-        }
+        PointerKeeper: PointerKeeper
     };
 }());

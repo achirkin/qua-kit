@@ -4,5 +4,3 @@ closure-compiler --warning_level=QUIET\
                  --define='DEBUG=false'\
         dist/build/test/test.jsexe/all.js\
         > test.js
-
-#cp jsbits/ReactiveBanana.js test.js

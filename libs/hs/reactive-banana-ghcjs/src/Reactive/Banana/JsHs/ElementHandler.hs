@@ -10,7 +10,8 @@
 
 module Reactive.Banana.JsHs.ElementHandler
   ( -- * JS handler
-    ElementHandler, elementHandler
+    HTMLClickHandler, clickHandler, clickEvents
+  , ElementHandler, elementHandler
   , play, stop, updateEvents, resizeEvents
     -- * Events
   , pointerEvents, wheelEvents
@@ -24,43 +25,57 @@ module Reactive.Banana.JsHs.ElementHandler
 import qualified Control.Event.Handler as RB
 import Reactive.Banana.Frameworks
 import Reactive.Banana.Combinators
-import JsHs.LikeJS.Class
-import JsHs.Types
+--import JsHs.LikeJS.Class
+--import JsHs.Types
 import qualified JsHs.Array as JS
-import qualified JsHs.Callback as JS
+--import qualified JsHs.Callback as JS
 
 
 import Reactive.Banana.JsHs.Types
 import qualified Reactive.Banana.JsHs.PointerKeeper as PK
 
+-- | Handler for a mouse click event
+newtype HTMLClickHandler = HTMLClickHandler
+  { clickH :: AddHandler ElementClick
+  }
+
+clickHandler :: HTMLElement -> IO HTMLClickHandler
+clickHandler el = do
+  (ah, fire) <- newAddHandler
+  PK.elementOnClick el fire
+  return $ HTMLClickHandler ah
+
+-- | Triggers on HTMLElement click
+clickEvents :: HTMLClickHandler -> MomentIO (Event ElementClick)
+clickEvents = fromAddHandler . clickH
 
 
 data ElementHandler = ElementHandler
   { state       :: PK.PointerKeeper
   , play        :: IO () -- ^ start requestAnimationFrame loop
   , stop        :: IO () -- ^ finish requestAnimationFrame loop
-  , render      :: AddHandler Double
-  , resizeH     :: AddHandler (Double, Double)
+  , render      :: AddHandler Time
+  , resizeH     :: AddHandler ResizeEvent
   , pointer     :: AddHandler PointerEvent
-  , wheel       :: AddHandler Double
+  , wheel       :: AddHandler WheelEvent
   , shiftKeyH   :: AddHandler Bool
   , ctrlKeyH    :: AddHandler Bool
   , altKeyH     :: AddHandler Bool
   , metaKeyH    :: AddHandler Bool
   , buttonsH    :: AddHandler Int
-  , downPointsH :: AddHandler (JS.Array PointerPos)
-  , curPointsH  :: AddHandler (JS.Array PointerPos)
-  , downTimeH   :: AddHandler Double
+  , downPointsH :: AddHandler (JS.Array Coords2D)
+  , curPointsH  :: AddHandler (JS.Array Coords2D)
+  , downTimeH   :: AddHandler Time
   }
 
-elementHandler :: JSVal -> IO ElementHandler
+elementHandler :: HTMLElement -> IO ElementHandler
 elementHandler el = do
   (ahRender, fireRender) <- newAddHandler
   (ahResize, fireResize) <- newAddHandler
   (ahP,      fireP)     <- newAddHandler
   (ahWheel,  fireWheel) <- newAddHandler
-  pk <- PK.newPointerKeeper el fireRender fireP (curry fireResize)
-  listenToWheel el fireWheel
+  pk <- PK.newPointerKeeper el fireRender fireP fireResize
+  PK.listenToWheel pk fireWheel
   return ElementHandler
     { state       = pk
     , play        = PK.play pk
@@ -84,7 +99,7 @@ elementHandler el = do
 -- | This type of events before rendering animation frame.
 --   Event value is a timestamp taken from window.requestAnimationFrame,
 --   which is similar to performance.now()
-updateEvents :: ElementHandler -> MomentIO (Event Double)
+updateEvents :: ElementHandler -> MomentIO (Event Time)
 updateEvents = fromAddHandler . render
 
 -- | All pointer events
@@ -92,11 +107,11 @@ pointerEvents :: ElementHandler -> MomentIO (Event PointerEvent)
 pointerEvents = fromAddHandler . pointer
 
 -- | Mouse wheel up or down (arg is +1 or -1 for scroll up or down accordingly)
-wheelEvents :: ElementHandler -> MomentIO (Event Double)
+wheelEvents :: ElementHandler -> MomentIO (Event WheelEvent)
 wheelEvents = fromAddHandler . wheel
 
 -- | when element is resized
-resizeEvents :: ElementHandler -> MomentIO (Event (Double,Double))
+resizeEvents :: ElementHandler -> MomentIO (Event ResizeEvent)
 resizeEvents = fromAddHandler . resizeH
 
 shiftKey :: ElementHandler -> MomentIO (Behavior Bool)
@@ -109,17 +124,9 @@ metaKey :: ElementHandler -> MomentIO (Behavior Bool)
 metaKey = fromChanges False . metaKeyH
 buttons :: ElementHandler -> MomentIO (Behavior Int)
 buttons = fromChanges 0 . buttonsH
-downPointers :: ElementHandler -> MomentIO (Behavior (JS.Array PointerPos))
+downPointers :: ElementHandler -> MomentIO (Behavior (JS.Array Coords2D))
 downPointers = fromChanges JS.emptyArray . downPointsH
-curPointers :: ElementHandler -> MomentIO (Behavior (JS.Array PointerPos))
+curPointers :: ElementHandler -> MomentIO (Behavior (JS.Array Coords2D))
 curPointers = fromChanges JS.emptyArray . curPointsH
-downTime :: ElementHandler -> MomentIO (Behavior Double)
+downTime :: ElementHandler -> MomentIO (Behavior Time)
 downTime = fromChanges 0 . downTimeH
-
-
-
-foreign import javascript unsafe "ReactiveBanana.listenToWheel($1,$2)"
-   js_listenToWheel :: JSVal -> JS.Callback (JSVal -> IO ())  -> IO ()
-listenToWheel :: JSVal -> (Double -> IO ()) -> IO ()
-listenToWheel el fwheel = JS.asyncCallback1 (fwheel . asLikeJS) >>= js_listenToWheel el
-
