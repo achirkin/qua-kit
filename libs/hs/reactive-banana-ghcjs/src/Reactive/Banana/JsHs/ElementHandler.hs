@@ -18,6 +18,7 @@ module Reactive.Banana.JsHs.ElementHandler
     -- * Behaviors
   , altKey, ctrlKey, metaKey, shiftKey
   , buttons, downPointers, curPointers, downTime
+  , viewPortSize
   ) where
 
 
@@ -130,3 +131,8 @@ curPointers :: ElementHandler -> MomentIO (Behavior (JS.Array Coords2D))
 curPointers = fromChanges JS.emptyArray . curPointsH
 downTime :: ElementHandler -> MomentIO (Behavior Time)
 downTime = fromChanges 0 . downTimeH
+-- | when element is resized
+viewPortSize :: ElementHandler -> MomentIO (Behavior Coords2D)
+viewPortSize eh = do
+  isize <- liftIO $ PK.viewPortSize (state eh)
+  fromChanges isize $ (\(ResizeEvent s) -> s) <$> resizeH eh

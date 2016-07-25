@@ -19,6 +19,7 @@ module Reactive.Banana.JsHs.PointerKeeper
   , eventPointerKeeper
   , downTime, downPointers, curPointers
   , play, stop
+  , viewPortSize
   ) where
 
 import Control.Monad (join)
@@ -69,6 +70,7 @@ foreign import javascript unsafe "$1.metaKey"  metaKey  :: PointerKeeper -> IO B
 foreign import javascript unsafe "$1.shiftKey" shiftKey :: PointerKeeper -> IO Bool
 foreign import javascript unsafe "$1['buttons']"  buttons  :: PointerKeeper -> IO Int
 foreign import javascript unsafe "$1.downTime" downTime :: PointerKeeper -> IO Time
+foreign import javascript unsafe "[$1.width, $1.height]" viewPortSize :: PointerKeeper -> IO Coords2D
 foreign import javascript unsafe "$1.downPointers"
     downPointers :: PointerKeeper -> IO (JS.Array Coords2D)
 foreign import javascript unsafe "$1.curPointers"

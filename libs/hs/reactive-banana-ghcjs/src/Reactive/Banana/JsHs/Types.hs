@@ -24,7 +24,7 @@ module Reactive.Banana.JsHs.Types
     -- * Modifiers
   , ModKey (..)
     -- * Positions
-  , Coords2D, coordX, coordY, unpackCoords2D
+  , Coords2D (..), coordX, coordY, unpackCoords2D
   ) where
 
 
