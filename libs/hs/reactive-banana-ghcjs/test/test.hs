@@ -117,9 +117,9 @@ foreign import javascript safe "document.getElementById(\"testbutton\")"
     getButton :: IO HTMLElement
 
 foreign import javascript unsafe "var body = document.getElementsByTagName(\"body\")[0]; \
-    \ body.innerHTML = '<div style=\"width: 1000px; margin: 25px; padding: 18px; \
+    \ body.innerHTML = '<div style=\"width: 90%; margin: 25px; padding: 18px; \
                       \ background-color: coral; border-color: blue; border-style: solid;\"> \
-                      \ <canvas id=\"cvn\" height=\"200\" width=\"200\" style=\"margin: 22px; \
+                      \ <canvas id=\"cvn\" style=\"margin: 22px; \
                       \ padding: 10px 20px 30px 25px; border-color: darkred; border-style: dashed; \
                       \ background-color: white; width: 65%; height: 400px;\"></canvas></div> \
                       \ <button id=\"testbutton\">click me!</button>';\

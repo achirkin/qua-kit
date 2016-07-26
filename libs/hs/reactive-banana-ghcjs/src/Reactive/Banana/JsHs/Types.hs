@@ -100,4 +100,4 @@ foreign import javascript unsafe "$1[0]" coordX :: Coords2D -> Double
 -- | Get pointer y coordinate
 foreign import javascript unsafe "$1[1]" coordY :: Coords2D -> Double
 -- | Get pointer coordinates
-foreign import javascript unsafe "$r1=$1.x;$r2=$1.y;" unpackCoords2D :: Coords2D -> (Double, Double)
+foreign import javascript unsafe "$r1=$1[0];$r2=$1[1];" unpackCoords2D :: Coords2D -> (Double, Double)

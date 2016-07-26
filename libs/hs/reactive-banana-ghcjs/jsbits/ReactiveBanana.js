@@ -3,6 +3,34 @@
  */
 
 
+// make sure that RequestAnimationFrame and CancelAnimationFrame work on all browsers
+(function() {
+    'use strict';
+    var lastTime = 0;
+    var vendors = ['ms', 'moz', 'webkit', 'o'];
+    for(var x = 0; x < vendors.length && !window['requestAnimationFrame']; ++x) {
+        window['requestAnimationFrame'] = window[vendors[x]+'RequestAnimationFrame'];
+        window['cancelAnimationFrame'] = window[vendors[x]+'CancelAnimationFrame']
+            || window[vendors[x]+'CancelRequestAnimationFrame'];
+    }
+
+    if (!window['requestAnimationFrame'])
+        window['requestAnimationFrame'] = function(callback, element) {
+            var currTime = new Date().getTime();
+            var timeToCall = Math.max(0, 16 - (currTime - lastTime));
+            var id = window.setTimeout(function() { callback(currTime + timeToCall); },
+                timeToCall);
+            lastTime = currTime + timeToCall;
+            return id;
+        };
+
+    if (!window['cancelAnimationFrame'])
+        window['cancelAnimationFrame'] = function(id) {
+            clearTimeout(id);
+        };
+}());
+
+// the main thing
 var ReactiveBanana = (function () {
     'use strict';
 
@@ -118,14 +146,14 @@ var ReactiveBanana = (function () {
         this.sizeUpdated = false;
         this.scrolledInThisFrame = false;
         this.movedInThisFrame = false;
-        this.updateLocation();
-        resize([pk.width, pk.height]);
-        var observer = new MutationObserver(function() {pk.updateLocation(); resize([pk.width, pk.height]); });
+        this.updateLocationCallback = function(updateScaling) { pk.updateLocation.apply(pk, [updateScaling]); resize([pk.width, pk.height]); };
+        this.updateLocationCallback(true);
+        var observer = new MutationObserver( function() { pk.updateLocationCallback.apply(pk, [true]); } );
         var config = {};
         config['attributes'] = true;
         observer.observe(el, config);
-        window.addEventListener('scroll',function() { pk.updateLocation.apply(pk, []); });
-        window.addEventListener('resize',function() { pk.updateLocation.apply(pk, []); resize([pk.width, pk.height]); });
+        window.addEventListener('scroll',function() { pk.updateLocation.apply(pk, [false]); });
+        //window.addEventListener('resize', function() { pk.updateLocationCallback.apply(pk, [false]); }  );
 
         el.addEventListener('contextmenu',function(ev){var e = window.event||ev; e.preventDefault();e.stopPropagation();return false;});
         el['style']['touch-action'] = "none";
@@ -143,11 +171,20 @@ var ReactiveBanana = (function () {
         el.addEventListener('mouseleave', pCancel);
         el.addEventListener('touchcancel', pCancel);
 
+        if (document['onmozfullscreenchange'] !== undefined) {
+            document['onmozfullscreenchange'] = function() { pk.updateLocationCallback.apply(pk, [false]); };
+        } else if (document['onwebkitfullscreenchange'] !== undefined) {
+            document['onwebkitfullscreenchange'] = function() { pk.updateLocationCallback.apply(pk, [false]); };
+        } else if (document['onmsfullscreenchange'] !== undefined) {
+            document['onmsfullscreenchange'] = function() { pk.updateLocationCallback.apply(pk, [false]); };
+        } else {
+            document['onfullscreenchange'] = function() { pk.updateLocationCallback.apply(pk, [false]); };
+        }
     };
 
     // Update position of an element so that it serves as a veiwport for pointer position;
     // computes available space within margin, border, and padding (so that it works with an html canvas size).
-    PointerKeeper.prototype.updateLocation = function () {
+    PointerKeeper.prototype.updateLocation = function (updateScaling) {
         var elstyle = window.getComputedStyle(this.target, null),
             pleft = parseFloat(elstyle.getPropertyValue('padding-left')) + parseFloat(elstyle.getPropertyValue('border-left-width')),
             ptop = parseFloat(elstyle.getPropertyValue('padding-top')) + parseFloat(elstyle.getPropertyValue('border-top-width')),
@@ -158,11 +195,15 @@ var ReactiveBanana = (function () {
             iwidth = bbox.width - pleft - pright;
         this.clientX = bbox.left + pleft;
         this.clientY = bbox.top + ptop;
-        this.clientScaleX = this.target.hasAttribute('width')  ? this.target.getAttribute('width')  / iwidth : 1;
-        this.clientScaleY = this.target.hasAttribute('height') ? this.target.getAttribute('height') / iheight : 1;
-        this.width  = this.target.hasAttribute('width')  ? this.target.getAttribute('width')  : iwidth;
-        this.height = this.target.hasAttribute('height') ? this.target.getAttribute('height') : iheight;
-        if (!this.sizeUpdated && (this.target.width != this.width && this.target.height != this.height)) {
+        if (updateScaling) {
+            this.clientScaleX = this.target.hasAttribute('width')  ? this.target.getAttribute('width')  / iwidth : 1;
+            this.clientScaleY = this.target.hasAttribute('height') ? this.target.getAttribute('height') / iheight : 1;
+        }
+        this.width  = this.clientScaleX * iwidth;
+        this.height = this.clientScaleY * iheight;
+        this.bboxw = bbox.width;
+        this.bboxh = bbox.height;
+        if (!this.sizeUpdated && (this.target.width != this.width || this.target.height != this.height)) {
             this.target.width = this.width;
             this.target.height = this.height;
             this.sizeUpdated = true;
@@ -175,11 +216,18 @@ var ReactiveBanana = (function () {
     PointerKeeper.prototype.play = function () {
         this.running = true;
         var pk = this;
+        var bbox = pk.target.getBoundingClientRect();
         function step(timestamp) {
             if (pk.running) {
                 pk.update(timestamp);
                 pk.movedInThisFrame = false;
                 pk.scrolledInThisFrame = false;
+
+                bbox = pk.target.getBoundingClientRect();
+                if (pk.bboxw != bbox.width || pk.bboxh != bbox.height) {
+                    //console.log('updating!', pk.bboxw, bbox.width, pk.bboxh, bbox.height);
+                    pk.updateLocationCallback(false);
+                }
                 window.requestAnimationFrame(step);
             }
         }
