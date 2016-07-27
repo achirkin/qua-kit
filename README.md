@@ -10,17 +10,18 @@ Qua-View (`apps/hs/qua-view`) is a WebGL-base browser viewer and editor for buil
 Luci (`apps/java/luci2`) is a lightweight middleware that allows to connect different urban computing services together
 and present their results in Qua-View.
 
-
 Projects that are already in some git repositories can be added as git modules
 using `git submodule add <repository> <path>`.
 
 ### Installation prerequisites
+
 ##### Java
 First, install
 [`JDK`](http://www.oracle.com/technetwork/java/javase/downloads/index.html);
 we prefer java 8.
 Second, install
 [`maven`](https://maven.apache.org/).
+
 ##### Haskell
 To build and install (and run later) haskell applications use
 [`stack`](http://docs.haskellstack.org/en/stable/README.html).
@@ -29,7 +30,16 @@ and builds the projects.
 
 ### Components
 
-#### qua-view
+### qua-view
+
+Path: `apps/hs/qua-view`.
+
+Client side of qua-kit. Browse the submodule for details.
+
+#### qua-server
+
+Path: `apps/hs/qua-server`.
+
 To build and run a particular app, use `build` and `exec` commands provided by `stack`.
 For examplre, to run `qua-server` you shoud:
 ```
@@ -38,9 +48,17 @@ stack exec qua-server
 ```
 
 #### Luci
+
+Path: `apps/java/luci2`.
 Given Java and maven are set up correctly, run Luci as follows:
 ```
 cd apps/java/luci2
 mvn clean install
 mvn exec:exec
 ```
+
+#### luci-connect
+
+Path: `libs/hs/luci-connect`.
+Luci-connect is a haskell library for clients and services of Luci.
+Refer to `libs/hs/luci-connect/README.md` for further documentation.
