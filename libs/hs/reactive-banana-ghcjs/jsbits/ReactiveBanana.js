@@ -123,7 +123,7 @@ var ReactiveBanana = (function () {
             this.pointers = ev['touches'].length == 0 ? pk.curPointers :
                  Array.prototype.slice.call(ev['touches']).map(function(t) {return [(t.clientX - pk.clientX) * pk.clientScaleX, (t.clientY - pk.clientY) * pk.clientScaleY];});
         } else {
-            this.pointers = ev.clientX ? [[(ev.clientX - pk.clientX) * pk.clientScaleX, (ev.clientY - pk.clientY) * pk.clientScaleY]] : [];
+            this.pointers = ev.clientX ? [[(ev.clientX - pk.clientX) * pk.clientScaleX, (ev.clientY - pk.clientY) * pk.clientScaleY]] : pk.curPointers;
         }
 
         // update keeper's pointer position tracking
