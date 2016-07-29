@@ -72,7 +72,7 @@ instance LikeJS "HTMLElement" ElementClick
 
 -- | Time of events is Double
 newtype Time = Time Double
-  deriving (Eq,Ord,Show,Enum,Num,Real,RealFrac,RealFloat,Fractional,Floating)
+  deriving (Eq,Ord,Show,Num,Real,RealFrac,RealFloat,Fractional,Floating)
 instance LikeJS "Number" Time where
   asLikeJS = Time . asLikeJS
   asJSVal (Time v) = asJSVal v

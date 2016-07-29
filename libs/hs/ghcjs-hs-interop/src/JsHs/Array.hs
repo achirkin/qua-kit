@@ -467,7 +467,7 @@ mapEither f arr = unsafePerformIO $ do
 
 {-# INLINE js_filter #-}
 foreign import javascript unsafe "$2.filter($1)"
-    js_filter :: (Callback (a -> Bool)) -> Array a -> IO (Array a)
+    js_filter :: Callback (a -> Bool) -> Array a -> IO (Array a)
 
 {-# INLINE js_mapEither #-}
 foreign import javascript unsafe "var rez = $2.map($1); $r1 = rez.filter(function(e){return !e.isRight();}).map(function(e){return e.left;}); $r2 = rez.filter(function(e){return e.isRight();}).map(function(e){return e.right;});"
