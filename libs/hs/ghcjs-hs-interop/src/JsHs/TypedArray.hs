@@ -1,4 +1,4 @@
-{-# LANGUAGE CPP #-}
+{-# LANGUAGE CPP, TypeSynonymInstances #-}
 {-# LANGUAGE DataKinds, PolyKinds #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
@@ -92,9 +92,11 @@ unsafeDataView' byteOffset mbyteLength (SomeArrayBuffer b) =
 instance Show (SomeTypedArray m t) where
     show = unpack' . js_show
 
-instance Eq (TypedArray t) where
+instance Eq (SomeTypedArray 'Immutable a) where
     (==) = js_compareArrays
 
+foreign import javascript unsafe "$r = true; if ($1.length !== $2.length) { $r = false; } else { for(var i = 0; i < $1.length; i++) { if ((!isNaN($1[i]) || !isNaN($2[i])) && $1[i] !== $2[i]) { $r = false; break;} } }"
+  js_compareArrays :: SomeTypedArray 'Immutable a -> SomeTypedArray 'Immutable b -> Bool
 
 -----------------------------------------------------------------------------
 -- | Convert data to primitive arrays
@@ -122,7 +124,7 @@ class MutableArrayBufferPrim a where
 
 -- SomeArrayBuffer instances
 
-instance ImmutableArrayBufferPrim ArrayBuffer where
+instance ImmutableArrayBufferPrim (SomeArrayBuffer 'Immutable) where
     {-# INLINE fromByteArrayPrim #-}
     fromByteArrayPrim = js_unwrapImmutableArrayBuffer
     {-# INLINE toByteArrayPrim #-}
@@ -136,7 +138,7 @@ instance MutableArrayBufferPrim (SomeArrayBuffer m) where
 
 -- SomeDataView instances
 
-instance ImmutableArrayBufferPrim DataView where
+instance ImmutableArrayBufferPrim (SomeDataView 'Immutable) where
     {-# INLINE fromByteArrayPrim #-}
     fromByteArrayPrim = js_unwrapImmutableDataView
     {-# INLINE toByteArrayPrim #-}
@@ -150,8 +152,9 @@ instance MutableArrayBufferPrim (SomeDataView m) where
 
 -- TypedArray instances
 
+#define IMMUTABLE 'Immutable
 #define TYPEDARRAYPRIMCONVERT(T,JSType,JSSize)\
-instance ImmutableArrayBufferPrim (TypedArray T) where{\
+instance ImmutableArrayBufferPrim (SomeTypedArray IMMUTABLE T) where{\
     {-# INLINE fromByteArrayPrim #-};\
     fromByteArrayPrim = js_unwrapImmutable/**/T/**/Array;\
     {-# INLINE toByteArrayPrim #-};\
@@ -161,6 +164,8 @@ instance MutableArrayBufferPrim (SomeTypedArray m T) where{\
     fromMutableByteArrayPrim = js_unwrap/**/T/**/Array;\
     {-# INLINE toMutableByteArrayPrim #-};\
     toMutableByteArrayPrim arr = js_wrapArrayBufferView (coerce arr)}
+
+
 
 TYPEDARRAYPRIMCONVERT(Int,Int32,4)
 TYPEDARRAYPRIMCONVERT(Int32,Int32,4)

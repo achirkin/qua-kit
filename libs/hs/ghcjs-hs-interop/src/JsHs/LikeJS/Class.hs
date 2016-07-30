@@ -30,17 +30,15 @@ import Data.Int
 import Data.Word
 
 --
-import GHC.TypeLits
-import GHC.Prim
---import Data.Coerce (Coercible ()) --, coerce)
-import Data.JSString
---import GHC.Exts (Any)
+import GHC.TypeLits (Symbol, KnownSymbol, symbolVal')
+import GHC.Prim (Any, Proxy#, proxy#)
+import Data.Coerce (Coercible (), coerce)
+import JsHs.JSString (JSString)
 import JsHs.Types.Prim (JSVal, jsNull, jsIsNullOrUndef)
 import Unsafe.Coerce (unsafeCoerce)
 import Control.DeepSeq (deepseq)
 
 
---import Data.Foldable (foldr')
 
 
 -- | Describes direct representation of data types in JS and HS.
@@ -89,18 +87,14 @@ instance LikeJS "String" JSString where
     {-# INLINE asLikeJS #-}
     asLikeJS  =  unsafeCoerce
 
-foreign import javascript unsafe "$r = $1" js_asLikeJSBool :: JSVal -> Bool
-{-# INLINE js_asLikeJSBool #-}
-foreign import javascript unsafe "$r = $1" js_asJSValBool :: Bool -> JSVal
-{-# INLINE js_asJSValBool #-}
+foreign import javascript unsafe "$r = $1;" js_asLikeJSBool :: JSVal -> Bool
+foreign import javascript unsafe "$r = $1;" js_asJSValBool :: Bool -> JSVal
 instance LikeJS "Boolean" Bool where
     asJSVal x = x `seq` js_asJSValBool x
     asLikeJS  =  js_asLikeJSBool
 
-foreign import javascript unsafe "$r = $1" js_asLikeJSChar :: JSVal -> Char
-{-# INLINE js_asLikeJSChar #-}
-foreign import javascript unsafe "$r = $1" js_asJSValChar :: Char -> JSVal
-{-# INLINE js_asJSValChar #-}
+foreign import javascript unsafe "$r = $1;" js_asLikeJSChar :: JSVal -> Char
+foreign import javascript unsafe "$r = $1;" js_asJSValChar :: Char -> JSVal
 instance LikeJS "Number" Char where
     asJSVal x = x `seq` js_asJSValChar x
     asLikeJS  =  js_asLikeJSChar
@@ -109,10 +103,10 @@ instance LikeJS "Number" Char where
 
 -- | convert Number types
 #define LIKEJSNum(T) \
-    foreign import javascript unsafe "$r = $1" \
-        asJSVal/**/T :: T -> JSVal;  {-# INLINE asJSVal/**/T #-}; \
-    foreign import javascript unsafe "$r = $1" \
-        js_asLikeJS/**/T :: JSVal -> T;  {-# INLINE js_asLikeJS/**/T #-}; \
+    foreign import javascript unsafe "$r = $1;" \
+        asJSVal/**/T :: T -> JSVal; \
+    foreign import javascript unsafe "$r = $1;" \
+        js_asLikeJS/**/T :: JSVal -> T; \
     instance LikeJS "Number" T where { \
         asJSVal x = x `seq` asJSVal/**/T x; {-# INLINE asJSVal #-}; \
         asLikeJS  = js_asLikeJS/**/T; {-# INLINE asLikeJS #-}; }
@@ -138,10 +132,8 @@ LIKEJSNum(Double)
 -- to preserve JS type name
 foreign import javascript unsafe "$1.d2 == null ? h$bigFromInt($1.d1) : $1.d2"
     js_asJSValInteger :: Any -> JSVal
-{-# INLINE js_asJSValInteger #-}
-foreign import javascript unsafe "$r = h$integer_mpzToInteger($1)"
+foreign import javascript unsafe "$r = h$integer_mpzToInteger($1);"
     js_asLikeJSInteger :: JSVal -> Any
-{-# INLINE js_asLikeJSInteger #-}
 instance LikeJS "BigInteger" Integer where
     asJSVal x = x `deepseq` js_asJSValInteger (unsafeCoerce x)
     asLikeJS = unsafeCoerce . js_asLikeJSInteger
@@ -159,7 +151,6 @@ instance (LikeJS ta a, LikeJS tb b) => LikeJS "Either" (Either a b) where
                    then Right . asLikeJS $ js_Either_right val
                    else Left . asLikeJS $ js_Either_left val
 
-{-# NOINLINE js_Either #-}
 foreign import javascript unsafe "$r = new LikeHS.Either($1, $2);" js_Either :: JSVal -> Bool -> JSVal
 foreign import javascript unsafe "$1.isRight()" js_Either_isRight :: JSVal -> Bool
 foreign import javascript unsafe "$1.right" js_Either_right :: JSVal -> JSVal

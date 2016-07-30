@@ -1,4 +1,4 @@
-{-# LANGUAGE DeriveDataTypeable,GeneralizedNewtypeDeriving, TypeFamilies, CPP #-}
+{-# LANGUAGE DeriveDataTypeable,GeneralizedNewtypeDeriving, CPP #-}
 {-# LANGUAGE DataKinds, PolyKinds #-}
 {-# LANGUAGE FlexibleInstances, MultiParamTypeClasses #-}
 -----------------------------------------------------------------------------

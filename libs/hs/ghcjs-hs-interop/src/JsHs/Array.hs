@@ -88,9 +88,9 @@ toList = asLikeJS . jsval . toJSArray
 
 {-# NOINLINE map #-}
 map :: ( LikeJSArray ta a
-         , LikeJS ty y)
-      => (ArrayElem a -> y)
-      -> a -> Array y
+       , LikeJS ty y)
+    => (ArrayElem a -> y)
+    -> a -> Array y
 map f arr = unsafePerformIO $ do
         call <- syncCallbackUnsafe1 $ asJSVal . f . asLikeJS
         r <- js_mapArray call (toJSArray arr)
@@ -99,10 +99,10 @@ map f arr = unsafePerformIO $ do
 
 {-# NOINLINE mapSame #-}
 mapSame :: ( LikeJSArray ta a
-             , LikeJS ta x
-             , x ~ ArrayElem a)
-          => (x -> x)
-          -> a -> a
+           , LikeJS ta x
+           , x ~ ArrayElem a)
+        => (x -> x)
+        -> a -> a
 mapSame f arr = unsafePerformIO $ do
         call <- syncCallbackUnsafe1 $ asJSVal . f . asLikeJS
         r <- fromJSArray <$> js_mapArray call (toJSArray arr)
@@ -158,7 +158,7 @@ mapiIO_ f arr = do
 "map/concat"     forall f g arr . map     f (map g arr)     = map     (f . g) arr
 "mapSame/concat" forall f g arr . mapSame f (mapSame g arr) = mapSame (f . g) arr
 "mapSN/concat"   forall f g arr . map     f (mapSame g arr) = map     (f . g) arr
-"map/toSame"     forall f   arr . fromJSArray (map f arr)     = mapSame f arr
+"map/toSame"     forall f   arr . fromJSArray (map f arr)   = mapSame f arr
     #-}
 
 
@@ -394,50 +394,47 @@ instance (Show a, LikeJS ta a) => Show (Array a) where
 
 -- mapping
 
-{-# INLINE js_mapArray #-}
 foreign import javascript unsafe "$2.map(h$retIfDef($1))"
     js_mapArray :: Callback f -> Array a -> IO (Array b)
 
 
-{-# INLINE js_mapArray_ #-}
 foreign import javascript unsafe "$2.forEach(h$doIfDef($1))"
     js_mapArray_ :: Callback f -> Array a -> IO ()
 
 
 -- folding
 
-{-# INLINE js_foldlArray #-}
 foreign import javascript unsafe "$3.reduce(h$retIfDef2oa($1),$2)"
     js_foldlArray :: Callback f -> JSVal -> Array a -> IO JSVal
 
-{-# INLINE js_foldl1Array #-}
+
 foreign import javascript unsafe "$2.reduce(h$retIfDef2oa($1))"
     js_foldl1Array :: Callback f -> Array a -> IO JSVal
 
-{-# INLINE js_foldrArray #-}
+
 foreign import javascript unsafe "$3.reduceRight(h$retIfDef2oa($1),$2)"
     js_foldrArray :: Callback f -> JSVal -> Array a -> IO JSVal
 
-{-# INLINE js_foldr1Array #-}
+
 foreign import javascript unsafe "$2.reduceRight(h$retIfDef2oa($1))"
     js_foldr1Array :: Callback f -> Array a -> IO JSVal
 
 
 -- zipping
 
-{-# INLINE js_zipArray #-}
+
 foreign import javascript unsafe "if($3){var f = h$retIfDef2($1); $r = $2.map(function(e,i){return f(e,$3[i],i);});}else{$r = [];}"
     js_zipArray :: Callback f -> Array a -> Array b -> IO (Array c)
 
-{-# INLINE js_zipArray_ #-}
+
 foreign import javascript unsafe "if($3){var f = h$retIfDef2($1); $2.forEach(function(e,i){f(e,$3[i],i);});}"
     js_zipArray_ :: Callback f -> Array a -> Array b -> IO ()
 
-{-# INLINE js_unionZipArray #-}
+
 foreign import javascript unsafe "var le = $2 || [], ri = $3 || []; var n = Math.max(le.length, ri.length); $r = new Array(n); for(var i = 0; i < n; i++){$r[i] = $1(le[i],ri[i],i);}"
     js_unionZipArray :: Callback f -> Array a -> Array b -> IO (Array c)
 
-{-# INLINE js_unionZipArray_ #-}
+
 foreign import javascript unsafe "var le = $2 || [], ri = $3 || []; var n = Math.max(le.length, ri.length); for(var i = 0; i < n; i++){$1(le[i],ri[i],i);}"
     js_unionZipArray_ :: Callback f -> Array a -> Array b -> IO ()
 
@@ -465,25 +462,25 @@ mapEither f arr = unsafePerformIO $ do
     r `seq` releaseCallback call
     return r
 
-{-# INLINE js_filter #-}
+
 foreign import javascript unsafe "$2.filter($1)"
     js_filter :: Callback (a -> Bool) -> Array a -> IO (Array a)
 
-{-# INLINE js_mapEither #-}
+
 foreign import javascript unsafe "var rez = $2.map($1); $r1 = rez.filter(function(e){return !e.isRight();}).map(function(e){return e.left;}); $r2 = rez.filter(function(e){return e.isRight();}).map(function(e){return e.right;});"
     js_mapEither :: (Callback (a -> Either b c)) -> Array a -> IO (Array b, Array c)
 
-{-# INLINE js_show #-}
+
 foreign import javascript unsafe "JSON.stringify($1)"
   js_show :: Array a -> JSString
 
 
 
---{-# INLINE js_ArrayToList #-}
+--
 --foreign import javascript unsafe "LikeHS.listFromArray($1)"
 --  js_ArrayToList :: Array a -> Any
 --
---{-# INLINE js_ListToArray #-}
+--
 --foreign import javascript unsafe "LikeHS.listToArray($1)"
 --  js_ListToArray :: Any -> Array a
 
@@ -496,7 +493,7 @@ foreign import javascript unsafe "JSON.stringify($1)"
 length :: LikeJSArray ta a => a -> Int
 length = js_length . toJSArray
 
-{-# INLINE js_length #-}
+
 foreign import javascript unsafe "$1.length"
     js_length :: Array a -> Int
 
@@ -504,7 +501,7 @@ foreign import javascript unsafe "$1.length"
 (!) :: LikeJSArray ta a => a -> Int -> ArrayElem a
 (!) arr = asLikeJS . js_index (toJSArray arr)
 
-{-# INLINE js_index #-}
+
 foreign import javascript unsafe "$1[$2]"
     js_index  :: Array a -> Int -> JSVal
 
@@ -520,11 +517,11 @@ take n = fromJSArray . js_slice 0 n . toJSArray
 drop :: LikeJSArray ta a => Int -> a -> a
 drop n = fromJSArray . js_slice1 n . toJSArray
 
-{-# INLINE js_slice #-}
+
 foreign import javascript unsafe "$3.slice($1,$2)"
     js_slice :: Int -> Int -> Array a -> Array a
 
-{-# INLINE js_slice1 #-}
+
 foreign import javascript unsafe "$2.slice($1)"
     js_slice1 :: Int -> Array a -> Array a
 
@@ -533,16 +530,14 @@ foreign import javascript unsafe "$2.slice($1)"
 concat :: LikeJSArray ta a => a -> a -> a
 concat a = fromJSArray . js_concat (toJSArray a) . toJSArray
 
-{-# INLINE js_concat #-}
+
 foreign import javascript unsafe "$1.concat($2)"
     js_concat :: Array a -> Array a -> Array a
 
 -- | Concatenate array of arrays into single array
-{-# INLINE join #-}
 foreign import javascript unsafe "[].concat.apply([], $1)"
     join :: Array (Array a) -> Array a
 
-{-# INLINE emptyArray #-}
 foreign import javascript unsafe "[]"
     emptyArray :: Array a
 
