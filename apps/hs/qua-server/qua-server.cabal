@@ -31,7 +31,7 @@ flag library-only
     default: False
 
 library
-
+    
     if (flag(dev) || flag(library-only))
         cpp-options: -DDEVELOPMENT
         ghc-options: -Wall -fwarn-tabs -O0
@@ -42,7 +42,12 @@ library
         Foundation
         Handler.Common
         Handler.Home
+        Handler.Home.LoadingSplash
+        Handler.Home.PopupHelp
+        Handler.Home.PopupSave
+        Handler.Home.UIButtons
         Handler.LuciProxy
+        Handler.QuaViewSettings
         Import
         Import.NoFoundation
         Model
@@ -98,7 +103,7 @@ library
     hs-source-dirs: src
 
 executable qua-server
-
+    
     if flag(library-only)
         buildable: False
     main-is: main.hs

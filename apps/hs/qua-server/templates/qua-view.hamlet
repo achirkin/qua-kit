@@ -1,6 +1,4 @@
-<svg fill="none" #loadingSplash version="1.1" viewBox="0 0 72 72" xmlns="http://www.w3.org/2000/svg">
-  <circle cx="36" cy="36" #redCircle r="28" stroke="#FF5722" stroke-dasharray="10, 5, 50, 40, 30.929188601, 40" stroke-opacity="1" stroke-width="16">
-  <circle cx="36" cy="36" #greyCircle r="28" stroke="#BF360C" stroke-dasharray="38, 14, 8, 14, 65.929188601, 14, 8, 14" stroke-opacity=".2" stroke-width="8">
+^{loadingSplash}
 
 <canvas #glcanvas>
 <div .idleguipanel #guipanel>
@@ -45,31 +43,8 @@
     <div #consolecontent>
   $#  on-canvas buttons
   <div .idleplaceholder #guiplaceholder>
-    $#  help popup button
-    <svg .uibutton height="64" style="left:0px;" version="1.1" viewBox="0 0 64 64" width="64" xmlns="http://www.w3.org/2000/svg">
-      <text .guiElement style="font-size: 60px; font-weight: bold;" x="16" y="60">
-        ?
-      <rect .btn height="64" #helpbutton onclick="document.getElementById('popuphelp').style.display='block'; document.getElementById('popupbg').style.display='block';" width="64" x="0" y="0">
-    $#  fullscreen button
-    <svg .uibutton height="64" style="left:0px;" version="1.1" viewBox="2 2 20 20" width="64" xmlns="http://www.w3.org/2000/svg">
-      <path .guiElement d="M5,5H10V7H7V10H5V5M14,5H19V10H17V7H14V5M17,14H19V19H14V17H17V14M10,17V19H5V14H7V17H10Z" #fullscreenbshape>
-      <rect .btn height="24" #fullscreenbutton onclick="toggleFullScreen()" width="24" x="0" y="0">
-    $#  submit button
-    <svg .uibutton height="64" style="left:0px;" version="1.1" viewBox="0 0 24 24" width="64" xmlns="http://www.w3.org/2000/svg">
-      <path .guiElement d="M15,9H5V5H15M12,19A3,3 0 0,1 9,16A3,3 0 0,1 12,13A3,3 0 0,1 15,16A3,3 0 0,1 12,19M17,3H5C3.89,3 3,3.9 3,5V19A2,2 0 0,0 5,21H19A2,2 0 0,0 21,19V7L17,3Z" #submitshape>
-      <rect .btn height="24" #submitbutton width="24" x="0" y="0">
-    $#  toolbox button
-    <svg .uibutton height="64" style="left:0px;" version="1.1" viewBox="0 0 24 24" width="64" xmlns="http://www.w3.org/2000/svg">
-      <path .guiElement d="M12,15.5A3.5,3.5 0 0,1 8.5,12A3.5,3.5 0 0,1 12,8.5A3.5,3.5 0 0,1 15.5,12A3.5,3.5 0 0,1 12,15.5M19.43,12.97C19.47,12.65 19.5,12.33 19.5,12C19.5,11.67 19.47,11.34 19.43,11L21.54,9.37C21.73,9.22 21.78,8.95 21.66,8.73L19.66,5.27C19.54,5.05 19.27,4.96 19.05,5.05L16.56,6.05C16.04,5.66 15.5,5.32 14.87,5.07L14.5,2.42C14.46,2.18 14.25,2 14,2H10C9.75,2 9.54,2.18 9.5,2.42L9.13,5.07C8.5,5.32 7.96,5.66 7.44,6.05L4.95,5.05C4.73,4.96 4.46,5.05 4.34,5.27L2.34,8.73C2.21,8.95 2.27,9.22 2.46,9.37L4.57,11C4.53,11.34 4.5,11.67 4.5,12C4.5,12.33 4.53,12.65 4.57,12.97L2.46,14.63C2.27,14.78 2.21,15.05 2.34,15.27L4.34,18.73C4.46,18.95 4.73,19.03 4.95,18.95L7.44,17.94C7.96,18.34 8.5,18.68 9.13,18.93L9.5,21.58C9.54,21.82 9.75,22 10,22H14C14.25,22 14.46,21.82 14.5,21.58L14.87,18.93C15.5,18.67 16.04,18.34 16.56,17.94L19.05,18.95C19.27,19.03 19.54,18.95 19.66,18.73L21.66,15.27C21.78,15.05 21.73,14.78 21.54,14.63L19.43,12.97Z" #toolboxshape>
-      <rect .btn height="24" #toolboxbutton onclick="toggleGUIPanel()" width="24" x="0" y="0">
-    $#  clear button
-    <svg .uibutton height="64" style="position: absolute; left:-64px; display: none;" version="1.1" viewBox="0 0 24 24" width="64" xmlns="http://www.w3.org/2000/svg">
-      <path .guiElement d="M12,20C7.59,20 4,16.41 4,12C4,7.59 7.59,4 12,4C16.41,4 20,7.59 20,12C20,16.41 16.41,20 12,20M12,2C6.47,2 2,6.47 2,12C2,17.53 6.47,22 12,22C17.53,22 22,17.53 22,12C22,6.47 17.53,2 12,2M14.59,8L12,10.59L9.41,8L8,9.41L10.59,12L8,14.59L9.41,16L12,13.41L14.59,16L16,14.59L13.41,12L16,9.41L14.59,8Z" #clearshape>
-      <rect .btn height="24" #clearbutton width="24" x="0" y="0">
-    $#  evaluate button
-    <svg .uibutton height="64" style="left:0px;" version="1.1" viewBox="0 0 24 24" width="64" xmlns="http://www.w3.org/2000/svg">
-      <path .guiElement d="M12,20.14C7.59,20.14 4,16.55 4,12.14C4,7.73 7.59,4.14 12,4.14C16.41,4.14 20,7.73 20,12.14C20,16.55 16.41,20.14 12,20.14M12,2.14A10,10 0 0,0 2,12.14A10,10 0 0,0 12,22.14A10,10 0 0,0 22,12.14C22,6.61 17.5,2.14 12,2.14M10,16.64L16,12.14L10,7.64V16.64Z" #evaluateshape>
-      <rect .btn height="24" #evaluatebutton width="24" x="0" y="0">
+    ^{uiButtons}
+
   $#  main control panel
   <div .tabpane #tabLuci style="display: none;">
     <form #loginform style="display: block;">
@@ -117,134 +92,23 @@
       <button .button onclick="document.getElementById('jsonfileinput').click()" style="display: inline;" type="button">
         Browse
       <div .pnormal #filenameIndicator style="display: inline;">
-      <input #jsonfileinput onchange="document.getElementById('filenameIndicator').innerText = document.getElementById('jsonfileinput').value.split(/(\|/)/g).pop();" style="display:none" type="file">
+      <script language="javascript">
+        function displayUploadedFileName() {
+            document.getElementById('filenameIndicator').innerText = document.getElementById('jsonfileinput').value.split(/(\\|\/)/g).pop();
+        }
+        function clearUploadedFileName() {
+            document.getElementById('filenameIndicator').innerText = '';
+            document.getElementById('jsonfileinput').value = '';
+        }
+      <input #jsonfileinput onchange="displayUploadedFileName()" style="display:none" type="file">
     $#  GeoJSON clear button
     <div .pleftbutdiv>
-      <button .button #cleargeombutton onclick="document.getElementById('filenameIndicator').innerText = ''; document.getElementById('jsonfileinput').value = '';" style="display: inline;" type="button">
+      <button .button #cleargeombutton onclick="clearUploadedFileName()" style="display: inline;" type="button">
         Clear
   <div .tabpane #tabServices style="display: none;">
     Services
 
 $#  Popup windows
 <div #popupbg onclick="document.getElementById('popuphelp').style.display='none'; document.getElementById('popupbg').style.display='none'; document.getElementById('popupsave').style.display='none';">
-<div .popupdiv #popuphelp>
-  <center .pheading #greetings>
-    Welcome to the web-based geometry modeler
-  <hr>
-  <table>
-    <tr>
-      <td>
-      <td>
-        <div .pheading>
-          You can use mouse to move camera and buildings:
-    <tr>
-      <td>
-        <svg .helpIcons fill="none" #mouseLeftIcon timelinebegin="loadbegin" version="1.1" viewBox="0 0 128 128" xmlns="http://www.w3.org/2000/svg">
-          <path d="m 60,66 0,-8.233239 c -3.690856,-1.401015 -6.258857,-4.504114 -6.258857,-8.109972 l 0,-15.313352 c 0,-3.605859 2.567755,-6.708958 6.258857,-8.109972 L 60,10 55.836735,10 C 38.253796,10 24,22.692958 24,38.350648 L 24,66 60,66 Z" #leftButton style="fill:#FF5722">
-          <path d="M 71,47.54717 C 71,51.110943 67.865965,54 64.000001,54 l 0,0 C 60.134035,54 57,51.110943 57,47.54717 L 57,36.45283 C 57,32.889056 60.134035,30 64.000001,30 l 0,0 C 67.865965,30 71,32.889056 71,36.45283 l 0,11.09434 z" #middleButton style="fill:#020202">
-          <path d="m 68,26.233239 c 3.690857,1.401015 6.258857,4.504113 6.258857,8.109973 l 0,15.313351 c 0,3.605859 -2.567755,6.708958 -6.258857,8.109972 L 68,66 l 36,0 0,-27.649352 C 104,22.692958 89.746203,10 72.163265,10 L 68,10 68,26.233239 Z" #rightButton style="fill:#020202">
-          <path d="m 24,69 0,21.536878 C 24,106.25679 38.109818,119 55.515151,119 l 16.969697,0 C 89.890181,119 104,106.25679 104,90.536878 L 104,69 24,69 Z" #mouseBody style="fill:#020202">
-      <td>
-        Click on a building using left mouse button to select it, or click on empty space to unselect a building.
-
-    <tr>
-      <td>
-        <svg .helpIcons fill="none" #mouseLeftIcon timelinebegin="loadbegin" version="1.1" viewBox="0 0 128 128" xmlns="http://www.w3.org/2000/svg">
-          <path d="m 60,66 0,-8.233239 c -3.690856,-1.401015 -6.258857,-4.504114 -6.258857,-8.109972 l 0,-15.313352 c 0,-3.605859 2.567755,-6.708958 6.258857,-8.109972 L 60,10 55.836735,10 C 38.253796,10 24,22.692958 24,38.350648 L 24,66 60,66 Z" #leftButton style="fill:#FF5722">
-          <path d="M 71,47.54717 C 71,51.110943 67.865965,54 64.000001,54 l 0,0 C 60.134035,54 57,51.110943 57,47.54717 L 57,36.45283 C 57,32.889056 60.134035,30 64.000001,30 l 0,0 C 67.865965,30 71,32.889056 71,36.45283 l 0,11.09434 z" #middleButton style="fill:#020202">
-          <path d="m 68,26.233239 c 3.690857,1.401015 6.258857,4.504113 6.258857,8.109973 l 0,15.313351 c 0,3.605859 -2.567755,6.708958 -6.258857,8.109972 L 68,66 l 36,0 0,-27.649352 C 104,22.692958 89.746203,10 72.163265,10 L 68,10 68,26.233239 Z" #rightButton style="fill:#020202">
-          <path d="m 24,69 0,21.536878 C 24,106.25679 38.109818,119 55.515151,119 l 16.969697,0 C 89.890181,119 104,106.25679 104,90.536878 L 104,69 24,69 Z" #mouseBody style="fill:#020202">
-          <path d="m 32,0 -12,13.886719 4.697266,0 0,10.810547 -10.810547,0 0,-4.697266 L 0,32 l 13.886719,12 0,-4.697266 10.810547,0 0,10.808594 -4.697266,0 L 32,64 44,50.111328 l -4.697266,0 0,-10.808594 10.808594,0 0,4.697266 L 64,32 50.111328,20 l 0,4.697266 -10.808594,0 0,-10.810547 4.697266,0 L 32,0 Z" #dragArrows style="fill:#FF5722;opacity:0.5" transform="translate(64,64)">
-      <td>
-        Press left mouse button to move camera or selected building horizontally
-
-    <tr>
-      <td>
-        <svg .helpIcons fill="none" #mouseLeftIcon timelinebegin="loadbegin" version="1.1" viewBox="0 0 128 128" xmlns="http://www.w3.org/2000/svg">
-          <path d="m 60,66 0,-8.233239 c -3.690856,-1.401015 -6.258857,-4.504114 -6.258857,-8.109972 l 0,-15.313352 c 0,-3.605859 2.567755,-6.708958 6.258857,-8.109972 L 60,10 55.836735,10 C 38.253796,10 24,22.692958 24,38.350648 L 24,66 60,66 Z" #leftButton style="fill:#020202">
-          <path d="M 71,47.54717 C 71,51.110943 67.865965,54 64.000001,54 l 0,0 C 60.134035,54 57,51.110943 57,47.54717 L 57,36.45283 C 57,32.889056 60.134035,30 64.000001,30 l 0,0 C 67.865965,30 71,32.889056 71,36.45283 l 0,11.09434 z" #middleButton style="fill:#FF5722">
-          <path d="m 68,26.233239 c 3.690857,1.401015 6.258857,4.504113 6.258857,8.109973 l 0,15.313351 c 0,3.605859 -2.567755,6.708958 -6.258857,8.109972 L 68,66 l 36,0 0,-27.649352 C 104,22.692958 89.746203,10 72.163265,10 L 68,10 68,26.233239 Z" #rightButton style="fill:#020202">
-          <path d="m 24,69 0,21.536878 C 24,106.25679 38.109818,119 55.515151,119 l 16.969697,0 C 89.890181,119 104,106.25679 104,90.536878 L 104,69 24,69 Z" #mouseBody style="fill:#020202">
-          <path d="m 32,0 -12,13.886719 4.697266,0 0,10.810547 -10.810547,0 0,-4.697266 L 0,32 l 13.886719,12 0,-4.697266 10.810547,0 0,10.808594 -4.697266,0 L 32,64 44,50.111328 l -4.697266,0 0,-10.808594 10.808594,0 0,4.697266 L 64,32 50.111328,20 l 0,4.697266 -10.808594,0 0,-10.810547 4.697266,0 L 32,0 Z" #dragArrows style="fill:#FF5722;opacity:0.5" transform="translate(64,64)">
-      <td>
-        Press middle mouse button to move camera vertically
-
-    <tr>
-      <td>
-        <svg .helpIcons fill="none" #mouseLeftIcon timelinebegin="loadbegin" version="1.1" viewBox="0 0 128 128" xmlns="http://www.w3.org/2000/svg">
-          <path d="m 60,66 0,-8.233239 c -3.690856,-1.401015 -6.258857,-4.504114 -6.258857,-8.109972 l 0,-15.313352 c 0,-3.605859 2.567755,-6.708958 6.258857,-8.109972 L 60,10 55.836735,10 C 38.253796,10 24,22.692958 24,38.350648 L 24,66 60,66 Z" #leftButton style="fill:#020202">
-          <path d="M 71,47.54717 C 71,51.110943 67.865965,54 64.000001,54 l 0,0 C 60.134035,54 57,51.110943 57,47.54717 L 57,36.45283 C 57,32.889056 60.134035,30 64.000001,30 l 0,0 C 67.865965,30 71,32.889056 71,36.45283 l 0,11.09434 z" #middleButton style="fill:#020202">
-          <path d="m 68,26.233239 c 3.690857,1.401015 6.258857,4.504113 6.258857,8.109973 l 0,15.313351 c 0,3.605859 -2.567755,6.708958 -6.258857,8.109972 L 68,66 l 36,0 0,-27.649352 C 104,22.692958 89.746203,10 72.163265,10 L 68,10 68,26.233239 Z" #rightButton style="fill:#FF5722">
-          <path d="m 24,69 0,21.536878 C 24,106.25679 38.109818,119 55.515151,119 l 16.969697,0 C 89.890181,119 104,106.25679 104,90.536878 L 104,69 24,69 Z" #mouseBody style="fill:#020202">
-          <path d="m 32,0 -12,13.886719 4.697266,0 0,10.810547 -10.810547,0 0,-4.697266 L 0,32 l 13.886719,12 0,-4.697266 10.810547,0 0,10.808594 -4.697266,0 L 32,64 44,50.111328 l -4.697266,0 0,-10.808594 10.808594,0 0,4.697266 L 64,32 50.111328,20 l 0,4.697266 -10.808594,0 0,-10.810547 4.697266,0 L 32,0 Z" #dragArrows style="fill:#FF5722;opacity:0.5" transform="translate(64,64)">
-      <td>
-        Press right mouse button to rotate camera or selected building
-    <tr>
-      <td>
-      <td>
-        <div .pheading>
-          If your device has a multitouch screen, you can use touch controls:
-    <tr>
-      <td>
-        <svg .helpIcons fill="none" #singleTouch timelinebegin="loadbegin" version="1.1" viewBox="0 0 128 128" xmlns="http://www.w3.org/2000/svg">
-          <circle cx="64" cy="64" fill="none" #outerCircle r="40" stroke="#FF5722" stroke-width="8">
-          <circle cx="64" cy="64" fill="#999999" #innerCircle r="30">
-      <td>
-        Touch a building using left mouse button to select it, or touch on empty space to unselect a building.
-
-    <tr>
-      <td>
-        <svg .helpIcons fill="none" #singleDrag timelinebegin="loadbegin" version="1.1" viewBox="0 0 128 128" xmlns="http://www.w3.org/2000/svg">
-          <circle cx="64" cy="64" fill="none" #outerCircle r="40" stroke="#FF5722" stroke-width="8">
-          <circle cx="64" cy="64" fill="#999999" #innerCircle r="30">
-          <path d="m 32,0 -12,13.886719 4.697266,0 0,10.810547 -10.810547,0 0,-4.697266 L 0,32 l 13.886719,12 0,-4.697266 10.810547,0 0,10.808594 -4.697266,0 L 32,64 44,50.111328 l -4.697266,0 0,-10.808594 10.808594,0 0,4.697266 L 64,32 50.111328,20 l 0,4.697266 -10.808594,0 0,-10.810547 4.697266,0 L 32,0 Z" #dragArrows style="fill:#FF5722;opacity:0.5" transform="translate(64,64)">
-      <td>
-        Move camera or selected building horizontally with one finger
-
-    <tr>
-      <td>
-        <svg .helpIcons fill="none" #twinDrag timelinebegin="loadbegin" version="1.1" viewBox="0 0 128 128" xmlns="http://www.w3.org/2000/svg">
-          <circle cx="32" cy="75" fill="none" #outerCircle r="29" stroke="#FF5722" stroke-width="6">
-          <circle cx="32" cy="75" fill="#999999" #innerCircle r="22">
-          <circle cx="91" cy="40" fill="none" #outerCircle r="29" stroke="#FF5722" stroke-width="6">
-          <circle cx="91" cy="40" fill="#999999" #innerCircle r="22">
-          <path d="m 32,0 -12,13.886719 4.697266,0 0,10.810547 -10.810547,0 0,-4.697266 L 0,32 l 13.886719,12 0,-4.697266 10.810547,0 0,10.808594 -4.697266,0 L 32,64 44,50.111328 l -4.697266,0 0,-10.808594 10.808594,0 0,4.697266 L 64,32 50.111328,20 l 0,4.697266 -10.808594,0 0,-10.810547 4.697266,0 L 32,0 Z" #dragArrows style="fill:#FF5722;opacity:0.5" transform="translate(64,64)">
-      <td>
-        Use two fingers to move, scale, and rotate naturally
-
-    <tr>
-      <td>
-        <svg .helpIcons fill="none" #twinDrag timelinebegin="loadbegin" version="1.1" viewBox="0 0 128 128" xmlns="http://www.w3.org/2000/svg">
-          <circle cx="29" cy="60" fill="none" #outerCircle r="26" stroke="#FF5722" stroke-width="6">
-          <circle cx="29" cy="60" fill="#999999" #innerCircle r="20">
-          <circle cx="91" cy="29" fill="none" #outerCircle r="26" stroke="#FF5722" stroke-width="6">
-          <circle cx="91" cy="29" fill="#999999" #innerCircle r="20">
-          <circle cx="80" cy="96" fill="none" #outerCircle r="26" stroke="#FF5722" stroke-width="6">
-          <circle cx="80" cy="96" fill="#999999" #innerCircle r="20">
-          <path d="m 32,0 -12,13.886719 4.697266,0 0,10.810547 -10.810547,0 0,-4.697266 L 0,32 l 13.886719,12 0,-4.697266 10.810547,0 0,10.808594 -4.697266,0 L 32,64 44,50.111328 l -4.697266,0 0,-10.808594 10.808594,0 0,4.697266 L 64,32 50.111328,20 l 0,4.697266 -10.808594,0 0,-10.810547 4.697266,0 L 32,0 Z" #dragArrows style="fill:#FF5722;opacity:0.5" transform="translate(64,64)">
-      <td>
-        Use three fingers to rotate camera in all directions
-
-  <hr>
-  <div style="text-align: justify;">
-    <b>
-      Note:
-    for research purposes some of your actions (e.g. moving and rotating geometry objects) on this page may be anonymously recorded and sent to our servers; by proceeding you agree to share these data.
-
-  <center>
-    <button .button onclick="document.getElementById('popuphelp').style.display='none'; document.getElementById('popupbg').style.display='none';" type="button">
-      Ok, let's go!
-<div .popupdiv #popupsave style="display: none;">
-  <div #previewcontainer>
-  <form #submitform method="post">
-    <input #sfSessionId name="sessionID" type="hidden">
-    <input #sfGeometry name="geometry" type="hidden">
-    <input #sfPreview name="preview" type="hidden">
-    <center>
-      <button .button onclick="document.getElementById('popupsave').style.display='none'; document.getElementById('popupbg').style.display='none';" type="button">
-        Cancel
-      <button .button type="submit">
-        Submit
-    <form>
-
-<script type="text/javascript" src="@{StaticR js_qua_view_js}" defer>
+^{popupHelp}
+^{popupSave}

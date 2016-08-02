@@ -7,3 +7,5 @@
 / HomeR GET POST
 /luci LuciR GET
 /chat ChatR GET
+
+/qua-view-settings QuaViewSettingsR GET
