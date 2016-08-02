@@ -35,30 +35,27 @@ import JsHs.TypedArray.Types
 -----------------------------------------------------------------------------
 
 
-{-# INLINE arrayLength #-}
 -- | Number of elements in the array
 foreign import javascript unsafe "$1.length"
     arrayLength :: SomeTypedArray m a -> Int
 
-{-# INLINE arrayBuffer #-}
 -- | Get underlying ArrayBuffer
 foreign import javascript unsafe "$1.buffer"
     arrayBuffer :: SomeTypedArray m a -> SomeArrayBuffer m
 
-{-# INLINE dataView #-}
 -- | Create a DataView for the whole ArrayBuffer
 foreign import javascript unsafe "new DataView($1)"
     dataView :: SomeArrayBuffer m -> SomeDataView m
 
-{-# INLINE dvByteLength #-}
+
 -- | Size of DataView in bytes
 foreign import javascript unsafe "$1.byteLength"
     dvByteLength :: SomeDataView m -> Int
-{-# INLINE dvByteOffset #-}
+
 -- | Offset of DataView within a buffer in bytes
 foreign import javascript unsafe "$1.byteOffset"
     dvByteOffset :: SomeDataView m -> Int
-{-# INLINE dvBuffer #-}
+
 -- | Underlying ArrayBuffer of DataView
 foreign import javascript unsafe "$1.buffer"
     dvBuffer :: SomeDataView m -> SomeArrayBuffer m
@@ -67,15 +64,15 @@ foreign import javascript unsafe "$1.buffer"
 -- Some not exposed js imports
 -----------------------------------------------------------------------------
 
-{-# INLINE js_byteLength #-}
+
 foreign import javascript unsafe "$1.byteLength"
     js_byteLength :: JSVal -> Int
 
-{-# INLINE js_createArrayBuffer #-}
+
 foreign import javascript unsafe "new ArrayBuffer($1)"
     js_createArrayBuffer :: Int -> State# s -> (# State# s, SomeArrayBuffer m #)
 
-{-# INLINE js_show #-}
+
 foreign import javascript unsafe "$r = '[' + $1.join(', ') + ']'"
     js_show :: SomeTypedArray m t -> JSString
 
@@ -83,42 +80,42 @@ foreign import javascript unsafe "$r = '[' + $1.join(', ') + ']'"
 
 -- slice mutable any
 
-{-# INLINE js_slice1 #-}
+
 foreign import javascript unsafe
   "$2.slice($1)" js_slice1 :: Int -> JSVal -> State# s -> (# State# s, JSVal #)
 
-{-# INLINE js_slice #-}
+
 foreign import javascript unsafe
   "$3.slice($1,$2)" js_slice :: Int -> Int -> JSVal -> State# s -> (# State# s, JSVal #)
 
 
 -- slice immutable any
 
-{-# INLINE js_slice1_imm #-}
+
 foreign import javascript unsafe
   "$2.slice($1)" js_slice1_imm :: Int -> JSVal -> JSVal
 
-{-# INLINE js_slice_imm #-}
+
 foreign import javascript unsafe
   "$3.slice($1,$2)" js_slice_imm :: Int -> Int -> JSVal -> JSVal
 
 -- Creating data views
 
 
-{-# INLINE js_dataView2 #-}
+
 foreign import javascript safe "new DataView($2,$1)"
     js_dataView2 :: Int -> JSVal -> SomeDataView m
-{-# INLINE js_unsafeDataView2 #-}
+
 foreign import javascript unsafe "new DataView($2,$1)"
     js_unsafeDataView2 :: Int -> JSVal-> SomeDataView m
-{-# INLINE js_dataView #-}
+
 foreign import javascript safe "new DataView($3,$1,$2)"
     js_dataView :: Int -> Int -> JSVal -> SomeDataView m
-{-# INLINE js_unsafeDataView #-}
+
 foreign import javascript unsafe "new DataView($3,$1,$2)"
     js_unsafeDataView :: Int -> Int -> JSVal -> JSVal
 
-{-# INLINE js_cloneDataView #-}
+
 foreign import javascript unsafe "new DataView($1.buffer.slice($1.byteOffset, $1.byteLength))"
     js_cloneDataView :: SomeDataView m0 -> State# s -> (# State# s, SomeDataView m #)
 
@@ -127,13 +124,13 @@ foreign import javascript unsafe "new DataView($1.buffer.slice($1.byteOffset, $1
 -----------------------------------------------------------------------------
 
 #define CREATEFUNCTIONS(T , JSName, JSArray, JSSize) \
-foreign import javascript unsafe "new JSArray($1)" js_createM/**/T/**/Array :: Int -> State# s -> (# State# s, SomeTypedArray m T #); {-# INLINE js_createM/**/T/**/Array #-};\
-foreign import javascript unsafe "new JSArray($1).fill($2)" js_fillNewM/**/T/**/Array :: Int -> T -> State# s -> (# State# s, SomeTypedArray m T #); {-# INLINE js_fillNewM/**/T/**/Array #-};\
-foreign import javascript unsafe "var arr = LikeHS.listToArrayNoUnwrap($1); $r = new JSArray(arr.length); $r.set(arr);" js_fromListM/**/T/**/Array :: Exts.Any -> State# s -> (# State# s, SomeTypedArray m T #); {-# INLINE js_fromListM/**/T/**/Array #-};\
-foreign import javascript unsafe "$r = new JSArray($1.length); $r.set($1);" js_fromArrayM/**/T/**/Array :: SomeTypedArray m0 t -> State# s -> (# State# s, SomeTypedArray m T #); {-# INLINE js_fromArrayM/**/T/**/Array #-};\
-foreign import javascript unsafe "$3[$1] = $2" js_setIndex/**/T/**/Array :: Int -> T -> SomeTypedArray m T -> State# s -> (# State# s, () #); {-# INLINE js_setIndex/**/T/**/Array #-};\
-foreign import javascript unsafe "$3.set(LikeHS.listToArrayNoUnwrap($2), $1)" js_setList/**/T/**/Array :: Int -> Exts.Any -> SomeTypedArray m T -> State# s -> (# State# s, () #); {-# INLINE js_setList/**/T/**/Array #-};\
-foreign import javascript unsafe "$3.set($2, $1)" js_setArray/**/T/**/Array :: Int -> SomeTypedArray m0 t -> SomeTypedArray m T -> State# s -> (# State# s, () #); {-# INLINE js_setArray/**/T/**/Array #-};
+foreign import javascript unsafe "new JSArray($1)" js_createM/**/T/**/Array :: Int -> State# s -> (# State# s, SomeTypedArray m T #);\
+foreign import javascript unsafe "new JSArray($1).fill($2)" js_fillNewM/**/T/**/Array :: Int -> T -> State# s -> (# State# s, SomeTypedArray m T #);\
+foreign import javascript unsafe "var arr = LikeHS.listToArrayNoUnwrap($1); $r = new JSArray(arr.length); $r.set(arr);" js_fromListM/**/T/**/Array :: Exts.Any -> State# s -> (# State# s, SomeTypedArray m T #);\
+foreign import javascript unsafe "$r = new JSArray($1.length); $r.set($1);" js_fromArrayM/**/T/**/Array :: SomeTypedArray m0 t -> State# s -> (# State# s, SomeTypedArray m T #);\
+foreign import javascript unsafe "$3[$1] = $2" js_setIndex/**/T/**/Array :: Int -> T -> SomeTypedArray m T -> State# s -> (# State# s, () #);\
+foreign import javascript unsafe "$3.set(LikeHS.listToArrayNoUnwrap($2), $1)" js_setList/**/T/**/Array :: Int -> Exts.Any -> SomeTypedArray m T -> State# s -> (# State# s, () #);\
+foreign import javascript unsafe "$3.set($2, $1)" js_setArray/**/T/**/Array :: Int -> SomeTypedArray m0 t -> SomeTypedArray m T -> State# s -> (# State# s, () #);
 
 CREATEFUNCTIONS(Int,Int32,Int32Array,4)
 CREATEFUNCTIONS(Int32,Int32,Int32Array,4)
@@ -161,7 +158,7 @@ CREATEFUNCTIONS(Word8Clamped,Uint8Clamped,Uint8ClampedArray,1)
 -- js_getIndexXXXArray operation for newtypes
 
 #define CREATEGETFUNCTION(T , JSName, JSArray, JSSize) \
-foreign import javascript unsafe "$2[$1]" js_getIndex/**/T/**/Array :: Int -> SomeTypedArray m T -> State# s -> (# State# s, T #); {-# INLINE js_getIndex/**/T/**/Array #-};
+foreign import javascript unsafe "$2[$1]" js_getIndex/**/T/**/Array :: Int -> SomeTypedArray m T -> State# s -> (# State# s, T #);
 
 CREATEGETFUNCTION(Int,Int32,Int32Array,4)
 CREATEGETFUNCTION(Int32,Int32,Int32Array,4)
@@ -175,7 +172,7 @@ CREATEGETFUNCTION(Float,Float32,Float32Array,4)
 CREATEGETFUNCTION(Double,Float64,Float64Array,8)
 
 #define CREATEGETFUNCTIONNT(T , T2, JSName, JSArray, JSSize) \
-{-# INLINE js_getIndex/**/T/**/Array #-};\
+\
 js_getIndex/**/T/**/Array :: Int -> SomeTypedArray m T -> State# s -> (# State# s, T #);\
 js_getIndex/**/T/**/Array i arr s = case js_getIndex/**/T2/**/Array i (coerce arr) s of { (# s1, v #) -> (# s1, coerce v #) }
 
@@ -197,36 +194,36 @@ CREATEGETFUNCTIONNT(Word8Clamped,Word8,Uint8Clamped,Uint8ClampedArray,1)
 -- Conversions between types
 -----------------------------------------------------------------------------
 
-{-# INLINE js_wrapImmutableArrayBuffer #-};
+
 foreign import javascript unsafe
     "h$wrapBuffer" js_wrapImmutableArrayBuffer :: SomeArrayBuffer m -> ByteArray#
-{-# INLINE js_unwrapImmutableArrayBuffer #-};
+
 foreign import javascript unsafe
     "h$wrapBuffer" js_unwrapImmutableArrayBuffer :: ByteArray# -> SomeArrayBuffer m
-{-# INLINE js_wrapArrayBuffer #-};
+
 foreign import javascript unsafe
     "h$wrapBuffer" js_wrapArrayBuffer :: SomeArrayBuffer any -> State# s -> (# State# s, MutableByteArray# s #)
-{-# INLINE js_unwrapArrayBuffer #-};
+
 foreign import javascript unsafe
     "h$wrapBuffer" js_unwrapArrayBuffer :: MutableByteArray# s -> State# s -> (# State# s, SomeArrayBuffer any #)
 
-{-# INLINE js_wrapImmutableArrayBufferView #-};
+
 foreign import javascript unsafe
     "h$wrapBuffer($1.buffer)" js_wrapImmutableArrayBufferView :: JSVal -> ByteArray#
-{-# INLINE js_wrapArrayBufferView #-};
+
 foreign import javascript unsafe
     "h$wrapBuffer($1.buffer)" js_wrapArrayBufferView :: JSVal -> State# s -> (# State# s, MutableByteArray# s #)
 
-{-# INLINE js_unwrapImmutableDataView #-};
+
 foreign import javascript unsafe
     "$1.dv" js_unwrapImmutableDataView :: ByteArray# -> SomeDataView m
-{-# INLINE js_unwrapDataView #-};
+
 foreign import javascript unsafe
     "$1.dv" js_unwrapDataView :: MutableByteArray# s -> State# s -> (# State# s, SomeDataView m #)
 
 #define CREATECONVERTERS(T, JSPType, JSName, JSArray, JSSize) \
-foreign import javascript unsafe "$1.JSPType || new JSArray($1.buf)" js_unwrapImmutable/**/T/**/Array :: ByteArray# -> SomeTypedArray m T; {-# INLINE js_unwrapImmutable/**/T/**/Array #-};\
-foreign import javascript unsafe "$1.JSPType || new JSArray($1.buf)" js_unwrap/**/T/**/Array :: MutableByteArray# s -> State# s -> (# State# s, SomeTypedArray m T #); {-# INLINE js_unwrap/**/T/**/Array #-};
+foreign import javascript unsafe "$1.JSPType || new JSArray($1.buf)" js_unwrapImmutable/**/T/**/Array :: ByteArray# -> SomeTypedArray m T;\
+foreign import javascript unsafe "$1.JSPType || new JSArray($1.buf)" js_unwrap/**/T/**/Array :: MutableByteArray# s -> State# s -> (# State# s, SomeTypedArray m T #);
 
 
 CREATECONVERTERS(Int,i3,Int32,Int32Array,4)
@@ -257,14 +254,14 @@ CREATECONVERTERS(Word8Clamped,uc,Uint8Clamped,Uint8ClampedArray,1)
 -----------------------------------------------------------------------------
 
 #define JSTYPEDARRAY(T , JSName, JSArray, JSSize) \
-foreign import javascript unsafe "new JSArray($1)" js_create/**/T/**/Array :: Int -> SomeTypedArray m T; {-# INLINE js_create/**/T/**/Array #-};\
-foreign import javascript unsafe "new JSArray($1).fill($2)" js_fillNew/**/T/**/Array :: Int -> T -> SomeTypedArray m T; {-# INLINE js_fillNew/**/T/**/Array #-};\
-foreign import javascript unsafe "var arr = LikeHS.listToArrayNoUnwrap($1); $r = new JSArray(arr.length); $r.set(arr);" js_fromList/**/T/**/Array :: Exts.Any -> SomeTypedArray m T; {-# INLINE js_fromList/**/T/**/Array #-};\
-foreign import javascript unsafe "$r = new JSArray($1.length); $r.set($1);" js_fromArray/**/T/**/Array :: SomeTypedArray m0 t -> SomeTypedArray m T; {-# INLINE js_fromArray/**/T/**/Array #-};\
-foreign import javascript unsafe "new JSArray($1)" js_view/**/T/**/Array :: SomeArrayBuffer m -> SomeTypedArray m T; {-# INLINE js_view/**/T/**/Array #-};\
-foreign import javascript unsafe "$r = $1[$2]" js_index/**/T/**/Array :: SomeTypedArray m T -> Int -> T; {-# INLINE js_index/**/T/**/Array #-};\
-foreign import javascript unsafe "$3.indexOf($2,$1)" js_indexOf/**/T/**/Array :: Int -> T -> SomeTypedArray m T -> Int; {-# INLINE js_indexOf/**/T/**/Array #-};\
-foreign import javascript unsafe "$3.lastIndexOf($2,$1)" js_lastIndexOf/**/T/**/Array :: Int -> T -> SomeTypedArray m T -> Int; {-# INLINE js_lastIndexOf/**/T/**/Array #-};
+foreign import javascript unsafe "new JSArray($1)" js_create/**/T/**/Array :: Int -> SomeTypedArray m T;\
+foreign import javascript unsafe "new JSArray($1).fill($2)" js_fillNew/**/T/**/Array :: Int -> T -> SomeTypedArray m T;\
+foreign import javascript unsafe "var arr = LikeHS.listToArrayNoUnwrap($1); $r = new JSArray(arr.length); $r.set(arr);" js_fromList/**/T/**/Array :: Exts.Any -> SomeTypedArray m T;\
+foreign import javascript unsafe "$r = new JSArray($1.length); $r.set($1);" js_fromArray/**/T/**/Array :: SomeTypedArray m0 t -> SomeTypedArray m T;\
+foreign import javascript unsafe "new JSArray($1)" js_view/**/T/**/Array :: SomeArrayBuffer m -> SomeTypedArray m T;\
+foreign import javascript unsafe "$r = $1[$2]" js_index/**/T/**/Array :: SomeTypedArray m T -> Int -> T;\
+foreign import javascript unsafe "$3.indexOf($2,$1)" js_indexOf/**/T/**/Array :: Int -> T -> SomeTypedArray m T -> Int;\
+foreign import javascript unsafe "$3.lastIndexOf($2,$1)" js_lastIndexOf/**/T/**/Array :: Int -> T -> SomeTypedArray m T -> Int;
 
 JSTYPEDARRAY(Int,Int32,Int32Array,4)
 JSTYPEDARRAY(Int32,Int32,Int32Array,4)
@@ -294,26 +291,26 @@ JSTYPEDARRAY(CDouble,Float64,Float64Array,8)
 -----------------------------------------------------------------------------
 
 #define DATAVIEW(T, JSget, JSset, JSSize) \
-foreign import javascript unsafe "$2.JSget($1)"      js_i_unsafeGet/**/T/**/BE  :: Int -> DataView -> T;{-# INLINE js_i_unsafeGet/**/T/**/BE #-};\
-foreign import javascript unsafe "$2.JSget($1,true)" js_i_unsafeGet/**/T/**/LE  :: Int -> DataView -> T;{-# INLINE js_i_unsafeGet/**/T/**/LE #-};\
-foreign import javascript safe   "$2.JSget($1)"      js_i_safeGet/**/T/**/BE    :: Int -> DataView -> T;{-# INLINE js_i_safeGet/**/T/**/BE #-};\
-foreign import javascript safe   "$2.JSget($1,true)" js_i_safeGet/**/T/**/LE    :: Int -> DataView -> T;{-# INLINE js_i_safeGet/**/T/**/LE #-};\
-foreign import javascript unsafe "$2.JSget($1)"      js_m_unsafeGet/**/T/**/BE  :: Int -> SomeDataView m -> State# s -> (# State# s, T #);{-# INLINE js_m_unsafeGet/**/T/**/BE #-};\
-foreign import javascript unsafe "$2.JSget($1,true)" js_m_unsafeGet/**/T/**/LE  :: Int -> SomeDataView m -> State# s -> (# State# s, T #);{-# INLINE js_m_unsafeGet/**/T/**/LE #-};\
-foreign import javascript safe   "$2.JSget($1)"      js_m_safeGet/**/T/**/BE    :: Int -> SomeDataView m -> State# s -> (# State# s, T #);{-# INLINE js_m_safeGet/**/T/**/BE #-};\
-foreign import javascript safe   "$2.JSget($1,true)" js_m_safeGet/**/T/**/LE    :: Int -> SomeDataView m -> State# s -> (# State# s, T #);{-# INLINE js_m_safeGet/**/T/**/LE #-};\
-foreign import javascript unsafe "$3.JSset($1,$2)"      js_unsafeSet/**/T/**/BE :: Int -> T -> SomeDataView m -> State# s -> (# State# s, () #);{-# INLINE js_unsafeSet/**/T/**/BE #-};\
-foreign import javascript unsafe "$3.JSset($1,$2,true)" js_unsafeSet/**/T/**/LE :: Int -> T -> SomeDataView m -> State# s -> (# State# s, () #);{-# INLINE js_unsafeSet/**/T/**/LE #-};\
-foreign import javascript safe   "$3.JSset($1,$2)"      js_safeSet/**/T/**/BE   :: Int -> T -> SomeDataView m -> State# s -> (# State# s, () #);{-# INLINE js_safeSet/**/T/**/BE #-};\
-foreign import javascript safe   "$3.JSset($1,$2,true)" js_safeSet/**/T/**/LE   :: Int -> T -> SomeDataView m -> State# s -> (# State# s, () #);{-# INLINE js_safeSet/**/T/**/LE #-};
+foreign import javascript unsafe "$2.JSget($1)"      js_i_unsafeGet/**/T/**/BE  :: Int -> DataView -> T;\
+foreign import javascript unsafe "$2.JSget($1,true)" js_i_unsafeGet/**/T/**/LE  :: Int -> DataView -> T;\
+foreign import javascript safe   "$2.JSget($1)"      js_i_safeGet/**/T/**/BE    :: Int -> DataView -> T;\
+foreign import javascript safe   "$2.JSget($1,true)" js_i_safeGet/**/T/**/LE    :: Int -> DataView -> T;\
+foreign import javascript unsafe "$2.JSget($1)"      js_m_unsafeGet/**/T/**/BE  :: Int -> SomeDataView m -> State# s -> (# State# s, T #);\
+foreign import javascript unsafe "$2.JSget($1,true)" js_m_unsafeGet/**/T/**/LE  :: Int -> SomeDataView m -> State# s -> (# State# s, T #);\
+foreign import javascript safe   "$2.JSget($1)"      js_m_safeGet/**/T/**/BE    :: Int -> SomeDataView m -> State# s -> (# State# s, T #);\
+foreign import javascript safe   "$2.JSget($1,true)" js_m_safeGet/**/T/**/LE    :: Int -> SomeDataView m -> State# s -> (# State# s, T #);\
+foreign import javascript unsafe "$3.JSset($1,$2)"      js_unsafeSet/**/T/**/BE :: Int -> T -> SomeDataView m -> State# s -> (# State# s, () #);\
+foreign import javascript unsafe "$3.JSset($1,$2,true)" js_unsafeSet/**/T/**/LE :: Int -> T -> SomeDataView m -> State# s -> (# State# s, () #);\
+foreign import javascript safe   "$3.JSset($1,$2)"      js_safeSet/**/T/**/BE   :: Int -> T -> SomeDataView m -> State# s -> (# State# s, () #);\
+foreign import javascript safe   "$3.JSset($1,$2,true)" js_safeSet/**/T/**/LE   :: Int -> T -> SomeDataView m -> State# s -> (# State# s, () #);
 
 #define DATAVIEW8(T, JSget, JSset, JSSize) \
-foreign import javascript unsafe "$2.JSget($1)"    js_i_unsafeGet/**/T :: Int -> DataView -> T;{-# INLINE js_i_unsafeGet/**/T #-};\
-foreign import javascript safe   "$2.JSget($1)"    js_i_safeGet/**/T   :: Int -> DataView -> T;{-# INLINE js_i_safeGet/**/T #-};\
-foreign import javascript unsafe "$2.JSget($1)"    js_m_unsafeGet/**/T :: Int -> SomeDataView m -> State# s -> (# State# s, T #);{-# INLINE js_m_unsafeGet/**/T #-};\
-foreign import javascript safe   "$2.JSget($1)"    js_m_safeGet/**/T   :: Int -> SomeDataView m -> State# s -> (# State# s, T #);{-# INLINE js_m_safeGet/**/T #-};\
-foreign import javascript unsafe "$3.JSset($1,$2)" js_unsafeSet/**/T   :: Int -> T -> SomeDataView m -> State# s -> (# State# s, () #);{-# INLINE js_unsafeSet/**/T #-};\
-foreign import javascript safe   "$3.JSset($1,$2)" js_safeSet/**/T     :: Int -> T -> SomeDataView m -> State# s -> (# State# s, () #);{-# INLINE js_safeSet/**/T #-};
+foreign import javascript unsafe "$2.JSget($1)"    js_i_unsafeGet/**/T :: Int -> DataView -> T;\
+foreign import javascript safe   "$2.JSget($1)"    js_i_safeGet/**/T   :: Int -> DataView -> T;\
+foreign import javascript unsafe "$2.JSget($1)"    js_m_unsafeGet/**/T :: Int -> SomeDataView m -> State# s -> (# State# s, T #);\
+foreign import javascript safe   "$2.JSget($1)"    js_m_safeGet/**/T   :: Int -> SomeDataView m -> State# s -> (# State# s, T #);\
+foreign import javascript unsafe "$3.JSset($1,$2)" js_unsafeSet/**/T   :: Int -> T -> SomeDataView m -> State# s -> (# State# s, () #);\
+foreign import javascript safe   "$3.JSset($1,$2)" js_safeSet/**/T     :: Int -> T -> SomeDataView m -> State# s -> (# State# s, () #);
 
 
 DATAVIEW(Int,getInt32,setInt32,4)
@@ -344,8 +341,6 @@ DATAVIEW8(Int8,getInt8,setInt8,1)
 -- Misc
 -----------------------------------------------------------------------------
 
-foreign import javascript unsafe "$r = true; if ($1.length !== $2.length) { $r = false; } else { for(var i = 0; i < $1.length; i++) { if ((!isNaN($1[i]) || !isNaN($2[i])) && $1[i] !== $2[i]) { $r = false; break;} } }"
-  js_compareArrays :: TypedArray a -> TypedArray b -> Bool; {-# INLINE js_compareArrays #-};\
 
 
 seqList :: [a] -> [a]

@@ -1,4 +1,4 @@
-{-# LANGUAGE DeriveDataTypeable,GeneralizedNewtypeDeriving, TypeFamilies, CPP #-}
+{-# LANGUAGE DeriveDataTypeable,GeneralizedNewtypeDeriving, CPP #-}
 {-# LANGUAGE DataKinds, PolyKinds #-}
 {-# LANGUAGE FlexibleInstances, MultiParamTypeClasses #-}
 -----------------------------------------------------------------------------
@@ -43,6 +43,7 @@ type IOTypedArray a = SomeTypedArray 'Mutable a
 newtype SomeTypedArray (m :: MutabilityType s) (a :: *) = SomeTypedArray JSVal deriving Typeable
 instance IsJSVal (SomeTypedArray m a)
 
+
 --instance PToJSVal (SomeTypedArray m a) where
 --  pToJSVal (SomeTypedArray v) = v
 --instance PFromJSVal (SomeTypedArray m a) where
@@ -51,6 +52,7 @@ instance IsJSVal (SomeTypedArray m a)
 -- | ArrayBuffer, mutable or immutable
 newtype SomeArrayBuffer (a :: MutabilityType s) = SomeArrayBuffer JSVal deriving Typeable
 instance IsJSVal (SomeArrayBuffer m)
+instance LikeJS "ArrayBuffer" (SomeArrayBuffer m)
 
 type ArrayBuffer      = SomeArrayBuffer 'Immutable
 type IOArrayBuffer    = SomeArrayBuffer 'Mutable

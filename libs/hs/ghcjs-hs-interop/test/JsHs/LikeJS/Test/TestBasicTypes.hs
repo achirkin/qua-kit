@@ -38,7 +38,6 @@ doubleConversion x = (asLikeJS $ asJSVal x) == x
 testJSTypeName :: (KnownSymbol ta, LikeJS ta a) => a -> Bool
 testJSTypeName x = jsTypeName x == unpack (js_getConstructorName $ asJSVal x)
 
-{-# NOINLINE js_getConstructorName #-}
 foreign import javascript unsafe "($1).constructor.name" js_getConstructorName :: JSVal -> JSString
 
 type DoubleList = [Double]

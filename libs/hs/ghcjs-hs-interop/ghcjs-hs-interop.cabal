@@ -22,6 +22,7 @@ source-repository head
 
 library
     exposed-modules:
+        JsHs
         JsHs.Array
         JsHs.Callback
         JsHs.Debug
@@ -55,7 +56,7 @@ library
         JsHs.Internal.Types
         JsHs.TypedArray.Types
         JsHs.TypedArray.Internal
-    ghc-options: -Wall -ferror-spans
+    ghc-options: -Wall -ferror-spans -O2
 
 test-suite AllTests
     type: exitcode-stdio-1.0

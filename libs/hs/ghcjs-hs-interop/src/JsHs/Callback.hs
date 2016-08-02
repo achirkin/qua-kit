@@ -85,7 +85,6 @@ syncCallbackUnsafeIO3 :: (JSVal -> JSVal -> JSVal -> IO JSVal) -> IO (Callback f
 syncCallbackUnsafeIO3 x = js_syncCallbackApplyReturnUnsafe 3 (unsafeCoerce x)
 
 
-{-# INLINE js_syncCallbackApplyReturnUnsafe #-}
 foreign import javascript unsafe
   "h$makeCallbackApply($1, h$runSyncReturnUnsafe, [false], $2)"
   js_syncCallbackApplyReturnUnsafe :: Int -> Any -> IO (Callback f)
