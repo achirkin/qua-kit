@@ -43,6 +43,8 @@ library
         Handler.Common
         Handler.Home
         Handler.Home.LoadingSplash
+        Handler.Home.PanelGeometry
+        Handler.Home.PanelServices
         Handler.Home.PopupHelp
         Handler.Home.PopupSave
         Handler.Home.UIButtons

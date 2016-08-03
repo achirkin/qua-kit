@@ -169,28 +169,6 @@ body
 
 /* GUI panel & on-canvas buttons transition */
 
-#guiplaceholder
-    position: absolute
-    bottom: 0
-    padding: 0
-    margin: 0
-    z-index: 4
-    overflow: visible
-/*    height: 256px */
-    width: 64px
-    -webkit-transition: width 300ms ease-in-out, left 300ms ease-in-out
-    -moz-transition: width 300ms ease-in-out, left 300ms ease-in-out
-    -o-transition: width 300ms ease-in-out, left 300ms ease-in-out
-    transition: width 300ms ease-in-out, left 300ms ease-in-out
-
-
-.activeplaceholder
-    left: -32px
-
-
-.idleplaceholder
-    left: -64px
-
 
 .activeguipanel
     box-shadow: 15px 15px 15px 15px #999999
@@ -293,12 +271,10 @@ body
     margin: auto 5px auto 5px
     line-height: 12px
 
-
 .group
     z-index: 5
     position: relative
     margin: 20px auto 10px 0px
-    width: 60%
     border-bottom: 1px solid #757575
 
 
@@ -499,22 +475,6 @@ input[type=checkbox]:checked + .label:before
 input[type=checkbox]:checked + .label
   box-shadow: inset 0 0 0 0 #4a4a4a,0 0 1px 0 #000
 
-#dynamicstaticswitcher + .label:after
-  content: "Static geometry"
-  display: block
-  white-space: nowrap
-  overflow: visible
-  position: absolute
-  margin: 10px 5px 5px 5px
-  padding: 0px
-  left: 60px
-  top: 2px
-
-#dynamicstaticswitcher:checked + .label:after
-  content: "Dynamic geometry"
-
-
-
 
 /* Pop-up windows */
 
@@ -528,7 +488,6 @@ input[type=checkbox]:checked + .label
   opacity: 0.4
   z-index: 999
   display: block
-
 
 
 .popupdiv

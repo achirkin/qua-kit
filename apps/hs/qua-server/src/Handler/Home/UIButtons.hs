@@ -14,6 +14,7 @@ module Handler.Home.UIButtons
   ) where
 
 import Import
+import Text.Julius
 
 -- | Rotating circular progress bar.
 --   Exposes:
@@ -27,6 +28,9 @@ uiButtons :: Widget
 uiButtons = do
   uiButton <- newIdent
   guiElement <- newIdent
+  guiplaceholder <- newIdent
+  idleplaceholder <- newIdent
+  activeplaceholder <- newIdent
   btn <- newIdent
   toWidgetHead
     [cassius|
@@ -60,6 +64,26 @@ uiButtons = do
           fill: #FFFFFF
           fill-opacity: 0
           stroke-opacity: 0
+
+      ##{guiplaceholder}
+          position: absolute
+          bottom: 0
+          padding: 0
+          margin: 0
+          z-index: 4
+          overflow: visible
+      /*    height: 256px */
+          width: 64px
+          -webkit-transition: width 300ms ease-in-out, left 300ms ease-in-out
+          -moz-transition: width 300ms ease-in-out, left 300ms ease-in-out
+          -o-transition: width 300ms ease-in-out, left 300ms ease-in-out
+          transition: width 300ms ease-in-out, left 300ms ease-in-out
+
+      .#{activeplaceholder}
+          left: -32px
+
+      .#{idleplaceholder}
+          left: -64px
     |]
   toWidgetHead
     [julius|
@@ -111,15 +135,16 @@ uiButtons = do
           var panel = document.getElementById('guipanel');
           if (panel.className == 'idleguipanel') {
               panel.className = 'activeguipanel';
-              document.getElementById('guiplaceholder').className = 'activeplaceholder';
+              document.getElementById('#{rawJS guiplaceholder}').className = '#{rawJS activeplaceholder}';
           } else {
               panel.className = 'idleguipanel';
-              document.getElementById('guiplaceholder').className = 'idleplaceholder';
+              document.getElementById('#{rawJS guiplaceholder}').className = '#{rawJS idleplaceholder}';
           }
       };
     |]
   toWidgetBody
     [hamlet|
+     <div .#{idleplaceholder} ##{guiplaceholder}>
       $#  help popup button
       <svg .#{uiButton} height="64" style="left:0px;" version="1.1" viewBox="0 0 64 64" width="64" xmlns="http://www.w3.org/2000/svg">
         <text .#{guiElement} style="font-size: 60px; font-weight: bold;" x="16" y="60">

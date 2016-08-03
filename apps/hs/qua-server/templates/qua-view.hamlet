@@ -1,7 +1,13 @@
+$# Progress bar to show when program is budy
 ^{loadingSplash}
 
+$# WebGL canvas
 <canvas #glcanvas>
+
+$# main panel GUI
 <div .idleguipanel #guipanel>
+
+
   $#  title bar
   <div #titlebar>
     <a target="_blank" href="https://github.com/achirkin/qua-kit">
@@ -17,6 +23,8 @@
           Information
         <text .iaLogo font-size="11" x="68" y="47">
           Architecture
+
+
   $#  tabs bar
   <div #tabsbar>
     <script type="text/javascript">
@@ -36,77 +44,27 @@
       Geometry
     <div .tabitem .tabitemidle #itabServices onclick="selectTab('tabServices');">
       Services
-    <div .tabitem .tabitemidle #itabLuci onclick="selectTab('tabLuci');">
-      Luci
+
+
+
   $#  console
   <div #consolediv>
     <div #consolecontent>
+
+
+
   $#  on-canvas buttons
-  <div .idleplaceholder #guiplaceholder>
-    ^{uiButtons}
+  ^{uiButtons}
+
+
 
   $#  main control panel
-  <div .tabpane #tabLuci style="display: none;">
-    <form #loginform style="display: block;">
-      <script language="javascript">
-        function checkIfUsed(id) {
-            var el = document.getElementById(id);
-            if (el.value==null || el.value=="") { el.className = "pinput"; }
-            else { el.className = "pinput used"; } }
-
-      <div .pheading>
-        Connect to Luci
-      <div .group>
-        <input .pinput #inputip onblur="checkIfUsed('inputip')" type="url">
-        <span .phighlight>
-        <span .pbar>
-        <label .plabel>
-          Host address
-      <div .group>
-        <input .pinput #inputlogin onblur="checkIfUsed('inputlogin')" type="text">
-        <span .phighlight>
-        <span .pbar>
-        <label .plabel>
-          Login
-      <div .group>
-        <input .pinput #inputpass onblur="checkIfUsed('inputpass')" type="password">
-        <span .phighlight>
-        <span .pbar>
-        <label .plabel>
-          Password
-      <div .pbutdiv #loginbutton>
-        <button .button type="button">
-          Connect
-    <div #logondiv style="display: none;">
-      <div .pheading>
-        Connected to Luci on
-        <p #ipaddressinfo style="display: inline;">
-  <div .tabpane #tabGeometry style="display: block;">
-    $#  GeoJSON file reading
-    <div .pheading>
-      Read GeoJSON from file
-    <div .pnormal .pleftbutdiv>
-      <input checked="" #dynamicstaticswitcher type="checkbox">
-      <label .label for="dynamicstaticswitcher">
-    <div .pleftbutdiv>
-      <button .button onclick="document.getElementById('jsonfileinput').click()" style="display: inline;" type="button">
-        Browse
-      <div .pnormal #filenameIndicator style="display: inline;">
-      <script language="javascript">
-        function displayUploadedFileName() {
-            document.getElementById('filenameIndicator').innerText = document.getElementById('jsonfileinput').value.split(/(\\|\/)/g).pop();
-        }
-        function clearUploadedFileName() {
-            document.getElementById('filenameIndicator').innerText = '';
-            document.getElementById('jsonfileinput').value = '';
-        }
-      <input #jsonfileinput onchange="displayUploadedFileName()" style="display:none" type="file">
-    $#  GeoJSON clear button
-    <div .pleftbutdiv>
-      <button .button #cleargeombutton onclick="clearUploadedFileName()" style="display: inline;" type="button">
-        Clear
   <div .tabpane #tabServices style="display: none;">
-    Services
+    ^{panelServices}
+  <div .tabpane #tabGeometry style="display: block;">
+    ^{panelGeometry}
+  <div .tabpane #tabInfo style="display: none;">
+
 
 $#  Popup windows
 <div #popupbg onclick="document.getElementById('popuphelp').style.display='none'; document.getElementById('popupbg').style.display='none'; document.getElementById('popupsave').style.display='none';">
