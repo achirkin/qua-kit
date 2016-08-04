@@ -54,7 +54,7 @@ Given Java and maven are set up correctly, run Luci as follows:
 ```
 cd apps/java/luci2
 mvn clean install
-mvn exec:exec
+mvn exec:java
 ```
 
 #### luci-connect
