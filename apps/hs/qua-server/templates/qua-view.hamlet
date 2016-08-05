@@ -38,7 +38,16 @@ $# main panel GUI
             ( document.getElementsByClassName('tabitem')
             , function(tab){tab.className = 'tabitem tabitemidle';}
             );
-        document.getElementById('i' + id).className = 'tabitem tabitemactive'; }
+        document.getElementById('i' + id).className = 'tabitem tabitemactive'; };
+      var hidePopups = function() {
+        Array.prototype.forEach.call
+            ( document.getElementsByClassName('popupdiv')
+            , function(p){p.style.display = 'none';}
+            );
+        document.getElementById('popupbg').style.display='none'; };
+      var showPopup = function(id) {
+        document.getElementById('popupbg').style.display='block';
+        document.getElementById(id).style.display='block'; };
 
     <div .tabitem .tabitemactive #itabGeometry onclick="selectTab('tabGeometry');">
       Geometry
@@ -60,13 +69,20 @@ $# main panel GUI
 
   $#  main control panel
   <div .tabpane #tabServices style="display: none;">
-    ^{panelServices}
+    <div .#{lcConnectedClass}>
+      ^{panelServices}
   <div .tabpane #tabGeometry style="display: block;">
-    ^{panelGeometry}
+    ^{fileUploadGeometry}
+    <div .#{lcDisconnectedClass}>
+      <div .pheading>
+        Luci scenarios are not available.
+    <div .#{lcConnectedClass}>
+      ^{luciScenariosPane}
   <div .tabpane #tabInfo style="display: none;">
-
+  ^{luciConnectForm}
 
 $#  Popup windows
-<div #popupbg onclick="document.getElementById('popuphelp').style.display='none'; document.getElementById('popupbg').style.display='none'; document.getElementById('popupsave').style.display='none';">
+<div #popupbg onclick="hidePopups()">
 ^{popupHelp}
 ^{popupSave}
+^{popupScenarioList}

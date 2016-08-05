@@ -137,6 +137,6 @@ popupHelp = do
           for research purposes some of your actions (e.g. moving and rotating geometry objects) on this page may be anonymously recorded and sent to our servers; by proceeding you agree to share these data.
 
         <center>
-          <button .button onclick="document.getElementById('popuphelp').style.display='none'; document.getElementById('popupbg').style.display='none';" type="button">
+          <button .button onclick="hidePopups()" type="button">
             Ok, let's go!
     |]

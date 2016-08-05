@@ -28,7 +28,7 @@ popupSave =
           <input #sfGeometry name="geometry" type="hidden">
           <input #sfPreview name="preview" type="hidden">
           <center>
-            <button .button onclick="document.getElementById('popupsave').style.display='none'; document.getElementById('popupbg').style.display='none';" type="button">
+            <button .button onclick="hidePopups()" type="button">
               Cancel
             <button .button type="submit">
               Submit

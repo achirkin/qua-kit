@@ -261,13 +261,13 @@ body
 .pheading
     z-index: 5
     position: relative
-    font-size: 18px
+    font-size: 14px
     margin: 10px auto 0px 0px
 
 
 .pnormal
     z-index: 5
-    font-size: 14px
+    font-size: 12px
     margin: auto 5px auto 5px
     line-height: 12px
 

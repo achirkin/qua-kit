@@ -66,6 +66,7 @@ result
 dist/
 .ghc-sandbox/
 .ghcjs-sandbox/
+*.tmp
 
 # eclipse
 .metadata/

@@ -31,7 +31,7 @@ flag library-only
     default: False
 
 library
-    
+
     if (flag(dev) || flag(library-only))
         cpp-options: -DDEVELOPMENT
         ghc-options: -Wall -fwarn-tabs -O0
@@ -43,6 +43,7 @@ library
         Handler.Common
         Handler.Home
         Handler.Home.LoadingSplash
+        Handler.Home.LuciConnect
         Handler.Home.PanelGeometry
         Handler.Home.PanelServices
         Handler.Home.PopupHelp
@@ -105,7 +106,7 @@ library
     hs-source-dirs: src
 
 executable qua-server
-    
+
     if flag(library-only)
         buildable: False
     main-is: main.hs

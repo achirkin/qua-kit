@@ -149,7 +149,7 @@ uiButtons = do
       <svg .#{uiButton} height="64" style="left:0px;" version="1.1" viewBox="0 0 64 64" width="64" xmlns="http://www.w3.org/2000/svg">
         <text .#{guiElement} style="font-size: 60px; font-weight: bold;" x="16" y="60">
           ?
-        <rect .#{btn} height="64" #helpbutton onclick="document.getElementById('popuphelp').style.display='block'; document.getElementById('popupbg').style.display='block';" width="64" x="0" y="0">
+        <rect .#{btn} height="64" #helpbutton onclick="showPopup('popuphelp')" width="64" x="0" y="0">
       $#  fullscreen button
       <svg .#{uiButton} height="64" style="left:0px;" version="1.1" viewBox="2 2 20 20" width="64" xmlns="http://www.w3.org/2000/svg">
         <path .#{guiElement} d="M5,5H10V7H7V10H5V5M14,5H19V10H17V7H14V5M17,14H19V19H14V17H17V14M10,17V19H5V14H7V17H10Z" #fullscreenbshape>
