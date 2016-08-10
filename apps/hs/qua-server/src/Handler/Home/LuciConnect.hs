@@ -36,7 +36,7 @@ luciConnectPane = do
               <div style="display: table; width: 100%; 0px; z-index: 5;">
                 <div style="display: table-cell; width: 6em; margin: 0; padding 0; vertical-align: middle;">
                   <button .button ##{connectButton} type="button" style="width: 100%; margin: 8px 0px 0px 0px; padding: 4px 12px 2px 12px;">
-                    Connect
+                    connect
                 <div style="display: table-cell; margin: 0; padding 0;">
                   <div .group style="">
                     <input .pinput ##{luciProxyUrl} onblur="checkIfUsed('#{luciProxyUrl}')" type="url">
