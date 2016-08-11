@@ -207,8 +207,8 @@ luciScenarios = do
                   }, "");
               }
               function formatDate(t) {
-                var d = new Date(t);
-                return d.getFullYear() + "." + d.getMonth() + "." + d.getDate() + " "
+                var d = new Date(t*1000);
+                return d.getFullYear() + "." + ((d.getMonth() + 101) + ".").substr(1) + ((d.getDate()+100) + " ").substr(1)
                        + d.getHours() + ":" + d.getMinutes() + ":" + d.getSeconds();
               }
               /** call it to setup scenario buttons state; comes from Handler.Home.PanelGeometry.
