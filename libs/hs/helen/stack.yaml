@@ -1,0 +1,16 @@
+extra-deps:
+  - binary-0.8.2.1
+
+flags: {}
+packages:
+  - .
+  - location:
+      git: https://github.com/achirkin/qua-kit.git
+      commit: 292be9aa536a86cf39632bb28a99daf77354215f
+    extra-dep: true
+    subdirs:
+    - libs/hs/luci-connect
+
+resolver: lts-6.2
+require-stack-version: ">= 1.0.2"
+extra-package-dbs: []
