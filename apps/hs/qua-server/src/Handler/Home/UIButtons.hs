@@ -32,6 +32,9 @@ uiButtons = do
   idleplaceholder <- newIdent
   activeplaceholder <- newIdent
   btn <- newIdent
+
+  serviceClear <- newIdent
+  serviceRun <- newIdent
   toWidgetHead
     [cassius|
       /* GUI icons */
@@ -87,6 +90,27 @@ uiButtons = do
     |]
   toWidgetHead
     [julius|
+      /** Registers one callback; comes from Handler.Home.UIButtons.
+       *  onClick :: IO ()
+       *  return :: IO ()
+       */
+      function registerServiceClear(onClick) {
+        document.getElementById('#{rawJS serviceClear}').addEventListener("click", onClick);
+      }
+      /** Registers one callback; comes from Handler.Home.UIButtons.
+       *  onClick :: IO ()
+       *  return :: IO ()
+       */
+      function registerServiceRun(onClick) {
+        document.getElementById('#{rawJS serviceRun}').addEventListener("click", onClick);
+      }
+      /** Shows or hides button "clear"; comes from Handler.Home.UIButtons.
+       *  state :: Bool
+       *  return :: IO ()
+       */
+      function toggleServiceClear(state) {
+        document.getElementById('#{rawJS serviceClear}').parentElement.style.display = state ? "block" : "none";
+      }
       // Toggle fullscreen and change the fullscreen button shape
       function toggleFullScreen() {
           if (!document['fullscreenElement'] && !document['mozFullScreenElement']
@@ -165,9 +189,9 @@ uiButtons = do
       $#  clear button
       <svg .#{uiButton} height="64" style="position: absolute; left:-64px; display: none;" version="1.1" viewBox="0 0 24 24" width="64" xmlns="http://www.w3.org/2000/svg">
         <path .#{guiElement} d="M12,20C7.59,20 4,16.41 4,12C4,7.59 7.59,4 12,4C16.41,4 20,7.59 20,12C20,16.41 16.41,20 12,20M12,2C6.47,2 2,6.47 2,12C2,17.53 6.47,22 12,22C17.53,22 22,17.53 22,12C22,6.47 17.53,2 12,2M14.59,8L12,10.59L9.41,8L8,9.41L10.59,12L8,14.59L9.41,16L12,13.41L14.59,16L16,14.59L13.41,12L16,9.41L14.59,8Z" #clearshape>
-        <rect .#{btn} height="24" #clearbutton width="24" x="0" y="0">
+        <rect .#{btn} height="24" ##{serviceClear} width="24" x="0" y="0">
       $#  evaluate button
       <svg .#{uiButton} height="64" style="left:0px;" version="1.1" viewBox="0 0 24 24" width="64" xmlns="http://www.w3.org/2000/svg">
         <path .#{guiElement} d="M12,20.14C7.59,20.14 4,16.55 4,12.14C4,7.73 7.59,4.14 12,4.14C16.41,4.14 20,7.73 20,12.14C20,16.55 16.41,20.14 12,20.14M12,2.14A10,10 0 0,0 2,12.14A10,10 0 0,0 12,22.14A10,10 0 0,0 22,12.14C22,6.61 17.5,2.14 12,2.14M10,16.64L16,12.14L10,7.64V16.64Z" #evaluateshape>
-        <rect .#{btn} height="24" #evaluatebutton width="24" x="0" y="0">
+        <rect .#{btn} height="24" ##{serviceRun} width="24" x="0" y="0">
     |]
