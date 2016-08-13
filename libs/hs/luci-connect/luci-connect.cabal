@@ -1,5 +1,5 @@
 name: luci-connect
-version: 1.0.0.0
+version: 1.0.1.0
 cabal-version: >=1.10
 build-type: Simple
 license: MIT
@@ -9,11 +9,11 @@ maintainer: Artem Chirkin <chirkin@arch.ethz.ch>
 stability: experimental
 homepage: https://github.com/achirkin/qua-kit
 bug-reports: https://github.com/achirkin/qua-kit/issues
+synopsis: Implement luci communication protocol
 description:
     Implement luci communication protocol
     https://bitbucket.org/treyerl/luci2 .
     See the module documentation and README for more information.
-synopsis: Implement luci communication protocol
 category: Network
 author: Artem Chirkin
 
@@ -24,7 +24,6 @@ source-repository head
 flag luci-test
     description:
         Build the luci binary protocol testing program.
-    default: True
 
 flag examples
     description:
@@ -54,20 +53,18 @@ library
         transformers-base -any,
         monad-logger -any,
         streaming-commons -any,
-        mtl -any
+        mtl -any,
+        time -any
     default-language: Haskell2010
     hs-source-dirs: src
     other-modules:
         Luci.Connect.Internal
     ghc-options: -Wall -ferror-spans
 
-
-
 executable luci-test
 
     if !flag(luci-test)
         buildable: False
-
     main-is: LuciTest.hs
     build-depends:
         base >=4.8.2 && <4.9,
@@ -80,11 +77,27 @@ executable luci-test
     hs-source-dirs: examples
     ghc-options: -Wall -ferror-spans
 
+executable luci-console
+
+    if !flag(examples)
+        buildable: False
+    main-is: LuciConsole.hs
+    build-depends:
+        base >=4.8.2 && <4.9,
+        aeson -any,
+        text -any,
+        bytestring >=0.10.6.0,
+        conduit >=1.0.0 && <1.3,
+        conduit-extra -any,
+        luci-connect -any
+    default-language: Haskell2010
+    hs-source-dirs: examples
+    ghc-options: -Wall -ferror-spans
+
 executable adding-numbers-service
 
     if !flag(examples)
         buildable: False
-
     main-is: AddingNumbersService.hs
     build-depends:
         base >=4.8.2 && <4.9,
@@ -99,7 +112,6 @@ executable haskell-tutorial-service
 
     if !flag(examples)
         buildable: False
-
     main-is: TutorialService.hs
     build-depends:
         base >=4.8.2 && <4.9,
@@ -111,3 +123,4 @@ executable haskell-tutorial-service
     default-language: Haskell2010
     hs-source-dirs: examples
     ghc-options: -Wall -ferror-spans
+

@@ -24,7 +24,7 @@ import Data.Text
 import Data.Monoid ((<>))
 
 
-import qualified Data.Vector as V
+--import qualified Data.Vector as V
 
 -- * Define state machine
 -- | First of all, let us define the state of our program

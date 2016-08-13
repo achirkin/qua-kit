@@ -45,6 +45,7 @@ module Luci.Connect
       --   from `Control.Monad.IO.Class` of @transformers@ package.
     , MonadIO (..)
       -- * Simple Luci clients
+    , luciChannels
     , talkToLuci
     , talkAsLuci
     , talkToLuciE
@@ -52,6 +53,7 @@ module Luci.Connect
       -- * Other helper wrappers
     , runLuciProgram
     , runSimpleLuciClient
+    , parseMsgsPanicCatching, parseMsgsPanicCatchingE
     ) where
 
 import           Control.Concurrent.MVar
@@ -209,6 +211,73 @@ defaultRunSettings = RunSettings
   }
 
 ----------------------------------------------------------------------------------------------------
+
+-- | Use separate sink and source in two channels
+luciChannels :: (MonadBaseControl IO m, MonadIO m, MonadRandom m, MonadLogger m)
+             => Int               -- ^ Port
+             -> Maybe ByteString  -- ^ Host (if Nothing then Servier else Client)(MonadBaseControl IO m, MonadIO m, MonadRandom m, MonadLogger m)
+             -> m (Sink LuciMessage m (), Source m LuciMessage)
+             -> m ()
+luciChannels port (Just host) io = Network.runGeneralTCPClient connSettings $ luciChannels' io
+  where
+    connSettings = Network.clientSettings port host
+luciChannels port Nothing io = Network.runGeneralTCPServer connSettings $ luciChannels' io
+  where
+    connSettings = Network.serverSettings port "*4"
+
+
+-- | Use existing connection to run a message-processing conduit
+luciChannels' :: (MonadBaseControl IO m, MonadIO m, MonadRandom m, MonadLogger m)
+              => m (Sink LuciMessage m (), Source m LuciMessage)
+              -> Network.AppData
+              -> m ()
+luciChannels' io appData = do
+    (sink, source) <- io
+    let handleErrors = do
+          x <- await
+          case x of
+            Nothing -> return ()
+            Just (Processing m) -> yield m >> handleErrors
+            Just (ProcessedData d) ->  do
+                lift $ yield d $$ outgoing
+                handleErrors
+            Just (ProcessingError e) -> logWarnN (Text.pack (show (e :: LuciError Text))) >> handleErrors
+--            writeIt (ProcessedData d) = liftIO $ putMVar rdata d -- yield (ProcessedData d) >> awaitMessageOrDiscard
+--            writeIt (ProcessingError (LuciClientError e)) = liftIO $ do
+--                putStrLn $ "Impossible! " ++ e
+--            writeIt (ProcessingError e) = liftIO $ do
+--                putStr "Error processing message: "
+--                print e
+--            writeIt (Processing (MessageHeader h, _)) = liftIO $ do
+--                putStr "Server says: "
+--                BSLC.putStrLn $ encode h
+--            readIt = do
+--              val <- fmap eitherDecodeStrict' . liftIO $ BS.getLine
+--              case val of
+--                Left err -> liftIO $ putStrLn err
+--                Right h -> yield (h, [])
+--              readIt
+--        _ <- forkIO . runLuciProgram () (logLevel sets) . runConduit
+--               $ incoming =&= parseMsgsPanicCatching
+--                          =&= panicResponseConduit
+--                          =$= awaitForever writeIt
+--        _ <- forkIO . runLuciProgram () (logLevel sets) . runConduit
+--               $ rgo =$= outgoing
+--        putStrLn "\nType JSON message
+    _ <- liftBaseWith $ \run -> forkIO . void . run $ runConduit
+                             $ incoming
+                            =&= parseMsgsPanicCatching
+                            =&= panicResponseConduit
+                            =$= handleErrors =$= sink
+    runConduit $ source =$= writeMessages =$= outgoing
+  where
+    outgoing = Network.appSink appData
+    incoming = mapOutput Processing $ Network.appSource appData
+
+
+
+----------------------------------------------------------------------------------------------------
+
 
 -- | Connect to Luci server and a conduit program that processes messages
 talkToLuci :: (MonadBaseControl IO m, MonadIO m, MonadRandom m, MonadLogger m)
