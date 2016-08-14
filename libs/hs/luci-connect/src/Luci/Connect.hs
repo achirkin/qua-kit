@@ -242,28 +242,6 @@ luciChannels' io appData = do
                 lift $ yield d $$ outgoing
                 handleErrors
             Just (ProcessingError e) -> logWarnN (Text.pack (show (e :: LuciError Text))) >> handleErrors
---            writeIt (ProcessedData d) = liftIO $ putMVar rdata d -- yield (ProcessedData d) >> awaitMessageOrDiscard
---            writeIt (ProcessingError (LuciClientError e)) = liftIO $ do
---                putStrLn $ "Impossible! " ++ e
---            writeIt (ProcessingError e) = liftIO $ do
---                putStr "Error processing message: "
---                print e
---            writeIt (Processing (MessageHeader h, _)) = liftIO $ do
---                putStr "Server says: "
---                BSLC.putStrLn $ encode h
---            readIt = do
---              val <- fmap eitherDecodeStrict' . liftIO $ BS.getLine
---              case val of
---                Left err -> liftIO $ putStrLn err
---                Right h -> yield (h, [])
---              readIt
---        _ <- forkIO . runLuciProgram () (logLevel sets) . runConduit
---               $ incoming =&= parseMsgsPanicCatching
---                          =&= panicResponseConduit
---                          =$= awaitForever writeIt
---        _ <- forkIO . runLuciProgram () (logLevel sets) . runConduit
---               $ rgo =$= outgoing
---        putStrLn "\nType JSON message
     _ <- liftBaseWith $ \run -> forkIO . void . run $ runConduit
                              $ incoming
                             =&= parseMsgsPanicCatching
