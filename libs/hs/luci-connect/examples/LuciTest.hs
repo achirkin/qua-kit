@@ -13,7 +13,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Main (main) where
 
-import Control.Monad (join)
+import Control.Monad (join, when)
 import Data.Conduit (mapOutput)
 import Data.Aeson as JSON
 import Data.Text (Text)
@@ -76,17 +76,6 @@ errorResponse err = do
 
 main :: IO ()
 main = do
-    putStrLn "Luci-test testing app. Usage:\n\
-             \luci-test [args..]\n\
-             \Parameters:\n\
-             \\tserver             - run as a server      (default: client)\n\
-             \\tport=x             - choose port          (default: 7654)\n\
-             \\thost=a.b.c.d       - choose host          (default: 127.0.1.1)\n\
-             \\trole=[tester|echo] - choose role          (default: tester)\n\
-             \\t   i.e. role=tester or role=echo\n\
-             \\ttimeout=x          - timeout for messages (default: 2) (in seconds)\n\
-             \\tloglevel=lvl       - choose logging level (default: info)\n\
-             \\t   possible levels:  debug, info, warn, error\n"
     args <- getArgs
     let sets = setSettings args RunSettings
                   { host     = "127.0.1.1"
@@ -96,6 +85,18 @@ main = do
                   , action   = testLuciProcessing
                   , logLevel = LevelInfo
                   }
+    when (logLevel sets < LevelWarn) $
+      putStrLn "Luci-test testing app. Usage:\n\
+               \luci-test [args..]\n\
+               \Parameters:\n\
+               \\tserver             - run as a server      (default: client)\n\
+               \\tport=x             - choose port          (default: 7654)\n\
+               \\thost=a.b.c.d       - choose host          (default: 127.0.1.1)\n\
+               \\trole=[tester|echo] - choose role          (default: tester)\n\
+               \\t   i.e. role=tester or role=echo\n\
+               \\ttimeout=x          - timeout for messages (default: 2) (in seconds)\n\
+               \\tloglevel=lvl       - choose logging level (default: info)\n\
+               \\t   possible levels:  debug, info, warn, error\n"
     (run sets) (port sets) (host sets) (logLevel sets) (timeout sets) (action sets)
   where
     setSettings [] s = s

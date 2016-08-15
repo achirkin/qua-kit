@@ -10,7 +10,7 @@
 --
 --
 -----------------------------------------------------------------------------
-{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE OverloadedStrings, GeneralizedNewtypeDeriving #-}
 module Helen.Core
   ( Helen (..), program, initHelen
   ) where
@@ -19,13 +19,17 @@ import qualified Data.Aeson as JSON
 --import Data.Text (Text)
 import qualified Data.Text as Text
 import Data.Conduit
+import Data.Unique
+import Data.Hashable
+import qualified Data.HashMap.Strict as HashMap
 
 import Luci.Messages
 import Luci.Connect
 import Luci.Connect.Base
 import System.Mem.Weak
-import qualified Control.Concurrent.MVar as MVar
-import qualified Control.Concurrent.Chan as Chan
+import qualified Control.Monad.STM as STM
+import qualified Control.Concurrent.STM.TMVar as STM
+import qualified Control.Concurrent.STM.TChan as STM
 import           Control.Concurrent (forkIO)
 import           Control.Monad.Trans.Control (liftBaseWith)
 import           Control.Monad.Trans.Class
@@ -33,40 +37,64 @@ import           Control.Monad (void, forever)
 import qualified Data.Conduit.Network as Network
 import qualified Data.ByteString.Lazy.Char8 as LazyBSC
 
---import Helen.Core.Service
+
+-- | Represent a connected client
+newtype ClientId = ClientId Unique
+  deriving (Eq,Ord, Hashable)
+
+type Client = Message -> LuciProgram Helen ()
 
 -- | The program state type
 data Helen = Helen
-  { msgChannel :: Chan.Chan (Message, Message -> LuciProgram Helen Bool)
+  { msgChannel       :: !(STM.TChan (ClientId, Message))
+  , sendMessage      :: !(ClientId -> Message -> LuciProgram Helen ())
+    -- ^ Send a message to a given client (by client id)
+  , registerClient   :: !(Client -> LuciProgram Helen (ClientId, LuciProgram Helen ()))
+    -- ^ Register a send-message callback;
+    --   Returns own cliendId and an unregister callback
   }
 
 -- | Initialize state
 initHelen :: IO Helen
 initHelen = do
-  ch <- Chan.newChan
+  ch <- STM.newTChanIO
+  clientStore <- STM.newTMVarIO (HashMap.empty :: HashMap.HashMap ClientId Client)
   return Helen
     { msgChannel = ch
+    , sendMessage = \cId msg -> do
+         mf <- fmap (HashMap.lookup cId) . liftIO . STM.atomically $ STM.readTMVar clientStore
+         case mf of
+           Nothing -> return ()
+           Just f -> f msg
+    , registerClient = \putMsg -> liftIO $ do
+         cId <- ClientId <$> newUnique
+         STM.atomically $ do
+             hm <- STM.takeTMVar clientStore
+             STM.putTMVar clientStore $ HashMap.insert cId putMsg hm
+         return ( cId
+                , liftIO . STM.atomically $
+                    STM.takeTMVar clientStore >>= STM.putTMVar clientStore . HashMap.delete cId
+                )
     }
 
 -- | Run main program
 program :: Int -- ^ Port
         -> LuciProgram Helen ()
 program port = do
-  -- Run all connections in a separate thread. Working! Helen state is not shared!
---  _ <- liftBaseWith $ \run -> forkIO . void . run $ luciChannels port Nothing prepareConnection
+  -- Run all connections in a separate thread. Warning! Helen state is not shared!
   _ <- liftBaseWith $ \run -> forkIO . void . run $ helenChannels port
   -- Now process message queue
   ch <- msgChannel <$> get
-  forever $ (liftIO $ Chan.readChan ch) >>= processMessage
+  forever $ (liftIO . STM.atomically $ STM.readTChan ch) >>= processMessage
 
 
 
-processMessage :: (Message, Message -> LuciProgram Helen Bool)
+processMessage :: (ClientId, Message)
                -> LuciProgram Helen ()
-processMessage (msg, callback) = do
+processMessage (clientId, msg) = do
+  helen <- get
   -- return message for now
-  success <- callback msg
-  if success then return () else liftIO $ putStrLn "could not send stuff"
+  sendMessage helen clientId msg
   return ()
 
 
@@ -84,20 +112,30 @@ helenChannels port = Network.runGeneralTCPServer connSettings $ helenChannels'
 helenChannels' :: Network.AppData
                -> LuciProgram Helen ()
 helenChannels' appData = do
-    -- weak reference based on connection state
-    weakSink <- liftIO $ mkWeak appData (\msg -> yield (makeMessage msg) =$= writeMessages $$ outgoing) Nothing
-    let -- if succesfully sent a message return true
+    -- here we store messages to be sent back to client
+    sendQueue <- liftIO . STM.atomically $ STM.newTChan
+    -- weak reference based on channel state
+    weakSink <- liftIO $ mkWeak sendQueue (liftIO . STM.atomically . STM.writeTChan sendQueue . Just . makeMessage) Nothing
+    let -- put message to sendback channel
         putMsg msg = msg `seq` do
           msending <- liftIO $ deRefWeak weakSink
           case msending of
-            Nothing -> return False
-            Just f  -> f msg >> return True
+            Nothing -> return ()
+            Just f  -> f msg
+    (clientId, unregister) <- get >>= flip registerClient putMsg
+    let -- define a source of data to send to client
+        source = do
+          mval <- liftIO . STM.atomically $ STM.readTChan sendQueue
+          case mval of
+            Nothing -> lift $ unregister
+            Just v  -> yield v >> source
         -- main message parsing
         sink = do
           rawproc <- await
           case rawproc of
             -- do some finalization actions, e.g. notify Helen that client is disconnected
-            Nothing -> return ()
+            Nothing -> do
+              liftIO . STM.atomically $ STM.unGetTChan sendQueue Nothing
             -- do actual message processing
             Just (Processing m@(h,_)) -> do
               case parseMessage m of
@@ -106,11 +144,11 @@ helenChannels' appData = do
                     let msgerr = Text.pack $ "Unexpected message: " ++ err
                                          ++ ". Received header: " ++ LazyBSC.unpack (JSON.encode h)
                     logWarnN msgerr
-                    lift $ yield (makeMessage $ MsgError msgerr) =$= writeMessages $$ outgoing
+                    liftIO . STM.atomically . STM.writeTChan sendQueue . Just . makeMessage $ MsgError msgerr
                   -- If all is good, put message into Helen's msgChannel
                   JSON.Success msg -> do
                     helen <- get
-                    liftIO $ Chan.writeChan (msgChannel helen) (msg, putMsg)
+                    liftIO . STM.atomically $ STM.writeTChan (msgChannel helen) (clientId, msg)
               sink
             -- send data back to client if it was early-processed
             Just (ProcessedData d) ->  do
@@ -118,7 +156,10 @@ helenChannels' appData = do
                 sink
             -- Notify about protocol errors
             Just (ProcessingError e) -> logWarnN (Text.pack (show (e :: LuciError Text.Text))) >> sink
-    -- run actual conduit
+
+    -- asynchroniously send messages
+    _ <- liftBaseWith $ \run -> forkIO . void . run $ source $$ writeMessages =$= outgoing
+    -- receive messages in current thread (another thread per connection anyway)
     runConduit $ incoming
               =&= parseMsgsPanicCatching
               =&= panicResponseConduit
