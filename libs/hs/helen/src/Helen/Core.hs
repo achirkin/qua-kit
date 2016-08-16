@@ -10,9 +10,10 @@
 --
 --
 -----------------------------------------------------------------------------
-{-# LANGUAGE OverloadedStrings, GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE OverloadedStrings #-}
 module Helen.Core
   ( Helen (..), program, initHelen
+  , Client (), clientAddr
   ) where
 
 import qualified Data.Aeson as JSON
@@ -20,7 +21,7 @@ import qualified Data.Aeson as JSON
 import qualified Data.Text as Text
 import Data.Conduit
 import Data.Unique
-import Data.Hashable
+import Data.Monoid ((<>))
 import qualified Data.HashMap.Strict as HashMap
 
 import Luci.Messages
@@ -33,49 +34,53 @@ import qualified Control.Concurrent.STM.TChan as STM
 import           Control.Concurrent (forkIO)
 import           Control.Monad.Trans.Control (liftBaseWith)
 import           Control.Monad.Trans.Class
-import           Control.Monad (void, forever)
+import           Control.Monad (void, forever, when)
+
 import qualified Data.Conduit.Network as Network
 import qualified Data.ByteString.Lazy.Char8 as LazyBSC
 
+import Helen.Core.Types
+import Helen.Core.Service
 
--- | Represent a connected client
-newtype ClientId = ClientId Unique
-  deriving (Eq,Ord, Hashable)
 
-type Client = Message -> LuciProgram Helen ()
-
--- | The program state type
-data Helen = Helen
-  { msgChannel       :: !(STM.TChan (ClientId, Message))
-  , sendMessage      :: !(ClientId -> Message -> LuciProgram Helen ())
-    -- ^ Send a message to a given client (by client id)
-  , registerClient   :: !(Client -> LuciProgram Helen (ClientId, LuciProgram Helen ()))
-    -- ^ Register a send-message callback;
-    --   Returns own cliendId and an unregister callback
-  }
 
 -- | Initialize state
 initHelen :: IO Helen
 initHelen = do
+  -- message channel
   ch <- STM.newTChanIO
-  clientStore <- STM.newTMVarIO (HashMap.empty :: HashMap.HashMap ClientId Client)
+  -- mutable base of clients
+  clientStore <- STM.newTMVarIO (HashMap.empty :: HashMap.HashMap ClientId (Client, LuciProgram Helen ()))
+  -- construct helen
   return Helen
     { msgChannel = ch
     , sendMessage = \cId msg -> do
-         mf <- fmap (HashMap.lookup cId) . liftIO . STM.atomically $ STM.readTMVar clientStore
-         case mf of
+         mc <- fmap (HashMap.lookup cId) . liftIO . STM.atomically $ STM.readTMVar clientStore
+         case mc of
            Nothing -> return ()
-           Just f -> f msg
-    , registerClient = \putMsg -> liftIO $ do
+           Just (c, _) -> queueMessage c msg
+    , registerClient = \client -> liftIO $ do
          cId <- ClientId <$> newUnique
          STM.atomically $ do
              hm <- STM.takeTMVar clientStore
-             STM.putTMVar clientStore $ HashMap.insert cId putMsg hm
+             STM.putTMVar clientStore $ HashMap.insert cId (client, return ()) hm
          return ( cId
-                , liftIO . STM.atomically $
-                    STM.takeTMVar clientStore >>= STM.putTMVar clientStore . HashMap.delete cId
+                , do
+                    munreg <- liftIO . STM.atomically $ do
+                       cs <- STM.takeTMVar clientStore
+                       let unreg = snd <$> HashMap.lookup cId cs
+                       STM.putTMVar clientStore $ HashMap.delete cId cs
+                       return unreg
+                    case munreg of
+                      Nothing -> return ()
+                      Just u  -> u
                 )
+    , subscribeUnregister = \cId action -> liftIO . STM.atomically $
+        STM.takeTMVar clientStore >>=
+          STM.putTMVar clientStore . HashMap.update (\(c, u) -> Just (c, u >> action cId)) cId
+    , serviceManager = initServiceManager
     }
+
 
 -- | Run main program
 program :: Int -- ^ Port
@@ -122,12 +127,17 @@ helenChannels' appData = do
           case msending of
             Nothing -> return ()
             Just f  -> f msg
-    (clientId, unregister) <- get >>= flip registerClient putMsg
+    (clientId, unregister) <- get >>= flip registerClient (Client putMsg . show $ Network.appSockAddr appData)
     let -- define a source of data to send to client
         source = do
           mval <- liftIO . STM.atomically $ STM.readTChan sendQueue
           case mval of
-            Nothing -> lift $ unregister
+            Nothing -> do
+               lift unregister
+               n <- liftIO $ STM.atomically (messagesLeft sendQueue)
+               when (n > 0) . logInfoN $
+                  "Client " <> Text.pack (show $ Network.appSockAddr appData) <> " disconnected leaving " <> Text.pack (show n)
+                            <> " messages not delivered."
             Just v  -> yield v >> source
         -- main message parsing
         sink = do
@@ -167,7 +177,9 @@ helenChannels' appData = do
   where
     outgoing = Network.appSink appData
     incoming = mapOutput Processing $ Network.appSource appData
-
+    messagesLeft tchan = STM.tryReadTChan tchan >>= \mv -> case mv of
+                              Nothing -> return (0 :: Int)
+                              Just _  -> (1+) <$> messagesLeft tchan
 
 
 

@@ -38,6 +38,7 @@ import           Crypto.Hash.Algorithms (MD5)
 
 import           Data.Aeson as JSON
 import qualified Data.Aeson.Types as JSON
+import           Data.Hashable
 import           Data.Maybe (fromMaybe)
 import           Data.String (IsString)
 import           Data.Time (DiffTime)
@@ -157,15 +158,15 @@ instance ToJSON AttachmentReference where
 
 -- | Luci service name
 newtype ServiceName = ServiceName Text
-  deriving (Eq,Ord,Show,IsString, FromJSON, ToJSON)
+  deriving (Eq,Ord,Show,IsString, FromJSON, ToJSON, Hashable)
 
 -- | Luci callID is used to reference client's calls to luci and services
 newtype CallId = CallId Int64
-  deriving (Eq,Ord,Show,Enum,Num,Real,Integral, FromJSON, ToJSON)
+  deriving (Eq,Ord,Show,Enum,Num,Real,Integral, FromJSON, ToJSON, Hashable)
 
 -- | Luci taskID is used in the context of luci workflows to refer to tasks
 newtype TaskId = TaskId Int64
-  deriving (Eq,Ord,Show,Enum,Num,Real,Integral, FromJSON, ToJSON)
+  deriving (Eq,Ord,Show,Enum,Num,Real,Integral, FromJSON, ToJSON, Hashable)
 
 -- | Percentage [0..100]%; used in luci messages to indicate state of a service computation
 newtype Percentage = Percentage Double
