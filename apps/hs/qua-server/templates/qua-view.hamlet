@@ -80,7 +80,7 @@ $# main panel GUI
         Luci scenarios are not available.
     <div .#{lcConnectedClass}>
       ^{luciScenariosPane}
-  <div .tabpane #tabInfo style="display: none;">
+  <div .tabpane #tabInfo style="display: none; height: 100%">
     ^{panelInfo}
   ^{luciConnectForm}
 

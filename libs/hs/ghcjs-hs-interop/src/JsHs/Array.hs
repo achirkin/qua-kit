@@ -33,6 +33,7 @@ module JsHs.Array
     , fromList, toList
     , length, (!), slice, take, drop, concat
     , filter, mapEither
+    , sort, removeSeqDups
     ) where
 
 --import Data.Geometry.VectorMath --(Vector )
@@ -391,6 +392,15 @@ instance (Show a, LikeJS ta a) => Show (Array a) where
 "show/JSStringArray" show = unpack' . js_show
     #-}
 
+
+-- | Sort an array using JavaScript sort function
+foreign import javascript unsafe "$1.sort()"
+    sort :: Array a -> Array a
+
+-- | Remove sequential duplicate elements.
+--   This returns a list of unique values if was used on a previously sorted array.
+foreign import javascript unsafe "$1.map(function(e,i){if(e==$1[i+1]){return null;}else{return e;}}).filter(function(e){return e!=null;})"
+    removeSeqDups :: Array a -> Array a
 
 -- mapping
 

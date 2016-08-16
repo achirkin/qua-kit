@@ -63,6 +63,14 @@ panelInfo = do
       |]
     toWidgetHead
       [julius|
+        var colorizeProperty = function(n){};
+        /** Registers one callback; comes from Handler.Home.PanelInfo.
+         *  h :: JSString -> IO ()
+         *  return :: IO ()
+         */
+        function registerColorizeProperty(f) {
+          colorizeProperty = function(n){f(n);};
+        }
         /** Show info (pairs of key-value); comes from Handler.Home.PanelInfo.
          *  obj :: Object -- all property names and values inside an object
          *  return :: IO ()
@@ -72,7 +80,7 @@ panelInfo = do
                     if (obj[n] != null && (obj[n].constructor == Number || obj[n].constructor == String)) {
                       var classnames = i % 2 == 1 ? "#{rawJS infoRow}" : "#{rawJS infoRowOdd} #{rawJS infoRow}"
                       return text
-                             + "<div class=\"" + classnames + "\" >"
+                             + "<div class=\"" + classnames + "\" onclick=\"colorizeProperty('" + n + "')\" >"
                              + " <div class=\"#{rawJS infoCellLeft}\">" + n + "</div>"
                              + " <div class=\"#{rawJS infoCellRight}\">" + obj[n] + "</div>"
                              + "</div>\n";
