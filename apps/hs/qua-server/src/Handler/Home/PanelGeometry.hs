@@ -208,8 +208,8 @@ luciScenarios = do
               }
               function formatDate(t) {
                 var d = new Date(t*1000);
-                return d.getFullYear() + "." + ((d.getMonth() + 101) + ".").substr(1) + ((d.getDate()+100) + " ").substr(1)
-                       + d.getHours() + ":" + d.getMinutes() + ":" + d.getSeconds();
+                return d.getFullYear() + "." + ('0' + (d.getMonth() + 1)).slice(-2) + "." + ('0' + d.getDate()).slice(-2) + " "
+                       + d.getHours() + ":" + ('0' + d.getMinutes()).slice(-2) + ":" + ('0' + d.getSeconds()).slice(-2);
               }
               /** call it to setup scenario buttons state; comes from Handler.Home.PanelGeometry.
                *  showButton :: Bool -- whether to show "save scenario" button
