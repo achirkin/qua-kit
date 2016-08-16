@@ -51,6 +51,8 @@ $# main panel GUI
 
     <div .tabitem .tabitemactive #itabGeometry onclick="selectTab('tabGeometry');">
       Geometry
+    <div .tabitem .tabitemidle #itabInfo onclick="selectTab('tabInfo');">
+      Info
     <div .tabitem .tabitemidle #itabServices onclick="selectTab('tabServices');">
       Services
 
@@ -79,6 +81,7 @@ $# main panel GUI
     <div .#{lcConnectedClass}>
       ^{luciScenariosPane}
   <div .tabpane #tabInfo style="display: none;">
+    ^{panelInfo}
   ^{luciConnectForm}
 
 $#  Popup windows

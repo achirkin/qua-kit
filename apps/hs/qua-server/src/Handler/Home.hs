@@ -8,6 +8,7 @@ import Handler.Home.PopupSave
 import Handler.Home.UIButtons
 import Handler.Home.PanelServices
 import Handler.Home.PanelGeometry
+import Handler.Home.PanelInfo
 import Handler.Home.LuciConnect
 
 getHomeR :: Handler Html

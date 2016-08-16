@@ -88,13 +88,13 @@ fileUploadGeometry = do
       <div .pheading>
         Read GeoJSON from file
       <div style="display: table; width: 100%; z-index: 5;">
-        <div style="display: table-cell; width: 80px; margin: 0; padding 0; vertical-align: middle;">
+        <div style="display: table-cell; width: 80px; margin: 0; padding: 0; vertical-align: middle;">
           <button .button ##{clearGeometry} onclick="clearUploadedFileName()" type="button" style="width: 100%; margin: 8px 0px 0px 0px; padding: 4px 12px 2px 12px;">
             clear
-        <div style="display: table-cell; width: 80px; margin: 0; padding 0; vertical-align: middle;">
+        <div style="display: table-cell; width: 80px; margin: 0; padding: 0; vertical-align: middle;">
           <button .button onclick="document.getElementById('#{jsonfileinput}').click()" type="button" style="width: 100%; margin: 8px 0px 0px 0px; padding: 4px 12px 2px 12px;">
             files
-        <div style="display: table-cell; margin: 0; padding 0; vertical-align: middle;">
+        <div style="display: table-cell; margin: 0; padding: 6px 0 0 0; vertical-align: middle;">
           <div .pnormal ##{fileNameIndicator}>
           <input ##{jsonfileinput} onchange="displayUploadedFileName()" style="display:none" type="file">
       $# <!-- <div> -->
@@ -227,13 +227,13 @@ luciScenarios = do
             <div .pheading>
               Remote (Luci) scenarios
             <div style="display: table; width: 100%; 0px; z-index: 5;">
-              <div style="display: table-cell; width: 97px; margin: 0; padding 0; vertical-align: middle;">
+              <div style="display: table-cell; width: 97px; margin: 0; padding: 0; vertical-align: middle;">
                 <button .button ##{browseScenarios} type="button" style="width: 100%; max-width: 97px; margin: 8px 0px 0px 0px; padding: 4px 12px 2px 12px;">
                   scenarios
-              <div ##{saveScenario} style="display: none; width: 63px; margin: 0; padding 0; vertical-align: middle;">
+              <div ##{saveScenario} style="display: none; width: 63px; margin: 0; padding: 0; vertical-align: middle;">
                 <button .button type="button" onclick="document.getElementById('#{scenarioNameField}').value = '';showPopup('#{popupScenarioSaveId}');" style="width: 100%; max-width: 63px; margin: 8px 0px 0px 0px; padding: 4px 12px 2px 12px;">
                   save
-              <div style="display: table-cell; margin: 0; padding 0; vertical-align: middle;">
+              <div style="display: table-cell; margin: 0; padding: 6px 0 0 0; vertical-align: middle;">
                 <div .pnormal ##{fileNameIndicator}>
 
             $# <!-- <div> -->
