@@ -212,24 +212,24 @@ instance ToJSON LuciMsgInfo where
 
 -- | Represent all registerd message types. Anything else is garbage!
 data Message
-  = MsgRun ServiceName JSON.Object [ByteString]
+  = MsgRun !ServiceName !JSON.Object ![ByteString]
     -- ^ run service message, e.g. {'run': 'ServiceList'};
     -- params: 'run', [(name, value)], optional attachments
-  | MsgCancel CallId
+  | MsgCancel !CallId
     -- ^ cancel service message, e.g. {'cancel': 25};
     -- params: 'callID'
-  | MsgNewCallID CallId
+  | MsgNewCallID !CallId
     -- ^ Luci call id, { newCallID: 57 };
     -- params: 'newCallID'
-  | MsgResult (Maybe LuciMsgInfo) ServiceResult [ByteString]
+  | MsgResult !(Maybe LuciMsgInfo) !ServiceResult ![ByteString]
     -- ^ result of a service execution
     -- e.g. { callID: 57, duration: 0, serviceName: "ServiceList", taskID: 0, result: Object };
     -- params: 'callID', 'duration', 'serviceName', 'taskID', 'result', optional attachments
-  | MsgProgress (Maybe LuciMsgInfo) Percentage ServiceResult [ByteString]
+  | MsgProgress !(Maybe LuciMsgInfo) !Percentage !ServiceResult ![ByteString]
     -- ^ result of a service execution,
     -- e.g. { callID: 57, duration: 0, serviceName: "St", taskID: 0, percentage: 0, progress: null};
     -- params: 'callID', 'duration', 'serviceName', 'taskID', 'percentage', 'progress', optional attachments
-  | MsgError Text
+  | MsgError !Text
     -- ^ error message, e.g. {'error': 'We are in trouble!'};
     -- params: 'error'
 
@@ -254,11 +254,11 @@ indexList xs i = headMaybe $ drop i xs
 -- | Parse all registered message types
 parseMessage :: LuciMessage -> Result Message
 parseMessage (MessageHeader (JSON.Object js), bss)
-  | Just (JSON.String s) <- HashMap.lookup "run" js       = Success $ MsgRun (ServiceName s) js bss
+  | Just (JSON.String s) <- HashMap.lookup "run" js       = Success $ MsgRun (ServiceName s) js $ seqList bss
   | Just (JSON.Number n) <- HashMap.lookup "cancel" js    = Success $ MsgCancel (round n)
   | Just (JSON.Number n) <- HashMap.lookup "newCallID" js = Success $ MsgNewCallID (round n)
-  | Just (JSON.Object o) <- HashMap.lookup "result" js    = Success $ MsgResult luciInfo (ServiceResult o) bss
-  | Just (JSON.Object o) <- HashMap.lookup "progess" js   = Success $ MsgProgress luciInfo perc (ServiceResult o) bss
+  | Just (JSON.Object o) <- HashMap.lookup "result" js    = Success $ MsgResult luciInfo (ServiceResult o) $ seqList bss
+  | Just (JSON.Object o) <- HashMap.lookup "progess" js   = Success $ MsgProgress luciInfo perc (ServiceResult o) $ seqList bss
   | Just (JSON.String s) <- HashMap.lookup "error" js     = Success $ MsgError s
   | otherwise = Error "None of registered keys are found (run,cancel,newCallID,result,progress,error)"
   where
@@ -276,23 +276,25 @@ makeMessage (MsgCancel n) = (MessageHeader $ JSON.object ["cancel" .= n], [])
 makeMessage (MsgNewCallID n) = (MessageHeader $ JSON.object ["newCallID" .= n], [])
 makeMessage (MsgError s) = (MessageHeader $ JSON.object ["error" .= s], [])
 makeMessage (MsgRun (ServiceName s) js bss) =
-  (MessageHeader . JSON.Object $ HashMap.insert "run" (JSON.String s) js, bss)
+  (MessageHeader . JSON.Object $ HashMap.insert "run" (JSON.String s) js, seqList bss)
 makeMessage (MsgResult Nothing sr bss) =
-  (MessageHeader . JSON.object $ ["result" .= sr], bss)
+  (MessageHeader . JSON.object $ ["result" .= sr], seqList bss)
 makeMessage (MsgProgress Nothing p sr bss) =
-  (MessageHeader . JSON.object $ ["progress" .= sr, "percentage" .= p], bss)
+  (MessageHeader . JSON.object $ ["progress" .= sr, "percentage" .= p], seqList bss)
 makeMessage (MsgResult (Just mi) (ServiceResult sr) bss) =
-  (MessageHeader . JSON.Object $ HashMap.insert "result" (JSON.Object sr) mio, bss)
+  (MessageHeader . JSON.Object $ HashMap.insert "result" (JSON.Object sr) mio, seqList bss)
   where
     JSON.Object mio = JSON.toJSON mi
 makeMessage (MsgProgress (Just mi) p (ServiceResult sr) bss) =
   (MessageHeader . JSON.Object . HashMap.insert "progress" (JSON.toJSON p)
-                               $ HashMap.insert "result" (JSON.Object sr) mio, bss)
+                               $ HashMap.insert "result" (JSON.Object sr) mio, seqList bss)
   where
     JSON.Object mio = JSON.toJSON mi
 
 
-
+seqList :: [a] -> [a]
+seqList [] = []
+seqList (x:xs) = x `seq` (x : seqList xs)
 
 
 
