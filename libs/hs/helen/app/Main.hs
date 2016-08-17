@@ -18,6 +18,7 @@ import System.Environment (getArgs)
 import Data.List (stripPrefix)
 
 import Helen.Core
+import Helen.Core.Types
 
 main :: IO ()
 main = do
@@ -34,7 +35,7 @@ main = do
                   }
     putStrLn $ "Helen is running on port " ++ show (port sets)
     helen <- initHelen
-    _ <- runLuciProgram helen (logLevel sets) $ program (port sets)
+    _ <- runHelenProgram helen (logLevel sets) $ program (port sets)
     putStrLn "Helen finished."
   where
     setSettings [] s = s

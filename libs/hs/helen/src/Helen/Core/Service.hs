@@ -11,7 +11,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Helen.Core.Service
   ( initServiceManager
-  , registerService
+--  , registerService
   ) where
 
 
@@ -39,27 +39,27 @@ data ServiceCall = ServiceCall
 initServiceManager :: ServiceManager
 initServiceManager = ServiceManager HashMap.empty
 
-registerService :: Service
-                -> LuciProgram Helen ()
-registerService rs@(RemoteService clientId serviceName) = do
-    helen <- get
-    -- unregister service on client disconnect
-    subscribeUnregister helen clientId (const . modify $ insideHelen hmUngister)
-    -- register this service now
-    put $ insideHelen hmRegister helen
-  where
-    hmRegister = HashMap.insert serviceName rs
-    hmUngister = HashMap.delete serviceName
-    insideHelen f h@Helen{serviceManager = ServiceManager sm} = h{serviceManager = ServiceManager $ f sm}
-
-
-processMessage :: (ClientId, Message)
-               -> LuciProgram Helen ()
-processMessage (clientId, msg@(MsgRun serviceName _ _)) = do
-  helen <- get
-  -- return message for now
-  sendMessage helen clientId msg
-  return ()
+--registerService :: Service
+--                -> HelenWorld ()
+--registerService rs@(RemoteService clientId serviceName) = do
+--    helen <- get
+--    -- unregister service on client disconnect
+--    subscribeUnregister helen clientId (const . modify $ insideHelen hmUngister)
+--    -- register this service now
+--    put $ insideHelen hmRegister helen
+--  where
+--    hmRegister = HashMap.insert serviceName rs
+--    hmUngister = HashMap.delete serviceName
+--    insideHelen f h@Helen{serviceManager = ServiceManager sm} = h{serviceManager = ServiceManager $ f sm}
+--
+--
+--processMessage :: (ClientId, Message)
+--               -> HelenWorld ()
+--processMessage (clientId, msg@(MsgRun serviceName _ _)) = do
+--  helen <- get
+--  -- return message for now
+--  sendMessage helen clientId msg
+--  return ()
 
 --data Message
 --  = MsgRun !ServiceName !JSON.Object ![ByteString]

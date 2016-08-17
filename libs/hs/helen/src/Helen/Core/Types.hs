@@ -20,7 +20,13 @@ module Helen.Core.Types
     Helen (..), ClientId (..)
   , Client (..)
     -- * Working with services
-  , Service (..), ServiceManager (..)
+  , Service (..), ServiceManager (..), ServicePool (..)
+    -- * Monad support
+  , HelenWorld, HelenRoom, HelenMonad (..)
+  , runHelenProgram, forkHelen
+    -- * Lenses
+  , msgChannel, serviceManager
+  , incomingMsgs, idleInstances, busyInstances
   ) where
 
 import Data.Unique
@@ -29,13 +35,13 @@ import Data.Hashable
 import Luci.Messages
 import Luci.Connect
 import qualified Data.HashMap.Strict as HashMap
-import           Data.Functor.Identity (Identity(..))
+import qualified Data.Sequence as Seq
 import qualified Control.Monad.STM as STM
 import qualified Control.Concurrent.STM.TVar as STM
 import qualified Control.Concurrent.STM.TChan as STM
+import           Control.Concurrent (forkIO)
 import           Control.Lens
 import           Control.Monad.Base (MonadBase)
-import           Control.Monad.IO.Class
 import           Control.Monad.Trans.Control
 import           Control.Monad.Trans.Class
 import           Control.Monad.State.Lazy
@@ -50,7 +56,7 @@ newtype ClientId = ClientId Unique
 
 -- | Information about a connected client
 data Client = Client
-  { queueMessage :: !(Message -> LuciProgram Helen ())
+  { queueMessage :: !(Message -> HelenWorld ())
     -- ^ Queue message directly to a client message channel;
     --   normally, modules should use `sendMessage` message from Helen to send messages.
   , clientAddr   :: !String
@@ -59,35 +65,51 @@ data Client = Client
 
 -- | The program state type
 data Helen = Helen
-  { msgChannel          :: !(STM.TChan (ClientId, Message))
+  { _msgChannel         :: !(STM.TChan (ClientId, Message))
     -- ^ The very core of Helen, all message processing goes through this channel
-  , sendMessage         :: !(ClientId -> Message -> LuciProgram Helen ())
+  , sendMessage         :: !(ClientId -> Message -> HelenWorld ())
     -- ^ Send a message to a given client (by client id)
-  , registerClient      :: !(Client -> LuciProgram Helen (ClientId, LuciProgram Helen ()))
+  , registerClient      :: !(Client -> HelenWorld (ClientId, HelenWorld ()))
     -- ^ Register a send-message callback;
     --   Returns own cliendId and an unregister callback
-  , subscribeUnregister :: !(ClientId -> (ClientId -> LuciProgram Helen ()) -> LuciProgram Helen ())
+  , subscribeUnregister :: !(ClientId -> (ClientId -> HelenWorld ()) -> HelenWorld ())
     -- ^ Anyone can subscribe for event "client unregistered".
     -- This will be called when a client with a given id cannot receive message anymore
-  , serviceManager      :: !ServiceManager
+  , _serviceManager      :: !ServiceManager
     -- ^ Keeps track of all services
   }
 
+-- | The very core of Helen, all message processing goes through this channel
+msgChannel :: Functor f => ((STM.TChan (ClientId, Message)) -> f (STM.TChan (ClientId, Message))) -> Helen -> f Helen
+msgChannel k h = fmap (\newC -> h { _msgChannel = newC }) (k (_msgChannel h))
+
+-- | Keeps track of all services
+serviceManager :: Functor f => (ServiceManager -> f ServiceManager) -> Helen -> f Helen
+serviceManager k h  = fmap (\newM -> h { _serviceManager = newM }) (k (_serviceManager h))
 
 -- | A handle representing TCP client connected as a service
 data Service = RemoteService !ClientId !ServiceName
 
+-- | Service pool manages available instances of services
+data ServicePool = ServicePool
+  { _incomingMsgs  :: !(Seq.Seq (ClientId, Message))
+    -- ^ store pending service tasks
+  , _idleInstances :: !(Seq.Seq Service)
+    -- ^ round-robin sequence of idle service instances
+  , _busyInstances :: !(HashMap.HashMap ClientId (CallId, Service))
+    -- ^ map of busy instances, so that it is easy to find instance that finished a task
+  }
+
 
 -- | Keep all services in one place
-newtype ServiceManager
-  = ServiceManager (HashMap.HashMap ServiceName Service)
+newtype ServiceManager = ServiceManager (HashMap.HashMap ServiceName ServicePool)
 
 
 
 
-
-
-
+----------------------------------------------------------------------------------------------------
+-- * Monad for Helen
+----------------------------------------------------------------------------------------------------
 
 
 
@@ -132,3 +154,24 @@ instance MonadState Helen HelenWorld where
 
 instance HelenMonad HelenWorld where
   liftHelen hr = state (runIdentity . runStateT (unRoom hr))
+
+
+-- | Run a program in IO monad.
+runHelenProgram :: Helen -> LogLevel -> HelenWorld r -> IO (r,Helen)
+runHelenProgram s ll (HelenWorld p) = do
+    hvar <- STM.newTVarIO s
+    r <- runStdoutLoggingT . filterLogger (\_ l -> l >= ll) $ runReaderT p hvar
+    h <- STM.atomically $ STM.readTVar hvar
+    return (r,h)
+
+-- | Fork an execution into a new thread
+forkHelen :: HelenWorld () -> HelenWorld ()
+forkHelen x = liftBaseWith $ \run -> void . forkIO . void $ run x
+
+
+----------------------------------------------------------------------------------------------------
+-- * Lenses
+----------------------------------------------------------------------------------------------------
+
+makeLenses ''ServicePool
+--makeLenses ''Helen

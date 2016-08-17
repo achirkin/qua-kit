@@ -31,10 +31,8 @@ import System.Mem.Weak
 import qualified Control.Monad.STM as STM
 import qualified Control.Concurrent.STM.TMVar as STM
 import qualified Control.Concurrent.STM.TChan as STM
-import           Control.Concurrent (forkIO)
-import           Control.Monad.Trans.Control (liftBaseWith)
 import           Control.Monad.Trans.Class
-import           Control.Monad (void, forever, when)
+import           Control.Monad (forever, when)
 
 import qualified Data.Conduit.Network as Network
 import qualified Data.ByteString.Lazy.Char8 as LazyBSC
@@ -50,10 +48,10 @@ initHelen = do
   -- message channel
   ch <- STM.newTChanIO
   -- mutable base of clients
-  clientStore <- STM.newTMVarIO (HashMap.empty :: HashMap.HashMap ClientId (Client, LuciProgram Helen ()))
+  clientStore <- STM.newTMVarIO (HashMap.empty :: HashMap.HashMap ClientId (Client, HelenWorld ()))
   -- construct helen
   return Helen
-    { msgChannel = ch
+    { _msgChannel = ch
     , sendMessage = \cId msg -> do
          mc <- fmap (HashMap.lookup cId) . liftIO . STM.atomically $ STM.readTMVar clientStore
          case mc of
@@ -78,24 +76,24 @@ initHelen = do
     , subscribeUnregister = \cId action -> liftIO . STM.atomically $
         STM.takeTMVar clientStore >>=
           STM.putTMVar clientStore . HashMap.update (\(c, u) -> Just (c, u >> action cId)) cId
-    , serviceManager = initServiceManager
+    , _serviceManager = initServiceManager
     }
 
 
 -- | Run main program
 program :: Int -- ^ Port
-        -> LuciProgram Helen ()
+        -> HelenWorld ()
 program port = do
   -- Run all connections in a separate thread. Warning! Helen state is not shared!
-  _ <- liftBaseWith $ \run -> forkIO . void . run $ helenChannels port
+  forkHelen $ helenChannels port
   -- Now process message queue
-  ch <- msgChannel <$> get
+  ch <- _msgChannel <$> get
   forever $ (liftIO . STM.atomically $ STM.readTChan ch) >>= processMessage
 
 
 
 processMessage :: (ClientId, Message)
-               -> LuciProgram Helen ()
+               -> HelenWorld ()
 processMessage (clientId, msg) = do
   helen <- get
   -- return message for now
@@ -107,7 +105,7 @@ processMessage (clientId, msg) = do
 -- | Start a TCP server to listen to connections;
 --   Each time message comes, it registered together with callback in a global message channel.
 helenChannels :: Int                  -- ^ Port
-              -> LuciProgram Helen ()
+              -> HelenWorld ()
 helenChannels port = Network.runGeneralTCPServer connSettings $ helenChannels'
   where
     connSettings = Network.serverSettings port "*4"
@@ -115,7 +113,7 @@ helenChannels port = Network.runGeneralTCPServer connSettings $ helenChannels'
 
 -- | Use existing connection to run a message-processing conduit
 helenChannels' :: Network.AppData
-               -> LuciProgram Helen ()
+               -> HelenWorld ()
 helenChannels' appData = do
     -- here we store messages to be sent back to client
     sendQueue <- liftIO . STM.atomically $ STM.newTChan
@@ -157,8 +155,8 @@ helenChannels' appData = do
                     liftIO . STM.atomically . STM.writeTChan sendQueue . Just . makeMessage $ MsgError msgerr
                   -- If all is good, put message into Helen's msgChannel
                   JSON.Success msg -> do
-                    helen <- get
-                    liftIO . STM.atomically $ STM.writeTChan (msgChannel helen) (clientId, msg)
+                    ch <- _msgChannel <$> get
+                    liftIO . STM.atomically $ STM.writeTChan ch (clientId, msg)
               sink
             -- send data back to client if it was early-processed
             Just (ProcessedData d) ->  do
@@ -168,7 +166,7 @@ helenChannels' appData = do
             Just (ProcessingError e) -> logWarnN (Text.pack (show (e :: LuciError Text.Text))) >> sink
 
     -- asynchroniously send messages
-    _ <- liftBaseWith $ \run -> forkIO . void . run $ source $$ writeMessages =$= outgoing
+    forkHelen $ source $$ writeMessages =$= outgoing
     -- receive messages in current thread (another thread per connection anyway)
     runConduit $ incoming
               =&= parseMsgsPanicCatching
