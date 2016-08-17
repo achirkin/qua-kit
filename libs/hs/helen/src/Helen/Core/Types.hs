@@ -1,4 +1,3 @@
-
 -----------------------------------------------------------------------------
 --
 -- Module      :  Helen.Core.Types
@@ -14,6 +13,8 @@
 -----------------------------------------------------------------------------
 {-# LANGUAGE OverloadedStrings, GeneralizedNewtypeDeriving  #-}
 {-# LANGUAGE MultiParamTypeClasses, FlexibleInstances, TypeFamilies #-}
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE TemplateHaskell #-}
 module Helen.Core.Types
   ( -- * Base server-client relationship
     Helen (..), ClientId (..)
@@ -29,13 +30,17 @@ import Luci.Messages
 import Luci.Connect
 import qualified Data.HashMap.Strict as HashMap
 import           Data.Functor.Identity (Identity(..))
+import qualified Control.Monad.STM as STM
+import qualified Control.Concurrent.STM.TVar as STM
 import qualified Control.Concurrent.STM.TChan as STM
+import           Control.Lens
 import           Control.Monad.Base (MonadBase)
 import           Control.Monad.IO.Class
 import           Control.Monad.Trans.Control
 import           Control.Monad.Trans.Class
 import           Control.Monad.State.Lazy
 import qualified Control.Monad.Trans.State
+import           Control.Monad.Trans.Reader
 import           Control.Monad.Logger
 import           Crypto.Random (MonadRandom (..))
 
@@ -84,31 +89,13 @@ newtype ServiceManager
 
 
 
----- | This data type wraps all necessary type transformers to run Luci service.
-----   It has an embeded state `s` that is preserved throughout program execution.
-----   The state `s` is a data type defined by a user;
-----   for instance, it can be a unit type @()@ if one does not need to have a state at all.
---newtype LuciProgram s t = LuciProgram { unProgram :: StateT s (LoggingT IO) t }
---  deriving (Functor, Applicative, Monad, MonadIO, MonadBase IO)
---
---instance MonadBaseControl IO (LuciProgram s) where
---  type StM (LuciProgram s) a = (a, s)
---  liftBaseWith f = LuciProgram $ liftBaseWith $ \q -> f (q . unProgram)
---  restoreM = LuciProgram . restoreM
---
---instance MonadRandom (LuciProgram s) where
---  getRandomBytes = liftIO . getRandomBytes
---
---instance MonadLogger (LuciProgram s) where
---  monadLoggerLog a b c d = LuciProgram . lift $ monadLoggerLog a b c d
---
---instance MonadState s (LuciProgram s) where
---  get = LuciProgram get
---  put = LuciProgram . put
---  state = LuciProgram . state
 
 
+-- | Define helen monad as a `MonadState Helen` plus additional transformation from pure monad `HelenRoom`
+class MonadState Helen m => HelenMonad m where
+  liftHelen :: HelenRoom a -> m a
 
+-- | Variant of Helen state monad without `IO` to do pure evaluation.
 newtype HelenRoom t = HelenRoom { unRoom :: StateT Helen Identity t }
   deriving (Functor, Applicative, Monad, MonadBase Identity)
 
@@ -117,11 +104,15 @@ instance MonadState Helen HelenRoom where
   put = HelenRoom . put
   state = HelenRoom . state
 
-newtype HelenWorld t = HelenWorld { unWorld :: StateT Helen (LoggingT IO) t }
+instance HelenMonad HelenRoom where
+  liftHelen = id
+
+-- | IO-full variant of Helen state with multithread-preserved state and logging.
+newtype HelenWorld t = HelenWorld { unWorld :: ReaderT (STM.TVar Helen) (LoggingT IO) t}
   deriving (Functor, Applicative, Monad, MonadIO, MonadBase IO)
 
 instance MonadBaseControl IO HelenWorld where
-  type StM HelenWorld a = (a, Helen)
+  type StM HelenWorld a = a
   liftBaseWith f = HelenWorld $ liftBaseWith $ \q -> f (q . unWorld)
   restoreM = HelenWorld . restoreM
 
@@ -132,6 +123,12 @@ instance MonadLogger HelenWorld where
   monadLoggerLog a b c d = HelenWorld . lift $ monadLoggerLog a b c d
 
 instance MonadState Helen HelenWorld where
-  get = HelenWorld get
-  put = HelenWorld . put
-  state = HelenWorld . state
+  get = HelenWorld $ ask >>= liftIO . STM.readTVarIO
+  put h = HelenWorld $ ask >>= liftIO . STM.atomically . flip STM.writeTVar h
+  state f = HelenWorld $ ask >>= \v -> liftIO . STM.atomically $ do
+      (r,h) <- f <$> STM.readTVar v
+      STM.writeTVar v h
+      return r
+
+instance HelenMonad HelenWorld where
+  liftHelen hr = state (runIdentity . runStateT (unRoom hr))
