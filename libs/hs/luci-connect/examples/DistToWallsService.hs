@@ -25,7 +25,7 @@ import qualified Data.Text as Text
 import Data.Conduit
 import Data.Monoid ((<>))
 import Data.ByteString (ByteString)
---import qualified Data.ByteString as BS
+import qualified Data.ByteString as BS
 import qualified Data.ByteString.Internal as BSI
 --import qualified Data.Vector.Storable as V
 import qualified Data.Text.Lazy as LText
@@ -69,7 +69,10 @@ processMessages = do
 -- | Respond to one message at a time
 responseMsgs :: Message -> Conduit Message (LuciProgram ()) Message
 -- Respond only to run messages with correct input
-responseMsgs (MsgRun "DistanceToWalls" pams [pts]) | Just (Success scId) <- fromJSON <$> HashMap.lookup "ScID" pams = liftIO (deserializePoints pts) >>= evaluate scId
+responseMsgs (MsgRun "DistanceToWalls" pams [pts]) | Just (Success scId) <- fromJSON <$> HashMap.lookup "ScID" pams = do
+    liftIO $ print pams
+    liftIO $ print $ makeAReference pts "sfdsfff" 1 Nothing
+    liftIO (deserializePoints pts) >>= evaluate scId
 -- Log luci errors
 responseMsgs (MsgError s) = logWarnN $ "[Luci error message] " <> s
 responseMsgs msg = logInfoN . ("[Ignore Luci message] " <>) . showJSON . toJSON . fst $ makeMessage msg
@@ -77,12 +80,13 @@ responseMsgs msg = logInfoN . ("[Ignore Luci message] " <>) . showJSON . toJSON 
 
 evaluate :: Int -> [G.Vector3 Float] -> Conduit Message (LuciProgram ()) Message
 evaluate scId pts = do
+  liftIO $ print $ length pts
   mscenario <- obtainScenario scId
   case mscenario of
     Nothing -> return ()
     Just scenario -> do
-      liftIO . print $ Lens.view (geofeatures . traverse . geometry . Lens.lens polygonLines const) scenario
-      let result = map (\v -> G.dot v v) pts
+      let segments = Lens.view (geofeatures . traverse . geometry . Lens.lens polygonLines const) scenario
+          result = map (`distToClosest` segments) pts
       resultBytes <- liftIO $ serializeValules result
       yield $ resultMessage resultBytes
   where
@@ -103,6 +107,23 @@ evaluate scId pts = do
     toVect [a,b] = G.vector3 (realToFrac a) (realToFrac b) 0
     toVect [a] = G.vector3 (realToFrac a) 0 0
     toVect [] = G.vector3 0 0 0
+    cross u v | (a,b,c) <- G.unpackV3 u
+              , (x,y,z) <- G.unpackV3 v = G.vector3 (b*z - c*y) (c*x - a*z) (a*y - b*x)
+    distToClosest x (s:ss) = min (distToSegment x s) (distToClosest x ss)
+    distToClosest _ []     = read "Infinity"
+    distToSegment :: G.Vector3 Float -> (G.Vector3 Float, G.Vector3 Float) -> Float
+    distToSegment x (a,b) = sqrt $ if makeSence then min labx (lv*lv/lab) else labx
+      where
+        v = cross ab ax
+        makeSence = G.dot ax ab > 0 && G.dot bx ab < 0 && lab > 0
+        ab = b - a
+        ax = x - a
+        bx = x - b
+        lax = G.dot ax ax
+        lbx = G.dot bx bx
+        lab = G.dot ab ab
+        labx = min lax lbx
+        lv =  G.dot v v
 
 -- | Try our best to get scenario by its ScID
 obtainScenario :: Int -> ConduitM Message Message (LuciProgram ()) (Maybe (GeoFeatureCollection JSON.Object))
@@ -136,7 +157,7 @@ deserializePoints (BSI.PS fptr off len) = withForeignPtr fptr $ \ptr -> mapM (\i
     x <- peekByteOff ptr i
     y <- peekByteOff ptr (i + 4)
     z <- peekByteOff ptr (i + 8)
-    return (G.vector3 x y z)) [off,off+12..off+len]
+    return (G.vector3 x y z)) [off,off+12..off+len-12]
 
 -- | convert a list of floating points to a bytestring
 serializeValules :: [Float] -> IO ByteString

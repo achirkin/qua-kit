@@ -103,7 +103,7 @@ data AttachmentReference = AttachmentReference
   , attMD5    :: !String       -- ^ MD5 hash value of an attachment.
   , attIndex  :: !Int          -- ^ Position of an attachment in a Luci protocol message.
   , attName   :: !(Maybe Text) -- ^ Optional name of an attachment.
-  }
+  } deriving (Eq, Show)
 
 -- | Check an attachment;
 --   returns true if an attachment length and an MD5 hash are correct.
@@ -259,7 +259,7 @@ parseMessage (MessageHeader (JSON.Object js), bss)
   | Just (JSON.Number n) <- HashMap.lookup "cancel" js    = Success $ MsgCancel (round n)
   | Just (JSON.Number n) <- HashMap.lookup "newCallID" js = Success $ MsgNewCallID (round n)
   | Just (JSON.Object o) <- HashMap.lookup "result" js    = Success $ MsgResult luciInfo (ServiceResult o) $ seqList bss
-  | Just (JSON.Object o) <- HashMap.lookup "progess" js   = Success $ MsgProgress luciInfo perc (ServiceResult o) $ seqList bss
+  | Just (JSON.Object o) <- HashMap.lookup "progress" js   = Success $ MsgProgress luciInfo perc (ServiceResult o) $ seqList bss
   | Just (JSON.String s) <- HashMap.lookup "error" js     = Success $ MsgError s
   | otherwise = Error "None of registered keys are found (run,cancel,newCallID,result,progress,error)"
   where
