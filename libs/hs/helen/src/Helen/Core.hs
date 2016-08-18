@@ -16,26 +16,25 @@ module Helen.Core
   , Client (), clientAddr
   ) where
 
+import qualified Control.Concurrent.STM.TMVar as STM
+import qualified Control.Concurrent.STM.TChan as STM
+import qualified Control.Monad.STM as STM
+import           Control.Monad.Trans.Class (lift)
+import           Control.Monad (forever, when)
 import qualified Data.Aeson as JSON
---import Data.Text (Text)
-import qualified Data.Text as Text
-import Data.Conduit
-import Data.Unique
-import Data.Monoid ((<>))
+import           Data.Conduit
+import qualified Data.Conduit.Network as Network
+import qualified Data.ByteString.Lazy.Char8 as LazyBSC
 import qualified Data.HashMap.Strict as HashMap
+import           Data.Maybe (fromMaybe)
+import           Data.Monoid ((<>))
+import qualified Data.Text as Text
+import           Data.Unique
+import           System.Mem.Weak
 
 import Luci.Messages
 import Luci.Connect
 import Luci.Connect.Base
-import System.Mem.Weak
-import qualified Control.Monad.STM as STM
-import qualified Control.Concurrent.STM.TMVar as STM
-import qualified Control.Concurrent.STM.TChan as STM
-import           Control.Monad.Trans.Class
-import           Control.Monad (forever, when)
-
-import qualified Data.Conduit.Network as Network
-import qualified Data.ByteString.Lazy.Char8 as LazyBSC
 
 import Helen.Core.Types
 import Helen.Core.Service
@@ -69,9 +68,7 @@ initHelen = do
                        let unreg = snd <$> HashMap.lookup cId cs
                        STM.putTMVar clientStore $ HashMap.delete cId cs
                        return unreg
-                    case munreg of
-                      Nothing -> return ()
-                      Just u  -> u
+                    fromMaybe (return ()) munreg
                 )
     , subscribeUnregister = \cId action -> liftIO . STM.atomically $
         STM.takeTMVar clientStore >>=
@@ -106,7 +103,7 @@ processMessage (clientId, msg) = do
 --   Each time message comes, it registered together with callback in a global message channel.
 helenChannels :: Int                  -- ^ Port
               -> HelenWorld ()
-helenChannels port = Network.runGeneralTCPServer connSettings $ helenChannels'
+helenChannels port = Network.runGeneralTCPServer connSettings helenChannels'
   where
     connSettings = Network.serverSettings port "*4"
 
@@ -142,7 +139,7 @@ helenChannels' appData = do
           rawproc <- await
           case rawproc of
             -- do some finalization actions, e.g. notify Helen that client is disconnected
-            Nothing -> do
+            Nothing ->
               liftIO . STM.atomically $ STM.unGetTChan sendQueue Nothing
             -- do actual message processing
             Just (Processing m@(h,_)) -> do

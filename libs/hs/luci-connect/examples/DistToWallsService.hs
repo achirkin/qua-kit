@@ -72,14 +72,16 @@ responseMsgs msg = logInfoN . ("[Ignore Luci message] " <>) . showJSON . toJSON 
 
 evaluate :: Int -> [G.Vector3 Float] -> Conduit Message (LuciProgram ()) Message
 evaluate scId pts = do
+  logInfoN "***Received a task***"
   mscenario <- obtainScenario scId
   case mscenario of
-    Nothing -> return ()
+    Nothing -> yield . MsgError $ "Could not get scenario from luci (" <> Text.pack (show scId) <> ")"
     Just scenario -> do
       let segments = Lens.view (geofeatures . traverse . geometry . Lens.lens polygonLines const) scenario
           result = map (`distToClosest` segments) pts
       resultBytes <- liftIO $ serializeValules result
       yield $ resultMessage resultBytes
+      logInfoN "***Sent results back****"
   where
     polygonLines ::  GeospatialGeometry -> [(G.Vector3 Float, G.Vector3 Float)]
     polygonLines NoGeometry = []

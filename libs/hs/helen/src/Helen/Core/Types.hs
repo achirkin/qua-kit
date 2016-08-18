@@ -80,12 +80,12 @@ data Helen = Helen
   }
 
 -- | The very core of Helen, all message processing goes through this channel
-msgChannel :: Functor f => ((STM.TChan (ClientId, Message)) -> f (STM.TChan (ClientId, Message))) -> Helen -> f Helen
-msgChannel k h = fmap (\newC -> h { _msgChannel = newC }) (k (_msgChannel h))
+msgChannel :: Functor f => (STM.TChan (ClientId, Message) -> f (STM.TChan (ClientId, Message))) -> Helen -> f Helen
+msgChannel k h = fmap (\newC -> h { _msgChannel = newC }) (k $ _msgChannel h)
 
 -- | Keeps track of all services
 serviceManager :: Functor f => (ServiceManager -> f ServiceManager) -> Helen -> f Helen
-serviceManager k h  = fmap (\newM -> h { _serviceManager = newM }) (k (_serviceManager h))
+serviceManager k h  = fmap (\newM -> h { _serviceManager = newM }) (k $ _serviceManager h)
 
 -- | A handle representing TCP client connected as a service
 data Service = RemoteService !ClientId !ServiceName
@@ -174,4 +174,3 @@ forkHelen x = liftBaseWith $ \run -> void . forkIO . void $ run x
 ----------------------------------------------------------------------------------------------------
 
 makeLenses ''ServicePool
---makeLenses ''Helen
