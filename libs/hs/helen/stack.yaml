@@ -9,13 +9,13 @@ packages:
   - .
   - location:
       git: https://github.com/achirkin/qua-kit.git
-      commit: 7c6049075f22f0d6a117d5d69c694f87da8b4cae
+      commit: 12d819121536fe16bd3e3acee9b9df1347aee10c
     extra-dep: true
     subdirs:
     - libs/hs/luci-connect
   - location:
       git: https://github.com/achirkin/qua-kit.git
-      commit: 7c6049075f22f0d6a117d5d69c694f87da8b4cae
+      commit: 12d819121536fe16bd3e3acee9b9df1347aee10c
     extra-dep: true
     subdirs:
     - libs/hs/fastvec
