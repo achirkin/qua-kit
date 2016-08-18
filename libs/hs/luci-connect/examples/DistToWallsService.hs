@@ -18,16 +18,12 @@ import Luci.Connect
 import Luci.Connect.Base
 import Luci.Messages
 import Data.Aeson as JSON
-import qualified Data.Aeson.Types as JSON
---import Data.Aeson.Types
 import Data.Text (Text)
 import qualified Data.Text as Text
 import Data.Conduit
 import Data.Monoid ((<>))
 import Data.ByteString (ByteString)
-import qualified Data.ByteString as BS
 import qualified Data.ByteString.Internal as BSI
---import qualified Data.Vector.Storable as V
 import qualified Data.Text.Lazy as LText
 import qualified Data.Text.Lazy.Encoding as LText
 import qualified Data.HashMap.Strict as HashMap
@@ -35,8 +31,7 @@ import qualified Data.Geometry as G
 import           Data.Geospatial
 import           Data.LinearRing
 import qualified Control.Lens as Lens
---import qualified Data.Geometry.VectorMath as G
-import Foreign.C.Types (CFloat)
+
 
 ----------------------------------------------------------------------------------------------------
 
@@ -69,10 +64,7 @@ processMessages = do
 -- | Respond to one message at a time
 responseMsgs :: Message -> Conduit Message (LuciProgram ()) Message
 -- Respond only to run messages with correct input
-responseMsgs (MsgRun "DistanceToWalls" pams [pts]) | Just (Success scId) <- fromJSON <$> HashMap.lookup "ScID" pams = do
-    liftIO $ print pams
-    liftIO $ print $ makeAReference pts "sfdsfff" 1 Nothing
-    liftIO (deserializePoints pts) >>= evaluate scId
+responseMsgs (MsgRun "DistanceToWalls" pams [pts]) | Just (Success scId) <- fromJSON <$> HashMap.lookup "ScID" pams = liftIO (deserializePoints pts) >>= evaluate scId
 -- Log luci errors
 responseMsgs (MsgError s) = logWarnN $ "[Luci error message] " <> s
 responseMsgs msg = logInfoN . ("[Ignore Luci message] " <>) . showJSON . toJSON . fst $ makeMessage msg

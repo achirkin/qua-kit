@@ -12,12 +12,6 @@ packages:
       commit: 7c6049075f22f0d6a117d5d69c694f87da8b4cae
     extra-dep: true
     subdirs:
-    - libs/hs/luci-connect
-  - location:
-      git: https://github.com/achirkin/qua-kit.git
-      commit: 7c6049075f22f0d6a117d5d69c694f87da8b4cae
-    extra-dep: true
-    subdirs:
     - libs/hs/fastvec
   - location:
       git: https://github.com/achirkin/hs-geojson

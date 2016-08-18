@@ -37,7 +37,7 @@ library
         Luci.Messages
     build-depends:
         base >=4.8.2 && <4.9,
-        conduit >=1.0.0 && <1.3,
+        conduit >=1.0.0,
         conduit-extra -any,
         monad-control -any,
         binary >=0.8.1,
@@ -55,7 +55,7 @@ library
         streaming-commons -any,
         mtl -any,
         time -any,
-        hashable >=1.2.4.0 && <1.3
+        hashable -any
     default-language: Haskell2010
     hs-source-dirs: src
     other-modules:
@@ -72,7 +72,7 @@ executable luci-test
         aeson -any,
         text -any,
         bytestring >=0.10.6.0,
-        conduit >=1.0.0 && <1.3,
+        conduit >=1.0.0,
         luci-connect -any
     default-language: Haskell2010
     hs-source-dirs: examples
@@ -88,7 +88,7 @@ executable luci-console
         aeson -any,
         text -any,
         bytestring >=0.10.6.0,
-        conduit >=1.0.0 && <1.3,
+        conduit >=1.0.0,
         conduit-extra -any,
         luci-connect -any
     default-language: Haskell2010
@@ -136,8 +136,8 @@ executable dist-walls-service
         text -any,
         vector -any,
         conduit -any,
-        conduit >=1.2.6.6 && <1.3,
-        unordered-containers >=0.2.7.0 && <0.3,
+        conduit >=1.2.6.6,
+        unordered-containers >=0.2.7.0,
         bytestring >=0.10.6.0,
         fastvec -any,
         geojson -any,

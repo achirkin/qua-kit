@@ -15,10 +15,10 @@ Luci-test is a command-line tool serving as a client or a server for sending Luc
 Run `stack install --flag luci-connect:luci-test` and then `luci-test` to see command-line options.
 Use it to test another implementation of Luci protocol.
 
-### adding-numbers-service
+### example services
 
-Adding-numbers-service is a simple example service that adds two numbers and returns result.
-Run `stack install --flag luci-connect:examples` and then `adding-numbers-service` to register it in Luci.
+The project contains serval simple example services.
+Run `stack install --flag luci-connect:examples` and then call one of the services to register it in Luci.
 This service is useful for checking if Luci is functional and also can be used as a service template.
 
 ## Luci reference
