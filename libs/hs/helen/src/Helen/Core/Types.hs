@@ -21,12 +21,14 @@ module Helen.Core.Types
   , Client (..)
     -- * Working with services
   , Service (..), ServiceManager (..), ServicePool (..)
+  , TargetedMessage (..), SourcedMessage (..)
     -- * Monad support
   , HelenWorld, HelenRoom, HelenMonad (..)
   , runHelenProgram, forkHelen
     -- * Lenses
   , msgChannel, serviceManager
   , incomingMsgs, idleInstances, busyInstances
+  , serviceMap, nextCallId
   ) where
 
 import Data.Unique
@@ -65,7 +67,7 @@ data Client = Client
 
 -- | The program state type
 data Helen = Helen
-  { _msgChannel         :: !(STM.TChan (ClientId, Message))
+  { _msgChannel         :: !(STM.TChan SourcedMessage)
     -- ^ The very core of Helen, all message processing goes through this channel
   , sendMessage         :: !(ClientId -> Message -> HelenWorld ())
     -- ^ Send a message to a given client (by client id)
@@ -80,7 +82,7 @@ data Helen = Helen
   }
 
 -- | The very core of Helen, all message processing goes through this channel
-msgChannel :: Functor f => (STM.TChan (ClientId, Message) -> f (STM.TChan (ClientId, Message))) -> Helen -> f Helen
+msgChannel :: Functor f => (STM.TChan SourcedMessage -> f (STM.TChan SourcedMessage)) -> Helen -> f Helen
 msgChannel k h = fmap (\newC -> h { _msgChannel = newC }) (k $ _msgChannel h)
 
 -- | Keeps track of all services
@@ -92,7 +94,7 @@ data Service = RemoteService !ClientId !ServiceName
 
 -- | Service pool manages available instances of services
 data ServicePool = ServicePool
-  { _incomingMsgs  :: !(Seq.Seq (ClientId, Message))
+  { _incomingMsgs  :: !(Seq.Seq SourcedMessage)
     -- ^ store pending service tasks
   , _idleInstances :: !(Seq.Seq Service)
     -- ^ round-robin sequence of idle service instances
@@ -102,10 +104,18 @@ data ServicePool = ServicePool
 
 
 -- | Keep all services in one place
-newtype ServiceManager = ServiceManager (HashMap.HashMap ServiceName ServicePool)
+data ServiceManager = ServiceManager
+  { _serviceMap :: !(HashMap.HashMap ServiceName ServicePool)
+    -- ^ store services by name
+  , _nextCallId :: !CallId
+    -- ^ keep track of last CallId to assign sequential numbers
+  }
 
+-- | Message with receiver
+data TargetedMessage = TargetedMessage !ClientId !Message
 
-
+-- | Message with sender
+data SourcedMessage = SourcedMessage !ClientId !Message
 
 ----------------------------------------------------------------------------------------------------
 -- * Monad for Helen
@@ -174,3 +184,4 @@ forkHelen x = liftBaseWith $ \run -> void . forkIO . void $ run x
 ----------------------------------------------------------------------------------------------------
 
 makeLenses ''ServicePool
+makeLenses ''ServiceManager

@@ -73,7 +73,7 @@ initHelen = do
     , subscribeUnregister = \cId action -> liftIO . STM.atomically $
         STM.takeTMVar clientStore >>=
           STM.putTMVar clientStore . HashMap.update (\(c, u) -> Just (c, u >> action cId)) cId
-    , _serviceManager = initServiceManager
+    , _serviceManager = defServiceManager
     }
 
 
@@ -89,9 +89,9 @@ program port = do
 
 
 
-processMessage :: (ClientId, Message)
+processMessage :: SourcedMessage
                -> HelenWorld ()
-processMessage (clientId, msg) = do
+processMessage (SourcedMessage clientId msg) = do
   helen <- get
   -- return message for now
   sendMessage helen clientId msg
@@ -153,7 +153,7 @@ helenChannels' appData = do
                   -- If all is good, put message into Helen's msgChannel
                   JSON.Success msg -> do
                     ch <- _msgChannel <$> get
-                    liftIO . STM.atomically $ STM.writeTChan ch (clientId, msg)
+                    liftIO . STM.atomically . STM.writeTChan ch $ SourcedMessage clientId msg
               sink
             -- send data back to client if it was early-processed
             Just (ProcessedData d) ->  do

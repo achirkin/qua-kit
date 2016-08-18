@@ -3,18 +3,16 @@ extra-deps:
 
 flags:
   luci-connect:
-    examples: false
-    luci-test: false
+    examples: true
+    luci-test: true
 packages:
   - .
   - location:
-      git: https://github.com/achirkin/qua-kit.git
-      commit: 12d819121536fe16bd3e3acee9b9df1347aee10c
+      git: https://github.com/achirkin/fastvec.git
+      commit: c5c91cac093a751e00958dacab4bc627ad17622b
     extra-dep: true
-    subdirs:
-    - libs/hs/fastvec
   - location:
-      git: https://github.com/achirkin/hs-geojson
+      git: https://github.com/achirkin/hs-geojson.git
       commit: ef613f30974278112725904894e22410816e7aef
     extra-dep: true
 

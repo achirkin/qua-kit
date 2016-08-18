@@ -10,34 +10,106 @@
 -----------------------------------------------------------------------------
 {-# LANGUAGE OverloadedStrings #-}
 module Helen.Core.Service
-  ( initServiceManager
+  ( defServiceManager
 --  , registerService
   ) where
 
 
-import Data.Text (Text)
+--import Data.Text (Text)
 --import Data.Hashable
 import qualified Data.HashMap.Strict as HashMap
-
+import Data.Sequence ((|>), ViewL(..))
+import qualified Data.Sequence as Seq
 --import qualified Control.Monad.STM as STM
 --import qualified Control.Concurrent.STM.TMVar as STM
 --import qualified Control.Concurrent.STM.TChan as STM
-
+import qualified Control.Lens as Lens
 
 import Helen.Core.Types
-import Luci.Connect
+--import Luci.Connect
 import Luci.Messages
 
 
-data ServiceCall = ServiceCall
-  { scClient :: !ClientId
-  , scService :: !ClientId
 
+defServiceManager :: ServiceManager
+defServiceManager = ServiceManager
+  { _serviceMap = HashMap.empty
+  , _nextCallId = 1
+  }
+
+defServicePool :: ServicePool
+defServicePool = ServicePool
+  { _incomingMsgs = Seq.empty
+  , _idleInstances = Seq.empty
+  , _busyInstances = HashMap.empty
   }
 
 
-initServiceManager :: ServiceManager
-initServiceManager = ServiceManager HashMap.empty
+--processRunMsg :: SourcedMessage
+--              -> ServiceManager
+--              -> ([TargetedMessage], ServiceManager)
+--processRunMsg (SourcedMessage requesterId msg@(MsgRun servName _ _)) man
+--  | Just pool  <- HashMap.insert servName (_serviceMap man) =
+--    ( [TargetedMessage requesterId $ MsgNewCallID callId]
+--    , man
+--      { _serviceMap = HashMap.insert servName pool' $ _serviceMap man
+--      , _nextCallId = callId + 1
+--      }
+--    )
+--  where
+--    callId = _nextCallId man
+--    pool' | Seq.EmptyL <- Seq.viewl (_idleInstances pool) = Lens.over incomingMsgs pool _
+
+
+-- | Update service pool according to message, and, maybe prepare a message for someone
+poolProcessMsg :: CallId -> SourcedMessage -> ServicePool -> (Maybe TargetedMessage, ServicePool)
+-- process run message - comes from client, gets to service
+poolProcessMsg callId smsg@(SourcedMessage requesterId msg@(MsgRun _ _ _)) pool
+    -- If there are no idle instance, then queue message
+  | EmptyL <- Seq.viewl (_idleInstances pool)
+      = ( Nothing
+        , Lens.over incomingMsgs (|> smsg) pool
+        )
+    -- If there are idle instances, then ask them to do job
+  | ins@(RemoteService i _) :< is <- Seq.viewl (_idleInstances pool)
+      = ( Just $ TargetedMessage i msg
+        , pool { _idleInstances = is
+               , _busyInstances = HashMap.insert i (callId, ins) (_busyInstances pool)
+               }
+        )
+-- cancel
+poolProcessMsg _ (SourcedMessage _ (MsgCancel _)) _
+  = error "MsgCancel should have not gone so far. Need to think how to handle cancels properly"
+poolProcessMsg _ (SourcedMessage _ (MsgNewCallID _)) _
+  = error "NewCallId is unexpected inside poolProcessMsg"
+-- I need to add client id to busy instancess or keep separate map callId->clientId.
+-- Another issue is to how to properly delete message from wherever it is on MsgCancel?
+--   Maybe an option is to have extended map callId -> (clientId,serviceName,?state?)
+--poolProcessMsg callId (SourcedMessage servClientId msg@(MsgResult _ _ _)) pool
+--  | Just (callId, serv) <- HashMap.lookup serviClientId $ _busyInstances pool
+--      = ( Just
+
+---- | A handle representing TCP client connected as a service
+--data Service = RemoteService !ClientId !ServiceName
+--
+---- | Service pool manages available instances of services
+--data ServicePool = ServicePool
+--  { _incomingMsgs  :: !(Seq.Seq (ClientId, Message))
+--    -- ^ store pending service tasks
+--  , _idleInstances :: !(Seq.Seq Service)
+--    -- ^ round-robin sequence of idle service instances
+--  , _busyInstances :: !(HashMap.HashMap ClientId (CallId, Service))
+--    -- ^ map of busy instances, so that it is easy to find instance that finished a task
+--  }
+--
+--
+---- | Keep all services in one place
+--data ServiceManager = ServiceManager
+--  { _serviceMap :: !(HashMap.HashMap ServiceName ServicePool)
+--    -- ^ store services by name
+--  , _nextCallId :: !CallId
+--    -- ^ keep track of last CallId to assign sequential numbers
+--  }
 
 --registerService :: Service
 --                -> HelenWorld ()
