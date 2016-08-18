@@ -72,7 +72,6 @@ responseMsgs msg = logInfoN . ("[Ignore Luci message] " <>) . showJSON . toJSON 
 
 evaluate :: Int -> [G.Vector3 Float] -> Conduit Message (LuciProgram ()) Message
 evaluate scId pts = do
-  liftIO $ print $ length pts
   mscenario <- obtainScenario scId
   case mscenario of
     Nothing -> return ()
