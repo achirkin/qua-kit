@@ -107,23 +107,27 @@ evaluate scId pts = do
     toVect [a,b] = G.vector3 (realToFrac a) (realToFrac b) 0
     toVect [a] = G.vector3 (realToFrac a) 0 0
     toVect [] = G.vector3 0 0 0
-    cross u v | (a,b,c) <- G.unpackV3 u
-              , (x,y,z) <- G.unpackV3 v = G.vector3 (b*z - c*y) (c*x - a*z) (a*y - b*x)
+
     distToClosest x (s:ss) = min (distToSegment x s) (distToClosest x ss)
     distToClosest _ []     = read "Infinity"
-    distToSegment :: G.Vector3 Float -> (G.Vector3 Float, G.Vector3 Float) -> Float
-    distToSegment x (a,b) = sqrt $ if makeSence then min labx (lv*lv/lab) else labx
-      where
-        v = cross ab ax
-        makeSence = G.dot ax ab > 0 && G.dot bx ab < 0 && lab > 0
-        ab = b - a
-        ax = x - a
-        bx = x - b
-        lax = G.dot ax ax
-        lbx = G.dot bx bx
-        lab = G.dot ab ab
-        labx = min lax lbx
-        lv =  G.dot v v
+
+
+distToSegment :: G.Vector3 Float -> (G.Vector3 Float, G.Vector3 Float) -> Float
+distToSegment x0 (x1,x2) = sqrt $ if between then d2 else min lu2 lv2
+   where
+     a = x2 - x1
+     u = x0 - x1
+     v = x2 - x0
+     between = G.dot a u > 0 && G.dot a v > 0
+     lu2 = G.dot u u
+     lv2 = G.dot v v
+     la2 = G.dot a a
+     c = cross a u
+     d2 = G.dot c c / la2
+
+cross :: G.Vector3 Float -> G.Vector3 Float -> G.Vector3 Float
+cross u v | (a,b,c) <- G.unpackV3 u
+          , (x,y,z) <- G.unpackV3 v = G.vector3 (b*z - c*y) (c*x - a*z) (a*y - b*x)
 
 -- | Try our best to get scenario by its ScID
 obtainScenario :: Int -> ConduitM Message Message (LuciProgram ()) (Maybe (GeoFeatureCollection JSON.Object))
