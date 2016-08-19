@@ -22,13 +22,14 @@ module Helen.Core.Types
     -- * Working with services
   , Service (..), ServiceManager (..), ServicePool (..)
   , TargetedMessage (..), SourcedMessage (..)
+  , RequestRun (..)
     -- * Monad support
   , HelenWorld, HelenRoom, HelenMonad (..)
   , runHelenProgram, forkHelen
     -- * Lenses
   , msgChannel, serviceManager
   , incomingMsgs, idleInstances, busyInstances
-  , serviceMap, nextCallId
+  , serviceMap, nextCallId, currentCalls, currentClients, namedPool
   ) where
 
 import Data.Unique
@@ -36,6 +37,8 @@ import Data.Hashable
 
 import Luci.Messages
 import Luci.Connect
+import Data.ByteString (ByteString)
+import qualified Data.Aeson as JSON
 import qualified Data.HashMap.Strict as HashMap
 import qualified Data.Sequence as Seq
 import qualified Control.Monad.STM as STM
@@ -94,7 +97,7 @@ data Service = RemoteService !ClientId !ServiceName
 
 -- | Service pool manages available instances of services
 data ServicePool = ServicePool
-  { _incomingMsgs  :: !(Seq.Seq SourcedMessage)
+  { _incomingMsgs  :: !(Seq.Seq RequestRun)
     -- ^ store pending service tasks
   , _idleInstances :: !(Seq.Seq Service)
     -- ^ round-robin sequence of idle service instances
@@ -110,6 +113,9 @@ data ServiceManager = ServiceManager
   , _nextCallId   :: !CallId
     -- ^ keep track of last CallId to assign sequential numbers
   , _currentCalls :: !(HashMap.HashMap CallId ServiceName)
+    -- ^ lookup service name by callId
+  , _currentClients :: !(HashMap.HashMap ClientId CallId)
+    -- ^ lookup callId by clientId
   }
 
 -- | Message with receiver
@@ -117,6 +123,12 @@ data TargetedMessage = TargetedMessage !ClientId !Message
 
 -- | Message with sender
 data SourcedMessage = SourcedMessage !ClientId !Message
+
+
+-- | MsgRun with assigned callId and clientId
+data RequestRun = RequestRun !CallId !ClientId !ServiceName !JSON.Object ![ByteString]
+
+
 
 ----------------------------------------------------------------------------------------------------
 -- * Monad for Helen
@@ -186,3 +198,14 @@ forkHelen x = liftBaseWith $ \run -> void . forkIO . void $ run x
 
 makeLenses ''ServicePool
 makeLenses ''ServiceManager
+
+
+
+-- | A lens to a service pool by name of a service
+namedPool :: Functor f
+          => ServiceName
+          -> (Maybe ServicePool -> f (Maybe ServicePool))
+          -> ServiceManager -> f ServiceManager
+namedPool sName k sm = fmap wrap (k . HashMap.lookup sName $ _serviceMap sm)
+  where
+    wrap mp = over serviceMap (HashMap.alter (const mp) sName) sm

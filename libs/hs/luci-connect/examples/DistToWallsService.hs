@@ -66,7 +66,7 @@ responseMsgs :: Message -> Conduit Message (LuciProgram ()) Message
 -- Respond only to run messages with correct input
 responseMsgs (MsgRun "DistanceToWalls" pams [pts]) | Just (Success scId) <- fromJSON <$> HashMap.lookup "ScID" pams = liftIO (deserializePoints pts) >>= evaluate scId
 -- Log luci errors
-responseMsgs (MsgError s) = logWarnN $ "[Luci error message] " <> s
+responseMsgs (MsgError _ s) = logWarnN $ "[Luci error message] " <> s
 responseMsgs msg = logInfoN . ("[Ignore Luci message] " <>) . showJSON . toJSON . fst $ makeMessage msg
 
 
@@ -75,7 +75,7 @@ evaluate scId pts = do
   logInfoN "***Received a task***"
   mscenario <- obtainScenario scId
   case mscenario of
-    Nothing -> yield . MsgError $ "Could not get scenario from luci (" <> Text.pack (show scId) <> ")"
+    Nothing -> yield . MsgError Nothing $ "Could not get scenario from luci (" <> Text.pack (show scId) <> ")"
     Just scenario -> do
       let segments = Lens.view (geofeatures . traverse . geometry . Lens.lens polygonLines const) scenario
           result = map (`distToClosest` segments) pts
@@ -140,7 +140,7 @@ obtainScenario scId = yield (getScenarioMessage scId) >> waitForScenario
                                 >> return Nothing
                Just (Success g) -> return $ Just g
         -- Luci error
-        Just (MsgError err) -> logWarnN ("[Get scenario message error] " <> err) >> return Nothing
+        Just (MsgError _ err) -> logWarnN ("[Get scenario message error] " <> err) >> return Nothing
         -- keep waiting for message
         Just msg -> (logInfoN . ("[Get scenario - ignore Luci message] " <>) . showJSON . toJSON . fst $ makeMessage msg)
             >> waitForScenario

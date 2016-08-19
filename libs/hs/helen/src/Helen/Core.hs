@@ -149,7 +149,7 @@ helenChannels' appData = do
                     let msgerr = Text.pack $ "Unexpected message: " ++ err
                                          ++ ". Received header: " ++ LazyBSC.unpack (JSON.encode h)
                     logWarnN msgerr
-                    liftIO . STM.atomically . STM.writeTChan sendQueue . Just . makeMessage $ MsgError msgerr
+                    liftIO . STM.atomically . STM.writeTChan sendQueue . Just . makeMessage $ MsgError Nothing msgerr
                   -- If all is good, put message into Helen's msgChannel
                   JSON.Success msg -> do
                     ch <- _msgChannel <$> get

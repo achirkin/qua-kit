@@ -230,7 +230,7 @@ data Message
     -- ^ result of a service execution,
     -- e.g. { callID: 57, duration: 0, serviceName: "St", taskID: 0, progress: 47, intermediateResult: null};
     -- params: 'callID', 'duration', 'serviceName', 'taskID', 'progress', 'intermediateResult', optional attachments
-  | MsgError !Text
+  | MsgError !(Maybe CallId) !Text
     -- ^ error message, e.g. {'error': 'We are in trouble!'};
     -- params: 'error'
 
@@ -244,7 +244,7 @@ attachment (MsgProgress _ _ _ bs) r = indexList bs (attIndex r - 1) >>= \x ->
     if checkAttachment r x then Just x else Nothing
 attachment (MsgCancel _) _ = Nothing
 attachment (MsgNewCallID _) _ = Nothing
-attachment (MsgError _) _ = Nothing
+attachment (MsgError _ _) _ = Nothing
 
 indexList :: [a] -> Int -> Maybe a
 indexList xs i = headMaybe $ drop i xs
@@ -260,7 +260,7 @@ parseMessage (MessageHeader (JSON.Object js), bss)
   | Just (JSON.Number n) <- HashMap.lookup "newCallID" js = Success $ MsgNewCallID (round n)
   | Just (JSON.Object o) <- HashMap.lookup "result" js    = Success $ MsgResult luciInfo (ServiceResult o) $ seqList bss
   | Just (JSON.Number n) <- HashMap.lookup "progress" js   = Success $ MsgProgress luciInfo (realToFrac n) (HashMap.lookup "intermediateResult" js >>= toResult) $ seqList bss
-  | Just (JSON.String s) <- HashMap.lookup "error" js     = Success $ MsgError s
+  | Just (JSON.String s) <- HashMap.lookup "error" js     = Success $ MsgError (HashMap.lookup "callID" js >>= toCallId) s
   | otherwise = Error "None of registered keys are found (run,cancel,newCallID,result,progress,error)"
   where
     luciInfo = case fromJSON (JSON.Object js) of
@@ -268,13 +268,16 @@ parseMessage (MessageHeader (JSON.Object js), bss)
                   Success li -> Just li
     toResult (JSON.Object o) = Just $ ServiceResult o
     toResult _ = Nothing
+    toCallId (JSON.Number n) = Just $ round n
+    toCallId _ = Nothing
 parseMessage (MessageHeader _, _) = Error "Invalid JSON type (expected object)."
 
 -- | Convert registered message type into generic message
 makeMessage :: Message -> LuciMessage
 makeMessage (MsgCancel n) = (MessageHeader $ JSON.object ["cancel" .= n], [])
 makeMessage (MsgNewCallID n) = (MessageHeader $ JSON.object ["newCallID" .= n], [])
-makeMessage (MsgError s) = (MessageHeader $ JSON.object ["error" .= s], [])
+makeMessage (MsgError Nothing s) = (MessageHeader $ JSON.object ["error" .= s], [])
+makeMessage (MsgError (Just i) s) = (MessageHeader $ JSON.object ["error" .= s, "callID" .= i], [])
 makeMessage (MsgRun (ServiceName s) js bss) =
   (MessageHeader . JSON.Object $ HashMap.insert "run" (JSON.String s) js, seqList bss)
 makeMessage (MsgResult mmi (ServiceResult sr) bss) =
