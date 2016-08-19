@@ -15,7 +15,7 @@ module Helen.Core.Service
   ) where
 
 
---import Data.Text (Text)
+import Data.Text (Text)
 --import Data.Hashable
 import qualified Data.HashMap.Strict as HashMap
 import Data.Sequence ((|>), ViewL(..))
@@ -24,6 +24,9 @@ import qualified Data.Sequence as Seq
 --import qualified Control.Concurrent.STM.TMVar as STM
 --import qualified Control.Concurrent.STM.TChan as STM
 import qualified Control.Lens as Lens
+import qualified Data.Aeson as JSON
+import           Data.ByteString (ByteString)
+import Data.Time (DiffTime)
 
 import Helen.Core.Types
 --import Luci.Connect
@@ -33,8 +36,9 @@ import Luci.Messages
 
 defServiceManager :: ServiceManager
 defServiceManager = ServiceManager
-  { _serviceMap = HashMap.empty
-  , _nextCallId = 1
+  { _serviceMap   = HashMap.empty
+  , _nextCallId   = 1
+  , _currentCalls = HashMap.empty
   }
 
 defServicePool :: ServicePool
@@ -89,6 +93,9 @@ poolProcessMsg _ (SourcedMessage _ (MsgNewCallID _)) _
 --  | Just (callId, serv) <- HashMap.lookup serviClientId $ _busyInstances pool
 --      = ( Just
 
+
+
+
 ---- | A handle representing TCP client connected as a service
 --data Service = RemoteService !ClientId !ServiceName
 --
@@ -133,6 +140,25 @@ poolProcessMsg _ (SourcedMessage _ (MsgNewCallID _)) _
 --  sendMessage helen clientId msg
 --  return ()
 
+processMessage :: SourcedMessage
+               -> HelenRoom [TargetedMessage]
+processMessage (SourcedMessage clientId (MsgRun sName pams bs)) = undefined
+
+-- | MsgRun with assigned callId and clientId
+data RequestRun = RequestRun !CallId !ClientId !ServiceName !JSON.Object ![ByteString]
+
+-- | MsgCancel with requester clientId
+data RequestCancel = RequestCancel !CallId !ClientId
+
+-- | MsgResult with target client
+data ResponseResult = ResponseResult !CallId !ClientId !ServiceName !DiffTime !ServiceResult ![ByteString]
+
+-- | MsgProgress with target client
+data ResponseProgress = ResponseProgress !CallId !ClientId !ServiceName !DiffTime !Percentage !(Maybe ServiceResult) ![ByteString]
+
+-- | MsgError with target client and callId
+data ResponseError = ResponseError !CallId !ClientId !Text
+
 --data Message
 --  = MsgRun !ServiceName !JSON.Object ![ByteString]
 --    -- ^ run service message, e.g. {'run': 'ServiceList'};
@@ -147,10 +173,10 @@ poolProcessMsg _ (SourcedMessage _ (MsgNewCallID _)) _
 --    -- ^ result of a service execution
 --    -- e.g. { callID: 57, duration: 0, serviceName: "ServiceList", taskID: 0, result: Object };
 --    -- params: 'callID', 'duration', 'serviceName', 'taskID', 'result', optional attachments
---  | MsgProgress !(Maybe LuciMsgInfo) !Percentage !ServiceResult ![ByteString]
+--  | MsgProgress !(Maybe LuciMsgInfo) !Percentage !(Maybe ServiceResult) ![ByteString]
 --    -- ^ result of a service execution,
---    -- e.g. { callID: 57, duration: 0, serviceName: "St", taskID: 0, percentage: 0, progress: null};
---    -- params: 'callID', 'duration', 'serviceName', 'taskID', 'percentage', 'progress', optional attachments
+--    -- e.g. { callID: 57, duration: 0, serviceName: "St", taskID: 0, progress: 47, intermediateResult: null};
+--    -- params: 'callID', 'duration', 'serviceName', 'taskID', 'progress', 'intermediateResult', optional attachments
 --  | MsgError !Text
 --    -- ^ error message, e.g. {'error': 'We are in trouble!'};
 --    -- params: 'error'

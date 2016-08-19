@@ -69,7 +69,7 @@ data Client = Client
 data Helen = Helen
   { _msgChannel         :: !(STM.TChan SourcedMessage)
     -- ^ The very core of Helen, all message processing goes through this channel
-  , sendMessage         :: !(ClientId -> Message -> HelenWorld ())
+  , sendMessage         :: !(TargetedMessage -> HelenWorld ())
     -- ^ Send a message to a given client (by client id)
   , registerClient      :: !(Client -> HelenWorld (ClientId, HelenWorld ()))
     -- ^ Register a send-message callback;
@@ -105,10 +105,11 @@ data ServicePool = ServicePool
 
 -- | Keep all services in one place
 data ServiceManager = ServiceManager
-  { _serviceMap :: !(HashMap.HashMap ServiceName ServicePool)
+  { _serviceMap   :: !(HashMap.HashMap ServiceName ServicePool)
     -- ^ store services by name
-  , _nextCallId :: !CallId
+  , _nextCallId   :: !CallId
     -- ^ keep track of last CallId to assign sequential numbers
+  , _currentCalls :: !(HashMap.HashMap CallId ServiceName)
   }
 
 -- | Message with receiver

@@ -51,7 +51,7 @@ initHelen = do
   -- construct helen
   return Helen
     { _msgChannel = ch
-    , sendMessage = \cId msg -> do
+    , sendMessage = \(TargetedMessage cId msg) -> do
          mc <- fmap (HashMap.lookup cId) . liftIO . STM.atomically $ STM.readTMVar clientStore
          case mc of
            Nothing -> return ()
@@ -94,7 +94,7 @@ processMessage :: SourcedMessage
 processMessage (SourcedMessage clientId msg) = do
   helen <- get
   -- return message for now
-  sendMessage helen clientId msg
+  sendMessage helen $ TargetedMessage clientId msg
   return ()
 
 
