@@ -40,6 +40,7 @@ module Luci.Connect
       -- | Re-exported logging facilities from `Control.Monad.Logger` module of @monad-logger@ package.
     , LogLevel (..)
     , logDebugN, logInfoN, logWarnN, logErrorN, logOtherN
+    , logDebugNS, logInfoNS, logWarnNS, logErrorNS, logOtherNS
       -- * Accessing IO
       -- | We follow the standard approach to perform IO actions: user `lifIO` operation
       --   from `Control.Monad.IO.Class` of @transformers@ package.

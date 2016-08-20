@@ -17,19 +17,21 @@
 {-# LANGUAGE TemplateHaskell #-}
 module Helen.Core.Types
   ( -- * Base server-client relationship
-    Helen (..), ClientId (..)
-  , Client (..)
+    Helen (..), ClientId (..), Client (..)
     -- * Working with services
-  , Service (..), ServiceManager (..), ServicePool (..)
-  , TargetedMessage (..), SourcedMessage (..)
-  , RequestRun (..)
+  , ServiceInstance (..), ServiceManager (..), ServicePool (..), ServiceInfo (..)
+  , TargetedMessage (..), SourcedMessage (..), SessionId (..), siName
+    -- * Categorized messages
+  , RequestRun (..), RequestCancel (..), ResponseResult (..), ResponseProgress (..), ResponseError (..)
+  , BelongsToSession (..)
     -- * Monad support
   , HelenWorld, HelenRoom, HelenMonad (..)
   , runHelenProgram, forkHelen
     -- * Lenses
   , msgChannel, serviceManager
   , incomingMsgs, idleInstances, busyInstances
-  , serviceMap, nextCallId, currentCalls, currentClients, namedPool
+  , serviceMap, nextToken, currentCalls, namedPool
+  , serviceInfo
   ) where
 
 import Data.Unique
@@ -38,6 +40,7 @@ import Data.Hashable
 import Luci.Messages
 import Luci.Connect
 import Data.ByteString (ByteString)
+import Data.Text (Text)
 import qualified Data.Aeson as JSON
 import qualified Data.HashMap.Strict as HashMap
 import qualified Data.Sequence as Seq
@@ -57,7 +60,15 @@ import           Crypto.Random (MonadRandom (..))
 
 -- | Represent a connected client
 newtype ClientId = ClientId Unique
-  deriving (Eq,Ord, Hashable)
+  deriving (Eq,Ord,Hashable)
+
+-- | ClientId plus a token from a corresponding run message
+data SessionId = SessionId !ClientId !Token
+  deriving (Eq,Ord)
+
+instance Hashable SessionId where
+  hashWithSalt s (SessionId i t) = hashWithSalt s i + hashWithSalt s t
+  hash (SessionId i t) = hash i + hash t
 
 -- | Information about a connected client
 data Client = Client
@@ -93,16 +104,33 @@ serviceManager :: Functor f => (ServiceManager -> f ServiceManager) -> Helen -> 
 serviceManager k h  = fmap (\newM -> h { _serviceManager = newM }) (k $ _serviceManager h)
 
 -- | A handle representing TCP client connected as a service
-data Service = RemoteService !ClientId !ServiceName
+data ServiceInstance = ServiceInstance !ClientId !ServiceName
+  deriving (Eq)
+
+-- | Full information about a service
+data ServiceInfo = ServiceInfo
+  { exampleCall :: !JSON.Value
+  , serviceName :: !ServiceName
+  , description :: !Text
+  , inputs  :: !(Maybe JSON.Value)
+  , outputs :: !(Maybe JSON.Value)
+  , constraints :: !(Maybe JSON.Value)
+  , quaQitCompliance :: !Bool
+  }
+
+
+-- | Helper to get service name
+siName :: ServiceInstance -> ServiceName
+siName (ServiceInstance _ sn) = sn
 
 -- | Service pool manages available instances of services
 data ServicePool = ServicePool
   { _incomingMsgs  :: !(Seq.Seq RequestRun)
     -- ^ store pending service tasks
-  , _idleInstances :: !(Seq.Seq Service)
+  , _idleInstances :: !(Seq.Seq ServiceInstance)
     -- ^ round-robin sequence of idle service instances
-  , _busyInstances :: !(HashMap.HashMap ClientId (CallId, Service))
-    -- ^ map of busy instances, so that it is easy to find instance that finished a task
+  , _serviceInfo   :: !ServiceInfo
+    -- ^ data coming with "RemoteRegister" message
   }
 
 
@@ -110,13 +138,15 @@ data ServicePool = ServicePool
 data ServiceManager = ServiceManager
   { _serviceMap   :: !(HashMap.HashMap ServiceName ServicePool)
     -- ^ store services by name
-  , _nextCallId   :: !CallId
-    -- ^ keep track of last CallId to assign sequential numbers
-  , _currentCalls :: !(HashMap.HashMap CallId ServiceName)
+  , _nextToken   :: !Token
+    -- ^ keep track of last Token to assign sequential numbers
+  , _currentCalls :: !(HashMap.HashMap SessionId ServiceName)
     -- ^ lookup service name by callId
-  , _currentClients :: !(HashMap.HashMap ClientId CallId)
-    -- ^ lookup callId by clientId
+  , _busyInstances :: !(HashMap.HashMap SessionId (ServiceInstance, SessionId))
+    -- ^ map of busy instances, so that it is easy to find instance that finished a task
   }
+
+
 
 -- | Message with receiver
 data TargetedMessage = TargetedMessage !ClientId !Message
@@ -124,10 +154,39 @@ data TargetedMessage = TargetedMessage !ClientId !Message
 -- | Message with sender
 data SourcedMessage = SourcedMessage !ClientId !Message
 
-
 -- | MsgRun with assigned callId and clientId
-data RequestRun = RequestRun !CallId !ClientId !ServiceName !JSON.Object ![ByteString]
+data RequestRun = RequestRun !SessionId !ServiceName !JSON.Object ![ByteString]
 
+-- | MsgCancel with requester clientId
+data RequestCancel = RequestCancel !SessionId
+
+-- | MsgResult with service clientId
+data ResponseResult = ResponseResult !SessionId !ServiceResult ![ByteString]
+
+-- | MsgProgress with service clientId
+data ResponseProgress = ResponseProgress !SessionId !Percentage !(Maybe ServiceResult) ![ByteString]
+
+-- | MsgError with service clientId
+data ResponseError = ResponseError !SessionId !Text
+
+class BelongsToSession a where
+  -- | get a session id from a message
+  sessionId :: a -> SessionId
+
+instance BelongsToSession TargetedMessage where
+  sessionId (TargetedMessage c msg) = SessionId c $ msgToken msg
+instance BelongsToSession SourcedMessage where
+  sessionId (SourcedMessage c msg) = SessionId c $ msgToken msg
+instance BelongsToSession RequestRun where
+  sessionId (RequestRun s _ _ _) = s
+instance BelongsToSession RequestCancel where
+  sessionId (RequestCancel s) = s
+instance BelongsToSession ResponseResult where
+  sessionId (ResponseResult s _ _) = s
+instance BelongsToSession ResponseProgress where
+  sessionId (ResponseProgress s _ _ _) = s
+instance BelongsToSession ResponseError where
+  sessionId (ResponseError s _) = s
 
 
 ----------------------------------------------------------------------------------------------------

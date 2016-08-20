@@ -11,12 +11,16 @@
 --
 -----------------------------------------------------------------------------
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE TemplateHaskell #-}
 module Main (main) where
 
-import Foreign
+import Foreign (withForeignPtr, peekByteOff, pokeByteOff)
 import Luci.Connect
 import Luci.Connect.Base
 import Luci.Messages
+import Control.Arrow ((&&&))
+import Control.Monad (void)
 import Data.Aeson as JSON
 import Data.Text (Text)
 import qualified Data.Text as Text
@@ -31,56 +35,74 @@ import qualified Data.Geometry as G
 import           Data.Geospatial
 import           Data.LinearRing
 import qualified Control.Lens as Lens
+import Control.Lens.Operators ((%%=), (%=))
 
 
 ----------------------------------------------------------------------------------------------------
 
+data ServiceState = ServiceState
+  { _currentRunToken :: Token
+  , _tokenGen :: Token
+  }
+
+Lens.makeLenses ''ServiceState
+
+genToken :: MonadState ServiceState m => m Token
+genToken = tokenGen %%= (id &&& (+1))
+
+
+
 -- | entry point
 main :: IO ()
-main = runReallySimpleLuciClient () $
+main = void . runReallySimpleLuciClient (ServiceState 0 0) $
    processTo =$= processMessages =$= processFrom
 
 -- | helper for parsing incoming messages
-processTo :: Conduit LuciMessage (LuciProgram ()) Message
+processTo :: Conduit LuciMessage (LuciProgram ServiceState) Message
 processTo = awaitForever $ \lmsg -> case parseMessage lmsg of
     Error s -> logWarnN $ "[Parsing header] " <> Text.pack s <> " Received: " <>  (showJSON . toJSON $ fst lmsg)
     Success m -> yield m
 
 -- | helper for sending outgoing messages
-processFrom :: Conduit Message (LuciProgram ()) (LuciProcessing Text LuciMessage)
+processFrom :: Conduit Message (LuciProgram ServiceState) (LuciProcessing Text LuciMessage)
 processFrom = awaitForever $ yieldMessage . makeMessage
 
 ----------------------------------------------------------------------------------------------------
 
 
 -- | The main program
-processMessages :: Conduit Message (LuciProgram ()) Message
+processMessages :: Conduit Message (LuciProgram ServiceState) Message
 processMessages = do
   -- send a first message to register as a service
-  yield registerMessage
+  regMsgToken <- genToken
+  yield $ registerMessage regMsgToken
   -- reply to all run requests
   awaitForever responseMsgs
 
 -- | Respond to one message at a time
-responseMsgs :: Message -> Conduit Message (LuciProgram ()) Message
+responseMsgs :: Message -> Conduit Message (LuciProgram ServiceState) Message
 -- Respond only to run messages with correct input
-responseMsgs (MsgRun "DistanceToWalls" pams [pts]) | Just (Success scId) <- fromJSON <$> HashMap.lookup "ScID" pams = liftIO (deserializePoints pts) >>= evaluate scId
+responseMsgs (MsgRun token "DistanceToWalls" pams [pts])
+  | Just (Success scId) <- fromJSON <$> HashMap.lookup "ScID" pams = do
+    currentRunToken %= const token
+    liftIO (deserializePoints pts) >>= evaluate scId
 -- Log luci errors
 responseMsgs (MsgError _ s) = logWarnN $ "[Luci error message] " <> s
 responseMsgs msg = logInfoN . ("[Ignore Luci message] " <>) . showJSON . toJSON . fst $ makeMessage msg
 
 
-evaluate :: Int -> [G.Vector3 Float] -> Conduit Message (LuciProgram ()) Message
+evaluate :: Int -> [G.Vector3 Float] -> Conduit Message (LuciProgram ServiceState) Message
 evaluate scId pts = do
+  curToken <- _currentRunToken <$> get
   logInfoN "***Received a task***"
   mscenario <- obtainScenario scId
   case mscenario of
-    Nothing -> yield . MsgError Nothing $ "Could not get scenario from luci (" <> Text.pack (show scId) <> ")"
+    Nothing -> yield . MsgError curToken $ "Could not get scenario from luci (" <> Text.pack (show scId) <> ")"
     Just scenario -> do
       let segments = Lens.view (geofeatures . traverse . geometry . Lens.lens polygonLines const) scenario
           result = map (`distToClosest` segments) pts
       resultBytes <- liftIO $ serializeValules result
-      yield $ resultMessage resultBytes
+      yield $ resultMessage curToken resultBytes
       logInfoN "***Sent results back****"
   where
     polygonLines ::  GeospatialGeometry -> [(G.Vector3 Float, G.Vector3 Float)]
@@ -123,16 +145,25 @@ cross u v | (a,b,c) <- G.unpackV3 u
           , (x,y,z) <- G.unpackV3 v = G.vector3 (b*z - c*y) (c*x - a*z) (a*y - b*x)
 
 -- | Try our best to get scenario by its ScID
-obtainScenario :: Int -> ConduitM Message Message (LuciProgram ()) (Maybe (GeoFeatureCollection JSON.Object))
-obtainScenario scId = yield (getScenarioMessage scId) >> waitForScenario
+obtainScenario :: Int -> ConduitM Message Message (LuciProgram ServiceState) (Maybe (GeoFeatureCollection JSON.Object))
+obtainScenario scId = do
+    scToken <- genToken
+    yield (getScenarioMessage scToken scId)
+    waitForScenario scToken
   where
-    waitForScenario = do
+    waitForScenario scToken = do
       mmsg <- await
       case mmsg of
         -- end of input
         Nothing -> logWarnN "[Get scenario] Conduit returned end of input" >> return Nothing
         -- a proper result
-        Just (MsgResult (Just LuciMsgInfo{lmiServiceName = "scenario.geojson.Get"}) (ServiceResult sc) _) ->
+        Just msg@(MsgResult rtoken (ServiceResult sc) _) ->
+          -- TODO remove dirty hack (rtoken == 9702953879202186) used to detect scenario.geojson.Get messages
+          if rtoken /= scToken && rtoken /= 9702953879202186
+          then do
+            logInfoN . ("[Get scenario - ignore Luci message] " <>) . showJSON . toJSON . fst $ makeMessage msg
+            waitForScenario scToken
+          else
             case JSON.fromJSON <$> (HashMap.lookup "geometry_output" sc >>= lookupVal "geometry") of
                Nothing          -> logWarnN ("[Get scenario] Cannot find (result.geometry_output.geometry). Result was: " <> showJSON (JSON.Object sc))
                                 >> return Nothing
@@ -142,8 +173,9 @@ obtainScenario scId = yield (getScenarioMessage scId) >> waitForScenario
         -- Luci error
         Just (MsgError _ err) -> logWarnN ("[Get scenario message error] " <> err) >> return Nothing
         -- keep waiting for message
-        Just msg -> (logInfoN . ("[Get scenario - ignore Luci message] " <>) . showJSON . toJSON . fst $ makeMessage msg)
-            >> waitForScenario
+        Just msg -> do
+           logInfoN . ("[Get scenario - ignore Luci message] " <>) . showJSON . toJSON . fst $ makeMessage msg
+           waitForScenario scToken
     lookupVal s (JSON.Object o) = HashMap.lookup s o
     lookupVal _ _ = Nothing
 
@@ -167,8 +199,8 @@ showJSON = LText.toStrict . LText.decodeUtf8 . encode
 ----------------------------------------------------------------------------------------------------
 
 -- | A message we send to register in luci
-registerMessage :: Message
-registerMessage = MsgRun "RemoteRegister" o []
+registerMessage :: Token -> Message
+registerMessage token = MsgRun token "RemoteRegister" o []
   where
     o = HashMap.fromList
       [ "description"        .= String "Show the distance to the closest building line"
@@ -198,8 +230,8 @@ registerMessage = MsgRun "RemoteRegister" o []
       ]
 
 -- | This is what we return to Luci
-resultMessage :: ByteString -> Message
-resultMessage bs = MsgResult Nothing (ServiceResult o) [bs]
+resultMessage :: Token -> ByteString -> Message
+resultMessage t bs = MsgResult t (ServiceResult o) [bs]
   where
     o = HashMap.fromList
       [ "mode"   .= String "points"
@@ -208,7 +240,7 @@ resultMessage bs = MsgResult Nothing (ServiceResult o) [bs]
       ]
 
 -- | Ask luci for a scenario
-getScenarioMessage :: Int -> Message
-getScenarioMessage scId = MsgRun "scenario.geojson.Get" o []
+getScenarioMessage :: Token -> Int -> Message
+getScenarioMessage token scId = MsgRun token "scenario.geojson.Get" o []
   where
     o = HashMap.fromList [ "ScID" .= scId ]

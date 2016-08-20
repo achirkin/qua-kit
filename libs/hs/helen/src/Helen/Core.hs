@@ -37,7 +37,7 @@ import Luci.Connect
 import Luci.Connect.Base
 
 import Helen.Core.Types
-import Helen.Core.Service
+import Helen.Core.Service (defServiceManager)
 
 
 
@@ -148,8 +148,13 @@ helenChannels' appData = do
                   JSON.Error err -> do
                     let msgerr = Text.pack $ "Unexpected message: " ++ err
                                          ++ ". Received header: " ++ LazyBSC.unpack (JSON.encode h)
+                        rtoken = case h of
+                            MessageHeader (JSON.Object o) -> case JSON.fromJSON <$> HashMap.lookup "token" o of
+                                    Just (JSON.Success t) -> t
+                                    _ -> (-1)
+                            _ -> (-1)
                     logWarnN msgerr
-                    liftIO . STM.atomically . STM.writeTChan sendQueue . Just . makeMessage $ MsgError Nothing msgerr
+                    liftIO . STM.atomically . STM.writeTChan sendQueue . Just . makeMessage $ MsgError rtoken msgerr
                   -- If all is good, put message into Helen's msgChannel
                   JSON.Success msg -> do
                     ch <- _msgChannel <$> get

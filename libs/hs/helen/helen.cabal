@@ -21,6 +21,7 @@ library
     exposed-modules:
         Helen.Core
         Helen.Core.Service
+        Helen.Core.Service.Registration
         Helen.Core.Types
     build-depends:
         base >=4.8 && <5,

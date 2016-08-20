@@ -22,8 +22,8 @@ module Luci.Messages
       -- * Common Messages
     , RemoteRegister (..)
       -- * Parsed message types
-    , Message (..), LuciMsgInfo (..), parseMessage, makeMessage
-    , ServiceName (..), CallId (..), Percentage (..), ServiceResult (..)
+    , Message (..), parseMessage, makeMessage, msgToken
+    , ServiceName (..), Token (..), Percentage (..), ServiceResult (..)
     ) where
 
 
@@ -39,9 +39,7 @@ import           Crypto.Hash.Algorithms (MD5)
 import           Data.Aeson as JSON
 import qualified Data.Aeson.Types as JSON
 import           Data.Hashable
-import           Data.Maybe (fromMaybe)
 import           Data.String (IsString)
-import           Data.Time (DiffTime)
 
 import Luci.Connect.Base
 import Luci.Connect.Internal
@@ -161,12 +159,8 @@ newtype ServiceName = ServiceName Text
   deriving (Eq,Ord,Show,IsString, FromJSON, ToJSON, Hashable)
 
 -- | Luci callID is used to reference client's calls to luci and services
-newtype CallId = CallId Int64
-  deriving (Eq,Ord,Show,Enum,Num,Real,Integral, FromJSON, ToJSON, Hashable)
-
--- | Luci taskID is used in the context of luci workflows to refer to tasks
-newtype TaskId = TaskId Int64
-  deriving (Eq,Ord,Show,Enum,Num,Real,Integral, FromJSON, ToJSON, Hashable)
+newtype Token = Token Int64
+  deriving (Eq,Ord,Show,Num,Enum, Real,Integral,FromJSON, ToJSON, Hashable)
 
 -- | Percentage [0..100]%; used in luci messages to indicate state of a service computation
 newtype Percentage = Percentage Double
@@ -177,73 +171,45 @@ newtype ServiceResult = ServiceResult JSON.Object
   deriving (Eq, Show, FromJSON, ToJSON)
 
 
--- | This portion of information is filled by middleware (Luci or Helen).
---   Service do not need to fill it, but client normally receives it as a result.
-data LuciMsgInfo = LuciMsgInfo
-  { lmiCallId      :: !CallId
-    -- ^ Unique callID is given by luci for every user request.
-  , lmiDuration    :: !DiffTime
-    -- ^ Duration of a service execution
-  , lmiServiceName :: !ServiceName
-    -- ^ Name of running service
-  , lmiTaskId      :: !TaskId
-    -- ^ taskID is assigned if a service runs within a workflow
-  } deriving (Eq, Show)
-
-instance FromJSON LuciMsgInfo where
-  parseJSON (Object v) = LuciMsgInfo
-      <$> v .: "callID"
-      <*> (f <$> v .:? "duration")
-      <*> v .: "serviceName"
-      <*> (fromMaybe 0 <$> v .:? "taskID")
-    where
-      f :: Maybe Double -> DiffTime
-      f Nothing = 0
-      f (Just x) = realToFrac $ x/1000
-  parseJSON invalid = JSON.typeMismatch "LuciMsgInfo" invalid
-
-instance ToJSON LuciMsgInfo where
-  toJSON LuciMsgInfo{..} = object
-    [ "callID"      .= lmiCallId
-    , "duration"    .= ((realToFrac lmiDuration :: Double) * 1000)
-    , "serviceName" .= lmiServiceName
-    , "taskID"      .= lmiTaskId
-    ]
-
 
 -- | Represent all registerd message types. Anything else is garbage!
 data Message
-  = MsgRun !ServiceName !JSON.Object ![ByteString]
-    -- ^ run service message, e.g. {'run': 'ServiceList'};
-    -- params: 'run', [(name, value)], optional attachments
-  | MsgCancel !CallId
-    -- ^ cancel service message, e.g. {'cancel': 25};
-    -- params: 'callID'
-  | MsgNewCallID !CallId
-    -- ^ Luci call id, { newCallID: 57 };
-    -- params: 'newCallID'
-  | MsgResult !(Maybe LuciMsgInfo) !ServiceResult ![ByteString]
+  = MsgRun !Token !ServiceName !JSON.Object ![ByteString]
+    -- ^ run service message, e.g. {'run': 'ServiceList', 'token': 'sfhrEg2sh'};
+    -- params: 'token', 'run', [(name, value)], optional attachments
+  | MsgCancel !Token
+    -- ^ cancel service message, e.g. {'cancel': 'sfhrEg2sh'};
+    -- params: 'token': 'sfhrEg2sh' };
+  | MsgResult !Token !ServiceResult ![ByteString]
     -- ^ result of a service execution
-    -- e.g. { callID: 57, duration: 0, serviceName: "ServiceList", taskID: 0, result: Object };
-    -- params: 'callID', 'duration', 'serviceName', 'taskID', 'result', optional attachments
-  | MsgProgress !(Maybe LuciMsgInfo) !Percentage !(Maybe ServiceResult) ![ByteString]
+    -- e.g. { 'token': 'sfhrEg2sh', 'result': Object };
+    -- params: 'token', 'result', optional attachments
+  | MsgProgress !Token !Percentage !(Maybe ServiceResult) ![ByteString]
     -- ^ result of a service execution,
-    -- e.g. { callID: 57, duration: 0, serviceName: "St", taskID: 0, progress: 47, intermediateResult: null};
-    -- params: 'callID', 'duration', 'serviceName', 'taskID', 'progress', 'intermediateResult', optional attachments
-  | MsgError !(Maybe CallId) !Text
-    -- ^ error message, e.g. {'error': 'We are in trouble!'};
-    -- params: 'error'
+    -- e.g. { 'token': 'sfhrEg2sh', 'progress': 47, 'intermediateResult': null};
+    -- params: 'token', 'progress', 'intermediateResult', optional attachments
+  | MsgError !Token !Text
+    -- ^ error message, e.g. { 'token': 'sfhrEg2sh', 'error': 'We are in trouble!'};
+    -- params: 'token', 'error'
+
+-- | All messsages have a unique for connection token
+msgToken :: Message -> Token
+msgToken (MsgRun t _ _ _) = t
+msgToken (MsgCancel t) = t
+msgToken (MsgResult t _ _) = t
+msgToken (MsgProgress t _ _ _) = t
+msgToken (MsgError t _) = t
+
 
 -- | Get attachment from a message, checking its MD5 hash
 attachment :: Message -> AttachmentReference -> Maybe ByteString
-attachment (MsgRun _ _ bs) r = indexList bs (attIndex r - 1) >>= \x ->
+attachment (MsgRun _ _ _ bs) r = indexList bs (attIndex r - 1) >>= \x ->
     if checkAttachment r x then Just x else Nothing
 attachment (MsgResult _  _ bs) r = indexList bs (attIndex r - 1) >>= \x ->
     if checkAttachment r x then Just x else Nothing
 attachment (MsgProgress _ _ _ bs) r = indexList bs (attIndex r - 1) >>= \x ->
     if checkAttachment r x then Just x else Nothing
 attachment (MsgCancel _) _ = Nothing
-attachment (MsgNewCallID _) _ = Nothing
 attachment (MsgError _ _) _ = Nothing
 
 indexList :: [a] -> Int -> Maybe a
@@ -255,43 +221,38 @@ indexList xs i = headMaybe $ drop i xs
 -- | Parse all registered message types
 parseMessage :: LuciMessage -> Result Message
 parseMessage (MessageHeader (JSON.Object js), bss)
-  | Just (JSON.String s) <- HashMap.lookup "run" js       = Success $ MsgRun (ServiceName s) js $ seqList bss
-  | Just (JSON.Number n) <- HashMap.lookup "cancel" js    = Success $ MsgCancel (round n)
-  | Just (JSON.Number n) <- HashMap.lookup "newCallID" js = Success $ MsgNewCallID (round n)
-  | Just (JSON.Object o) <- HashMap.lookup "result" js    = Success $ MsgResult luciInfo (ServiceResult o) $ seqList bss
-  | Just (JSON.Number n) <- HashMap.lookup "progress" js   = Success $ MsgProgress luciInfo (realToFrac n) (HashMap.lookup "intermediateResult" js >>= toResult) $ seqList bss
-  | Just (JSON.String s) <- HashMap.lookup "error" js     = Success $ MsgError (HashMap.lookup "callID" js >>= toCallId) s
+  | Just (JSON.String s) <- HashMap.lookup "run" js      = Success $ MsgRun token (ServiceName s) js $ seqList bss
+  | Just (JSON.Number t) <- HashMap.lookup "cancel" js   = Success $ MsgCancel (round t)
+  | Just (JSON.Object o) <- HashMap.lookup "result" js   = Success $ MsgResult token (ServiceResult o) $ seqList bss
+  | Just (JSON.Number n) <- HashMap.lookup "progress" js = Success $ MsgProgress token (realToFrac n) (HashMap.lookup "intermediateResult" js >>= toResult) $ seqList bss
+  | Just (JSON.String s) <- HashMap.lookup "error" js    = Success $ MsgError token s
   | otherwise = Error "None of registered keys are found (run,cancel,newCallID,result,progress,error)"
   where
-    luciInfo = case fromJSON (JSON.Object js) of
-                  Error _ -> Nothing
-                  Success li -> Just li
+    token = case JSON.fromJSON <$> HashMap.lookup "token" js of
+              -- TODO remove dirty hack (rtoken == 9702953879202186) used to detect scenario.geojson.Get messages
+              Nothing          -> if HashMap.lookup "serviceName" js == Just (JSON.String "scenario.geojson.Get")
+                                  then 9702953879202186
+                                  else 77777777777
+              Just (Error _)   -> 66666666666
+              Just (Success t) -> t
     toResult (JSON.Object o) = Just $ ServiceResult o
     toResult _ = Nothing
-    toCallId (JSON.Number n) = Just $ round n
-    toCallId _ = Nothing
 parseMessage (MessageHeader _, _) = Error "Invalid JSON type (expected object)."
+
 
 -- | Convert registered message type into generic message
 makeMessage :: Message -> LuciMessage
-makeMessage (MsgCancel n) = (MessageHeader $ JSON.object ["cancel" .= n], [])
-makeMessage (MsgNewCallID n) = (MessageHeader $ JSON.object ["newCallID" .= n], [])
-makeMessage (MsgError Nothing s) = (MessageHeader $ JSON.object ["error" .= s], [])
-makeMessage (MsgError (Just i) s) = (MessageHeader $ JSON.object ["error" .= s, "callID" .= i], [])
-makeMessage (MsgRun (ServiceName s) js bss) =
-  (MessageHeader . JSON.Object $ HashMap.insert "run" (JSON.String s) js, seqList bss)
-makeMessage (MsgResult mmi (ServiceResult sr) bss) =
-  (MessageHeader . JSON.object $ ("result" .= sr): miMaybe mmi, seqList bss)
-  where
-    miMaybe (Just mi) | JSON.Object mio <- JSON.toJSON mi = HashMap.toList mio
-    miMaybe _ = []
-makeMessage (MsgProgress mmi p msr bss) =
-  (MessageHeader . JSON.object $ ("progress" .= JSON.toJSON p) : srMaybe msr ++ miMaybe mmi, seqList bss)
+makeMessage (MsgCancel token) = (MessageHeader $ JSON.object ["cancel" .= token], [])
+makeMessage (MsgError token s) = (MessageHeader $ JSON.object ["error" .= s, "token" .= token], [])
+makeMessage (MsgRun token sname js bss) =
+  (MessageHeader . JSON.object $ ["run" .= sname,  "token" .= token] ++ HashMap.toList js, seqList bss)
+makeMessage (MsgResult token (ServiceResult sr) bss) =
+  (MessageHeader . JSON.object $ ["result" .= sr,  "token" .= token], seqList bss)
+makeMessage (MsgProgress token p msr bss) =
+  (MessageHeader . JSON.object $ ["progress" .= p, "token" .= token] ++ srMaybe msr, seqList bss)
   where
     srMaybe (Just (ServiceResult x)) = ["intermediateResult" .= x]
     srMaybe _ = []
-    miMaybe (Just mi) | JSON.Object mio <- JSON.toJSON mi = HashMap.toList mio
-    miMaybe _ = []
 
 
 seqList :: [a] -> [a]
