@@ -17,7 +17,6 @@ module Main (main) where
 
 import Foreign (withForeignPtr, peekByteOff, pokeByteOff)
 import Luci.Connect
-import Luci.Connect.Base
 import Luci.Messages
 import Control.Arrow ((&&&))
 import Control.Monad (void)
@@ -28,8 +27,6 @@ import Data.Conduit
 import Data.Monoid ((<>))
 import Data.ByteString (ByteString)
 import qualified Data.ByteString.Internal as BSI
-import qualified Data.Text.Lazy as LText
-import qualified Data.Text.Lazy.Encoding as LText
 import qualified Data.HashMap.Strict as HashMap
 import qualified Data.Geometry as G
 import           Data.Geospatial
@@ -54,18 +51,7 @@ genToken = tokenGen %%= (id &&& (+1))
 
 -- | entry point
 main :: IO ()
-main = void . runReallySimpleLuciClient (ServiceState 0 0) $
-   processTo =$= processMessages =$= processFrom
-
--- | helper for parsing incoming messages
-processTo :: Conduit LuciMessage (LuciProgram ServiceState) Message
-processTo = awaitForever $ \lmsg -> case parseMessage lmsg of
-    Error s -> logWarnN $ "[Parsing header] " <> Text.pack s <> " Received: " <>  (showJSON . toJSON $ fst lmsg)
-    Success m -> yield m
-
--- | helper for sending outgoing messages
-processFrom :: Conduit Message (LuciProgram ServiceState) (LuciProcessing Text LuciMessage)
-processFrom = awaitForever $ yieldMessage . makeMessage
+main = void $ runReallySimpleLuciClient (ServiceState 0 0) processMessages
 
 ----------------------------------------------------------------------------------------------------
 
@@ -86,6 +72,9 @@ responseMsgs (MsgRun token "DistanceToWalls" pams [pts])
   | Just (Success scId) <- fromJSON <$> HashMap.lookup "ScID" pams = do
     currentRunToken %= const token
     liftIO (deserializePoints pts) >>= evaluate scId
+responseMsgs (MsgRun token _ _ _) = do
+    currentRunToken %= const token
+    yield $ MsgError token "Incorrect input in the 'run' message."
 -- Log luci errors
 responseMsgs (MsgError _ s) = logWarnN $ "[Luci error message] " <> s
 responseMsgs msg = logInfoN . ("[Ignore Luci message] " <>) . showJSON . toJSON . fst $ makeMessage msg
@@ -193,8 +182,7 @@ serializeValules :: [Float] -> IO ByteString
 serializeValules xs = BSI.create (length xs * 4) $ \ptr -> mapM_ (uncurry $ pokeByteOff ptr) $ zip [0,4..] xs
 
 
-showJSON :: JSON.Value -> Text
-showJSON = LText.toStrict . LText.decodeUtf8 . encode
+
 
 ----------------------------------------------------------------------------------------------------
 

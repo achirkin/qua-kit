@@ -51,7 +51,7 @@ initHelen = do
   -- construct helen
   return Helen
     { _msgChannel = ch
-    , sendMessage = \msg@(TargetedMessage _ cId _) -> do
+    , sendDirectMessage = \msg@(TargetedMessage _ cId _) -> do
          mc <- fmap (HashMap.lookup cId) . liftIO . STM.atomically $ STM.readTMVar clientStore
          case mc of
            Nothing -> return ()
@@ -89,19 +89,8 @@ program port = do
   ch <- _msgChannel <$> get
   forever $ (liftIO . STM.atomically $ STM.readTChan ch) >>= (\msg -> do
       (msgs, helen) <- liftHelen $ processMessage msg >>= (\xs -> (,) xs <$> get)
-      mapM (sendMessage helen) msgs
+      mapM (sendDirectMessage helen) msgs
     )
-
-
-
---processMessage :: SourcedMessage
---               -> HelenWorld ()
---processMessage (SourcedMessage clientId msg) = do
---  helen <- get
---  -- return message for now
---  sendMessage helen $ TargetedMessage clientId clientId msg
---  return ()
-
 
 
 -- | Start a TCP server to listen to connections;
@@ -136,7 +125,8 @@ helenChannels' appData = do
                lift unregister
                n <- liftIO $ STM.atomically (messagesLeft sendQueue)
                when (n > 0) . logInfoN $
-                  "Client " <> Text.pack (show $ Network.appSockAddr appData) <> " disconnected leaving " <> Text.pack (show n)
+                  "Client " <> Text.pack (show $ Network.appSockAddr appData)
+                            <> " disconnected leaving " <> Text.pack (show n)
                             <> " messages not delivered."
             Just v  -> yield v >> source
         -- main message parsing

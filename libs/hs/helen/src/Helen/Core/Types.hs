@@ -22,7 +22,7 @@ module Helen.Core.Types
   , ServiceInstance (..), ServiceManager (..), ServicePool (..), ServiceInfo (..)
   , TargetedMessage (..), SourcedMessage (..), SessionId (..), siName
     -- * Categorized messages
-  , RequestRun (..), RequestCancel (..), ResponseResult (..), ResponseProgress (..), ResponseError (..)
+  , RequestRun (..)
   , BelongsToSession (..)
     -- * Monad support
   , HelenWorld, HelenRoom, HelenMonad (..)
@@ -40,7 +40,6 @@ import Data.Hashable
 import Luci.Messages
 import Luci.Connect
 import Data.ByteString (ByteString)
-import Data.Text (Text)
 import qualified Data.Aeson as JSON
 import qualified Data.HashMap.Strict as HashMap
 import qualified Data.Sequence as Seq
@@ -83,7 +82,7 @@ data Client = Client
 data Helen = Helen
   { _msgChannel         :: !(STM.TChan SourcedMessage)
     -- ^ The very core of Helen, all message processing goes through this channel
-  , sendMessage         :: !(TargetedMessage -> HelenWorld ())
+  , sendDirectMessage   :: !(TargetedMessage -> HelenWorld ())
     -- ^ Send a message to a given client (by client id)
   , registerClient      :: !(Client -> HelenWorld (ClientId, HelenWorld ()))
     -- ^ Register a send-message callback;
@@ -107,18 +106,6 @@ serviceManager k h  = fmap (\newM -> h { _serviceManager = newM }) (k $ _service
 data ServiceInstance = ServiceInstance !ClientId !ServiceName
   deriving (Eq)
 
--- | Full information about a service
-data ServiceInfo = ServiceInfo
-  { exampleCall :: !JSON.Value
-  , serviceName :: !ServiceName
-  , description :: !Text
-  , inputs  :: !(Maybe JSON.Value)
-  , outputs :: !(Maybe JSON.Value)
-  , constraints :: !(Maybe JSON.Value)
-  , quaQitCompliance :: !Bool
-  }
-
-
 -- | Helper to get service name
 siName :: ServiceInstance -> ServiceName
 siName (ServiceInstance _ sn) = sn
@@ -141,7 +128,7 @@ data ServiceManager = ServiceManager
   , _nextToken   :: !Token
     -- ^ keep track of last Token to assign sequential numbers
   , _currentCalls :: !(HashMap.HashMap SessionId ServiceName)
-    -- ^ lookup service name by callId
+    -- ^ lookup service name by session id of a client calling this service
   , _busyInstances :: !(HashMap.HashMap SessionId (ServiceInstance, SessionId))
     -- ^ map of busy instances, so that it is easy to find instance that finished a task
   }
@@ -157,18 +144,6 @@ data SourcedMessage = SourcedMessage !ClientId !Message
 -- | MsgRun with assigned callId and clientId
 data RequestRun = RequestRun !SessionId !ServiceName !JSON.Object ![ByteString]
 
--- | MsgCancel with requester clientId
-data RequestCancel = RequestCancel !SessionId
-
--- | MsgResult with service clientId
-data ResponseResult = ResponseResult !SessionId !ServiceResult ![ByteString]
-
--- | MsgProgress with service clientId
-data ResponseProgress = ResponseProgress !SessionId !Percentage !(Maybe ServiceResult) ![ByteString]
-
--- | MsgError with service clientId
-data ResponseError = ResponseError !SessionId !Text
-
 class BelongsToSession a where
   -- | get a session id from a message
   sessionId :: a -> SessionId
@@ -179,14 +154,6 @@ instance BelongsToSession SourcedMessage where
   sessionId (SourcedMessage c msg) = SessionId c $ msgToken msg
 instance BelongsToSession RequestRun where
   sessionId (RequestRun s _ _ _) = s
-instance BelongsToSession RequestCancel where
-  sessionId (RequestCancel s) = s
-instance BelongsToSession ResponseResult where
-  sessionId (ResponseResult s _ _) = s
-instance BelongsToSession ResponseProgress where
-  sessionId (ResponseProgress s _ _ _) = s
-instance BelongsToSession ResponseError where
-  sessionId (ResponseError s _) = s
 
 
 ----------------------------------------------------------------------------------------------------

@@ -18,28 +18,28 @@ module Luci.Messages
       AttachmentReference (..)
     , checkAttachment, makeAReference, attachment
       -- * Helpers
-    , simpleMessage, fromMessage
+    , simpleMessage, fromMessage, luciMessageToken
       -- * Common Messages
-    , RemoteRegister (..)
+    , ServiceInfo (..)
       -- * Parsed message types
     , Message (..), parseMessage, makeMessage, msgToken
     , ServiceName (..), Token (..), Percentage (..), ServiceResult (..)
+    , resultJSON, objectJSON, showJSON
     ) where
 
 
 
 import qualified Data.ByteString as BS
---import qualified Data.ByteString.Base64 as BS
 import           Data.HashMap.Strict as HashMap
 import qualified Crypto.Hash as Hash
 import           Crypto.Hash.Algorithms (MD5)
---import           Control.Monad (when)
-
-
 import           Data.Aeson as JSON
 import qualified Data.Aeson.Types as JSON
+import           Data.Maybe (fromMaybe)
 import           Data.Hashable
 import           Data.String (IsString)
+import qualified Data.Text.Lazy as LText
+import qualified Data.Text.Lazy.Encoding as LText
 
 import Luci.Connect.Base
 import Luci.Connect.Internal
@@ -53,29 +53,45 @@ simpleMessage v = (toMsgHead v, [])
 fromMessage :: FromJSON a => LuciMessage -> Result a
 fromMessage (MessageHeader v,_) = fromJSON v
 
--- | Register a service in Luci
-data RemoteRegister = RemoteRegister
-  { exampleCall :: !Value
-  , serviceName :: !Text
-  , description :: !Text
-  , inputs  :: !(Maybe Value)
-  , outputs :: !(Maybe Value)
+-- | Try get token from raw JSON message
+luciMessageToken :: LuciMessage -> Maybe Token
+luciMessageToken (MessageHeader (JSON.Object js), _)
+  | Just (JSON.Number t) <- HashMap.lookup "token" js = Just $ round t
+luciMessageToken _ = Nothing
+
+-- | Full information about a service
+data ServiceInfo = ServiceInfo
+  { exampleCall      :: !JSON.Value
+  , serviceName      :: !ServiceName
+  , description      :: !Text
+  , inputs           :: !(Maybe JSON.Value)
+  , outputs          :: !(Maybe JSON.Value)
+  , constraints      :: !(Maybe JSON.Value)
+  , quaQitCompliance :: !Bool
   }
 
-instance ToJSON RemoteRegister where
-  toJSON RemoteRegister{..} = objectM
-    [ "run"         .=! ("RemoteRegister" :: Text)
-    , "exampleCall" .=! exampleCall
+
+instance ToJSON ServiceInfo where
+  toJSON ServiceInfo{..} = objectM
+    [ "exampleCall" .=! exampleCall
     , "serviceName" .=! serviceName
     , "description" .=! description
     , "inputs"      .=? inputs
     , "outputs"     .=? outputs
+    , "constraints" .=? constraints
+    , "qua-view-compliant" .=! quaQitCompliance
     ]
 
-
---Right (Object (fromList [("newCallID",Number 10.0)]),[])
---Right (Object (fromList [("instanceID",Number 0.0),("progress",Object (fromList [])),("callID",Number 10.0),("serviceName",String "RemoteRegister"),("percentage",Number 0.0)]),[])
---Right (Object (fromList [("instanceID",Number 0.0),("result",Object (fromList [("registeredName",String "CoolTestService")])),("callID",Number 10.0),("serviceName",String "RemoteRegister")]),[])
+instance FromJSON ServiceInfo where
+  parseJSON (JSON.Object v) = ServiceInfo
+     <$> v .: "exampleCall"
+     <*> v .: "serviceName"
+     <*> v .: "description"
+     <*> v .:? "inputs"
+     <*> v .:? "outputs"
+     <*> v .:? "constraints"
+     <*> (fromMaybe False <$> v .:? "qua-view-compliant")
+  parseJSON invalid = JSON.typeMismatch "ServiceInfo" invalid
 
 
 -- | All message attachments must be specified in JSON header of the message.
@@ -170,7 +186,17 @@ newtype Percentage = Percentage Double
 newtype ServiceResult = ServiceResult JSON.Object
   deriving (Eq, Show, FromJSON, ToJSON)
 
+-- | Construct ServiceResult similarly to Aeson.object function
+resultJSON :: [(Text,Value)] -> ServiceResult
+resultJSON = ServiceResult . HashMap.fromList
 
+-- | Construct Aeson.Object similarly to Aeson.object function
+objectJSON :: [(Text,Value)] -> JSON.Object
+objectJSON = HashMap.fromList
+
+-- | Helper to print formatted JSON
+showJSON :: JSON.Value -> Text
+showJSON = LText.toStrict . LText.decodeUtf8 . encode
 
 -- | Represent all registerd message types. Anything else is garbage!
 data Message
@@ -221,13 +247,14 @@ indexList xs i = headMaybe $ drop i xs
 -- | Parse all registered message types
 parseMessage :: LuciMessage -> Result Message
 parseMessage (MessageHeader (JSON.Object js), bss)
-  | Just (JSON.String s) <- HashMap.lookup "run" js      = Success $ MsgRun token (ServiceName s) js $ seqList bss
+  | Just (JSON.String s) <- HashMap.lookup "run" js      = Success $ MsgRun token (ServiceName s) js' $ seqList bss
   | Just (JSON.Number t) <- HashMap.lookup "cancel" js   = Success $ MsgCancel (round t)
   | Just (JSON.Object o) <- HashMap.lookup "result" js   = Success $ MsgResult token (ServiceResult o) $ seqList bss
   | Just (JSON.Number n) <- HashMap.lookup "progress" js = Success $ MsgProgress token (realToFrac n) (HashMap.lookup "intermediateResult" js >>= toResult) $ seqList bss
   | Just (JSON.String s) <- HashMap.lookup "error" js    = Success $ MsgError token s
   | otherwise = Error "None of registered keys are found (run,cancel,newCallID,result,progress,error)"
   where
+    js' = HashMap.delete "token" js
     token = case JSON.fromJSON <$> HashMap.lookup "token" js of
               -- TODO remove dirty hack (rtoken == 9702953879202186) used to detect scenario.geojson.Get messages
               Nothing          -> if HashMap.lookup "serviceName" js == Just (JSON.String "scenario.geojson.Get")
@@ -245,7 +272,9 @@ makeMessage :: Message -> LuciMessage
 makeMessage (MsgCancel token) = (MessageHeader $ JSON.object ["cancel" .= token], [])
 makeMessage (MsgError token s) = (MessageHeader $ JSON.object ["error" .= s, "token" .= token], [])
 makeMessage (MsgRun token sname js bss) =
-  (MessageHeader . JSON.object $ ["run" .= sname,  "token" .= token] ++ HashMap.toList js, seqList bss)
+  (MessageHeader . JSON.object $ ["run" .= sname,  "token" .= token] ++ HashMap.toList js', seqList bss)
+  where
+    js' = HashMap.delete "run" $ HashMap.delete "token" js
 makeMessage (MsgResult token (ServiceResult sr) bss) =
   (MessageHeader . JSON.object $ ["result" .= sr,  "token" .= token], seqList bss)
 makeMessage (MsgProgress token p msr bss) =

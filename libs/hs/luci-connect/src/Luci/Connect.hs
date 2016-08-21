@@ -29,7 +29,7 @@ module Luci.Connect
     , LuciProgram
       -- * Sending and receiving messages
       -- | Following is a mixture of helper functions and re-exports from `Data.Conduit` module of @conduit@ package.
-    , yieldMessage
+    , yieldMessage, yield
     , await, awaitForever, (=$=)
       -- * Stateful computations
       -- | Program state is accessible via `Control.Monad.State` module of @mtl@ package.
@@ -67,6 +67,7 @@ import           Control.Monad.State.Lazy
 import qualified Control.Monad.Trans.State
 import           Control.Monad.Logger
 import           Crypto.Random (MonadRandom (..))
+import qualified Data.Aeson as JSON
 import qualified Data.ByteString.Char8 as BSC
 import qualified Data.ByteString as BS
 import qualified Data.Char as Char (toLower)
@@ -81,6 +82,7 @@ import           System.Environment (getArgs)
 
 import Luci.Connect.Base
 import Luci.Connect.Internal
+import Luci.Messages
 
 
 ----------------------------------------------------------------------------------------------------
@@ -160,13 +162,13 @@ runSimpleLuciClient llvl p h erh pipe is = runLuciProgram is llvl $ talkToLuci p
 --
 --  @
 --  main :: IO ()
---  main = runReallySimpleLuciClient () (awaitForever yieldMessage)
+--  main = runReallySimpleLuciClient () (awaitForever yield)
 --  @
 --  This program will send all reveived messages back to sender;
 --  it has no state, because state data type is the unit type @()@.
 runReallySimpleLuciClient :: s
                           -- ^ Initial state of a program set by user.
-                          -> Conduit LuciMessage (LuciProgram s) (LuciProcessing Text LuciMessage)
+                          -> Conduit Message (LuciProgram s) Message
                           -- ^ How to process LuciMessage
                           -> IO s
                           -- ^ Program runs and in the end returns a final state.
@@ -181,7 +183,7 @@ runReallySimpleLuciClient s0 pipe = do
                      (hostS sets)
                       Nothing
                      (logWarnNS "PIPELINE ERROR" . Text.pack . show)
-                     pipe
+                     (processTo =$= pipe =$= processFrom)
   where
     showLevel (LevelOther l) = Text.unpack l
     showLevel lvl = map Char.toLower . drop 5 $ show lvl
@@ -196,6 +198,18 @@ runReallySimpleLuciClient s0 pipe = do
                                  "error"   -> setSettings s{logLevelS = LevelError} xs
                                  h -> setSettings s{logLevelS = LevelOther $ Text.pack h} xs
                            | otherwise = setSettings s xs
+
+
+
+-- | helper for parsing incoming messages
+processTo :: Conduit LuciMessage (LuciProgram s) Message
+processTo = awaitForever $ \lmsg -> case parseMessage lmsg of
+    JSON.Error s -> logWarnN $ "[Parsing header] " <> Text.pack s <> " Received: " <>  (showJSON . toJSON $ fst lmsg)
+    JSON.Success m -> yield m
+
+-- | helper for sending outgoing messages
+processFrom :: Conduit Message (LuciProgram s) (LuciProcessing Text LuciMessage)
+processFrom = awaitForever $ yieldMessage . makeMessage
 
 
 data RunSettings = RunSettings
