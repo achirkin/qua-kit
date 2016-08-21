@@ -37,8 +37,8 @@ import Luci.Connect
 import Luci.Connect.Base
 
 import Helen.Core.Types
-import Helen.Core.Service (defServiceManager)
-
+import Helen.Core.Service (defServiceManager, processMessage)
+import Helen.Core.Service.Registration (registrationService)
 
 
 -- | Initialize state
@@ -51,7 +51,7 @@ initHelen = do
   -- construct helen
   return Helen
     { _msgChannel = ch
-    , sendMessage = \(TargetedMessage cId msg) -> do
+    , sendMessage = \msg@(TargetedMessage _ cId _) -> do
          mc <- fmap (HashMap.lookup cId) . liftIO . STM.atomically $ STM.readTMVar clientStore
          case mc of
            Nothing -> return ()
@@ -81,21 +81,26 @@ initHelen = do
 program :: Int -- ^ Port
         -> HelenWorld ()
 program port = do
+  -- register pre-defines services
+  registrationService
   -- Run all connections in a separate thread. Warning! Helen state is not shared!
   forkHelen $ helenChannels port
   -- Now process message queue
   ch <- _msgChannel <$> get
-  forever $ (liftIO . STM.atomically $ STM.readTChan ch) >>= processMessage
+  forever $ (liftIO . STM.atomically $ STM.readTChan ch) >>= (\msg -> do
+      (msgs, helen) <- liftHelen $ processMessage msg >>= (\xs -> (,) xs <$> get)
+      mapM (sendMessage helen) msgs
+    )
 
 
 
-processMessage :: SourcedMessage
-               -> HelenWorld ()
-processMessage (SourcedMessage clientId msg) = do
-  helen <- get
-  -- return message for now
-  sendMessage helen $ TargetedMessage clientId msg
-  return ()
+--processMessage :: SourcedMessage
+--               -> HelenWorld ()
+--processMessage (SourcedMessage clientId msg) = do
+--  helen <- get
+--  -- return message for now
+--  sendMessage helen $ TargetedMessage clientId clientId msg
+--  return ()
 
 
 
@@ -117,7 +122,7 @@ helenChannels' appData = do
     -- weak reference based on channel state
     weakSink <- liftIO $ mkWeak sendQueue (liftIO . STM.atomically . STM.writeTChan sendQueue . Just . makeMessage) Nothing
     let -- put message to sendback channel
-        putMsg msg = msg `seq` do
+        putMsg (TargetedMessage _ _ msg) = msg `seq` do
           msending <- liftIO $ deRefWeak weakSink
           case msending of
             Nothing -> return ()

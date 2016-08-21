@@ -23,8 +23,8 @@ import           Control.Lens.Operators
 import qualified Control.Lens as Lens
 import           Control.Monad.State.Lazy
 import qualified Data.HashMap.Strict as HashMap
-import qualified Data.Foldable as Foldable (toList)
-import           Data.Maybe (isJust)
+import qualified Data.Foldable as Foldable (toList,foldl')
+import           Data.Maybe (isJust, fromMaybe)
 import           Data.Monoid ((<>))
 import           Data.Sequence (ViewL(..))
 import qualified Data.Sequence as Seq
@@ -64,12 +64,18 @@ registerService info si@(ServiceInstance _ sName) = do
 
 -- | Unregister all occurrences of an instance
 --   and send errors to all clients with pending requests
+--   Returns a list of messages to send and
+--     1. if the service remains available (provided by other instances)
+--     2. how many instances were unregistered
 unregisterService :: ServiceInstance
-                  -> HelenRoom [TargetedMessage]
-unregisterService si@(ServiceInstance _ sName@(ServiceName tname)) = do
+                  -> HelenRoom ((Bool, Int), [TargetedMessage])
+unregisterService si@(ServiceInstance sourceCID sName@(ServiceName tname)) = do
     -- first I need to check if there are tasks pending for the service
     (clientCalls, othersHere) <-
       serviceManager.busyInstances %%= inspectBusies
+    -- count how many idle instances were deregistered
+    ni <- (fromMaybe 0 . fmap (Foldable.foldl' countInSeq 0 . _idleInstances))
+          . Lens.view (serviceManager.namedPool sName) <$> get
     clientWaits <-
       if othersHere
       -- if there are instances from other clients, then just remove all idles related to this instances
@@ -77,10 +83,11 @@ unregisterService si@(ServiceInstance _ sName@(ServiceName tname)) = do
         serviceManager.namedPool sName %= deleteIdle
         return []
       else serviceManager.namedPool sName %%= deletePool
-    return $ map sendWarning $ clientCalls ++ clientWaits
+    return . (,) (othersHere, length clientCalls + ni) . map sendWarning $ clientCalls ++ clientWaits
   where
-    sendWarning (SessionId cId t) = TargetedMessage cId . MsgError t $
+    sendWarning (SessionId cId t) = TargetedMessage sourceCID cId . MsgError t $
         "Service " <> tname <> " has been unregistered. Try again later."
+    countInSeq n si' = if si' == si then n+1 else n
     deleteIdle Nothing = Nothing
     deleteIdle (Just pool) = Just $ Lens.over idleInstances (Seq.filter (si /=)) pool
     deletePool Nothing = ([], Nothing)
@@ -103,7 +110,7 @@ processMessage (SourcedMessage clientId (MsgRun token sName@(ServiceName tName) 
   -- early inerrupt if there is no such service
   hasService <- isJust . Lens.view (serviceManager.namedPool sName) <$> get
   if not hasService
-  then return [ TargetedMessage clientId
+  then return [ TargetedMessage clientId clientId
                 $ MsgError token $ "Service " <> tName <> " is not available."
               ]
   else do
@@ -145,7 +152,7 @@ processMessage smsg@(SourcedMessage cId (MsgResult token rez bs)) | sesId <- ses
   msInstance <- serviceManager.busyInstances %%= (HashMap.lookup sesId &&& HashMap.delete sesId)
   case msInstance of
     -- if there is no such instance, the message may be sent by a service that was not asked to do anything
-    Nothing -> return [ TargetedMessage cId (MsgError token "Cannot find you to be working on a task!") ]
+    Nothing -> return [ TargetedMessage cId cId (MsgError token "Cannot find you to be working on a task!") ]
     Just (sInstance,reqSId) -> do
       -- process result message and maybe another request queued in pool
       (msgRez, mmsgReq) <- serviceManager.namedPool (siName sInstance)
@@ -171,12 +178,12 @@ processMessage smsg@(SourcedMessage cId (MsgProgress token p mr bs)) | sesId <- 
   msInstance <- HashMap.lookup sesId . Lens.view (serviceManager.busyInstances) <$> get
   case msInstance of
     -- if there is no such instance, the message may be sent by a service that was not asked to do anything
-    Nothing -> return [ TargetedMessage cId (MsgError token "Cannot find you to be working on a task!") ]
+    Nothing -> return [ TargetedMessage cId cId (MsgError token "Cannot find you to be working on a task!") ]
     -- here the difference to result message is that neither current calls
     -- nor busyInstances or pools should be altered
     Just (_,SessionId clientId clientToken) -> do
       -- so, we just redirect the message to the client
-      return [TargetedMessage clientId $ MsgProgress clientToken p mr bs]
+      return [TargetedMessage cId clientId $ MsgProgress clientToken p mr bs]
 
 
 -- error
@@ -186,7 +193,7 @@ processMessage smsg@(SourcedMessage cId (MsgError token err)) | sesId <- session
   msInstance <- HashMap.lookup sesId . Lens.view (serviceManager.busyInstances) <$> get
   case msInstance of
     -- if there is no such instance, the message may be sent by a service that was not asked to do anything
-    Nothing -> return [ TargetedMessage cId (MsgError token "Cannot find you to be working on a task!") ]
+    Nothing -> return [ TargetedMessage cId cId (MsgError token "Cannot find you to be working on a task!") ]
     Just (sInstance,reqSId) -> do
       -- process result message and maybe another request queued in pool
       (msgRez, mmsgReq) <- serviceManager.namedPool (siName sInstance)
@@ -217,14 +224,14 @@ processRunMessage :: RequestRun
 -- if none instance of a service registered, ServicePool will be Nothing
 --   this means Helen sends back an error message
 processRunMessage (RequestRun (SessionId clientId token) (ServiceName sName) _ _) Nothing =
-  ( Just ( TargetedMessage clientId $ MsgError token $ "Service " <> sName <> " is not available."
+  ( Just ( TargetedMessage clientId clientId $ MsgError token $ "Service " <> sName <> " is not available."
          , Nothing
          )
   , Nothing )
-processRunMessage msg@(RequestRun (SessionId _ token) sName pams bs) (Just pool)
+processRunMessage msg@(RequestRun (SessionId clientId token) sName pams bs) (Just pool)
     -- If there are idle instances, then ask one to do the job
   | ins@(ServiceInstance servClientId _) :< is <- Seq.viewl (_idleInstances pool)
-      = ( Just ( TargetedMessage servClientId $ MsgRun token sName pams bs
+      = ( Just ( TargetedMessage clientId servClientId $ MsgRun token sName pams bs
                , Just ins
                )
         , Just pool { _idleInstances = is }
@@ -257,7 +264,7 @@ processResultMessage :: (ServiceInstance, SessionId)
                      -> ((TargetedMessage, Maybe (TargetedMessage, SessionId)), Maybe ServicePool)
 -- If there is no such service pool, then result comes from a not registered service
 processResultMessage _ (ResponseResult (SessionId clientId token) _ _) Nothing
-  = ( ( TargetedMessage clientId (MsgError token "Cannot find you to be registered as a service!")
+  = ( ( TargetedMessage clientId clientId (MsgError token "Cannot find you to be registered as a service!")
       , Nothing
       )
     , Nothing
@@ -266,9 +273,9 @@ processResultMessage _ (ResponseResult (SessionId clientId token) _ _) Nothing
 processResultMessage (si, (SessionId cClientId cToken))
                      (ResponseResult (SessionId sClientId _) rez bs) (Just pool)
   -- if there are messages to be processed in a queue, then immediately forward them to a service
-  | (RequestRun rsid@(SessionId _ rToken) rsName rreq rbs) :< imsgs <- Seq.viewl (_incomingMsgs pool)
+  | (RequestRun rsid@(SessionId clientId rToken) rsName rreq rbs) :< imsgs <- Seq.viewl (_incomingMsgs pool)
     = ( ( resultMsg
-        , Just (TargetedMessage sClientId $ MsgRun rToken rsName rreq rbs, rsid)
+        , Just (TargetedMessage clientId sClientId $ MsgRun rToken rsName rreq rbs, rsid)
         )
         , Just $ pool {_incomingMsgs = imsgs }
       )
@@ -280,7 +287,7 @@ processResultMessage (si, (SessionId cClientId cToken))
         , Just $ Lens.over idleInstances (|> si) pool
       )
   where
-    resultMsg = TargetedMessage cClientId $ MsgResult cToken rez bs
+    resultMsg = TargetedMessage sClientId cClientId $ MsgResult cToken rez bs
 
 
 
@@ -293,7 +300,7 @@ processErrorMessage :: (ServiceInstance, SessionId)
                      -> ((TargetedMessage, Maybe (TargetedMessage, SessionId)), Maybe ServicePool)
 -- If there is no such service pool, then result comes from a not registered service
 processErrorMessage _ (ResponseError (SessionId clientId token) _) Nothing
-  = ( ( TargetedMessage clientId (MsgError token "Cannot find you to be registered as a service!")
+  = ( ( TargetedMessage clientId clientId (MsgError token "Cannot find you to be registered as a service!")
       , Nothing
       )
     , Nothing
@@ -302,9 +309,9 @@ processErrorMessage _ (ResponseError (SessionId clientId token) _) Nothing
 processErrorMessage (si, (SessionId cClientId cToken))
                     (ResponseError (SessionId sClientId _) err) (Just pool)
   -- if there are messages to be processed in a queue, then immediately forward them to a service
-  | (RequestRun rsid@(SessionId _ rToken) rsName rreq rbs) :< imsgs <- Seq.viewl (_incomingMsgs pool)
+  | (RequestRun rsid@(SessionId clientId rToken) rsName rreq rbs) :< imsgs <- Seq.viewl (_incomingMsgs pool)
     = ( ( resultMsg
-        , Just (TargetedMessage sClientId $ MsgRun rToken rsName rreq rbs, rsid)
+        , Just (TargetedMessage clientId sClientId $ MsgRun rToken rsName rreq rbs, rsid)
         )
         , Just $ pool {_incomingMsgs = imsgs }
       )
@@ -316,7 +323,7 @@ processErrorMessage (si, (SessionId cClientId cToken))
         , Just $ Lens.over idleInstances (|> si) pool
       )
   where
-    resultMsg = TargetedMessage cClientId $ MsgError cToken err
+    resultMsg = TargetedMessage sClientId cClientId $ MsgError cToken err
 
 
 

@@ -72,7 +72,7 @@ instance Hashable SessionId where
 
 -- | Information about a connected client
 data Client = Client
-  { queueMessage :: !(Message -> HelenWorld ())
+  { queueMessage :: !(TargetedMessage -> HelenWorld ())
     -- ^ Queue message directly to a client message channel;
     --   normally, modules should use `sendMessage` message from Helen to send messages.
   , clientAddr   :: !String
@@ -148,8 +148,8 @@ data ServiceManager = ServiceManager
 
 
 
--- | Message with receiver
-data TargetedMessage = TargetedMessage !ClientId !Message
+-- | Message with sender and receiver
+data TargetedMessage = TargetedMessage !ClientId !ClientId !Message
 
 -- | Message with sender
 data SourcedMessage = SourcedMessage !ClientId !Message
@@ -174,7 +174,7 @@ class BelongsToSession a where
   sessionId :: a -> SessionId
 
 instance BelongsToSession TargetedMessage where
-  sessionId (TargetedMessage c msg) = SessionId c $ msgToken msg
+  sessionId (TargetedMessage _ c msg) = SessionId c $ msgToken msg
 instance BelongsToSession SourcedMessage where
   sessionId (SourcedMessage c msg) = SessionId c $ msgToken msg
 instance BelongsToSession RequestRun where
