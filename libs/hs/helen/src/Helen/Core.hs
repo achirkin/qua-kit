@@ -39,6 +39,7 @@ import Luci.Connect.Base
 import Helen.Core.Types
 import Helen.Core.Service (defServiceManager, processMessage)
 import Helen.Core.Service.Registration (registrationService)
+import Helen.Core.Service.Information  (infoService)
 
 
 -- | Initialize state
@@ -81,8 +82,9 @@ initHelen = do
 program :: Int -- ^ Port
         -> HelenWorld ()
 program port = do
-  -- register pre-defines services
+  -- register pre-defined services
   registrationService
+  infoService
   -- Run all connections in a separate thread. Warning! Helen state is not shared!
   forkHelen $ helenChannels port
   -- Now process message queue
@@ -152,8 +154,8 @@ helenChannels' appData = do
                     liftIO . STM.atomically . STM.writeTChan sendQueue . Just . makeMessage $ MsgError rtoken msgerr
                   -- If all is good, put message into Helen's msgChannel
                   JSON.Success msg -> do
-                    ch <- _msgChannel <$> get
-                    liftIO . STM.atomically . STM.writeTChan ch $ SourcedMessage clientId msg
+                    helen <- get
+                    lift . sendMessage helen $ SourcedMessage clientId msg
               sink
             -- send data back to client if it was early-processed
             Just (ProcessedData d) ->  do

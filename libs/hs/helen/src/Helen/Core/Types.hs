@@ -17,7 +17,7 @@
 {-# LANGUAGE TemplateHaskell #-}
 module Helen.Core.Types
   ( -- * Base server-client relationship
-    Helen (..), ClientId (..), Client (..)
+    Helen (..), ClientId (..), Client (..), sendMessage
     -- * Working with services
   , ServiceInstance (..), ServiceManager (..), ServicePool (..), ServiceInfo (..)
   , TargetedMessage (..), SourcedMessage (..), SessionId (..), siName
@@ -93,6 +93,13 @@ data Helen = Helen
   , _serviceManager      :: !ServiceManager
     -- ^ Keeps track of all services
   }
+
+-- | Put a message into Helen processing channel.
+--   Use this function when implementing embedded services:
+--   the messages will appear in a normal pipeplan for processing.
+sendMessage :: Helen -> SourcedMessage -> HelenWorld ()
+sendMessage h = liftIO . STM.atomically . STM.writeTChan (_msgChannel h)
+
 
 -- | The very core of Helen, all message processing goes through this channel
 msgChannel :: Functor f => (STM.TChan SourcedMessage -> f (STM.TChan SourcedMessage)) -> Helen -> f Helen

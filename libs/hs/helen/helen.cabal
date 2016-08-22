@@ -21,6 +21,7 @@ library
     exposed-modules:
         Helen.Core
         Helen.Core.Service
+        Helen.Core.Service.Information
         Helen.Core.Service.Registration
         Helen.Core.Types
     build-depends:

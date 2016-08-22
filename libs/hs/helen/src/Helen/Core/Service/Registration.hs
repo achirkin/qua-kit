@@ -16,8 +16,6 @@ module Helen.Core.Service.Registration
   ) where
 
 
-import qualified Control.Concurrent.STM.TChan as STM
-import qualified Control.Monad.STM as STM
 import           Control.Monad (when, unless, foldM, forM_)
 import qualified Control.Lens as Lens
 import qualified Data.Aeson as JSON
@@ -48,17 +46,13 @@ registrationService = do
 
 
 
-returnMessage :: Helen -> SourcedMessage -> HelenWorld ()
-returnMessage h msg =
-  liftIO . STM.atomically $ STM.writeTChan (_msgChannel h) msg
-
 runRegService :: TargetedMessage -> HelenWorld ()
 
 -- register
 runRegService (TargetedMessage clientId myId (MsgRun token "RemoteRegister" pams _)) =
     case psInfo of
       -- failed to parse message - return it back to client
-      JSON.Error err -> get >>= \h -> returnMessage h
+      JSON.Error err -> get >>= \h -> sendMessage h
               .  SourcedMessage myId . MsgError token
               $ "Cannot parse RemoteRegister message " <> Text.pack err
       JSON.Success sInfo -> do
@@ -68,7 +62,7 @@ runRegService (TargetedMessage clientId myId (MsgRun token "RemoteRegister" pams
         helen <- liftHelen $ registerService sInfo sInstance >> get
         logInfoNS "RegistrationService" $ "Registered an instance of '" <> sname <> "' service."
         -- inform about success
-        returnMessage helen .  SourcedMessage myId $
+        sendMessage helen .  SourcedMessage myId $
           MsgResult token (ServiceResult $ HashMap.fromList
                             [ "registeredName" .= sname ]
                           ) []
@@ -122,7 +116,7 @@ runRegService (TargetedMessage clientId myId (MsgRun token "RemoteDeregister" pa
                                           , "deregisteredN"    .= n
                                           , "remainsAvailable" .= r
                                           ] ) $ filter (\(_,_,n) -> n > 0) removals
-  returnMessage helen . SourcedMessage myId $
+  sendMessage helen . SourcedMessage myId $
     if null unregServices
     then MsgError token "No services to deregister."
     else MsgResult token
