@@ -24,8 +24,8 @@ import qualified Control.Lens as Lens
 import           Control.Monad.State.Lazy
 import           Data.ByteString (ByteString)
 import qualified Data.HashMap.Strict as HashMap
-import qualified Data.Foldable as Foldable (toList,foldl')
-import           Data.Maybe (isJust, fromMaybe)
+import qualified Data.Foldable as Foldable (toList,foldl',any)
+import           Data.Maybe (isJust)
 import           Data.Monoid ((<>))
 import           Data.Sequence (ViewL(..))
 import qualified Data.Sequence as Seq
@@ -57,7 +57,7 @@ defServicePool si = ServicePool
 registerService :: ServiceInfo
                 -> ServiceInstance
                 -> HelenRoom ()
-registerService info si@(ServiceInstance _ sName) = do
+registerService info si@(ServiceInstance _ sName) =
     serviceManager.namedPool sName %= Just . registerInPool
   where
     registerInPool Nothing = Lens.over idleInstances (|> si) (defServicePool info)
@@ -72,10 +72,13 @@ unregisterService :: ServiceInstance
                   -> HelenRoom ((Bool, Int), [TargetedMessage])
 unregisterService si@(ServiceInstance sourceCID sName@(ServiceName tname)) = do
     -- first I need to check if there are tasks pending for the service
-    (clientCalls, othersHere) <-
+    (clientCalls, othersBusyHere) <-
       serviceManager.busyInstances %%= inspectBusies
-    -- count how many idle instances were deregistered
-    ni <- (fromMaybe 0 . fmap (Foldable.foldl' countInSeq 0 . _idleInstances))
+    -- check if there are some idle instances of the same service
+    othersIdleHere <- othersIdle . Lens.view (serviceManager.namedPool sName) <$> get
+    let othersHere = othersBusyHere || othersIdleHere
+    -- count how many idle instances are to be deregistered
+    ni <- maybe 0 (Foldable.foldl' countInSeq 0 . _idleInstances)
           . Lens.view (serviceManager.namedPool sName) <$> get
     clientWaits <-
       if othersHere
@@ -84,7 +87,10 @@ unregisterService si@(ServiceInstance sourceCID sName@(ServiceName tname)) = do
         serviceManager.namedPool sName %= deleteIdle
         return []
       else serviceManager.namedPool sName %%= deletePool
-    return . (,) (othersHere, length clientCalls + ni) . map sendWarning $ clientCalls ++ clientWaits
+    let canceledJobs = clientCalls ++ clientWaits
+    -- delete all user calls before sending them regret messages
+    serviceManager.currentCalls %= \hm -> Foldable.foldl' (flip HashMap.delete) hm canceledJobs
+    return . (,) (othersHere, length clientCalls + ni) . map sendWarning $ canceledJobs
   where
     sendWarning (SessionId cId t) = TargetedMessage sourceCID cId . MsgError t $
         "Service " <> tname <> " has been unregistered. Try again later."
@@ -93,6 +99,8 @@ unregisterService si@(ServiceInstance sourceCID sName@(ServiceName tname)) = do
     deleteIdle (Just pool) = Just $ Lens.over idleInstances (Seq.filter (si /=)) pool
     deletePool Nothing = ([], Nothing)
     deletePool (Just pool) = ( map sessionId . Foldable.toList $ _incomingMsgs pool, Nothing)
+    othersIdle Nothing = False
+    othersIdle (Just pool) = Foldable.any (si /=) $ Lens.view idleInstances pool
     inspectBusies hm = let (cs',ss', oh) = HashMap.foldlWithKey' f ([],[],False) hm
                            f (cs,ss,others) ssId (ssi@(ServiceInstance _ n), csId)
                                      = if ssi == si then (csId:cs, ssId:ss, others)
@@ -149,10 +157,10 @@ processMessage smsg@(SourcedMessage _ (MsgCancel _)) | sesId <- sessionId smsg =
 
 
 -- result
-processMessage smsg@(SourcedMessage _ (MsgResult _ _ _)) = processErrorOrResult smsg
+processMessage smsg@(SourcedMessage _ MsgResult{}) = processErrorOrResult smsg
 
 -- error
-processMessage smsg@(SourcedMessage _ (MsgError _ _)) = processErrorOrResult smsg
+processMessage smsg@(SourcedMessage _ MsgError{}) = processErrorOrResult smsg
 
 -- progress
 --  almost the same process as for result
@@ -164,7 +172,7 @@ processMessage smsg@(SourcedMessage cId (MsgProgress token p mr bs)) | sesId <- 
     Nothing -> return [ TargetedMessage cId cId (MsgError token "Cannot find you to be working on a task!") ]
     -- here the difference to result message is that neither current calls
     -- nor busyInstances or pools should be altered
-    Just (_,SessionId clientId clientToken) -> do
+    Just (_,SessionId clientId clientToken) ->
       -- so, we just redirect the message to the client
       return [TargetedMessage cId clientId $ MsgProgress clientToken p mr bs]
 
@@ -256,7 +264,7 @@ releaseInstance :: ServiceInstance
 releaseInstance _ Nothing = (Nothing, Nothing)
 releaseInstance si@(ServiceInstance serviceId _) (Just pool)
   -- if there are messages to be processed in a message queue, then return a new task
-  | (RequestRun rsid@(SessionId clientId _) sName pams bs) :< imsgs <- Seq.viewl (_incomingMsgs pool)
+  | RequestRun rsid@(SessionId clientId _) sName pams bs :< imsgs <- Seq.viewl (_incomingMsgs pool)
     = ( Just (\token -> TargetedMessage clientId serviceId $ MsgRun token sName pams bs, rsid)
       , Just pool {_incomingMsgs = imsgs }
       )

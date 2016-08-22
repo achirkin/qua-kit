@@ -146,8 +146,8 @@ helenChannels' appData = do
                         rtoken = case h of
                             MessageHeader (JSON.Object o) -> case JSON.fromJSON <$> HashMap.lookup "token" o of
                                     Just (JSON.Success t) -> t
-                                    _ -> (-1)
-                            _ -> (-1)
+                                    _ -> -1
+                            _ -> -1
                     logWarnN msgerr
                     liftIO . STM.atomically . STM.writeTChan sendQueue . Just . makeMessage $ MsgError rtoken msgerr
                   -- If all is good, put message into Helen's msgChannel

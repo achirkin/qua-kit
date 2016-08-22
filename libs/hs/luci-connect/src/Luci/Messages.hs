@@ -56,7 +56,7 @@ fromMessage (MessageHeader v,_) = fromJSON v
 -- | Try get token from raw JSON message
 luciMessageToken :: LuciMessage -> Maybe Token
 luciMessageToken (MessageHeader (JSON.Object js), _)
-  | Just (JSON.Number t) <- HashMap.lookup "token" js = Just $ round t
+  | Just (JSON.Number t) <- HashMap.lookup "callID" js = Just $ round t
 luciMessageToken _ = Nothing
 
 -- | Full information about a service
@@ -248,18 +248,15 @@ indexList xs i = headMaybe $ drop i xs
 parseMessage :: LuciMessage -> Result Message
 parseMessage (MessageHeader (JSON.Object js), bss)
   | Just (JSON.String s) <- HashMap.lookup "run" js      = Success $ MsgRun token (ServiceName s) js' $ seqList bss
-  | Just (JSON.Number t) <- HashMap.lookup "cancel" js   = Success $ MsgCancel (round t)
+  | Just _               <- HashMap.lookup "cancel" js   = Success $ MsgCancel token
   | Just (JSON.Object o) <- HashMap.lookup "result" js   = Success $ MsgResult token (ServiceResult o) $ seqList bss
   | Just (JSON.Number n) <- HashMap.lookup "progress" js = Success $ MsgProgress token (realToFrac n) (HashMap.lookup "intermediateResult" js >>= toResult) $ seqList bss
   | Just (JSON.String s) <- HashMap.lookup "error" js    = Success $ MsgError token s
   | otherwise = Error "None of registered keys are found (run,cancel,newCallID,result,progress,error)"
   where
-    js' = HashMap.delete "token" js
-    token = case JSON.fromJSON <$> HashMap.lookup "token" js of
-              -- TODO remove dirty hack (rtoken == 9702953879202186) used to detect scenario.geojson.Get messages
-              Nothing          -> if HashMap.lookup "serviceName" js == Just (JSON.String "scenario.geojson.Get")
-                                  then 9702953879202186
-                                  else 77777777777
+    js' = HashMap.delete "callID" js
+    token = case JSON.fromJSON <$> HashMap.lookup "callID" js of
+              Nothing          -> 77777777777
               Just (Error _)   -> 66666666666
               Just (Success t) -> t
     toResult (JSON.Object o) = Just $ ServiceResult o
@@ -269,16 +266,16 @@ parseMessage (MessageHeader _, _) = Error "Invalid JSON type (expected object)."
 
 -- | Convert registered message type into generic message
 makeMessage :: Message -> LuciMessage
-makeMessage (MsgCancel token) = (MessageHeader $ JSON.object ["cancel" .= token], [])
-makeMessage (MsgError token s) = (MessageHeader $ JSON.object ["error" .= s, "token" .= token], [])
+makeMessage (MsgCancel token) = (MessageHeader $ JSON.object ["cancel" .= token, "callID" .= token], [])
+makeMessage (MsgError token s) = (MessageHeader $ JSON.object ["error" .= s, "callID" .= token], [])
 makeMessage (MsgRun token sname js bss) =
-  (MessageHeader . JSON.object $ ["run" .= sname,  "token" .= token] ++ HashMap.toList js', seqList bss)
+  (MessageHeader . JSON.object $ ["run" .= sname,  "callID" .= token] ++ HashMap.toList js', seqList bss)
   where
-    js' = HashMap.delete "run" $ HashMap.delete "token" js
+    js' = HashMap.delete "run" $ HashMap.delete "callID" js
 makeMessage (MsgResult token (ServiceResult sr) bss) =
-  (MessageHeader . JSON.object $ ["result" .= sr,  "token" .= token], seqList bss)
+  (MessageHeader . JSON.object $ ["result" .= sr,  "callID" .= token], seqList bss)
 makeMessage (MsgProgress token p msr bss) =
-  (MessageHeader . JSON.object $ ["progress" .= p, "token" .= token] ++ srMaybe msr, seqList bss)
+  (MessageHeader . JSON.object $ ["progress" .= p, "callID" .= token] ++ srMaybe msr, seqList bss)
   where
     srMaybe (Just (ServiceResult x)) = ["intermediateResult" .= x]
     srMaybe _ = []

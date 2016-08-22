@@ -10,7 +10,7 @@
 -- Local service providing "remoteRegister" task.
 --
 -----------------------------------------------------------------------------
-{-# LANGUAGE RecordWildCards, OverloadedStrings #-}
+{-# LANGUAGE OverloadedStrings #-}
 module Helen.Core.Service.Registration
   ( registrationService
   ) where
@@ -18,7 +18,7 @@ module Helen.Core.Service.Registration
 
 import qualified Control.Concurrent.STM.TChan as STM
 import qualified Control.Monad.STM as STM
-import           Control.Monad (when, foldM, forM_)
+import           Control.Monad (when, unless, foldM, forM_)
 import qualified Control.Lens as Lens
 import qualified Data.Aeson as JSON
 import           Data.Aeson ((.=))
@@ -112,7 +112,7 @@ runRegService (TargetedMessage clientId myId (MsgRun token "RemoteDeregister" pa
     when (deleteCount > 0) $
       logInfoNS "RegistrationService" $ "Deregistered service '" <> sname
           <> "' that was provided by a recently disconneced client"
-  when (not $ null msgs) $
+  unless (null msgs) $
     logInfoNS "RegistrationService" $
                  "Notified " <> Text.pack (show $ length msgs) <> " connected clients that some services were disconnected."
 

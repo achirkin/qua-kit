@@ -147,8 +147,7 @@ obtainScenario scId = do
         Nothing -> logWarnN "[Get scenario] Conduit returned end of input" >> return Nothing
         -- a proper result
         Just msg@(MsgResult rtoken (ServiceResult sc) _) ->
-          -- TODO remove dirty hack (rtoken == 9702953879202186) used to detect scenario.geojson.Get messages
-          if rtoken /= scToken && rtoken /= 9702953879202186
+          if rtoken /= scToken
           then do
             logInfoN . ("[Get scenario - ignore Luci message] " <>) . showJSON . toJSON . fst $ makeMessage msg
             waitForScenario scToken
