@@ -12,15 +12,28 @@ import Data.Aeson                  (Result (..), fromJSON, withObject, (.!=),
                                     (.:?))
 import Data.FileEmbed              (embedFile)
 import Data.Yaml                   (decodeEither')
+import qualified Data.Text.Encoding as Text
+#if POSTGRESQL
+import Database.Persist.Postgresql (PostgresConf)
+#else
 import Database.Persist.Sqlite     (SqliteConf)
+#endif
 import Language.Haskell.TH.Syntax  (Exp, Name, Q)
-import Network.Wai.Handler.Warp    (HostPreference)
+--import Network.Wai.Handler.Warp    (HostPreference)
 import Yesod.Default.Config2       (applyEnvValue, configSettingsYml)
 import Yesod.Default.Util          (WidgetFileSettings, widgetFileNoReload,
                                     widgetFileReload)
 
 import qualified Data.ByteString.Char8 as BS
 import Data.Conduit.Network
+import Web.LTI
+
+-- Go with Sqlite on development, and Postgres on production
+#if POSTGRESQL
+type PersistConf = PostgresConf
+#else
+type PersistConf = SqliteConf
+#endif
 
 -- | Runtime settings to configure this application. These settings can be
 -- loaded from various sources: defaults, environment variables, config files,
@@ -28,7 +41,7 @@ import Data.Conduit.Network
 data AppSettings = AppSettings
     { appStaticDir              :: String
     -- ^ Directory from which to serve static files.
-    , appDatabaseConf           :: SqliteConf
+    , appDatabaseConf           :: PersistConf
     -- ^ Configuration settings for accessing the database.
     , appRoot                   :: Maybe Text
     -- ^ Base for all generated URLs. If @Nothing@, determined
@@ -59,6 +72,8 @@ data AppSettings = AppSettings
     -- ^ Google Analytics code
     , appLuciAddress            :: Maybe ClientSettings
     -- ^ Default address of luci to redirect WebSockets to
+    , appLTICredentials         :: LTIProvider
+    -- ^ LTI credentials (i.e. for edX authorization)
     }
 
 instance FromJSON AppSettings where
@@ -89,6 +104,10 @@ instance FromJSON AppSettings where
         lport <- o .:? "luci-port"
         let appLuciAddress = clientSettings <$> lport <*> (BS.pack <$> lhost)
 
+        ltiKey    <- o .: "lti-key"
+        ltiSecret <- o .: "lti-secret"
+        let appLTICredentials = newLTIProvider (Text.encodeUtf8 ltiKey) (Text.encodeUtf8 ltiSecret)
+
         return AppSettings {..}
 
 
@@ -118,9 +137,24 @@ widgetFile = (if appReloadTemplates compileTimeAppSettings
 configSettingsYmlBS :: ByteString
 configSettingsYmlBS = $(embedFile configSettingsYml)
 
+configSettingsYmlDB :: FilePath
+#if POSTGRESQL
+configSettingsYmlDB = "config/settingsPostgreSQL.yml"
+#else
+configSettingsYmlDB = "config/settingsSqlite.yml"
+#endif
+
+configSettingsYmlDBBS :: ByteString
+#if POSTGRESQL
+configSettingsYmlDBBS = $(embedFile "config/settingsPostgreSQL.yml")
+#else
+configSettingsYmlDBBS = $(embedFile "config/settingsSqlite.yml")
+#endif
+
 -- | @config/settings.yml@, parsed to a @Value@.
 configSettingsYmlValue :: Value
-configSettingsYmlValue = either Exception.throw id $ decodeEither' configSettingsYmlBS
+configSettingsYmlValue = either Exception.throw id $ decodeEither'
+    (configSettingsYmlBS <> configSettingsYmlDBBS)
 
 -- | A version of @AppSettings@ parsed at compile time from @config/settings.yml@.
 compileTimeAppSettings :: AppSettings

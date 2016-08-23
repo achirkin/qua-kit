@@ -1,0 +1,14 @@
+extra-deps:
+  - yesod-auth-oauth-1.4.1.1
+    # authenticate-oauth patched package, remains here until comes to stackage
+  - authenticate-oauth-1.6
+    # LTI interop client
+  - ltiv1p1-1.0.0.2
+
+flags: {}
+packages:
+  - .
+
+resolver: lts-6.12
+require-stack-version: ">= 1.1.0"
+extra-package-dbs: []

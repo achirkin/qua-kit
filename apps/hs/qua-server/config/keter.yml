@@ -11,7 +11,7 @@ stanzas:
     exec: ../dist/build/qua-server/qua-server
 
     # Command line options passed to your application.
-    args: []
+    args: [/opt/keter/etc/quakitsettings.yml]
 
     hosts:
       # You can specify one or more hostnames for your application to respond

@@ -30,13 +30,27 @@ flag library-only
         Build for use with "yesod devel"
     default: False
 
+flag postgresql
+    description:
+        Use PostgreSQL database. Otherwise use sqlite.
+
 library
-    
+
+    if ((flag(postgresql) && !flag(dev)) && !flag(library-only))
+        cpp-options: -DPOSTGRESQL
+
     if (flag(dev) || flag(library-only))
         cpp-options: -DDEVELOPMENT
         ghc-options: -Wall -fwarn-tabs -O0
     else
         ghc-options: -Wall -fwarn-tabs -O2
+
+    if ((flag(postgresql) && !flag(dev)) && !flag(library-only))
+        build-depends:
+            persistent-postgresql -any
+    else
+        build-depends:
+            persistent-sqlite -any
     exposed-modules:
         Application
         Foundation
@@ -71,7 +85,6 @@ library
         bytestring >=0.9 && <0.11,
         text >=0.11 && <2.0,
         persistent >=2.0 && <2.6,
-        persistent-sqlite >=2.1.1 && <2.6,
         persistent-template >=2.0 && <2.6,
         template-haskell -any,
         shakespeare >=2.0 && <2.1,
@@ -97,7 +110,8 @@ library
         time -any,
         case-insensitive -any,
         wai -any,
-        stm -any
+        stm -any,
+        ltiv1p1 -any
     default-language: Haskell2010
     default-extensions: TemplateHaskell QuasiQuotes OverloadedStrings
                         NoImplicitPrelude MultiParamTypeClasses TypeFamilies GADTs
@@ -107,7 +121,10 @@ library
     hs-source-dirs: src
 
 executable qua-server
-    
+
+    if ((flag(postgresql) && !flag(dev)) && !flag(library-only))
+        cpp-options: -DPOSTGRESQL
+
     if flag(library-only)
         buildable: False
     main-is: main.hs
@@ -123,20 +140,7 @@ test-suite test
     main-is: Spec.hs
     build-depends:
         base -any,
-        qua-server -any,
-        yesod-test >=1.5.0.1 && <1.6,
-        yesod-core -any,
-        yesod -any,
-        persistent -any,
-        persistent-sqlite -any,
-        resourcet -any,
-        monad-logger -any,
-        shakespeare -any,
-        transformers -any,
-        hspec >=2.0.0,
-        classy-prelude -any,
-        classy-prelude-yesod -any,
-        aeson -any
+        qua-server -any
     default-language: Haskell2010
     default-extensions: TemplateHaskell QuasiQuotes OverloadedStrings
                         NoImplicitPrelude CPP MultiParamTypeClasses TypeFamilies GADTs
