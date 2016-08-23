@@ -227,7 +227,8 @@ defaultRunSettings = RunSettings
 
 ----------------------------------------------------------------------------------------------------
 
--- | Use separate sink and source in two channels
+-- | Use separate sink and source in two channels.
+--   In client mode source runs in main thread, sink runs in forked thread.
 luciChannels :: (MonadBaseControl IO m, MonadIO m, MonadRandom m, MonadLogger m)
              => Int               -- ^ Port
              -> Maybe ByteString  -- ^ Host (if Nothing then Servier else Client)(MonadBaseControl IO m, MonadIO m, MonadRandom m, MonadLogger m)
@@ -241,7 +242,8 @@ luciChannels port Nothing io = Network.runGeneralTCPServer connSettings $ luciCh
     connSettings = Network.serverSettings port "*4"
 
 
--- | Use existing connection to run a message-processing conduit
+-- | Use existing connection to run a message-processing conduit.
+--   Source runs in main thread, sink runs in forked thread.
 luciChannels' :: (MonadBaseControl IO m, MonadIO m, MonadRandom m, MonadLogger m)
               => m (Sink LuciMessage m (), Source m LuciMessage)
               -> Network.AppData

@@ -22,7 +22,7 @@ import           Data.Aeson ((.=))
 import qualified Data.HashMap.Strict as HashMap
 import qualified Data.List as List (sort, intersect,foldl',union)
 import           Data.List ((\\))
-import           Data.Maybe (maybeToList)
+import           Data.Maybe (maybeToList, fromMaybe)
 import           Data.Monoid ((<>))
 import qualified Data.Text as Text
 import qualified Data.Text.Lazy as LText
@@ -72,24 +72,42 @@ runInfoService (TargetedMessage _ myId (MsgRun token "ServiceInfo" pams _)) = do
 -- FilterServices
 runInfoService (TargetedMessage _ myId (MsgRun token "FilterServices" pams _)) = do
     helen <- get
-    let snames = map fst . filter ((keys ==) . findKeys rcrLevel keys . JSON.toJSON . _serviceInfo . snd) . HashMap.toList
+    let snames = map fst . filter (match . JSON.toJSON . _serviceInfo . snd) . HashMap.toList
                $ Lens.view (serviceManager.serviceMap) helen
     sendMessage helen $ SourcedMessage myId $ MsgResult token (
       resultJSON ["serviceNames" .= snames]
       ) []
   where
+    match | not (null keys) = (keys ==) . findKeys rcrLevel keys
+          | jsonMatch /= JSON.object [] = findJSONMatches rcrLevel
+          | otherwise = const True
     rcrLevel = case JSON.fromJSON <$> HashMap.lookup "rcrLevel" pams of
                  Just (JSON.Success l) -> max 0 (l :: Int)
                  _ -> 0
     keys = case JSON.fromJSON <$> HashMap.lookup "keys" pams of
                  Just (JSON.Success l) -> List.sort l
                  _ -> []
+    jsonMatch = fromMaybe (JSON.object []) $ HashMap.lookup "jsonMatch" pams
     findKeys 0 ks (JSON.Object v) = List.foldl' List.union ks' . map (findKeys 0 (ks \\ ks') . snd) $ HashMap.toList v
                              where ks' = ks `List.intersect` List.sort (HashMap.keys v)
     findKeys 1 ks (JSON.Object v) = ks `List.intersect` List.sort (HashMap.keys v)
     findKeys n ks (JSON.Object v) = List.foldl' List.union [] . map (findKeys (n-1) ks . snd) $ HashMap.toList v
     findKeys _ _ _ = []
+    matchJSON JSON.Null _  = True
+    matchJSON (JSON.Array  t) (JSON.Array  v) = t == v
+    matchJSON (JSON.String t) (JSON.String v) = t == v
+    matchJSON (JSON.Number t) (JSON.Number v) = t == v
+    matchJSON (JSON.Bool   t) (JSON.Bool   v) = t == v
+    matchJSON (JSON.Object t) (JSON.Object v) = (HashMap.size t == HashMap.size v') && HashMap.foldl' (&&) True v'
+      where v' = HashMap.intersectionWith matchJSON t v
+    matchJSON _ _ = False
+    findJSONMatches 0 val@(JSON.Object v) = matchJSON jsonMatch val || HashMap.foldl' (\a x -> findJSONMatches 0 x || a) False v
+    findJSONMatches 0 val = matchJSON jsonMatch val
+    findJSONMatches 1 val = matchJSON jsonMatch val
+    findJSONMatches n (JSON.Object v) = HashMap.foldl' (\a x -> findJSONMatches (n-1) x || a) False v
+    findJSONMatches _ _ = False
 
+--jsonMatch
 
 -- unknown messages are ignored
 runInfoService (TargetedMessage _ _ msg)   -- ignore register responses
@@ -154,12 +172,14 @@ filterServicesMessage = MsgRun (-123456782) "RemoteRegister" o []
   where
     o = HashMap.fromList
       [ "description"        .= JSON.String ( "Filters services according to"
-                                           <> "\n its keys at a given recursion level."
+                                           <> "\n a) its keys at a given recursion level."
+                                           <> "\n b) a given json template with values equal to 'null' meaning only keys are compared"
                                            <> "\n Recursion level 0 means all levels are checked; restrict to one level with rcrLevel = 1.")
       , "serviceName"        .= JSON.String "FilterServices"
       , "qua-view-compliant" .= JSON.Bool False
       , "inputs"             .= JSON.object
-          [ "keys"         .= JSON.String "['string']"
+          [ "XOR keys"       .= JSON.String "['string']"
+          , "XOR jsonMatch"  .= JSON.String "json"
           , "OPT rcrLevel" .= JSON.String "number"
           ]
       , "outputs"            .= JSON.object
