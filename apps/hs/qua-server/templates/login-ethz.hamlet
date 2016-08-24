@@ -1,0 +1,48 @@
+<!-- css -->
+<link href="@{StaticR css_base_min_css}" rel="stylesheet">
+<link href="@{StaticR css_project_min_css}" rel="stylesheet">
+
+<!-- content -->
+<header class="header header-red ui-header">
+  <span class="header-logo">iA User stories - Login
+<main class="content">
+  <div class="container">
+    <!-- header message -->
+    $maybe msg <- mmsg
+      <div class="row margin-bottom-no">
+        <div class="col-lg-4 col-lg-push-4 col-sm-6 col-sm-push-3">
+          <div class="card margin-bottom-no">
+            <div class="card-main">
+              <div class="card-inner">
+                <p>#{msg}
+
+    <div class="row">
+      <div class="col-lg-4 col-lg-push-4 col-sm-6 col-sm-push-3">
+        <section class="content-inner margin-top-no">
+          <div class="card">
+            <div class="card-main">
+              <div class="card-header">
+                <div class="card-inner">
+                  <h1 class="card-heading">Login using ETH Zurich account
+              <div class="card-inner">
+                <p class="text-center">
+                  <form class="form" action="@{loginR}" method="post">
+                    <div class="form-group form-group-label">
+                      <div class="row">
+                        <div class="col-md-10 col-md-push-1">
+                          <label class="floating-label" for="username">Username
+                          <input class="form-control" id="username" name="username" type="text" required>
+                    <div class="form-group form-group-label">
+                      <div class="row">
+                        <div class="col-md-10 col-md-push-1">
+                          <label class="floating-label" for="password">Password
+                          <input class="form-control" id="password" name="password" type="password" required>
+                    <div class="form-group">
+                      <div class="row">
+                        <div class="col-md-10 col-md-push-1">
+                          <button class="btn btn-block btn-red waves-attach waves-light waves-effect" type="submit">Sign In
+
+<!-- js -->
+<script type="text/javascript" src="@{StaticR js_jquery_2_2_3_min_js}">
+<script type="text/javascript" src="@{StaticR js_base_min_js}">
+<script type="text/javascript" src="@{StaticR js_project_min_js}">

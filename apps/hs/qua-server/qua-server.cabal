@@ -65,10 +65,13 @@ library
         Handler.Home.PopupSave
         Handler.Home.UIButtons
         Handler.LuciProxy
+        Handler.Mooc
+        Handler.Mooc.EdxLogin
         Handler.QuaViewSettings
         Import
         Import.NoFoundation
         Model
+        Model.CustomTypes
         Settings
         Settings.StaticFiles
     build-depends:
@@ -79,6 +82,9 @@ library
         yesod-static >=1.4.0.3 && <1.6,
         yesod-form >=1.4.0 && <1.5,
         yesod-websockets -any,
+        yesod-auth-ldap-native >=0.2.0.0,
+        transformers >=0.4.2.0 && <0.5,
+        ldap-client >=0.1.0,
         classy-prelude >=0.10.2,
         classy-prelude-conduit >=0.10.2,
         classy-prelude-yesod >=0.10.2,
@@ -135,21 +141,3 @@ executable qua-server
     hs-source-dirs: app
     ghc-options: -threaded -rtsopts -with-rtsopts=-N
 
-test-suite test
-    type: exitcode-stdio-1.0
-    main-is: Spec.hs
-    build-depends:
-        base -any,
-        qua-server -any
-    default-language: Haskell2010
-    default-extensions: TemplateHaskell QuasiQuotes OverloadedStrings
-                        NoImplicitPrelude CPP MultiParamTypeClasses TypeFamilies GADTs
-                        GeneralizedNewtypeDeriving FlexibleContexts FlexibleInstances
-                        EmptyDataDecls NoMonomorphismRestriction DeriveDataTypeable
-                        ViewPatterns TupleSections
-    hs-source-dirs: test
-    other-modules:
-        Handler.CommonSpec
-        Handler.HomeSpec
-        TestImport
-    ghc-options: -Wall

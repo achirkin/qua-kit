@@ -2,16 +2,21 @@ module Foundation where
 
 import Control.Concurrent.STM.TChan
 
+import Yesod.Auth.LdapNative
 import Import.NoFoundation
 import Database.Persist.Sql (ConnectionPool, runSqlPool)
 import Text.Hamlet          (hamletFile)
 import Text.Jasmine         (minifym)
-import Yesod.Auth.OpenId    (authOpenId, IdentifierType (Claimed))
+--import Yesod.Auth.OpenId    (authOpenId, IdentifierType (Claimed))
+import Yesod.Auth.Message   (AuthMessage (..))
 import Yesod.Default.Util   (addStaticContentExternal)
 import Yesod.Core.Types     (Logger)
 import qualified Yesod.Core.Unsafe as Unsafe
 --import qualified Data.CaseInsensitive as CI
 --import qualified Data.Text.Encoding as TE
+
+import Handler.Mooc.EdxLogin
+
 
 -- | The foundation datatype for your application. This can be a good place to
 -- keep settings and values requiring initialization before your application
@@ -134,25 +139,51 @@ instance YesodAuth App where
     type AuthId App = UserId
 
     -- Where to send a user after successful login
-    loginDest _ = HomeR
+    loginDest _ = MoocHomeR
     -- Where to send a user after logout
-    logoutDest _ = HomeR
+    logoutDest _ = MoocHomeR
     -- Override the above two destinations when a Referer: header is present
     redirectToReferer _ = True
 
-    authenticate creds = runDB $ do
-        x <- getBy $ UniqueUser $ credsIdent creds
+    -- authenticatin using ldap plugin
+    authenticate creds@Creds{credsPlugin = "ldap"} = runDB $ do
+        x <- getBy . ETHUserName . Just $ credsIdent creds
         case x of
             Just (Entity uid _) -> return $ Authenticated uid
             Nothing -> Authenticated <$> insert User
-                { userIdent = credsIdent creds
-                , userPassword = Nothing
+                { userName = Just $ credsIdent creds
+                , userRole = UR_LOCAL
+                , userEthUserName = Just $ credsIdent creds
+                , userEdxUserId = Nothing
                 }
+    authenticate creds@Creds{credsPlugin = "lti"} = do
+      mapM_ (uncurry setSession) (credsExtra creds)
+      runDB $ do
+        x <- getBy . EdxUserId . Just $ credsIdent creds
+        case x of
+            Just (Entity uid _) -> return $ Authenticated uid
+            Nothing -> Authenticated <$> insert User
+                { userName = Just $ credsIdent creds
+                , userRole = UR_STUDENT
+                , userEthUserName = Nothing
+                , userEdxUserId = Just $ credsIdent creds
+                }
+    authenticate _ = return $ UserError AuthError
 
-    -- You can add other plugins like Google Email, email or OAuth here
-    authPlugins _ = [authOpenId Claimed []]
+--    EdxUserId edxUserId !force
+
+    -- You can add other plugins like Google Email, email or OAuth here    -- You can add other plugins like Google Email, email or OAuth here
+    authPlugins ye = [ authLdapWithForm ldapConf $ \loginR -> getMessage >>= \mmsg -> $(widgetFile "login-ethz")
+                     , authLtiPlugin (appLTICredentials $ appSettings ye)]
+--    authPlugins _ = [authOpenId Claimed []]
 
     authHttpManager = getHttpManager
+
+ldapConf :: LdapAuthConf
+ldapConf = setHost (Insecure "auth.arch.ethz.ch") $ setPort 636
+  $ mkLdapConf Nothing "cn=users,dc=ethz,dc=ch"
+
+
 
 instance YesodAuthPersist App
 
@@ -177,3 +208,9 @@ unsafeHandler = Unsafe.fakeHandlerGetLogger appLogger
 -- https://github.com/yesodweb/yesod/wiki/Sending-email
 -- https://github.com/yesodweb/yesod/wiki/Serve-static-files-from-a-separate-domain
 -- https://github.com/yesodweb/yesod/wiki/i18n-messages-in-the-scaffolding
+
+
+
+
+
+

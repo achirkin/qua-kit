@@ -1,17 +1,86 @@
+-- | Web-app user (authorize via ETHZ LDAP or EdX LTI or pre-defined).
 User
-    ident Text
-    password Text Maybe
-    UniqueUser ident
-    deriving Typeable
-Email
-    email Text
-    userId UserId Maybe
-    verkey Text Maybe
-    UniqueEmail email
-Comment json -- Adding "json" causes ToJSON and FromJSON instances to be derived.
-    message Text
-    userId UserId Maybe
-    deriving Eq
+    name Text Maybe
+    role UserRole default=0
+    ethUserName Text Maybe
+    edxUserId Text Maybe
+    ETHUserName ethUserName !force
+    EdxUserId edxUserId !force
     deriving Show
 
- -- By default this file is used in Model.hs (which is imported by Foundation.hs)
+-- | Normally a course unit
+EdxResource
+    link         Text
+    courseId     EdxCourseId
+    friendlyName Text Maybe
+    EdxResLink   link
+    deriving Show
+
+-- | custom parameters set for an exercise
+EdxResourceParam
+    resourceId  EdxResourceId
+    key         Text
+    value       Text
+    EdxResParam resourceId key
+    deriving Show
+
+-- | An edX course
+EdxCourse
+    contextId    Text
+    friendlyName Text Maybe
+    EdxContextId contextId
+    deriving Show
+
+Scenario
+    authorId      UserId
+    image         ByteString
+    geometry      ByteString
+    description   Text
+    edxResource   EdxResourceId
+    edxOutcomeUrl Text Maybe
+    edxResultId   Text Maybe
+    lastUpdate    UTCTime default=CURRENT_TIMESTAMP
+
+Review
+    scenarioId  ScenarioId
+    criterionId CriterionId
+    positive    Bool
+    comment     Text
+
+Criterion
+    name        Text
+    description Text
+
+Vote
+    criterionId   CriterionId
+    betterId      ScenarioId
+    worseId       ScenarioId
+    explanation   Text Maybe
+    edxResource   EdxResourceId
+    edxOutcomeUrl Text Maybe
+    edxResultId   Text Maybe
+    timestamp     UTCTime default=CURRENT_TIMESTAMP
+
+UserScenarioAction
+    authorId     UserId
+    scenarioId   ScenarioId
+    timestamp    UTCTime default=CURRENT_TIMESTAMP
+    geomId       Int
+    x11 Double
+    x12 Double
+    x13 Double
+    x14 Double
+    x21 Double
+    x22 Double
+    x23 Double
+    x24 Double
+    x31 Double
+    x32 Double
+    x33 Double
+    x34 Double
+    x41 Double
+    x42 Double
+    x43 Double
+    x44 Double
+
+

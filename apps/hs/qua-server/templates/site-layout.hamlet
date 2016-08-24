@@ -9,5 +9,5 @@ $doctype 5
     <link rel="icon" href="@{FaviconR}" type="image/x-icon" />
     <title>#{pageTitle pc}
     ^{pageHead pc}
-  <body>
+  <body class="page-red">
     ^{pageBody pc}

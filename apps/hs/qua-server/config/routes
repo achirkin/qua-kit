@@ -9,3 +9,6 @@
 /chat ChatR GET
 
 /qua-view-settings QuaViewSettingsR GET
+
+
+/mooc MoocHomeR GET POST

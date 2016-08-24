@@ -131,7 +131,11 @@ processYesodRequest prov yreq = ExceptT $ do
 convertRequest :: Wai.Request
                -> HTTP.RequestBody
                -> HTTP.Request
+#if MIN_VERSION_http_client(0, 4, 30)
+convertRequest wr rbody = HTTP.defaultRequest
+#else
 convertRequest wr rbody = def
+#endif
     { HTTP.method = Wai.requestMethod wr
     , HTTP.secure = Wai.appearsSecure wr
     , HTTP.host = whost

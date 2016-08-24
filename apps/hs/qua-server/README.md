@@ -23,3 +23,9 @@ Run test suite:
 ```
 yesod test
 ```
+
+#### Acknowledgements
+
+Thanks to [Daemonite's Material UI](https://github.com/Daemonite/material) team for frontend templates.
+
+For the web server engine: [yesodweb](http://www.yesodweb.com/).

@@ -14,7 +14,7 @@ module Handler.Home.PanelServices
   ) where
 
 import Import
-import Text.Julius
+--import Text.Julius
 
 panelServices :: Widget
 panelServices = do
