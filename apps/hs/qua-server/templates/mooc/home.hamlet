@@ -8,7 +8,7 @@
     <li>
       <a data-toggle="menu" href="#ui_menu">
         <span class="icon icon-lg">menu
-  <div.header-logo.margin-no style="word-break: break-all; word-wrap: break-word; width: 70%; display: inline-block; padding-top: 12px;">
+  <div.header-logo.margin-no>
     qua-kit
   <ul class="nav nav-list pull-right">
     <li class="dropdown margin-right">
