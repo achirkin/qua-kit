@@ -1,6 +1,6 @@
 -- | Web-app user (authorize via ETHZ LDAP or EdX LTI or pre-defined).
 User
-    name Text Maybe
+    name Text
     role UserRole default=0
     ethUserName Text Maybe
     edxUserId Text Maybe
@@ -31,8 +31,14 @@ EdxCourse
     EdxContextId contextId
     deriving Show
 
+ScenarioProblem
+    geometry    ByteString
+    description Text
+    scale       Double
+
 Scenario
     authorId      UserId
+    taskId        ScenarioProblemId
     image         ByteString
     geometry      ByteString
     description   Text
@@ -62,8 +68,8 @@ Vote
     timestamp     UTCTime default=CURRENT_TIMESTAMP
 
 UserScenarioAction
-    authorId     UserId
-    scenarioId   ScenarioId
+    authorId     UserId Maybe
+    scenarioId   ScenarioProblemId
     timestamp    UTCTime default=CURRENT_TIMESTAMP
     geomId       Int
     x11 Double

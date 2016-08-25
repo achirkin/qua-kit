@@ -27,7 +27,7 @@ pluginName = "lti"
 
 authLtiPlugin :: (Yesod m, YesodAuth m) => LTIProvider -> AuthPlugin m
 authLtiPlugin conf =
-  AuthPlugin pluginName (dispatch conf) $ \_tp -> getYesod >>= redirect . loginDest
+  AuthPlugin pluginName (dispatch conf) $ \_tp -> return ()
 
 -- | This creates a page with url
 --   root.root/auth/page/lti/login
@@ -59,9 +59,8 @@ dispatch conf "POST" ["login"] = do
                         Nothing -> permissionDenied $ "Cannot access request parameter " <> Text.decodeUtf8 p
     -- store all special parameters in user session
     saveCustomParams [] = []
-    saveCustomParams ((k,v):xs) =
-      case Text.stripPrefix "custom_" $ Text.decodeUtf8 k of
-        Nothing -> saveCustomParams xs
-        Just key -> (key, Text.decodeUtf8 v) : saveCustomParams xs
+    saveCustomParams ((k,v):xs) = if "custom_" `isPrefixOf` k
+               then (Text.decodeUtf8 k, Text.decodeUtf8 v) : saveCustomParams xs
+               else saveCustomParams xs
 dispatch _ _ _                 = notFound
 

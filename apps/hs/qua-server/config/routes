@@ -7,8 +7,10 @@
 / HomeR GET POST
 /luci LuciR GET
 /chat ChatR GET
+/logging QVLoggingR GET
 
 /qua-view-settings QuaViewSettingsR GET
 
 
 /mooc MoocHomeR GET POST
+/renameme RenameMeR GET

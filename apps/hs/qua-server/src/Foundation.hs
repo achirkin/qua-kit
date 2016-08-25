@@ -53,10 +53,8 @@ type Form x = Html -> MForm (HandlerT App IO) (FormResult x, Widget)
 instance Yesod App where
     -- Controls the base of generated URLs. For more information on modifying,
     -- see: https://github.com/yesodweb/yesod/wiki/Overriding-approot
-    approot = ApprootRequest $ \app req ->
-        case appRoot $ appSettings app of
-            Nothing -> getApprootText guessApproot app req
-            Just root -> root
+    approot = ApprootRequest $ \app req -> fromMaybe (getApprootText guessApproot app req)
+                                                     (appRoot $ appSettings app)
 
     -- Store session data on the client in encrypted cookies,
     -- default session idle timeout is 120 minutes
@@ -151,7 +149,7 @@ instance YesodAuth App where
         case x of
             Just (Entity uid _) -> return $ Authenticated uid
             Nothing -> Authenticated <$> insert User
-                { userName = Just $ credsIdent creds
+                { userName = credsIdent creds
                 , userRole = UR_LOCAL
                 , userEthUserName = Just $ credsIdent creds
                 , userEdxUserId = Nothing
@@ -163,19 +161,16 @@ instance YesodAuth App where
         case x of
             Just (Entity uid _) -> return $ Authenticated uid
             Nothing -> Authenticated <$> insert User
-                { userName = Just $ credsIdent creds
+                { userName = take 8 $ credsIdent creds
                 , userRole = UR_STUDENT
                 , userEthUserName = Nothing
                 , userEdxUserId = Just $ credsIdent creds
                 }
     authenticate _ = return $ UserError AuthError
 
---    EdxUserId edxUserId !force
-
-    -- You can add other plugins like Google Email, email or OAuth here    -- You can add other plugins like Google Email, email or OAuth here
+    -- You can add other plugins like Google Email, email or OAuth here
     authPlugins ye = [ authLdapWithForm ldapConf $ \loginR -> getMessage >>= \mmsg -> $(widgetFile "login-ethz")
                      , authLtiPlugin (appLTICredentials $ appSettings ye)]
---    authPlugins _ = [authOpenId Claimed []]
 
     authHttpManager = getHttpManager
 

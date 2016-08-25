@@ -35,16 +35,16 @@ flag postgresql
         Use PostgreSQL database. Otherwise use sqlite.
 
 library
-
+    
     if ((flag(postgresql) && !flag(dev)) && !flag(library-only))
         cpp-options: -DPOSTGRESQL
-
+    
     if (flag(dev) || flag(library-only))
         cpp-options: -DDEVELOPMENT
         ghc-options: -Wall -fwarn-tabs -O0
     else
         ghc-options: -Wall -fwarn-tabs -O2
-
+    
     if ((flag(postgresql) && !flag(dev)) && !flag(library-only))
         build-depends:
             persistent-postgresql -any
@@ -64,9 +64,11 @@ library
         Handler.Home.PopupHelp
         Handler.Home.PopupSave
         Handler.Home.UIButtons
+        Handler.LoggingWS
         Handler.LuciProxy
         Handler.Mooc
         Handler.Mooc.EdxLogin
+        Handler.Mooc.RenameMe
         Handler.QuaViewSettings
         Import
         Import.NoFoundation
@@ -127,10 +129,10 @@ library
     hs-source-dirs: src
 
 executable qua-server
-
+    
     if ((flag(postgresql) && !flag(dev)) && !flag(library-only))
         cpp-options: -DPOSTGRESQL
-
+    
     if flag(library-only)
         buildable: False
     main-is: main.hs

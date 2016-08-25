@@ -6,7 +6,7 @@ extra-deps:
   - yesod-auth-ldap-native-0.2.0.0
   - ldap-client-0.1.0
     # LTI interop client
-  - ltiv1p1-1.0.0.2
+  - ltiv1p1-1.0.0.3
 
 flags: {}
 packages:
