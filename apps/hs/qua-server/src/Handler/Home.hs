@@ -20,9 +20,12 @@ postHomeR = renderQuaView
 
 renderQuaView :: Handler Html
 renderQuaView = do
+  showFull <- canShowFull . getRole <$> maybeAuth
+
   -- connecting form + conteiners for optional content
   (lcConnectedClass, lcDisconnectedClass, luciConnectForm) <- luciConnectPane
   (popupScenarioList, luciScenariosPane) <- luciScenarios
+  (uiButtonsGUI, uiButtonsSubmitPopup) <- uiButtons
   defaultLayout $ do
 
     -- add qua-view dependencies
@@ -54,3 +57,10 @@ renderQuaView = do
 
     -- render all html
     $(widgetFile "qua-view")
+  where
+    canShowFull UR_NOBODY = True
+    canShowFull UR_STUDENT = False
+    canShowFull UR_LOCAL = True
+    canShowFull UR_ADMIN = True
+    getRole Nothing = UR_NOBODY
+    getRole (Just (Entity _ u)) = userRole u

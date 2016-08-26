@@ -37,6 +37,7 @@ import Handler.LuciProxy
 import Handler.QuaViewSettings
 import Handler.Mooc
 import Handler.Mooc.RenameMe
+import Handler.Mooc.SubmitProposal
 import Handler.LoggingWS
 
 -- This line actually creates our YesodDispatch instance. It is the second half

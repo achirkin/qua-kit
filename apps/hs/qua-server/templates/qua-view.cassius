@@ -105,6 +105,12 @@ body
 .tabitemidle
     opacity: 0.6
 
+/* #headerbar
+    background-image: url('@{StaticR css_images_bg_back_header_svg}')
+    background-position: -50% 50%
+    background-color: #FF5722
+    height: 248px;
+    max-heigt: 15%; */
 
 #titlebar
     position: relative

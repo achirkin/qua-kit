@@ -69,6 +69,7 @@ library
         Handler.Mooc
         Handler.Mooc.EdxLogin
         Handler.Mooc.RenameMe
+        Handler.Mooc.SubmitProposal
         Handler.QuaViewSettings
         Import
         Import.NoFoundation

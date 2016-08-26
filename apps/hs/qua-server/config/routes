@@ -12,5 +12,6 @@
 /qua-view-settings QuaViewSettingsR GET
 
 
-/mooc MoocHomeR GET POST
-/renameme RenameMeR GET
+/mooc        MoocHomeR GET POST
+/mooc/submit SubmitProposalR POST
+/renameme    RenameMeR GET
