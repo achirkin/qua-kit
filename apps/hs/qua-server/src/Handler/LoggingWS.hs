@@ -9,7 +9,7 @@
 --
 --
 -----------------------------------------------------------------------------
-
+{-# OPTIONS_GHC -fno-warn-orphans #-}
 module Handler.LoggingWS
   ( getQVLoggingR
   ) where
@@ -19,48 +19,46 @@ module Handler.LoggingWS
 import Import
 
 import Yesod.WebSockets
-import Data.Conduit.Network as Network
-import qualified Data.Conduit.List as CList
+--import Data.Conduit.Network as Network
+--import qualified Data.Conduit.List as CList
+import Database.Persist.Sql (toSqlKey)
+import Data.Text.Read (decimal)
+import Data.Aeson (decodeStrict')
+import Data.Aeson.Types (typeMismatch)
 --import qualified Data.ByteString.Char8 as BSC
 
 
-loggingApp :: WebSocketsT Handler ()
-loggingApp = do
-    sourceWS $$ mapM_C (\msg -> print (msg :: Text))
---            atomically $ writeTChan writingChan $ name <> ": " <> msg
---
---    sendTextData ("Welcome to the chat server, please enter your name." :: Text)
---    name <- receiveData
---    sendTextData $ "Welcome, " <> name
---    writingChan <- appWSChan <$> getYesod
---    readingChan <- atomically $ do
---        writeTChan writingChan $ name <> " has joined the chat"
---        dupTChan writingChan
---    race_
---        (forever $ atomically (readTChan readingChan) >>= sendTextData)
---        (sourceWS $$ mapM_C (\msg ->
---            atomically $ writeTChan writingChan $ name <> ": " <> msg))
+loggingApp :: UserId -> ScenarioProblemId -> WebSocketsT Handler ()
+loggingApp uId scpId = sourceWS $$ mapM_C (\msg -> do
+       t <- liftIO getCurrentTime
+       case decodeStrict' msg of
+         Nothing   -> return ()
+         Just msgF -> lift . runDB . insert_ $ (msgF uId scpId t :: UserScenarioAction)
+     )
 
---  mluciAddr <- lift $ appLuciAddress . appSettings <$> getYesod
---  case mluciAddr of
---    Nothing -> return () -- sendTextData ("No default Luci host specified in settings." :: Text)
---    Just luciAddr -> runGeneralTCPClient luciAddr $ \appData -> do
---      -- sendTextData ("Connected to Luci on " <> getHost luciAddr <> ":" <> BSC.pack (show $ getPort luciAddr))
---      let toLuci :: Consumer ByteString (WebSocketsT Handler) ()
---          toLuci = Network.appSink appData
---          fromLuci :: Producer (WebSocketsT Handler) ByteString
---          fromLuci = Network.appSource appData
---          toClient :: Consumer ByteString (WebSocketsT Handler) ()
---          toClient = sinkWSBinary
---          fromClient :: Producer (WebSocketsT Handler) ByteString
---          fromClient = sourceWS
---      race_
---         (runConduit $ fromClient =$= CList.mapM (\x -> (liftIO . print $ "CLIENT: " <> x) >> return x) =$= toLuci)
---         (runConduit $ fromLuci =$= CList.mapM (\x -> (liftIO . print $ "LUCI: " <> x) >> return x) =$= toClient)
+
+instance FromJSON (UserId -> ScenarioProblemId -> UTCTime -> UserScenarioAction) where
+  parseJSON (Object v) = do
+    v11:v12:v13:v14
+     :v21:v22:v23:v24
+     :v31:v32:v33:v34
+     :v41:v42:v43:v44:_ <- v .: "transform"
+    geomId <- v .: "geomID"
+    return $ \uId spId t -> UserScenarioAction
+       uId spId t geomId
+       v11 v12 v13 v14
+       v21 v22 v23 v24
+       v31 v32 v33 v34
+       v41 v42 v43 v44
+  parseJSON invalid = typeMismatch "UserScenarioAction" invalid
 
 
 getQVLoggingR :: Handler Html
 getQVLoggingR = do
-    webSockets loggingApp
+    mUId <- maybeAuthId
+    mcustom_exercise_id <- fmap (fmap (toSqlKey . fst) . decimal) <$> lookupSession "custom_exercise_id"
+    case (,) <$> mUId <*> mcustom_exercise_id of
+      Just (uId, Right eId) -> webSockets $ loggingApp uId eId
+      _ -> return ()
     notFound
 

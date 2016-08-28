@@ -16,8 +16,6 @@ module Handler.Mooc
 
 
 
-
-import qualified Data.Text as Text
 import qualified Data.Map as Map
 --import qualified Database.Esqueleto      as E
 --import           Database.Esqueleto      ((^.))
@@ -45,8 +43,4 @@ getMoocHomeR  = do
 
 
 -- | Get two capital characters out of a name
-twoCharsName :: Text -> Text
-twoCharsName s = case filter (not . null) $ Text.words s of
-   [name] -> Text.toUpper $ Text.take 2 name
-   n1:n2:_ -> Text.toUpper $ Text.take 1 n1 <> Text.take 1 n2
-   _ -> "??"
+

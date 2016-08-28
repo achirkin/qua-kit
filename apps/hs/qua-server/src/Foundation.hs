@@ -2,6 +2,7 @@ module Foundation where
 
 import Control.Concurrent.STM.TChan
 
+import qualified Data.Text as Text
 import Yesod.Auth.LdapNative
 import Import.NoFoundation
 import Database.Persist.Sql (ConnectionPool, runSqlPool)
@@ -15,6 +16,7 @@ import qualified Yesod.Core.Unsafe as Unsafe
 --import qualified Data.CaseInsensitive as CI
 --import qualified Data.Text.Encoding as TE
 
+import qualified Data.Map.Strict as Map
 import Handler.Mooc.EdxLogin
 
 
@@ -92,6 +94,11 @@ instance Yesod App where
     isAuthorized (AuthR _) _ = return Authorized
     isAuthorized FaviconR _ = return Authorized
     isAuthorized RobotsR _ = return Authorized
+    isAuthorized AdminR _ = do
+      role <- muserRole <$> maybeAuth
+      return $ if role == UR_ADMIN
+               then Authorized
+               else Unauthorized "You need admin rights to access this page."
     -- Default to Authorized for now.
     isAuthorized _ _ = return Authorized
 
@@ -155,17 +162,17 @@ instance YesodAuth App where
                 , userEdxUserId = Nothing
                 }
     authenticate creds@Creds{credsPlugin = "lti"} = do
-      mapM_ (uncurry setSession) (credsExtra creds)
+      setupEdxParams (credsExtra creds)
       runDB $ do
         x <- getBy . EdxUserId . Just $ credsIdent creds
         case x of
-            Just (Entity uid _) -> return $ Authenticated uid
-            Nothing -> Authenticated <$> insert User
-                { userName = take 8 $ credsIdent creds
-                , userRole = UR_STUDENT
-                , userEthUserName = Nothing
-                , userEdxUserId = Just $ credsIdent creds
-                }
+          Just (Entity uid _) -> return $ Authenticated uid
+          Nothing -> Authenticated <$> insert User
+              { userName = take 8 $ credsIdent creds
+              , userRole = UR_STUDENT
+              , userEthUserName = Nothing
+              , userEdxUserId = Just $ credsIdent creds
+              }
     authenticate _ = return $ UserError AuthError
 
     -- You can add other plugins like Google Email, email or OAuth here
@@ -204,8 +211,72 @@ unsafeHandler = Unsafe.fakeHandlerGetLogger appLogger
 -- https://github.com/yesodweb/yesod/wiki/Serve-static-files-from-a-separate-domain
 -- https://github.com/yesodweb/yesod/wiki/i18n-messages-in-the-scaffolding
 
+muserRole :: Maybe (Entity User) -> UserRole
+muserRole Nothing = UR_ADMIN -- UR_NOBODY
+muserRole (Just (Entity _ u)) = userRole u
+
+twoCharsName :: Text -> Text
+twoCharsName s = case filter (not . null) $ Text.words s of
+   [name] -> Text.toUpper $ Text.take 2 name
+   n1:n2:_ -> Text.toUpper $ Text.take 1 n1 <> Text.take 1 n2
+   _ -> "??"
 
 
+setupEdxParams :: [(Text,Text)] -> Handler ()
+setupEdxParams params = do
+  lookupAndSave "lis_outcome_service_url"
+  lookupAndSave "lis_result_sourcedid"
+  lookupAndSave "resource_link_id"
+  lookupAndSave "custom_exercise_type"
+  lookupAndSave "custom_exercise_id"
+  runDB $
+    case (,) <$> mresource_link_id <*> mcontext_id of
+      Nothing  -> return ()
+      Just (resource_link_id, context_id) -> do
+        mEdxRes <- getBy (EdxResLinkId resource_link_id)
+        case mEdxRes of
+          Just (Entity ek _) -> saveCustomParams ek
+          Nothing -> do
+            Entity edxCourseId _ <- upsert (EdxCourse context_id Nothing) []
+            ek <- insert $ EdxResource resource_link_id edxCourseId (Map.lookup "custom_component_display_name" pm)
+            saveCustomParams ek
+  where
+    mresource_link_id = Map.lookup "resource_link_id" pm
+    mcontext_id       = Map.lookup "context_id" pm
+    lookupAndSave t = case Map.lookup t pm of
+        Nothing -> return ()
+        Just v  -> setSession t v
+    pm = Map.fromList params
+    saveCustomParams ek = mapM_ (\(k,v) -> void $ upsert (EdxResourceParam ek k v) []) $
+                           map (first (drop 7)) $ filter (isPrefixOf "custom_". fst ) params
 
+--setupCourse context_id =
 
+--            user_id                 <- lookupParam msg "user_id"
+--        resource_link_id        <- lookupParam msg "resource_link_id"
+--        context_id              <- lookupParam msg "context_id"
+--        lis_outcome_service_url <- lookupParam msg "lis_outcome_service_url"
+--        lis_result_sourcedid    <- lookupParam msg "lis_result_sourcedid"
 
+--  -- | Normally a course unit
+--EdxResource
+--    linkId       Text
+--    courseId     EdxCourseId
+--    friendlyName Text Maybe
+--    EdxResLinkId linkId
+--    deriving Show
+--
+---- | custom parameters set for an exercise
+--EdxResourceParam
+--    resourceId  EdxResourceId
+--    key         Text
+--    value       Text
+--    EdxResParam resourceId key
+--    deriving Show
+--
+---- | An edX course
+--EdxCourse
+--    contextId    Text
+--    friendlyName Text Maybe
+--    EdxContextId contextId
+--    deriving Show

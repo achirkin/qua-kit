@@ -29,6 +29,9 @@ import Network.Wai.Middleware.RequestLogger (Destination (Logger),
 import System.Log.FastLogger                (defaultBufSize, newStdoutLoggerSet,
                                              toLogStr)
 
+import qualified Data.ByteString as BS (readFile)
+import qualified Data.ByteString.Base64 as BSUrl (encode)
+
 -- Import all relevant handler modules here.
 -- Don't forget to add new modules to your cabal file!
 import Handler.Common
@@ -37,8 +40,12 @@ import Handler.LuciProxy
 import Handler.QuaViewSettings
 import Handler.Mooc
 import Handler.Mooc.RenameMe
+import Handler.Mooc.Admin
+import Handler.Mooc.Scenario
+import Handler.Mooc.BrowseProposals
 import Handler.Mooc.SubmitProposal
 import Handler.LoggingWS
+
 
 -- This line actually creates our YesodDispatch instance. It is the second half
 -- of the call to mkYesodData which occurs in Foundation.hs. Please see the
@@ -77,6 +84,19 @@ makeFoundation appSettings = do
 
     -- Perform database migration using our application's logging settings.
     runLoggingT (runSqlPool (runMigration migrateAll) pool) logFunc
+
+    sctaskfile <- BS.readFile "static/data/mooctask.geojson"
+    sctaskpreview <- BS.readFile "static/data/mooctask.png"
+    _ <- flip runSqlPool pool $ do
+      -- add dev sample problem
+      repsert (toSqlKey 0) (ScenarioProblem
+            ( "data:image/png;base64," <> BSUrl.encode sctaskpreview
+            ) sctaskfile "Empower Shack scenario" 0.001)
+      -- make me the first admin
+      mme <- getBy $ ETHUserName (Just "achirkin")
+      case mme of
+        Nothing -> insert_ $ User "Artem Chirkin" UR_ADMIN (Just "achirkin") Nothing
+        Just (Entity key _) -> update key [UserRole =. UR_ADMIN]
 
     -- Return the foundation
     return $ mkFoundation pool

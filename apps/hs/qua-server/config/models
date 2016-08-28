@@ -10,10 +10,10 @@ User
 
 -- | Normally a course unit
 EdxResource
-    link         Text
+    linkId       Text
     courseId     EdxCourseId
     friendlyName Text Maybe
-    EdxResLink   link
+    EdxResLinkId linkId
     deriving Show
 
 -- | custom parameters set for an exercise
@@ -32,6 +32,7 @@ EdxCourse
     deriving Show
 
 ScenarioProblem
+    image       ByteString
     geometry    ByteString
     description Text
     scale       Double
@@ -42,6 +43,7 @@ Scenario
     image         ByteString
     geometry      ByteString
     description   Text
+    scale         Double
     edxResource   EdxResourceId
     edxOutcomeUrl Text Maybe
     edxResultId   Text Maybe
@@ -68,7 +70,7 @@ Vote
     timestamp     UTCTime default=CURRENT_TIMESTAMP
 
 UserScenarioAction
-    authorId     UserId Maybe
+    authorId     UserId
     scenarioId   ScenarioProblemId
     timestamp    UTCTime default=CURRENT_TIMESTAMP
     geomId       Int
