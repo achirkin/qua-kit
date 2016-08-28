@@ -30,7 +30,6 @@ import System.Log.FastLogger                (defaultBufSize, newStdoutLoggerSet,
                                              toLogStr)
 
 import qualified Data.ByteString as BS (readFile)
-import qualified Data.ByteString.Base64 as BSUrl (encode)
 
 -- Import all relevant handler modules here.
 -- Don't forget to add new modules to your cabal file!
@@ -44,6 +43,7 @@ import Handler.Mooc.Admin
 import Handler.Mooc.Scenario
 import Handler.Mooc.BrowseProposals
 import Handler.Mooc.SubmitProposal
+import Handler.Mooc.ProposalPreview
 import Handler.LoggingWS
 
 
@@ -89,9 +89,7 @@ makeFoundation appSettings = do
     sctaskpreview <- BS.readFile "static/data/mooctask.png"
     _ <- flip runSqlPool pool $ do
       -- add dev sample problem
-      repsert (toSqlKey 0) (ScenarioProblem
-            ( "data:image/png;base64," <> BSUrl.encode sctaskpreview
-            ) sctaskfile "Empower Shack scenario" 0.001)
+      repsert (toSqlKey 0) (ScenarioProblem sctaskpreview sctaskfile "Empower Shack scenario" 0.001)
       -- make me the first admin
       mme <- getBy $ ETHUserName (Just "achirkin")
       case mme of

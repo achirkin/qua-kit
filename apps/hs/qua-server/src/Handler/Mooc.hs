@@ -41,6 +41,3 @@ getMoocHomeR  = do
         $(widgetFile "mooc/home")
 
 
-
--- | Get two capital characters out of a name
-

@@ -23,9 +23,9 @@ getBrowseProposalsR = do
       setTitle "EdX User Stories"
       toWidgetBody $
         [hamlet|
-          $forall (Entity _ scenario) <- scenarios
+          $forall (Entity scId scenario) <- scenarios
             <div>
-              <img src="#{decodeUtf8 $ scenarioImage scenario}" height=400>
+              <img src="@{ProposalPreviewR scId}" height=400>
               <div>
                 #{scenarioDescription scenario}
         |]

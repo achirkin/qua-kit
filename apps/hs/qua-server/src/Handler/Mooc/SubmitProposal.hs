@@ -18,6 +18,7 @@ import Import
 import Database.Persist.Sql (toSqlKey)
 import Data.Text.Read (decimal)
 
+import qualified Data.ByteString.Base64 as BSB (decodeLenient)
 
 postSubmitProposalR :: Handler Html
 postSubmitProposalR = do
@@ -53,7 +54,7 @@ postSubmitProposalR = do
         Just (Entity _ prevScenario) -> do
           t <- liftIO getCurrentTime
           _ <- runDB . insert $ prevScenario
-             { scenarioImage = encodeUtf8 preview
+             { scenarioImage = BSB.decodeLenient . encodeUtf8 . drop 1 $ dropWhile (',' /=) preview
              , scenarioDescription = fromMaybe "" description
              , scenarioGeometry = encodeUtf8 geometry
              , scenarioLastUpdate = t

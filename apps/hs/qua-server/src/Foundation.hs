@@ -211,10 +211,13 @@ unsafeHandler = Unsafe.fakeHandlerGetLogger appLogger
 -- https://github.com/yesodweb/yesod/wiki/Serve-static-files-from-a-separate-domain
 -- https://github.com/yesodweb/yesod/wiki/i18n-messages-in-the-scaffolding
 
+
 muserRole :: Maybe (Entity User) -> UserRole
 muserRole Nothing = UR_ADMIN -- UR_NOBODY
 muserRole (Just (Entity _ u)) = userRole u
 
+
+-- | Get two capital characters out of a name
 twoCharsName :: Text -> Text
 twoCharsName s = case filter (not . null) $ Text.words s of
    [name] -> Text.toUpper $ Text.take 2 name
@@ -250,33 +253,3 @@ setupEdxParams params = do
     saveCustomParams ek = mapM_ (\(k,v) -> void $ upsert (EdxResourceParam ek k v) []) $
                            map (first (drop 7)) $ filter (isPrefixOf "custom_". fst ) params
 
---setupCourse context_id =
-
---            user_id                 <- lookupParam msg "user_id"
---        resource_link_id        <- lookupParam msg "resource_link_id"
---        context_id              <- lookupParam msg "context_id"
---        lis_outcome_service_url <- lookupParam msg "lis_outcome_service_url"
---        lis_result_sourcedid    <- lookupParam msg "lis_result_sourcedid"
-
---  -- | Normally a course unit
---EdxResource
---    linkId       Text
---    courseId     EdxCourseId
---    friendlyName Text Maybe
---    EdxResLinkId linkId
---    deriving Show
---
----- | custom parameters set for an exercise
---EdxResourceParam
---    resourceId  EdxResourceId
---    key         Text
---    value       Text
---    EdxResParam resourceId key
---    deriving Show
---
----- | An edX course
---EdxCourse
---    contextId    Text
---    friendlyName Text Maybe
---    EdxContextId contextId
---    deriving Show

@@ -12,9 +12,10 @@
 /qua-view-settings QuaViewSettingsR GET
 
 
-/admin                            AdminR GET
-/mooc                             MoocHomeR GET POST
-/mooc/submit                      SubmitProposalR POST
-/mooc/scenario/#ScenarioProblemId ScenarioR GET
-/mooc/proposals/browse            BrowseProposalsR GET
-/renameme                         RenameMeR GET
+/admin                              AdminR GET
+/mooc                               MoocHomeR GET POST
+/mooc/submit                        SubmitProposalR POST
+/mooc/scenario/#ScenarioProblemId   ScenarioR GET
+/mooc/proposals/browse              BrowseProposalsR GET
+/mooc/proposals/preview/#ScenarioId ProposalPreviewR GET
+/renameme                           RenameMeR GET
