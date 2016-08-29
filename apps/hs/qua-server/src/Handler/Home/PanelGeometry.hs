@@ -19,27 +19,9 @@ import Text.Julius
 
 fileUploadGeometry :: Widget
 fileUploadGeometry = do
-  dynamicstaticswitcher <- newIdent
   jsonfileinput <- newIdent
   fileNameIndicator <- newIdent
   clearGeometry <- newIdent
-  toWidgetHead
-    [cassius|
-
-      ##{dynamicstaticswitcher} + .label:after
-        content: "Static geometry"
-        display: block
-        white-space: nowrap
-        overflow: visible
-        position: absolute
-        margin: 10px 5px 5px 5px
-        padding: 0px
-        left: 60px
-        top: 2px
-
-      ##{dynamicstaticswitcher}:checked + .label:after
-        content: "Dynamic geometry"
-    |]
   toWidgetHead
     [julius|
         "use strict"
@@ -85,21 +67,15 @@ fileUploadGeometry = do
   toWidgetBody
     [hamlet|
       $#  GeoJSON file reading
-      <div .pheading>
+      <div>
         Read GeoJSON from file
-      <div style="display: table; width: 100%; z-index: 5;">
-        <div style="display: table-cell; width: 80px; margin: 0; padding: 0; vertical-align: middle;">
-          <button .button ##{clearGeometry} onclick="clearUploadedFileName()" type="button" style="width: 100%; margin: 8px 0px 0px 0px; padding: 4px 12px 2px 12px;">
-            clear
-        <div style="display: table-cell; width: 80px; margin: 0; padding: 0; vertical-align: middle;">
-          <button .button onclick="document.getElementById('#{jsonfileinput}').click()" type="button" style="width: 100%; margin: 8px 0px 0px 0px; padding: 4px 12px 2px 12px;">
-            files
-        <div style="display: table-cell; margin: 0; padding: 6px 0 0 0; vertical-align: middle;">
-          <div .pnormal ##{fileNameIndicator}>
-          <input ##{jsonfileinput} onchange="displayUploadedFileName()" style="display:none" type="file">
-      $# <!-- <div> -->
-      $# <!--   <input checked="" ##{dynamicstaticswitcher} type="checkbox"> -->
-      $# <!--   <label .label for="#{dynamicstaticswitcher}"> -->
+      <div>
+        <a.btn.btn-red.waves-attach.waves-light.waves-effect ##{clearGeometry} onclick="clearUploadedFileName()">
+          clear
+        <a.btn.btn-red.waves-attach.waves-light.waves-effect onclick="document.getElementById('#{jsonfileinput}').click()">
+          files
+        <div style="display:inline; font-size: 0.9em;" ##{fileNameIndicator}>
+        <input ##{jsonfileinput} onchange="displayUploadedFileName()" style="display:none" type="file">
     |]
 
 luciScenarios :: Handler (Widget, Widget)
@@ -107,7 +83,6 @@ luciScenarios = do
   popupScenarioListId <- newIdent
   popupScenarioListTable <- newIdent
   popupScenarioSaveId <- newIdent
-  popupScenarioSave <- newIdent
   scenarioNameField <- newIdent
   let popupScenario = do
         toWidgetHead
@@ -124,21 +99,34 @@ luciScenarios = do
           |]
         toWidgetBody
               [hamlet|
-                <div .popupdiv ##{popupScenarioListId} style="display: none;">
-                  <div ##{popupScenarioListTable} style="display: table; width: 100%;">
-                <div .popupdiv ##{popupScenarioSaveId} style="display: none;">
-                  <div ##{popupScenarioSave} style="display: table; width: 100%;">
-                    Enter a name for a new scenario to save it on Luci server
-                    <center>
-                      <div .group style="">
-                        <input .pinput ##{scenarioNameField} onblur="checkIfUsed('#{scenarioNameField}')" type="text">
-                        <span .phighlight>
-                        <span .pbar>
-                        <label .plabel>
-                          Scenario name
-                    <center>
-                      <button .button onclick="saveLuciScenario(document.getElementById('#{scenarioNameField}').value);" type="button">
-                        Save!
+                <div style="display: none;" aria-hidden="true" class="modal modal-va-middle fade" ##{popupScenarioListId} role="dialog" tabindex="-1">
+                  <div class="modal-dialog">
+                    <div class="modal-content">
+                      <div class="modal-heading">
+                        <p class="modal-title">
+                          Select scenario
+                      <div class="modal-inner">
+                        <div ##{popupScenarioListTable} style="display: table; width: 100%;">
+                      <div class="modal-footer">
+                        <p class="text-right">
+                          <a class="btn btn-flat btn-brand-accent waves-attach waves-effect" data-dismiss="modal">
+                            Cancel
+                <div style="display: none;" aria-hidden="true" class="modal modal-va-middle fade" ##{popupScenarioSaveId} role="dialog" tabindex="-1">
+                  <div class="modal-dialog">
+                    <div class="modal-content">
+                      <div class="modal-heading">
+                        <p class="modal-title">
+                          Enter a name for a new scenario to save it on a server
+                      <div class="modal-inner">
+                        <div class="form-group form-group-label">
+                          <label class="floating-label" for="#{scenarioNameField}">Scenario name
+                          <input class="form-control" ##{scenarioNameField} type="text">
+                      <div class="modal-footer">
+                        <p class="text-right">
+                          <a.btn.btn-flat.btn-brand-accent.waves-attach.waves-effect data-dismiss="modal">
+                            Cancel
+                          <a.btn.btn-flat.btn-brand-accent.waves-attach.waves-effect data-dismiss="modal" onclick="saveLuciScenario($('##{scenarioNameField}').val());">
+                            Save
               |]
       luciScenariosPane = do
         browseScenarios <- newIdent
@@ -182,7 +170,7 @@ luciScenarios = do
                *  return :: IO ()
                */
               function registerAskLuciForScenario(sendMsg) {
-                askLuciForScenario = function(id,scname){sendMsg(id,scname);hidePopups();};
+                askLuciForScenario = function(id,scname){$('##{rawJS popupScenarioListId}').modal('hide');sendMsg(id,scname);};
               }
               /** Registers one callback; comes from Handler.Home.PanelGeometry.
                *  onClick :: IO ()
@@ -196,7 +184,7 @@ luciScenarios = do
                 *  return :: IO ()
                 */
               function displayScenarios(xs) {
-                showPopup('#{rawJS popupScenarioListId}');
+                $('##{rawJS popupScenarioListId}').modal('show');
                 document.getElementById('#{rawJS popupScenarioListTable}').innerHTML = xs.reduce(function(text, scDesc, i){
                     var classnames = i % 2 == 0 ? "#{rawJS scenariosRow}" : "#{rawJS scenariosRowOdd} #{rawJS scenariosRow}"
                     return  "<div class=\"" + classnames + "\" onclick=\"askLuciForScenario(" + scDesc.ScID + ",'" + scDesc.name + "')\" >"
@@ -218,27 +206,20 @@ luciScenarios = do
                */
               function toggleSaveScenarioButton(showButton, scName) {
                 var scn = scName ? scName : "";
-                document.getElementById('#{rawJS saveScenario}').style.display = showButton ? 'table-cell' : 'none';
+                document.getElementById('#{rawJS saveScenario}').style.display = showButton ? 'inline' : 'none';
                 document.getElementById('#{rawJS fileNameIndicator}').innerText = scn;
               }
           |]
         toWidgetBody
           [hamlet|
-            <div .pheading>
+            <div>
               Remote (Luci) scenarios
-            <div style="display: table; width: 100%; 0px; z-index: 5;">
-              <div style="display: table-cell; width: 97px; margin: 0; padding: 0; vertical-align: middle;">
-                <button .button ##{browseScenarios} type="button" style="width: 100%; max-width: 97px; margin: 8px 0px 0px 0px; padding: 4px 12px 2px 12px;">
-                  scenarios
-              <div ##{saveScenario} style="display: none; width: 63px; margin: 0; padding: 0; vertical-align: middle;">
-                <button .button type="button" onclick="document.getElementById('#{scenarioNameField}').value = '';showPopup('#{popupScenarioSaveId}');" style="width: 100%; max-width: 63px; margin: 8px 0px 0px 0px; padding: 4px 12px 2px 12px;">
-                  save
-              <div style="display: table-cell; margin: 0; padding: 6px 0 0 0; vertical-align: middle;">
-                <div .pnormal ##{fileNameIndicator}>
-
-            $# <!-- <div> -->
-            $# <!--   <input checked="" ##{dynamicstaticswitcher} type="checkbox"> -->
-            $# <!--   <label .label for="#{dynamicstaticswitcher}"> -->
+            <div>
+              <a.btn.btn-red.waves-attach.waves-light.waves-effect ##{browseScenarios}">
+                Scenarios
+              <a.btn.btn-red.waves-attach.waves-light.waves-effect ##{saveScenario}" style="display: none;" onclick="$('##{scenarioNameField}').val('');$('##{popupScenarioSaveId}').modal('show');">
+                Save
+              <div style="display:inline; font-size: 0.9em;" ##{fileNameIndicator}>
           |]
   return (popupScenario, luciScenariosPane)
 

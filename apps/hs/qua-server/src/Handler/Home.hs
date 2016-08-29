@@ -20,13 +20,14 @@ postHomeR = renderQuaView
 
 renderQuaView :: Handler Html
 renderQuaView = do
-  showFull <- canShowFull . getRole <$> maybeAuth
+  urole <- getRole <$> maybeAuth
+  let showFull = canShowFull urole
 
   -- connecting form + conteiners for optional content
   (lcConnectedClass, lcDisconnectedClass, luciConnectForm) <- luciConnectPane
   (popupScenarioList, luciScenariosPane) <- luciScenarios
   (uiButtonsGUI, uiButtonsSubmitPopup) <- uiButtons
-  defaultLayout $ do
+  minimalLayout $ do
 
     -- add qua-view dependencies
     toWidgetHead

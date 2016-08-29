@@ -42,10 +42,11 @@ import Handler.Mooc.RenameMe
 import Handler.Mooc.Admin
 import Handler.Mooc.Scenario
 import Handler.Mooc.BrowseProposals
+import Handler.Mooc.EditProposal
+import Handler.Mooc.ViewProposal
 import Handler.Mooc.SubmitProposal
 import Handler.Mooc.ProposalPreview
 import Handler.LoggingWS
-
 
 -- This line actually creates our YesodDispatch instance. It is the second half
 -- of the call to mkYesodData which occurs in Foundation.hs. Please see the

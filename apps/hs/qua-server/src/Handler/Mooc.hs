@@ -31,12 +31,9 @@ getMoocHomeR :: Handler Html
 getMoocHomeR  = do
     setUltDestCurrent
 
-    mmsg <- getMessage
-    muser <- fmap entityVal <$> maybeAuth
-
     ses <- map (\(k,v) -> k <> " - " <> decodeUtf8 v) . Map.toList <$> getSession
 
-    defaultLayout $ do
+    fullLayout "EdX User Stories" $ do
         setTitle "EdX User Stories"
         $(widgetFile "mooc/home")
 

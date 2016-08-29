@@ -16,6 +16,9 @@
 /mooc                               MoocHomeR GET POST
 /mooc/submit                        SubmitProposalR POST
 /mooc/scenario/#ScenarioProblemId   ScenarioR GET
+/mooc/proposal/#ScenarioId          ProposalR GET
 /mooc/proposals/browse              BrowseProposalsR GET
 /mooc/proposals/preview/#ScenarioId ProposalPreviewR GET
+/mooc/proposals/edit                EditProposalR GET
+/mooc/proposals/view/#ScenarioId    ViewProposalR GET
 /renameme                           RenameMeR GET

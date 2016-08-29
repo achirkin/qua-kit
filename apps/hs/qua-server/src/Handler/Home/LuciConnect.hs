@@ -30,24 +30,19 @@ luciConnectPane = do
 
     let connectForm =
           [hamlet|
-            <div .pheading style="margin: 15px 5px 0px 32px; padding: 0px;">
-              <div .pheading style="margin: 0px;">
-                Connect to Luci
-              <div style="display: table; width: 100%; 0px; z-index: 5;">
-                <div style="display: table-cell; width: 6em; margin: 0; padding 0; vertical-align: middle;">
-                  <button .button ##{connectButton} type="button" style="width: 100%; margin: 8px 0px 0px 0px; padding: 4px 12px 2px 12px;">
-                    connect
-                <div style="display: table-cell; margin: 0; padding 0;">
-                  <div .group style="">
-                    <input .pinput ##{luciProxyUrl} onblur="checkIfUsed('#{luciProxyUrl}')" type="url">
-                    <span .phighlight>
-                    <span .pbar>
-                    <label .plabel>
-                      Host address
+           <div style="margin: 10px 0 0 20px;">
+            <div>
+              Connect to Luci
+            <div>
+              <a.btn.btn-red.waves-attach.waves-light.waves-effect ##{connectButton}">
+                connect
+              <div.form-group.form-group-label.control-highlight style="display: inline-block; margin: 12px 0px -12px 4px;">
+                <label.floating-label for="#{luciProxyUrl}">Host address
+                <input.form-control ##{luciProxyUrl} type="url" value="ws://localhost/luci">
           |]
         connectedInfo =
           [hamlet|
-            <div .pheading style="margin: 15px 5px 0px 32px;">
+            <div style="margin: 10px 0 0 20px;">
               Connected to Luci at
               <p ##{luciConnectedInfo} style="display: inline;">
            |]
@@ -64,12 +59,6 @@ luciConnectPane = do
       |]
     toWidgetHead
       [julius|
-        // helper for showing input fields correctly
-        function checkIfUsed(id) {
-                var el = document.getElementById(id);
-                if (el.value==null || el.value=="") { el.className = "pinput"; }
-                else { el.className = "pinput used"; }
-        }
         /** Registers one callback; comes from Handler.Home.PanelServices.
          *  onClick :: JSString -> IO () -- address of websocket host
          *  return :: IO ()
@@ -115,7 +104,6 @@ luciConnectPane = do
             document.getElementsByClassName('#{rawJS luciDisconnectedClass}')).forEach(function(e){
                e.className = "#{rawJS luciDisconnectedClass} #{rawJS visiblePaneClass}";
              });
-          checkIfUsed('#{rawJS luciProxyUrl}');
         }
       |]
     toWidgetBody

@@ -1,0 +1,16 @@
+<nav style="display: none; z-index: 10005" aria-hidden="true" class="menu" id="ui_menu" tabindex="-1">
+  <div class="menu-scroll" style="z-index: 10006">
+    <div class="menu-content"  style="z-index: 10007">
+      <a class="menu-logo" href="@{MoocHomeR}">QUA-KIT
+      <ul class="nav">
+        <li>
+          <a class="waves-attach waves-effect" href="@{EditProposalR}">
+            Work on a design
+          <a class="waves-attach waves-effect" href="@{BrowseProposalsR}">
+            Explore submissions
+          <a class="waves-attach waves-effect" href="">
+            Understand criteria
+          <a class="waves-attach waves-effect" href="">
+            Assess designs
+          <a class="waves-attach waves-effect" href="">
+            About

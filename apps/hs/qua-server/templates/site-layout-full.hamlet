@@ -15,8 +15,8 @@ $doctype 5
     <title>#{pageTitle pc}
     ^{pageHead pc}
   <body class="page-red">
-     <!-- header of the page -->
-    <header class="header header-red ui-header">
+    <!-- header of the page -->
+    <header class="header header-transparent header-waterfall ui-header affix-top">
       <ul class="nav nav-list pull-left">
         <li>
           <a data-toggle="menu" href="#ui_menu">
@@ -44,18 +44,26 @@ $doctype 5
     <!-- Navigation bar -->
     ^{siteMenu}
 
+    <!-- content -->
     <main class="content">
+      <div class="content-header ui-content-header">
+        <div class="container">
+          <h1 class="content-heading">Quick Urban Analysis Kit
       <div class="container">
-        <!-- header message -->
-        $maybe msg <- mmsg
-          <div class="row margin-bottom-no">
-            <div class="col-lg-4 col-lg-push-4 col-sm-6 col-sm-push-3">
+        <section class="content-inner margin-top-no">
+
+          <!-- header message -->
+          <div class="row">
+            <div class="col-lg-7 col-md-8 col-sm-9">
               <div class="card margin-bottom-no">
                 <div class="card-main">
                   <div class="card-inner">
-                    <p>#{msg}
+                    $maybe msg <- mmsg
+                      <p>#{msg}
+                    $nothing
+                      <p>#{defaultMsg}
 
-    ^{pageBody pc}
+          ^{pageBody pc}
 
 
     <!-- popups -->
@@ -81,6 +89,7 @@ $doctype 5
                   Cancel
                 <a class="btn btn-flat btn-brand waves-attach waves-effect" onclick="window.location.replace('@{RenameMeR}?newname=' + document.getElementById('ui_renameme_inputvalue').value)">
                   Rename
+
 
     <!-- material ui  js -->
     <script type="text/javascript" src="@{StaticR js_base_min_js}">

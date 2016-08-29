@@ -76,9 +76,10 @@ panelInfo = do
          *  return :: IO ()
          */
         function showInfo(obj) {
+          var j = 0;
           document.getElementById('#{rawJS infoPane}').innerHTML = Object.keys(obj).reduce(function(text, n, i){
                     if (obj[n] != null && (obj[n].constructor == Number || obj[n].constructor == String)) {
-                      var classnames = i % 2 == 1 ? "#{rawJS infoRow}" : "#{rawJS infoRowOdd} #{rawJS infoRow}"
+                      var classnames = (j++) % 2 == 1 ? "#{rawJS infoRow}" : "#{rawJS infoRowOdd} #{rawJS infoRow}"
                       return text
                              + "<div class=\"" + classnames + "\" onclick=\"colorizeProperty('" + n + "')\" >"
                              + " <div class=\"#{rawJS infoCellLeft}\">" + n + "</div>"

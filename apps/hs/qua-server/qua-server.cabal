@@ -69,11 +69,13 @@ library
         Handler.Mooc
         Handler.Mooc.Admin
         Handler.Mooc.BrowseProposals
+        Handler.Mooc.EditProposal
         Handler.Mooc.EdxLogin
         Handler.Mooc.ProposalPreview
         Handler.Mooc.RenameMe
         Handler.Mooc.Scenario
         Handler.Mooc.SubmitProposal
+        Handler.Mooc.ViewProposal
         Handler.QuaViewSettings
         Import
         Import.NoFoundation

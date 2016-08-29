@@ -74,7 +74,9 @@ instance Yesod App where
 
     defaultLayout widget = do
 --        master <- getYesod
---        mmsg <- getMessage
+        mmsg <- getMessage
+        muser <- (fmap entityVal) <$> maybeAuth
+        siteMenu <- pageBody <$> widgetToPageContent $(widgetFile "site-menu")
 
         -- We break up the default layout into two components:
         -- default-layout is the contents of the body tag, and
@@ -131,6 +133,25 @@ instance Yesod App where
     makeLogger = return . appLogger
     maximumContentLength _ _ = Just 2000000
 
+
+fullLayout :: Text -> Widget -> Handler Html
+fullLayout defaultMsg widget = do
+    mmsg <- getMessage
+    muser <- (fmap entityVal) <$> maybeAuth
+    siteMenu <- pageBody <$> widgetToPageContent $(widgetFile "site-menu")
+    pc <- widgetToPageContent widget
+    withUrlRenderer $(hamletFile "templates/site-layout-full.hamlet")
+
+
+
+minimalLayout :: Widget -> Handler Html
+minimalLayout widget = do
+    muser <- (fmap entityVal) <$> maybeAuth
+    siteMenu <- pageBody <$> widgetToPageContent $(widgetFile "site-menu")
+    pc <- widgetToPageContent widget
+    withUrlRenderer $(hamletFile "templates/site-layout-minimal.hamlet")
+
+
 -- How to run database actions.
 instance YesodPersist App where
     type YesodPersistBackend App = SqlBackend
@@ -176,7 +197,7 @@ instance YesodAuth App where
     authenticate _ = return $ UserError AuthError
 
     -- You can add other plugins like Google Email, email or OAuth here
-    authPlugins ye = [ authLdapWithForm ldapConf $ \loginR -> getMessage >>= \mmsg -> $(widgetFile "login-ethz")
+    authPlugins ye = [ authLdapWithForm ldapConf $ \loginR -> $(widgetFile "login-ethz")
                      , authLtiPlugin (appLTICredentials $ appSettings ye)]
 
     authHttpManager = getHttpManager

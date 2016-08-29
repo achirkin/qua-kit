@@ -1,138 +1,40 @@
-<!-- css -->
-<link href="@{StaticR css_base_min_css}" rel="stylesheet">
-<link href="@{StaticR css_project_min_css}" rel="stylesheet">
+<!-- all story cards -->
+<div class="ui-card-wrap">
+  <div class="row">
 
-<!-- header of the page -->
-<header class="header header-transparent header-waterfall ui-header affix-top">
-  <ul class="nav nav-list pull-left">
-    <li>
-      <a data-toggle="menu" href="#ui_menu">
-        <span class="icon icon-lg">menu
-  <div.header-logo.margin-no>
-    qua-kit
-  <ul class="nav nav-list pull-right">
-    <li class="dropdown margin-right">
-      $maybe user <- muser
-        <a class="dropdown-toggle padding-left-no padding-right-no" data-toggle="dropdown">
-          <p style="margin-right: 0.5em;">#{userName user}
-          <span class="avatar avatar-sm">#{twoCharsName $ userName user}
-        <ul class="dropdown-menu dropdown-menu-right">
-          <li>
-            <a class="padding-right-lg waves-attach waves-effect" data-backdrop="static" data-toggle="modal" href="#ui_renameme_dialog">
-              <span class="icon icon-lg margin-right">edit
-              Change name
-          <li>
-            <a class="padding-right-lg waves-attach waves-effect" href="@{AuthR LogoutR}">
-              <span class="icon icon-lg margin-right">exit_to_app
-              Logout
-      $nothing
-        <a href=@{AuthR LoginR}>Login
+    <div class="col-lg-4 col-sm-6">
+      <div class="card card-brand">
+        <div class="card-main">
+          <div class="card-inner">
+            Card-brand
+          <div class="card-action">
+            <div class="card-action-btn pull-left">
+              <a class="btn btn-flat waves-attach waves-light waves-effect" href="javascript:void(0)">
+                <span class="icon">check
+                &nbsp;Button
 
-<!-- Navigation bar -->
-<nav style="display: none;" aria-hidden="true" class="menu" id="ui_menu" tabindex="-1">
-  <div class="menu-scroll">
-    <div class="menu-content">
-      <a class="menu-logo" href="@{MoocHomeR}">QUA-KIT
-      <ul class="nav">
-        <li>
-          <a class="waves-attach waves-effect" href="">
-            Work on a design
-          <a class="waves-attach waves-effect" href="">
-            Explore submissions
-          <a class="waves-attach waves-effect" href="">
-            Understand criteria
-          <a class="waves-attach waves-effect" href="">
-            Assess designs
-          <a class="waves-attach waves-effect" href="">
-            About
+    <div class="col-lg-4 col-sm-6">
+      <div class="card">
+        <div class="card-main">
+          <div class="card-inner">
+            Card
+          <div class="card-action">
+            <div class="card-action-btn pull-left">
+              <a class="btn btn-flat waves-attach waves-light waves-effect" href="javascript:void(0)">
+                <span class="icon">check
+                &nbsp;Button
 
-<!-- content -->
-<main class="content">
-  <div class="content-header ui-content-header">
-    <div class="container">
-      <h1 class="content-heading">Quick Urban Analysis Kit
-  <div class="container">
-    <section class="content-inner margin-top-no">
+    $forall pam <- ses
 
-      <!-- header message -->
-      <div class="row">
-        <div class="col-lg-7 col-md-8 col-sm-9">
-          <div class="card margin-bottom-no">
-            <div class="card-main">
-              <div class="card-inner">
-                $maybe msg <- mmsg
-                  <p>#{msg}
-                $nothing
-                  <p>On this page you will find some information...
-
-      <!-- all story cards -->
-      <div class="ui-card-wrap">
-        <div class="row">
-
-          <div class="col-lg-4 col-sm-6">
-            <div class="card card-brand">
-              <div class="card-main">
-                <div class="card-inner">
-                  Card-brand
-                <div class="card-action">
-                  <div class="card-action-btn pull-left">
-                    <a class="btn btn-flat waves-attach waves-light waves-effect" href="javascript:void(0)">
-                      <span class="icon">check
-                      &nbsp;Button
-
-          <div class="col-lg-4 col-sm-6">
-            <div class="card">
-              <div class="card-main">
-                <div class="card-inner">
-                  Card
-                <div class="card-action">
-                  <div class="card-action-btn pull-left">
-                    <a class="btn btn-flat waves-attach waves-light waves-effect" href="javascript:void(0)">
-                      <span class="icon">check
-                      &nbsp;Button
-
-          $forall pam <- ses
-
-            <div class="col-lg-4 col-sm-6">
-              <div class="card card-brand">
-                <div class="card-main">
-                  <div class="card-inner">
-                    #{pam}
-                  <div class="card-action">
-                    <div class="card-action-btn pull-left">
-                      <a class="btn btn-flat waves-attach waves-light waves-effect" href="javascript:void(0)">
-                        <span class="icon">check
+      <div class="col-lg-4 col-sm-6">
+        <div class="card card-brand">
+          <div class="card-main">
+            <div class="card-inner">
+              #{pam}
+            <div class="card-action">
+              <div class="card-action-btn pull-left">
+                <a class="btn btn-flat waves-attach waves-light waves-effect" href="javascript:void(0)">
+                  <span class="icon">check
                         &nbsp;Button
-
-
-<!-- popups -->
-$maybe user <- muser
-  <div style="display: none;" aria-hidden="true" class="modal modal-va-middle fade" id="ui_renameme_dialog" role="dialog" tabindex="-1">
-    <div class="modal-dialog">
-      <div class="modal-content">
-        <div class="modal-heading">
-          <p class="modal-title">
-            Change the user name
-        <div class="modal-inner">
-          <p class="h5 margin-top-sm text-black-hint">
-            You may set you real name or a nickname you like;
-            the name is visible to others in the gallery and discussions.
-            It does not affect your real id used for grading in edX system.
-          <div class="form-group form-group-label control-highlight">
-            <label class="floating-label" for="ui_renameme_inputvalue">
-              Name
-            <input class="form-control" id="ui_renameme_inputvalue" value="#{userName user}" type="text" name="newusername" required>
-        <div class="modal-footer">
-          <p class="text-right">
-            <a class="btn btn-flat btn-brand waves-attach waves-effect" data-dismiss="modal">
-              Cancel
-            <a class="btn btn-flat btn-brand waves-attach waves-effect" onclick="window.location.replace('@{RenameMeR}?newname=' + document.getElementById('ui_renameme_inputvalue').value)">
-              Rename
-
-
-<!-- js -->
-<script type="text/javascript" src="@{StaticR js_jquery_2_2_3_min_js}">
-<script type="text/javascript" src="@{StaticR js_base_min_js}">
-<script type="text/javascript" src="@{StaticR js_project_min_js}">
 
 

@@ -14,6 +14,7 @@
 
 module Handler.Mooc.Scenario
   ( getScenarioR
+  , getProposalR
   ) where
 
 import Import
@@ -26,7 +27,7 @@ getScenarioR scpId = do
   lis_result_sourcedid    <- lookupSession "lis_result_sourcedid"
   case muserId of
     Nothing -> return ""
-    Just uId -> fmap (fromMaybe "" . (fmap (decodeUtf8 . scenarioGeometry))) . runDB $ do
+    Just uId -> fmap (maybe "" (decodeUtf8 . scenarioGeometry)) . runDB $ do
       mscenario <- selectSource
           [ ScenarioAuthorId ==. uId
           , ScenarioTaskId   ==. scpId
@@ -57,3 +58,7 @@ getScenarioR scpId = do
                                      lis_result_sourcedid
                                      t
                    get scId
+
+
+getProposalR :: ScenarioId -> Handler Text
+getProposalR scId = maybe "" (decodeUtf8 . scenarioGeometry) <$> runDB (get scId)
