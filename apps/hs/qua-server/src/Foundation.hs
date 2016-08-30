@@ -16,6 +16,7 @@ import qualified Yesod.Core.Unsafe as Unsafe
 --import qualified Data.CaseInsensitive as CI
 --import qualified Data.Text.Encoding as TE
 
+import Text.Blaze (Markup)
 import qualified Data.Map.Strict as Map
 import Handler.Mooc.EdxLogin
 
@@ -101,6 +102,11 @@ instance Yesod App where
       return $ if role == UR_ADMIN
                then Authorized
                else Unauthorized "You need admin rights to access this page."
+    isAuthorized CompareProposalsR _ = do
+      iAmHere <- (Nothing /=) <$> maybeAuthId
+      return $ if iAmHere
+               then Authorized
+               else Unauthorized "Only logged-in users can access this page"
     -- Default to Authorized for now.
     isAuthorized _ _ = return Authorized
 
@@ -134,8 +140,8 @@ instance Yesod App where
     maximumContentLength _ _ = Just 2000000
 
 
-fullLayout :: Text -> Widget -> Handler Html
-fullLayout defaultMsg widget = do
+fullLayout :: Maybe Markup -> Text -> Widget -> Handler Html
+fullLayout mmsgIcon defaultMsg widget = do
     mmsg <- getMessage
     muser <- (fmap entityVal) <$> maybeAuth
     siteMenu <- pageBody <$> widgetToPageContent $(widgetFile "site-menu")
@@ -234,7 +240,7 @@ unsafeHandler = Unsafe.fakeHandlerGetLogger appLogger
 
 
 muserRole :: Maybe (Entity User) -> UserRole
-muserRole Nothing = UR_ADMIN -- UR_NOBODY
+muserRole Nothing = UR_NOBODY -- UR_NOBODY
 muserRole (Just (Entity _ u)) = userRole u
 
 

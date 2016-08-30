@@ -11,6 +11,8 @@
 
 /qua-view-settings QuaViewSettingsR GET
 
+/about                              AboutR GET
+/feedback                           FeedbackR GET
 
 /admin                              AdminR GET
 /mooc                               MoocHomeR GET POST
@@ -21,4 +23,10 @@
 /mooc/proposals/preview/#ScenarioId ProposalPreviewR GET
 /mooc/proposals/edit                EditProposalR GET
 /mooc/proposals/view/#ScenarioId    ViewProposalR GET
+/mooc/proposals/compare             CompareProposalsR GET
+/mooc/criteria/browse               CriteriaListR GET
+/mooc/criteria/img/#CriterionId     CriteriaImgR GET
 /renameme                           RenameMeR GET
+
+
+/mooc/proposals/vote/#CriterionId/#ScenarioId/#ScenarioId VoteForProposalR POST

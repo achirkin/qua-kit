@@ -36,13 +36,13 @@ getQuaViewSettingsR = do
         quaViewLoggingWS = "ws" <> drop 4 (yesodRender app appr QVLoggingR [])
         submitHTTP = yesodRender app appr SubmitProposalR []
         -- get a link to a current EdX user problem or to an example scenario for other users
-        scenarioHTTP = case (,,) <$> custom_exercise_type
-                                 <*> fmap decimal custom_exercise_id
-                                 <*> fmap decimal custom_proposal_id of
-            Just ("design", Right i, _) ->
-                yesodRender app appr (ScenarioR . toSqlKey . fst $ i) []
-            Just ("view", _, Right i) ->
-                yesodRender app appr (ProposalR . toSqlKey . fst $ i) []
+        scenarioHTTP = case custom_exercise_type of
+            Just "design" -> case fmap decimal custom_exercise_id of
+                   Just (Right i) -> yesodRender app appr (ScenarioR . toSqlKey . fst $ i) []
+                   _ -> yesodRender app appr (StaticR data_mooctask_geojson) []
+            Just "view"   -> case fmap decimal custom_proposal_id of
+                   Just (Right i) -> yesodRender app appr (ProposalR . toSqlKey . fst $ i) []
+                   _ -> yesodRender app appr (StaticR data_mooctask_geojson) []
             _ ->
                 yesodRender app appr (StaticR data_mooctask_geojson) []
     return . TypedContent typeJson . toContent . object $

@@ -24,7 +24,7 @@ getBrowseProposalsR = do
         uname <- fromMaybe "anonymous user" . fmap userName <$> lift (get (scenarioAuthorId s))
         yield (i,s,uname)
       ) $$ Conduit.consume
-    fullLayout "Qua-kit student designs" $ do
+    fullLayout Nothing "Qua-kit student designs" $ do
       setTitle "Qua-kit student designs"
       toWidgetHead $
         [cassius|

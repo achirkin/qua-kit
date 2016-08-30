@@ -30,14 +30,18 @@ import System.Log.FastLogger                (defaultBufSize, newStdoutLoggerSet,
                                              toLogStr)
 
 import qualified Data.ByteString as BS (readFile)
+--import qualified Data.ByteString.Base64 as BSB (encode)
 
 -- Import all relevant handler modules here.
 -- Don't forget to add new modules to your cabal file!
 import Handler.Common
+import Handler.About
+import Handler.Feedback
 import Handler.Home
 import Handler.LuciProxy
 import Handler.QuaViewSettings
 import Handler.Mooc
+import Handler.Mooc.Criteria
 import Handler.Mooc.RenameMe
 import Handler.Mooc.Admin
 import Handler.Mooc.Scenario
@@ -45,8 +49,11 @@ import Handler.Mooc.BrowseProposals
 import Handler.Mooc.EditProposal
 import Handler.Mooc.ViewProposal
 import Handler.Mooc.SubmitProposal
+import Handler.Mooc.CompareProposals
 import Handler.Mooc.ProposalPreview
 import Handler.LoggingWS
+
+
 
 -- This line actually creates our YesodDispatch instance. It is the second half
 -- of the call to mkYesodData which occurs in Foundation.hs. Please see the
@@ -88,7 +95,12 @@ makeFoundation appSettings = do
 
     sctaskfile <- BS.readFile "static/data/mooctask.geojson"
     sctaskpreview <- BS.readFile "static/data/mooctask.png"
-    _ <- flip runSqlPool pool $ do
+    criteriaIconSecurity      <- decodeUtf8 <$> BS.readFile "static/data/security.svg"
+    criteriaIconFire          <- decodeUtf8 <$> BS.readFile "static/data/fire.svg"
+    criteriaIconShading       <- decodeUtf8 <$> BS.readFile "static/data/shading.svg"
+    criteriaIconAccessibility <- decodeUtf8 <$> BS.readFile "static/data/accessibility.svg"
+    criteriaIconAesthetic     <- decodeUtf8 <$> BS.readFile "static/data/aesthetic.svg"
+    flip runSqlPool pool $ do
       -- add dev sample problem
       repsert (toSqlKey 0) (ScenarioProblem sctaskpreview sctaskfile "Empower Shack scenario" 0.001)
       -- make me the first admin
@@ -96,6 +108,14 @@ makeFoundation appSettings = do
       case mme of
         Nothing -> insert_ $ User "Artem Chirkin" UR_ADMIN (Just "achirkin") Nothing
         Just (Entity key _) -> update key [UserRole =. UR_ADMIN]
+      -- add test criteria into DB
+      _ <- upsert (Criterion "Security" "Avoid dark corners and keep all paths easily visually observable." sctaskpreview criteriaIconSecurity) []
+      _ <- upsert (Criterion "Fire safety" "Keep distance between buildings or groups of buildings to reduce the chance of spreading fire." sctaskpreview criteriaIconFire) []
+      _ <- upsert (Criterion "Shading" "The area exhibits hight temperatures, therefore it makes sense to keep pathways in shade." sctaskpreview criteriaIconShading) []
+      _ <- upsert (Criterion "Accessibility" "All buildings must be accessible from outside, there should be no labyrinths in the discrict." sctaskpreview criteriaIconAccessibility) []
+      _ <- upsert (Criterion "Aesthetic" "The district should look attractive." sctaskpreview criteriaIconAesthetic) []
+      return ()
+
 
     -- Return the foundation
     return $ mkFoundation pool

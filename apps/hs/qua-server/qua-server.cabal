@@ -35,16 +35,16 @@ flag postgresql
         Use PostgreSQL database. Otherwise use sqlite.
 
 library
-    
+
     if ((flag(postgresql) && !flag(dev)) && !flag(library-only))
         cpp-options: -DPOSTGRESQL
-    
+
     if (flag(dev) || flag(library-only))
         cpp-options: -DDEVELOPMENT
         ghc-options: -Wall -fwarn-tabs -O0
     else
         ghc-options: -Wall -fwarn-tabs -O2
-    
+
     if ((flag(postgresql) && !flag(dev)) && !flag(library-only))
         build-depends:
             persistent-postgresql -any
@@ -54,7 +54,10 @@ library
     exposed-modules:
         Application
         Foundation
+        Foundation.Criteria
+        Handler.About
         Handler.Common
+        Handler.Feedback
         Handler.Home
         Handler.Home.LoadingSplash
         Handler.Home.LuciConnect
@@ -69,6 +72,8 @@ library
         Handler.Mooc
         Handler.Mooc.Admin
         Handler.Mooc.BrowseProposals
+        Handler.Mooc.CompareProposals
+        Handler.Mooc.Criteria
         Handler.Mooc.EditProposal
         Handler.Mooc.EdxLogin
         Handler.Mooc.ProposalPreview
@@ -97,6 +102,7 @@ library
         classy-prelude >=0.10.2,
         classy-prelude-conduit >=0.10.2,
         classy-prelude-yesod >=0.10.2,
+        blaze-markup >=0.7.1,
         bytestring >=0.9 && <0.11,
         base64-bytestring -any,
         text >=0.11 && <2.0,
@@ -137,10 +143,10 @@ library
     hs-source-dirs: src
 
 executable qua-server
-    
+
     if ((flag(postgresql) && !flag(dev)) && !flag(library-only))
         cpp-options: -DPOSTGRESQL
-    
+
     if flag(library-only)
         buildable: False
     main-is: main.hs

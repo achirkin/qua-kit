@@ -32,7 +32,7 @@ popupHelp urole = do
     |]
   toWidgetBody
     [hamlet|
-      <div style="display: none;" aria-hidden="true" class="modal modal-va-middle fade" #popuphelp role="dialog" tabindex="-1">
+      <div.modal.modal-va-middle.fade #popuphelp aria-hidden="true" role="dialog" tabindex="-1">
         <div class="modal-dialog">
           <div class="modal-content">
             <div class="modal-heading">
@@ -155,6 +155,6 @@ popupHelp urole = do
 
             <div class="modal-footer">
               <p class="text-right">
-                <a class="btn btn-flat btn-brand-accent waves-attach waves-effect" data-dismiss="modal">
+                <a.btn.btn-flat.btn-brand-accent.waves-attach.waves-effect data-dismiss="modal">
                   Ok, let's go!
     |]

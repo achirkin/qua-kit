@@ -50,24 +50,36 @@ Scenario
     lastUpdate    UTCTime default=CURRENT_TIMESTAMP
 
 Review
+    reviewerId  UserId
     scenarioId  ScenarioId
     criterionId CriterionId
     positive    Bool
     comment     Text
 
 Criterion
-    name        Text
-    description Text
+    name         Text
+    description  Text
+    image        ByteString
+    icon         Text
+    CriterionDef name
 
 Vote
+    voterId       UserId
     criterionId   CriterionId
     betterId      ScenarioId
     worseId       ScenarioId
     explanation   Text Maybe
-    edxResource   EdxResourceId
+    edxResource   EdxResourceId Maybe
     edxOutcomeUrl Text Maybe
     edxResultId   Text Maybe
     timestamp     UTCTime default=CURRENT_TIMESTAMP
+
+Rating
+    authorId    UserId
+    problemId   ScenarioProblemId
+    criterionId CriterionId
+    value       Double
+    RatingOf authorId problemId criterionId
 
 UserScenarioAction
     authorId     UserId

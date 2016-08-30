@@ -33,7 +33,7 @@ getMoocHomeR  = do
 
     ses <- map (\(k,v) -> k <> " - " <> decodeUtf8 v) . Map.toList <$> getSession
 
-    fullLayout "EdX User Stories" $ do
+    fullLayout Nothing "EdX User Stories" $ do
         setTitle "EdX User Stories"
         $(widgetFile "mooc/home")
 

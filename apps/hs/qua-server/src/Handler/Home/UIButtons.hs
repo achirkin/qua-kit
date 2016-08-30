@@ -51,7 +51,7 @@ uiButtons = do
                           <input type="hidden" ##{sfPreview} name="preview">
                           <div class="form-group form-group-label">
                             <label.floating-label for="#{textAreaDesc}">
-                            <textarea.form-control.textarea-autosize form="#{submitForm}" id="#{textAreaDesc}" name="description">
+                            <textarea.form-control.textarea-autosize form="#{submitForm}" id="#{textAreaDesc}" rows="1" name="description">
                       <div class="modal-footer">
                         <p class="text-right">
                           <a.btn.btn-flat.btn-brand-accent.waves-attach.waves-effect data-dismiss="modal">

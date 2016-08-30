@@ -8,9 +8,11 @@
             Work on a design
           <a class="waves-attach waves-effect" href="@{BrowseProposalsR}">
             Explore submissions
-          <a class="waves-attach waves-effect" href="">
+          <a class="waves-attach waves-effect" href="@{CriteriaListR}">
             Understand criteria
-          <a class="waves-attach waves-effect" href="">
-            Assess designs
-          <a class="waves-attach waves-effect" href="">
+          <a class="waves-attach waves-effect" href="@{CompareProposalsR}">
+            Compare designs
+          <a class="waves-attach waves-effect" href="@{AboutR}">
             About
+          <a class="waves-attach waves-effect" href="@{FeedbackR}">
+            Feedback

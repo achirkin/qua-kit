@@ -56,12 +56,21 @@ $doctype 5
           <div class="row">
             <div class="col-lg-7 col-md-8 col-sm-9">
               <div class="card margin-bottom-no">
-                <div class="card-main">
-                  <div class="card-inner">
-                    $maybe msg <- mmsg
-                      <p>#{msg}
-                    $nothing
-                      <p>#{defaultMsg}
+                $maybe msg <- mmsg
+                  <aside class="card-side pull-left">
+                    <span class="card-heading">
+                      <i class="icon">info_outline
+                  <div class="card-main">
+                    <div class="card-inner">
+                        <p>#{msg}
+                $nothing
+                  $maybe msgIcon <- mmsgIcon
+                    <aside class="card-side pull-left">
+                      <span class="card-heading">
+                        #{msgIcon}
+                  <div class="card-main">
+                    <div class="card-inner">
+                        <p>#{defaultMsg}
 
           ^{pageBody pc}
 
