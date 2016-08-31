@@ -4,7 +4,7 @@
 /favicon.ico FaviconR GET
 /robots.txt RobotsR GET
 
-/ HomeR GET POST
+/viewer HomeR GET POST
 /luci LuciR GET
 /chat ChatR GET
 /logging QVLoggingR GET
@@ -13,12 +13,11 @@
 
 /about                              AboutR GET
 /feedback                           FeedbackR GET
-
 /admin                              AdminR GET
-/mooc                               MoocHomeR GET POST
+
+/                                   MoocHomeR GET POST
 /mooc/submit                        SubmitProposalR POST
-/mooc/scenario/#ScenarioProblemId   ScenarioR GET
-/mooc/proposal/#ScenarioId          ProposalR GET
+/mooc/proposal/#ScenarioId          ScenarioR GET
 /mooc/proposals/browse              BrowseProposalsR GET
 /mooc/proposals/preview/#ScenarioId ProposalPreviewR GET
 /mooc/proposals/edit                EditProposalR GET
@@ -30,3 +29,7 @@
 
 
 /mooc/proposals/vote/#CriterionId/#ScenarioId/#ScenarioId VoteForProposalR POST
+
+
+/test/designex  SimulateDesignExerciseR GET
+/test/compareex SimulateCompareExerciseR GET

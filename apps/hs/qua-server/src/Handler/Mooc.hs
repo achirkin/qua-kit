@@ -17,24 +17,26 @@ module Handler.Mooc
 
 
 import qualified Data.Map as Map
---import qualified Database.Esqueleto      as E
---import           Database.Esqueleto      ((^.))
---import qualified Database.Persist.Sql    as PSQL
 
 import Import
+import Handler.Mooc.EdxLogin
 
 
-postMoocHomeR :: Handler Html
-postMoocHomeR = getMoocHomeR
 
-getMoocHomeR :: Handler Html
-getMoocHomeR  = do
+postMoocHomeR :: Handler TypedContent
+postMoocHomeR = do
+  master <- getYesod
+  yreq <- getRequest
+  dispatchLti (appLTICredentials $ appSettings master) yreq
+
+getMoocHomeR :: Handler TypedContent
+getMoocHomeR  = toTypedContent <$> do
     setUltDestCurrent
 
-    ses <- map (\(k,v) -> k <> " - " <> decodeUtf8 v) . Map.toList <$> getSession
+--    ses <- map (\(k,v) -> k <> " - " <> decodeUtf8 v) . Map.toList <$> getSession
 
-    fullLayout Nothing "EdX User Stories" $ do
-        setTitle "EdX User Stories"
+    fullLayout Nothing "Welcome to QUA-KIT!" $ do
+        setTitle "qua-kit"
         $(widgetFile "mooc/home")
 
 

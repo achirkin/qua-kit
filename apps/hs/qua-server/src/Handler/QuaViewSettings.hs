@@ -17,48 +17,52 @@ module Handler.QuaViewSettings
 import Import
 import Database.Persist.Sql (toSqlKey)
 import Data.Text.Read (decimal)
---import Data.Aeson
---import qualified Data.Text as Text
+import qualified Handler.Mooc.Scenario as S
 
+
+-- | Set up settings for qua-view
+--   * qua_view_mode=mode -- edit or view or full; full is default
+--   * scenario_id=i -- if set up then load this scenario from database
 getQuaViewSettingsR :: Handler TypedContent
 getQuaViewSettingsR = do
-    muser <- maybeAuth
-    custom_exercise_type <- lookupSession "custom_exercise_type"
-    custom_exercise_id   <- lookupSession "custom_exercise_id"
-    custom_proposal_id   <- lookupSession "custom_proposal_id"
+    qua_view_mode <- fromMaybe "full" <$> lookupSession "qua_view_mode"
+
+    mscenario_id <- getScenarioId
+    mscale <- getScenarioScale mscenario_id
+
     app <- getYesod
     req <- waiRequest
-    let role = muserRole muser
-        appr = getApprootText guessApproot app req
+    let appr = getApprootText guessApproot app req
         quaviewHTTP = yesodRender app appr HomeR []
         luciProxyHTTP = yesodRender app appr LuciR []
         luciProxyWS = "ws" <> drop 4 luciProxyHTTP
         quaViewLoggingWS = "ws" <> drop 4 (yesodRender app appr QVLoggingR [])
         submitHTTP = yesodRender app appr SubmitProposalR []
-        -- get a link to a current EdX user problem or to an example scenario for other users
-        scenarioHTTP = case custom_exercise_type of
-            Just "design" -> case fmap decimal custom_exercise_id of
-                   Just (Right i) -> yesodRender app appr (ScenarioR . toSqlKey . fst $ i) []
-                   _ -> yesodRender app appr (StaticR data_mooctask_geojson) []
-            Just "view"   -> case fmap decimal custom_proposal_id of
-                   Just (Right i) -> yesodRender app appr (ProposalR . toSqlKey . fst $ i) []
-                   _ -> yesodRender app appr (StaticR data_mooctask_geojson) []
-            _ ->
-                yesodRender app appr (StaticR data_mooctask_geojson) []
+        mscenarioHTTP = flip (yesodRender app appr . ScenarioR) [] <$> mscenario_id
     return . TypedContent typeJson . toContent . object $
       [ "viewRoute"  .= quaviewHTTP
       , "luciRoute"  .= luciProxyWS
       , "loggingUrl" .= quaViewLoggingWS
       , "submitUrl"  .= submitHTTP
-      , "scenarioUrl" .= scenarioHTTP
-      , "objectScale" .= Number 0.001
-      , "profile" .= String ( case role of
-            UR_NOBODY  -> "full"
-            UR_STUDENT -> case custom_exercise_type of
-                           Just "design" -> "edit"
-                           Just "view" -> "view"
-                           _ -> "view"
-            UR_LOCAL   -> "full"
-            UR_ADMIN   -> "full"
-            )
-      ]
+      , "profile"     .= qua_view_mode
+      ] ^++^ fmap ("scenarioUrl" .=) mscenarioHTTP
+        ^++^ fmap ("objectScale" .=) mscale
+
+(^++^) :: [a] -> Maybe a -> [a]
+xs ^++^ Just x = x:xs
+xs ^++^ Nothing = xs
+
+getScenarioId :: Handler (Maybe ScenarioId)
+getScenarioId = do
+    mtscenario_id <- lookupSession "scenario_id"
+    case decimal <$> mtscenario_id of
+      Just (Right (i, _)) -> return . Just $ toSqlKey i
+      _ -> do
+        mtscp_id <- lookupSession "custom_exercise_id"
+        case decimal <$> mtscp_id of
+          Just (Right (i, _)) -> S.getScenarioId $ toSqlKey i
+          _ -> return Nothing
+
+getScenarioScale :: Maybe ScenarioId -> Handler (Maybe Double)
+getScenarioScale Nothing = return Nothing
+getScenarioScale (Just i) = fmap (fmap scenarioScale) . runDB $ get i

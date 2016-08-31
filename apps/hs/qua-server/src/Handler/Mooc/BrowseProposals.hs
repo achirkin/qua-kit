@@ -16,14 +16,12 @@ module Handler.Mooc.BrowseProposals
 
 import Import
 import qualified Data.Text as Text
-import qualified Data.Conduit.List as Conduit
+--import qualified Data.Conduit.List as Conduit
+import Database.Persist.Sql (rawSql)
 
 getBrowseProposalsR :: Handler Html
 getBrowseProposalsR = do
-    scenarios <- runDB $ selectSource [] [] =$= awaitForever (\(Entity i s) -> do
-        uname <- fromMaybe "anonymous user" . fmap userName <$> lift (get (scenarioAuthorId s))
-        yield (i,s,uname)
-      ) $$ Conduit.consume
+    usersscenarios <- runDB getLastSubmissions
     fullLayout Nothing "Qua-kit student designs" $ do
       setTitle "Qua-kit student designs"
       toWidgetHead $
@@ -44,7 +42,7 @@ getBrowseProposalsR = do
         [hamlet|
           <div class="ui-card-wrap">
             <div class="row">
-              $forall (scId,scenario,userN) <- scenarios
+              $forall (Entity _ u, Entity scId scenario) <- usersscenarios
                 <div class="col-lg-4 col-md-6 col-sm-9 col-xs-9 story_cards">
                   <div class="card">
                     <aside class="card-side card-side-img pull-left card-side-moocimg">
@@ -52,7 +50,7 @@ getBrowseProposalsR = do
                     <div class="card-main">
                       <div class="card-inner" style="margin: 10px 12px;">
                         <p style="margin: 6px 0px;">
-                          #{userN}
+                          #{userName u}
                             <br>
                           #{show $ utctDay $ scenarioLastUpdate scenario}
                         <p style="margin: 6px 0px; white-space: pre-line; overflow-y: hidden; color: #555;">
@@ -84,3 +82,17 @@ shortComment t = dropInitSpace . remNewLines $
                     . map (Text.dropWhile (\c -> c == ' ' || c == '\r' || c == '\t'))
                     . Text.lines
         dropInitSpace = Text.dropWhile (\c -> c == ' ' || c == '\n' || c == '\r' || c == '\t')
+
+
+getLastSubmissions :: ReaderT SqlBackend Handler [(Entity User, Entity Scenario)]
+getLastSubmissions = rawSql query []
+  where
+    query = Text.unlines
+          ["SELECT ??, ??"
+          ,"FROM scenario"
+          ,"INNER JOIN ( SELECT scenario.author_id, scenario.task_id, MAX(scenario.last_update) as x"
+          ,"             FROM scenario"
+          ,"             GROUP BY scenario.author_id, scenario.task_id ) t"
+          ,"        ON t.task_id = scenario.task_id AND t.author_id = scenario.author_id AND t.x = scenario.last_update"
+          ,"INNER JOIN \"user\" ON \"user\".id = scenario.author_id;"
+          ]

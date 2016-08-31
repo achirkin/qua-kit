@@ -11,7 +11,7 @@
 -----------------------------------------------------------------------------
 {-# LANGUAGE Rank2Types#-}
 module Handler.Mooc.EdxLogin
-  ( authLtiPlugin
+  ( authLtiPlugin, dispatchLti
   ) where
 
 import Import.NoFoundation
@@ -27,13 +27,20 @@ pluginName = "lti"
 
 authLtiPlugin :: (Yesod m, YesodAuth m) => LTIProvider -> AuthPlugin m
 authLtiPlugin conf =
-  AuthPlugin pluginName (dispatch conf) $ \_tp -> return ()
+  AuthPlugin pluginName (dispatchAuth conf) $ \_tp -> return ()
 
 -- | This creates a page with url
 --   root.root/auth/page/lti/login
-dispatch :: (RenderMessage site FormMessage) => LTIProvider -> Text -> [Text] -> AuthHandler site TypedContent
-dispatch conf "POST" ["login"] = do
-    yreq <- getRequest
+dispatchAuth :: (RenderMessage site FormMessage) => LTIProvider -> Text -> [Text] -> AuthHandler site TypedContent
+dispatchAuth conf "POST" ["login"] = getRequest >>= lift . dispatchLti conf
+dispatchAuth _ _ _                 = notFound
+
+
+
+-- | This creates a page with url
+--   root.root/auth/page/lti/login
+dispatchLti :: (RenderMessage site FormMessage, YesodAuth site) => LTIProvider -> YesodRequest -> HandlerT site IO TypedContent
+dispatchLti conf yreq = do
     eltiRequest <- runExceptT $ processYesodRequest conf yreq
     case eltiRequest of
       Left (LTIException err) -> permissionDenied $ Text.pack err
@@ -45,7 +52,7 @@ dispatch conf "POST" ["login"] = do
         lis_outcome_service_url <- lookupParam msg "lis_outcome_service_url"
         lis_result_sourcedid    <- lookupParam msg "lis_result_sourcedid"
         -- set LTI credentials
-        lift . setCredsRedirect
+        setCredsRedirect
              . Creds pluginName user_id
              $ ("resource_link_id"       , resource_link_id)
              : ("context_id"             , context_id)
@@ -62,5 +69,3 @@ dispatch conf "POST" ["login"] = do
     saveCustomParams ((k,v):xs) = if "custom_" `isPrefixOf` k
                then (Text.decodeUtf8 k, Text.decodeUtf8 v) : saveCustomParams xs
                else saveCustomParams xs
-dispatch _ _ _                 = notFound
-

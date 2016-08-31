@@ -1,64 +1,54 @@
 -----------------------------------------------------------------------------
---
+-- |
 -- Module      :  Handler.Mooc.Scenario
 -- Copyright   :  (c) Artem Chirkin
 -- License     :  MIT
 --
 -- Maintainer  :  Artem Chirkin <chirkin@arch.ethz.ch>
 -- Stability   :  experimental
--- Portability :
 --
--- |
 --
 -----------------------------------------------------------------------------
 
 module Handler.Mooc.Scenario
   ( getScenarioR
-  , getProposalR
+  , getScenarioId
   ) where
 
 import Import
+import Database.Persist.Sql (fromSqlKey)
+import Control.Monad.Trans.Maybe
 
-getScenarioR :: ScenarioProblemId -> Handler Text
-getScenarioR scpId = do
-  muserId <- maybeAuthId
-  resource_link_id        <- lookupSession "resource_link_id"
-  lis_outcome_service_url <- lookupSession "lis_outcome_service_url"
-  lis_result_sourcedid    <- lookupSession "lis_result_sourcedid"
-  case muserId of
-    Nothing -> return ""
-    Just uId -> fmap (maybe "" (decodeUtf8 . scenarioGeometry)) . runDB $ do
-      mscenario <- selectSource
-          [ ScenarioAuthorId ==. uId
-          , ScenarioTaskId   ==. scpId
-          ]
-          [ Desc ScenarioLastUpdate
-          ] $$ await
-      case mscenario of
-        Just scenario -> return $ Just $ entityVal scenario
-        Nothing ->
-          case resource_link_id of
-             Nothing -> return Nothing
-             Just rli -> do
-               mscproblem <- get scpId
-               medxres <- getBy $ EdxResLinkId rli
-               case (,) <$> mscproblem <*> medxres of
-                 Nothing -> return Nothing
-                 Just (scp, Entity edxResId _) -> do
-                   t <- liftIO getCurrentTime
-                   scId <- insert $ Scenario
-                                     uId
-                                     scpId
-                                     (scenarioProblemImage scp)
-                                     (scenarioProblemGeometry scp)
-                                     (scenarioProblemDescription scp)
-                                     (scenarioProblemScale scp)
-                                     edxResId
-                                     lis_outcome_service_url
-                                     lis_result_sourcedid
-                                     t
-                   get scId
+getScenarioId :: ScenarioProblemId -> Handler (Maybe ScenarioId)
+getScenarioId scpId = runMaybeT $ do
+    userId <- MaybeT maybeAuthId
+    mScenarioId <- fmap (fmap entityKey) . lift . runDB $ selectSource
+                      [ ScenarioAuthorId ==. userId
+                      , ScenarioTaskId   ==. scpId
+                      ]
+                      [ Desc ScenarioLastUpdate
+                      ] $$ await
+    case mScenarioId of
+      Just scId -> return scId
+      Nothing -> do
+        resource_link_id        <- MaybeT $ lookupSession "resource_link_id"
+        lis_outcome_service_url <- lift $ lookupSession "lis_outcome_service_url"
+        lis_result_sourcedid    <- lift $ lookupSession "lis_result_sourcedid"
+        (scproblem, edxres) <- MaybeT . runDB $ (\mx my -> (,) <$> mx <*> my)
+                                             <$> get scpId
+                                             <*> getBy (EdxResLinkId resource_link_id)
+        t <- liftIO getCurrentTime
+        scId <- lift . runDB . insert $ Scenario userId scpId
+             (scenarioProblemImage scproblem)
+             (scenarioProblemGeometry scproblem)
+             (scenarioProblemDescription scproblem)
+             (scenarioProblemScale scproblem)
+             (entityKey edxres)
+             lis_outcome_service_url
+             lis_result_sourcedid
+             t
+        lift $ setSession "scenario_id" (pack . show $ fromSqlKey scId)
+        return scId
 
-
-getProposalR :: ScenarioId -> Handler Text
-getProposalR scId = maybe "" (decodeUtf8 . scenarioGeometry) <$> runDB (get scId)
+getScenarioR :: ScenarioId -> Handler Text
+getScenarioR scId = maybe "" (decodeUtf8 . scenarioGeometry) <$> runDB (get scId)

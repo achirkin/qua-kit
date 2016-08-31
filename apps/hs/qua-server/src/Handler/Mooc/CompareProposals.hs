@@ -27,52 +27,71 @@ import qualified Data.Text.Read as Text
 
 postVoteForProposalR :: CriterionId -> ScenarioId -> ScenarioId -> Handler Html
 postVoteForProposalR cId better worse = do
+  userId <- requireAuthId
   useSVars <- (\mt -> if mt == Just "compare" then id else const Nothing) <$> lookupSession "custom_exercise_type"
   resource_link_id        <- useSVars <$> lookupSession "resource_link_id"
   lis_outcome_service_url <- useSVars <$> lookupSession "lis_outcome_service_url"
   lis_result_sourcedid    <- useSVars <$> lookupSession "lis_result_sourcedid"
   mexplanation <- lookupPostParam "explanation"
-  muid <- maybeAuthId
-  case muid of
-    Nothing -> return ()
-    Just uid -> runDB $ do
-      mresId <- case resource_link_id of
-         Nothing -> return Nothing
-         Just rlid -> fmap entityKey <$> getBy (EdxResLinkId rlid)
-      t <- liftIO getCurrentTime
-      _ <- insert $ Vote uid cId better worse mexplanation mresId
-                         lis_outcome_service_url lis_result_sourcedid t
-      return ()
-  updateSession "compare_counter" incrementTextValue
-  redirect CompareProposalsR
+  runDB $ do
+    mresId <- case resource_link_id of
+       Nothing -> return Nothing
+       Just rlid -> fmap entityKey <$> getBy (EdxResLinkId rlid)
+    t <- liftIO getCurrentTime
+    _ <- insert $ Vote userId cId better worse mexplanation mresId
+                       lis_outcome_service_url lis_result_sourcedid t
+    return ()
+
+  mcustom_exercise_count   <- (>>= parseInt) <$> lookupSession "custom_exercise_count"
+  case mcustom_exercise_count of
+    Nothing -> redirect CompareProposalsR
+    Just custom_exercise_count -> do
+       compare_counter <- fromMaybe 0 . (>>= parseInt) <$> lookupSession "compare_counter"
+       case custom_exercise_count `compare` (compare_counter+1) of
+          -- continue exercise
+          GT -> do
+            setSession "compare_counter" (pack . show $ compare_counter + 1)
+            getCompareByCriterionR userId cId
+          -- something strange happend, go to standard pipeline
+          LT -> redirect CompareProposalsR
+          -- Finish exercise!
+          EQ -> do
+            setMessage "You are done with this exercise, thank you! You can continue exploring the site or go back to edX."
+            deleteSession "custom_exercise_count"
+            deleteSession "compare_counter"
+            redirect MoocHomeR
 
 
-updateSession :: Text -> (Maybe Text -> Maybe Text) -> Handler ()
-updateSession s f = lookupSession s >>= \m -> case f m of
-    Nothing -> return ()
-    Just v  -> setSession s v
+--updateSession :: Text -> (Maybe Text -> Maybe Text) -> Handler ()
+--updateSession s f = lookupSession s >>= \m -> case f m of
+--    Nothing -> return ()
+--    Just v  -> setSession s v
+--
+--
+--incrementTextValue :: Maybe Text -> Maybe Text
+--incrementTextValue t = (pack . show . (+1)) <$> (t >>= parseInt)
 
-
-incrementTextValue :: Maybe Text -> Maybe Text
-incrementTextValue Nothing  = Nothing
-incrementTextValue (Just t) = case Text.decimal t of
-    Right (i, _) -> Just . pack . show $ (i+1 :: Int)
-    Left _ -> Nothing
-
+parseInt :: Text -> Maybe Int
+parseInt t = case Text.decimal t of
+  Right (i,_) -> Just i
+  _ -> Nothing
 
 getCompareProposalsR :: Handler Html
 getCompareProposalsR = do
-  muid <- maybeAuthId
-  case muid of
-    Nothing -> permissionDenied "You must log in"
-    Just uid -> runDB getLeastPopularCriterion >>= \mcID -> case mcID of
-          Nothing  -> notFound
-          Just cid -> getCompareByCriterionR uid cid
+  setUltDest MoocHomeR
+  userId <- requireAuthId
+  runDB getLeastPopularCriterion >>= \mcID -> case mcID of
+     Nothing  -> notFound
+     Just cid -> getCompareByCriterionR userId cid
 
 
 
 getCompareByCriterionR :: UserId -> CriterionId -> Handler Html
 getCompareByCriterionR uId cId = do
+  custom_exercise_count   <- fromMaybe 0 . (>>= parseInt) <$> lookupSession "custom_exercise_count"
+  compare_counter   <- fromMaybe 0 . (>>= parseInt) <$> lookupSession "compare_counter"
+  let showPopup = custom_exercise_count > 0 && compare_counter == 0
+  when showPopup $ void getMessages
   (criterion,msubs) <- runDB $ do
       cr <- get404 cId
       ms <- getLeastPopularSubmissions uId
@@ -83,7 +102,12 @@ getCompareByCriterionR uId cId = do
       fullLayout (Just . preEscapedToMarkup $ criterionIcon criterion)
                  ("Compare designs according to a "
                   <> toLower (criterionName criterion)
-                  <> " criterion") $ do
+                  <> " criterion"
+                  <> ( if compare_counter <= custom_exercise_count && custom_exercise_count > 0
+                       then " (" <> pack (show $ compare_counter + 1) <> "/" <> pack (show $ custom_exercise_count) <> ")"
+                       else ""
+                     )
+                  ) $ do
         setTitle "Compare design proposals"
         toWidgetHead
           [julius|
@@ -108,6 +132,9 @@ getCompareByCriterionR uId cId = do
           |]
         toWidgetBody
           [hamlet|
+            $if showPopup
+              ^{infoModal criterion}
+
             <div class="row">
 
               <div.col-lg-6.col-md-6.col-sm-10.col-xs-12>
@@ -161,8 +188,33 @@ getCompareByCriterionR uId cId = do
                         <div.card-action-btn.pull-right>
                           <a.btn.btn-flat.btn-red.waves-attach.waves-effect onclick="$('#submitvoteform').submit();">
                             Vote!
-
           |]
+    where
+      infoModal criterion =
+        [hamlet|
+          <div.modal.modal-va-middle.fade #popuphelp aria-hidden="true" role="dialog" tabindex="-1">
+              <div class="modal-dialog">
+                <div class="card">
+                  <aside class="card-side card-side-img pull-left card-side-moocimg">
+                    <img src="@{CriteriaImgR cId}">
+                  <div class="card-main">
+                    <div.card-header.text-brand-accent>
+                      <div class="card-inner">
+                        <h3>
+                          Compare designs exercise
+                        Read the criterion description and then compare a series of design pairs.
+                    <div.card-inner>
+                      <p>
+                        #{criterionName criterion}
+                      <p style="white-space: pre-line; overflow-y: hidden; color: #555;">
+                       #{criterionDescription criterion}
+                    <div.card-action>
+                      <div.card-action-btn.pull-right>
+                        <a.btn.btn-flat.btn-brand-accent.waves-attach.waves-effect data-dismiss="modal">
+                          Ok, let's go!
+          <script type="text/javascript">
+            \$( document ).ready(function() { $('#popuphelp').modal('show');});
+        |]
 
 
 prepareDescription :: Scenario -> Text

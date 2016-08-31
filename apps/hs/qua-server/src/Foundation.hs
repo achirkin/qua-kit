@@ -174,6 +174,7 @@ instance YesodAuth App where
     loginDest _ = MoocHomeR
     -- Where to send a user after logout
     logoutDest _ = MoocHomeR
+    onLogout = clearSession
     -- Override the above two destinations when a Referer: header is present
     redirectToReferer _ = True
 
@@ -257,8 +258,11 @@ setupEdxParams params = do
   lookupAndSave "lis_outcome_service_url"
   lookupAndSave "lis_result_sourcedid"
   lookupAndSave "resource_link_id"
-  lookupAndSave "custom_exercise_type"
-  lookupAndSave "custom_exercise_id"
+  case exercise_type of
+    Just "design" -> setUltDest EditProposalR
+    Just "compare" -> setUltDest CompareProposalsR
+    _ -> return ()
+  mapM_ (uncurry setSession) $ filter (isPrefixOf "custom_". fst ) params
   runDB $
     case (,) <$> mresource_link_id <*> mcontext_id of
       Nothing  -> return ()
@@ -271,6 +275,7 @@ setupEdxParams params = do
             ek <- insert $ EdxResource resource_link_id edxCourseId (Map.lookup "custom_component_display_name" pm)
             saveCustomParams ek
   where
+    exercise_type = Map.lookup "custom_exercise_type" pm
     mresource_link_id = Map.lookup "resource_link_id" pm
     mcontext_id       = Map.lookup "context_id" pm
     lookupAndSave t = case Map.lookup t pm of

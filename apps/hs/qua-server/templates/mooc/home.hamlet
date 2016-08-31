@@ -6,35 +6,42 @@
       <div class="card card-brand">
         <div class="card-main">
           <div class="card-inner">
-            Card-brand
+            The application provides an easy-to-use geometry editor, suitable for educational and demonstrational purposes.
           <div class="card-action">
             <div class="card-action-btn pull-left">
-              <a class="btn btn-flat waves-attach waves-light waves-effect" href="javascript:void(0)">
+              <a class="btn btn-flat waves-attach waves-light waves-effect" href="@{EditProposalR}">
                 <span class="icon">check
-                &nbsp;Button
+                &nbsp;Use geometry editor
+
+    <div class="col-lg-4 col-sm-6">
+      <div class="card card-orange">
+        <div class="card-main">
+          <div class="card-inner">
+            A special type of exercises consists in comparing pairs of design proposals according to a single design criterion.
+          <div class="card-action">
+            <div class="card-action-btn pull-left">
+              <a class="btn btn-flat waves-attach waves-light waves-effect" href="@{CompareProposalsR}">
+                <span class="icon">check
+                &nbsp;Compare designs
+
+    <div class="col-lg-4 col-sm-6">
+      <div class="card card-red">
+        <div class="card-main">
+          <div class="card-inner">
+            The gallery is a collection of design proposals submitted by other users.
+          <div class="card-action">
+            <div class="card-action-btn pull-left">
+              <a class="btn btn-flat waves-attach waves-light waves-effect" href="@{BrowseProposalsR}">
+                <span class="icon">check
+                &nbsp;Go to gallery
 
     <div class="col-lg-4 col-sm-6">
       <div class="card">
         <div class="card-main">
           <div class="card-inner">
-            Card
+            The tool is developed at the Chair of Information Architecture, ETH Zurich.
           <div class="card-action">
             <div class="card-action-btn pull-left">
-              <a class="btn btn-flat waves-attach waves-light waves-effect" href="javascript:void(0)">
+              <a class="btn btn-flat waves-attach waves-light waves-effect" href="http://www.ia.arch.ethz.ch/">
                 <span class="icon">check
-                &nbsp;Button
-
-    $forall pam <- ses
-
-      <div class="col-lg-4 col-sm-6">
-        <div class="card card-brand">
-          <div class="card-main">
-            <div class="card-inner">
-              #{pam}
-            <div class="card-action">
-              <div class="card-action-btn pull-left">
-                <a class="btn btn-flat waves-attach waves-light waves-effect" href="javascript:void(0)">
-                  <span class="icon">check
-                        &nbsp;Button
-
-
+                &nbsp;Visit our site

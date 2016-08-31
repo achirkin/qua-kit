@@ -53,6 +53,7 @@ import Handler.Mooc.CompareProposals
 import Handler.Mooc.ProposalPreview
 import Handler.LoggingWS
 
+import Handler.Mooc.Tests
 
 
 -- This line actually creates our YesodDispatch instance. It is the second half

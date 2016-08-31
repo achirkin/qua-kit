@@ -20,6 +20,6 @@ import Database.Persist.Sql (fromSqlKey)
 
 getViewProposalR :: ScenarioId -> Handler Html
 getViewProposalR scId = do
-  setSession "custom_exercise_type" "view"
-  setSession "custom_proposal_id" (pack . show $ fromSqlKey scId)
+  setSession "qua_view_mode" "view"
+  setSession "scenario_id" (pack . show $ fromSqlKey scId)
   redirect HomeR
