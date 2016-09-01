@@ -22,7 +22,10 @@ import qualified Handler.Mooc.Scenario as S
 getEditProposalR :: Handler Html
 getEditProposalR = do
   setUltDest MoocHomeR
-  setSession "qua_view_mode" "edit"
+  role <- muserRole <$> maybeAuth
+  case role of
+    UR_STUDENT -> setSession "qua_view_mode" "edit"
+    _          -> setSession "qua_view_mode" "full"
   mtscp_id <- lookupSession "custom_exercise_id"
   case decimal <$> mtscp_id of
     Just (Right (i, _)) -> do

@@ -27,8 +27,8 @@ $doctype 5
         <li class="dropdown margin-right">
           $maybe user <- muser
             <a class="dropdown-toggle padding-left-no padding-right-no" data-toggle="dropdown">
-              <p style="margin-right: 0.5em;">#{userName user}
-              <span class="avatar avatar-sm">#{twoCharsName $ userName user}
+              <p style="margin-right: 0.5em;" #usernameplace>#{userName user}
+              <span class="avatar avatar-sm" #twocharsplace>#{twoCharsName $ userName user}
             <ul class="dropdown-menu dropdown-menu-right">
               <li>
                 <a class="padding-right-lg waves-attach waves-effect" data-backdrop="static" data-toggle="modal" href="#ui_renameme_dialog">
@@ -88,16 +88,32 @@ $doctype 5
                 You may set you real name or a nickname you like; #
                 the name is visible to others in the gallery and discussions. #
                 It does not affect your real id used for grading in edX system.
+              <p class="margin-top-sm text-orange-hint">
+                Note: we use this name to refer to your submission. #
+                We reserve the right to publish your submission referenced by this name.
               <div class="form-group form-group-label control-highlight">
                 <label class="floating-label" for="ui_renameme_inputvalue">
                   Name
                 <input class="form-control" id="ui_renameme_inputvalue" value="#{userName user}" type="text" name="newusername" required>
             <div class="modal-footer">
               <p class="text-right">
-                <a class="btn btn-flat btn-brand waves-attach waves-effect" data-dismiss="modal">
+                <a class="btn btn-flat btn-brand-accent waves-attach waves-effect" data-dismiss="modal">
                   Cancel
-                <a class="btn btn-flat btn-brand waves-attach waves-effect" onclick="window.location.replace('@{RenameMeR}?newname=' + document.getElementById('ui_renameme_inputvalue').value)">
+                <a class="btn btn-flat btn-brand-accent waves-attach waves-effect" #renamemebut >
                   Rename
+              <script type="text/javascript">
+                \$("#renamemebut").click(function(){
+                \    $.ajax({ url: "@{RenameMeR}?newname=" + $('#ui_renameme_inputvalue').val()
+                \           , success: function(result){
+                \              var json = JSON.parse(result);
+                \              if (json.newname) {
+                \                $('#usernameplace').text(json.newname);
+                \                $('#twocharsplace').text(json.twochars);
+                \              }
+                \           }});
+                \    $('#ui_renameme_dialog').modal('hide');
+                \});
+                onclick="window.location.replace('@{RenameMeR}?newname=' + document.getElementById('ui_renameme_inputvalue').value)"
 
 
     <!-- material ui  js -->

@@ -20,8 +20,10 @@ postHomeR = renderQuaView
 
 renderQuaView :: Handler Html
 renderQuaView = do
-  urole <- getRole <$> maybeAuth
-  let showFull = canShowFull urole
+
+  urole <- muserRole <$> maybeAuth
+  qua_view_mode <- fromMaybe "full" <$> lookupSession "qua_view_mode"
+  let showFull = qua_view_mode == "full"
 
   -- connecting form + conteiners for optional content
   (lcConnectedClass, lcDisconnectedClass, luciConnectForm) <- luciConnectPane
@@ -58,10 +60,4 @@ renderQuaView = do
 
     -- render all html
     $(widgetFile "qua-view")
-  where
-    canShowFull UR_NOBODY = True
-    canShowFull UR_STUDENT = False
-    canShowFull UR_LOCAL = True
-    canShowFull UR_ADMIN = True
-    getRole Nothing = UR_NOBODY
-    getRole (Just (Entity _ u)) = userRole u
+

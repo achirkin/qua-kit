@@ -241,7 +241,7 @@ unsafeHandler = Unsafe.fakeHandlerGetLogger appLogger
 
 
 muserRole :: Maybe (Entity User) -> UserRole
-muserRole Nothing = UR_NOBODY -- UR_NOBODY
+muserRole Nothing = UR_NOBODY
 muserRole (Just (Entity _ u)) = userRole u
 
 

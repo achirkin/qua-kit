@@ -114,20 +114,22 @@ getCompareByCriterionR uId cId = do
             function selectLeft() {
               $('#submitvoteform').attr('action','@{VoteForProposalR cId k1 k2}');
               $('#leftChoiceButton').css('opacity','1');
-              $('#leftChoiceButtonA').html('<span class="icon">thumb_up</span> Selected')
-              $('#leftChoiceButtonA').addClass('btn-red')
+              $('#leftChoiceButtonA').html('<span class="icon">thumb_up</span> Selected');
+              $('#leftChoiceButtonA').addClass('btn-red');
               $('#rightChoiceButton').css('opacity','0.6');
-              $('#rightChoiceButtonA').html('<span class="icon">thumb_down</span> Selected')
-              $('#rightChoiceButtonA').removeClass('btn-red')
+              $('#rightChoiceButtonA').html('<span class="icon">thumb_down</span> Selected');
+              $('#rightChoiceButtonA').removeClass('btn-red');
+              $('#votebutton').click(function(){$('#submitvoteform').submit();});
             }
             function selectRight() {
               $('#submitvoteform').attr('action','@{VoteForProposalR cId k1 k2}');
               $('#rightChoiceButton').css('opacity','1');
-              $('#rightChoiceButtonA').html('<span class="icon">thumb_up</span> Selected')
-              $('#rightChoiceButtonA').addClass('btn-red')
+              $('#rightChoiceButtonA').html('<span class="icon">thumb_up</span> Selected');
+              $('#rightChoiceButtonA').addClass('btn-red');
               $('#leftChoiceButton').css('opacity','0.6');
-              $('#leftChoiceButtonA').html('<span class="icon">thumb_down</span> Selected')
-              $('#leftChoiceButtonA').removeClass('btn-red')
+              $('#leftChoiceButtonA').html('<span class="icon">thumb_down</span> Selected');
+              $('#leftChoiceButtonA').removeClass('btn-red');
+              $('#votebutton').click(function(){$('#submitvoteform').submit();});
             }
           |]
         toWidgetBody
@@ -186,7 +188,7 @@ getCompareByCriterionR uId cId = do
                             <textarea.form-control.textarea-autosize id="explanation" name="explanation" rows="1">
                       <div.card-action>
                         <div.card-action-btn.pull-right>
-                          <a.btn.btn-flat.btn-red.waves-attach.waves-effect onclick="$('#submitvoteform').submit();">
+                          <a.btn.btn-flat.btn-red.waves-attach.waves-effect #votebutton>
                             Vote!
           |]
     where

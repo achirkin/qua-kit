@@ -15,8 +15,6 @@ module Handler.QuaViewSettings
 
 
 import Import
-import Database.Persist.Sql (toSqlKey)
-import Data.Text.Read (decimal)
 import qualified Handler.Mooc.Scenario as S
 
 
@@ -27,8 +25,7 @@ getQuaViewSettingsR :: Handler TypedContent
 getQuaViewSettingsR = do
     qua_view_mode <- fromMaybe "full" <$> lookupSession "qua_view_mode"
 
-    mscenario_id <- getScenarioId
-    mscale <- getScenarioScale mscenario_id
+    scenarioLinkScale <- S.getScenarioLink
 
     app <- getYesod
     req <- waiRequest
@@ -38,7 +35,7 @@ getQuaViewSettingsR = do
         luciProxyWS = "ws" <> drop 4 luciProxyHTTP
         quaViewLoggingWS = "ws" <> drop 4 (yesodRender app appr QVLoggingR [])
         submitHTTP = yesodRender app appr SubmitProposalR []
-        mscenarioHTTP = flip (yesodRender app appr . ScenarioR) [] <$> mscenario_id
+        mscenarioHTTP = flip (yesodRender app appr) [] . fst <$> scenarioLinkScale
     return . TypedContent typeJson . toContent . object $
       [ "viewRoute"  .= quaviewHTTP
       , "luciRoute"  .= luciProxyWS
@@ -46,23 +43,9 @@ getQuaViewSettingsR = do
       , "submitUrl"  .= submitHTTP
       , "profile"     .= qua_view_mode
       ] ^++^ fmap ("scenarioUrl" .=) mscenarioHTTP
-        ^++^ fmap ("objectScale" .=) mscale
+        ^++^ fmap (("objectScale" .=) . snd) scenarioLinkScale
 
 (^++^) :: [a] -> Maybe a -> [a]
 xs ^++^ Just x = x:xs
 xs ^++^ Nothing = xs
 
-getScenarioId :: Handler (Maybe ScenarioId)
-getScenarioId = do
-    mtscenario_id <- lookupSession "scenario_id"
-    case decimal <$> mtscenario_id of
-      Just (Right (i, _)) -> return . Just $ toSqlKey i
-      _ -> do
-        mtscp_id <- lookupSession "custom_exercise_id"
-        case decimal <$> mtscp_id of
-          Just (Right (i, _)) -> S.getScenarioId $ toSqlKey i
-          _ -> return Nothing
-
-getScenarioScale :: Maybe ScenarioId -> Handler (Maybe Double)
-getScenarioScale Nothing = return Nothing
-getScenarioScale (Just i) = fmap (fmap scenarioScale) . runDB $ get i
