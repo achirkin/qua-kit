@@ -1,0 +1,1800 @@
+\section{Built-In Services}
+\label{ch:builtinservices}
+
+\subsection{AttachmentJSON}
+\label{ch:builtinservices:AttachmentJSON}
+Returns the json specification of attachments and json geometry objects.
+\subsubsection*{Inputs:}
+\begin{itemize}
+  \small
+    \item \textbf{run}: 
+\begin{lstlisting}
+AttachmentJSON
+\end{lstlisting}
+  \end{itemize}
+\subsubsection*{Outputs:}
+\begin{itemize}
+  \small
+    \item \textbf{XOR error}: 
+\begin{lstlisting}
+string
+\end{lstlisting}
+    \item \textbf{XOR progress}: 
+\begin{lstlisting}
+json
+\end{lstlisting}
+    \item \textbf{XOR result}: 
+\begin{lstlisting}
+{
+  attachment: attachment, 
+  jsongeometry: jsongeometry
+}
+\end{lstlisting}
+  \end{itemize}
+
+\subsection{Download}
+\label{ch:builtinservices:Download}
+Downloads
+ a file from a given URL and stores is in Luci's attachment folder as 
+\&lt;md5 checksum\&gt;.\&lt;format\&gt; 
+\subsubsection*{Inputs:}
+\begin{itemize}
+  \small
+    \item \textbf{run}: 
+\begin{lstlisting}
+Download
+\end{lstlisting}
+    \item \textbf{url}: the URL to be used
+\begin{lstlisting}
+string
+\end{lstlisting}
+  \end{itemize}
+\subsubsection*{Outputs:}
+\begin{itemize}
+  \small
+    \item \textbf{XOR error}: 
+\begin{lstlisting}
+string
+\end{lstlisting}
+    \item \textbf{XOR progress}: 
+\begin{lstlisting}
+json
+\end{lstlisting}
+    \item \textbf{XOR result}: 
+\begin{lstlisting}
+{
+  checksum: string// the checksum in hexadecimal representation, 
+  format: string// equals the string typically put as a file ending, 
+  length: number// the length of the attachments as number of bytes
+}
+\end{lstlisting}
+  \end{itemize}
+
+\subsection{Exists}
+\label{ch:builtinservices:Exists}
+Tests whether a service with the given serviceName or a task with given taskID exists.
+\subsubsection*{Inputs:}
+\begin{itemize}
+  \small
+    \item \textbf{run}: 
+\begin{lstlisting}
+Exists
+\end{lstlisting}
+    \item \textbf{XOR instanceID}: 
+\begin{lstlisting}
+number
+\end{lstlisting}
+    \item \textbf{XOR serviceName}: the name of the service to be tested
+\begin{lstlisting}
+string
+\end{lstlisting}
+  \end{itemize}
+\subsubsection*{Outputs:}
+\begin{itemize}
+  \small
+    \item \textbf{XOR error}: 
+\begin{lstlisting}
+string
+\end{lstlisting}
+    \item \textbf{XOR progress}: 
+\begin{lstlisting}
+json
+\end{lstlisting}
+    \item \textbf{XOR result}: 
+\begin{lstlisting}
+{
+  exists: boolean
+}
+\end{lstlisting}
+  \end{itemize}
+
+\subsection{FilterServices}
+\label{ch:builtinservices:FilterServices}
+Filters
+ services according to a) its keys at a given recursion level, b) its 
+types at a given recursion level or c) a given json template with values
+ equal to 'null' meaning only keys are compared.
+\subsubsection*{Inputs:}
+\begin{itemize}
+  \small
+    \item \textbf{run}: 
+\begin{lstlisting}
+FilterServices
+\end{lstlisting}
+    \item \textbf{XOR jsonMatch}: 
+\begin{lstlisting}
+json
+\end{lstlisting}
+    \item \textbf{XOR keys}: 
+\begin{lstlisting}
+[
+  string
+]
+\end{lstlisting}
+    \item \textbf{XOR types}: 
+\begin{lstlisting}
+[
+  string
+]
+\end{lstlisting}
+    \item \textbf{OPT rcrLevel}: 
+\begin{lstlisting}
+number
+\end{lstlisting}
+  \end{itemize}
+\subsubsection*{Outputs:}
+\begin{itemize}
+  \small
+    \item \textbf{XOR error}: 
+\begin{lstlisting}
+string
+\end{lstlisting}
+    \item \textbf{XOR progress}: 
+\begin{lstlisting}
+json
+\end{lstlisting}
+    \item \textbf{XOR result}: 
+\begin{lstlisting}
+{
+  serviceList: [
+    string
+  ]
+}
+\end{lstlisting}
+  \end{itemize}
+
+\subsection{GetStartupTime}
+\label{ch:builtinservices:GetStartupTime}
+Returns the startup of time of Luci.
+\subsubsection*{Inputs:}
+\begin{itemize}
+  \small
+    \item \textbf{run}: 
+\begin{lstlisting}
+GetStartupTime
+\end{lstlisting}
+  \end{itemize}
+\subsubsection*{Outputs:}
+\begin{itemize}
+  \small
+    \item \textbf{XOR error}: 
+\begin{lstlisting}
+string
+\end{lstlisting}
+    \item \textbf{XOR progress}: 
+\begin{lstlisting}
+json
+\end{lstlisting}
+    \item \textbf{XOR result}: 
+\begin{lstlisting}
+{
+  startupTime: number// in milliseconds since 1.1.1970
+}
+\end{lstlisting}
+  \end{itemize}
+
+\subsection{RemoteDeregister}
+\label{ch:builtinservices:RemoteDeregister}
+Deregisters
+ a client from a service registration. This will cancel any running 
+service call, cancel all subscriptions of this client and, if the 
+service to be deregistered is the last remaining of its kind, its 
+serviceName will be removedfrom the list of available services.
+\subsubsection*{Inputs:}
+\begin{itemize}
+  \small
+    \item \textbf{run}: 
+\begin{lstlisting}
+RemoteDeregister
+\end{lstlisting}
+  \end{itemize}
+\subsubsection*{Outputs:}
+\begin{itemize}
+  \small
+    \item \textbf{XOR error}: 
+\begin{lstlisting}
+string
+\end{lstlisting}
+    \item \textbf{XOR result}: 
+\begin{lstlisting}
+{
+  deregisteredName: string// Intended to inform listeners about the service name that was deregistered, 
+  id: number// int, the id that was deregistered, 
+  nodeIP: string// Intended to inform listeners about the IP of the machine that deregistered the service, 
+  remainsAvailable: boolean// boolean to indicate whether other services with the samename remain  available (true) or whether the service is being deleted from the listof  available services (false)
+}
+\end{lstlisting}
+  \end{itemize}
+
+\subsection{RemoteRegister}
+\label{ch:builtinservices:RemoteRegister}
+Registers a client as a service.
+\subsubsection*{Inputs:}
+\begin{itemize}
+  \small
+    \item \textbf{run}: 
+\begin{lstlisting}
+RemoteRegister
+\end{lstlisting}
+    \item \textbf{description}: 
+\begin{lstlisting}
+string
+\end{lstlisting}
+    \item \textbf{exampleCall}: Mandatory json object that shows an example call. Since OPT/XOR/ANY  modifiers are only allowed in in \& output specifications and not in  calls, an example call shows very clearly how a call could look like.
+\begin{lstlisting}
+json
+\end{lstlisting}
+    \item \textbf{serviceName}: mandatory string that identifies the service
+\begin{lstlisting}
+string
+\end{lstlisting}
+    \item \textbf{OPT id}: Optional int to be used to identify a remote service. E.g. for  viewer services it might be important to be able to identify remote  service instances. If the id is taken already an error will be thrown /  registration aborted.
+\begin{lstlisting}
+number
+\end{lstlisting}
+    \item \textbf{OPT inputs}: Optional json object holding the input description to be included by 'ServiceInfo' / the API
+\begin{lstlisting}
+json
+\end{lstlisting}
+    \item \textbf{OPT outputs}: Optional json object holding the output description to be included by 'ServiceInfo' / the API
+\begin{lstlisting}
+json
+\end{lstlisting}
+  \end{itemize}
+\subsubsection*{Outputs:}
+\begin{itemize}
+  \small
+    \item \textbf{XOR error}: 
+\begin{lstlisting}
+string
+\end{lstlisting}
+    \item \textbf{XOR result}: 
+\begin{lstlisting}
+{
+  id: number// The int given as input or an int generated by Luci, 
+  nodeIP: string// The IP of the client that was registered as a service (intended to inform listeners), 
+  registeredName: string// Intended to inform listeners about the service name that was registered
+}
+\end{lstlisting}
+  \end{itemize}
+
+\subsection{ServiceControl}
+\label{ch:builtinservices:ServiceControl}
+Used
+ to remotely administrate installed services on a selected machine or on
+ allmachines having a 'ServiceControl' remote service running.
+\subsubsection*{Inputs:}
+\begin{itemize}
+  \small
+    \item \textbf{run}: 
+\begin{lstlisting}
+ServiceControl
+\end{lstlisting}
+    \item \textbf{XOR info}: get filtered information about either selected machines (nodes) or  about selectedserviceNames on all machines or full information about all  machines in case this value is 'null'
+\begin{lstlisting}
+{
+  \null\: error, 
+  {XOR nodes: {
+    OPT threadPool: boolean, 
+    XOR nodes: [
+      string
+    ], 
+    XOR serviceNames: [
+      string
+    ]
+  }
+}
+\end{lstlisting}
+    \item \textbf{XOR install}: install files on either selected machines (nodes) or on all machines (services)
+\begin{lstlisting}
+{
+  XOR nodes: {
+    ANY IP: [
+      attachment
+    ]
+  }, 
+  XOR services: [
+    attachment
+  ]
+}
+\end{lstlisting}
+    \item \textbf{XOR remove}: remove services identified by their name (serviceName) either on selected machines (nodes) or on all machines (services)
+\begin{lstlisting}
+{
+  XOR nodes: {
+    ANY IP: [
+      string
+    ]
+  }, 
+  XOR services: [
+    string
+  ]
+}
+\end{lstlisting}
+    \item \textbf{XOR start}: startup a given number of services either globally or on selected machines (nodes)
+\begin{lstlisting}
+{
+  XOR nodes: {
+    ANY IP: {
+      ANY serviceName: {
+        \number\,: error, 
+        {ANY id: {
+          ANY id: string
+        }
+      }
+    }
+  }, 
+  XOR services: {
+    ANY serviceName: number
+  }
+}
+\end{lstlisting}
+    \item \textbf{XOR stop}: stop a given amount of services either globally or on specified machines (nodes).
+\begin{lstlisting}
+{
+  XOR nodes: {
+    ANY IP: {
+      ANY serviceName: number
+    }
+  }, 
+  XOR services: {
+    ANY serviceName: number
+  }
+}
+\end{lstlisting}
+  \end{itemize}
+\subsubsection*{Outputs:}
+\begin{itemize}
+  \small
+    \item \textbf{XOR error}: 
+\begin{lstlisting}
+string
+\end{lstlisting}
+    \item \textbf{XOR result}: 
+\begin{lstlisting}
+{
+  OPT errors: list// 'TODO' in case at least one of the items to  install/remove/start/stop produced an error this list contains one error  string per item, 
+  XOR info: {
+    OPT quickPool: {
+      avgWaitingTime: number, 
+      maxPoolSize: number, 
+      numCalls: number, 
+      poolSize: number, 
+      waitingInQueue: number
+    }, 
+    OPT slowPool: {
+      avgWaitingTime: number, 
+      maxPoolSize: number, 
+      numCalls: number, 
+      poolSize: number, 
+      waitingInQueue: number
+    }, 
+    XOR nodes: {
+      ANY ip: {
+        OPT installedServices: {
+          ANY serviceName: {
+            exec: string// to be run in console, 
+            numRequestedCPUCores: number// 0 = using all available cores
+          }
+        }, 
+        OPT system: {
+          CPU: {
+            archNumBits: number// int; 32 or 64, 
+            endian: string// 'big' or 'little', 
+            numCores: number
+          }, 
+          name: string, 
+          osname: string, 
+          osversion: string
+        }, 
+        services: {
+          busy: {
+            ANY serviceName: number
+          }, 
+          idle: {
+            ANY serviceName: number
+          }, 
+          running: {
+            ANY serviceName: number
+          }
+        }
+      }
+    }, 
+    XOR services: {
+      ANY serviceName: {
+        OPT available: number// not busy, 
+        OPT nodes: list// list of IPv4, 
+        OPT running: number, 
+        avgDuration: number// in milliseconds, 
+        numCalls: number// how many times this service has been called already
+      }
+    }, 
+    remoteSummary: {
+      busy: number, 
+      idle: number
+    }
+  }, 
+  XOR installed: {
+    ANY IP: [
+      string
+    ]
+  }, 
+  XOR removed: {
+    ANY IP: [
+      string
+    ]
+  }, 
+  XOR started: {
+    ANY IP: {
+      ANY serviceName: number
+    }
+  }, 
+  XOR stopped: {
+    ANY IP: {
+      ANY serviceName: number
+    }
+  }
+}
+\end{lstlisting}
+  \end{itemize}
+
+\subsection{ServiceHistory}
+\label{ch:builtinservices:ServiceHistory}
+Returns
+ the history of a requested service as in number of calls and 
+availableworkers either since startup time or during the requested 
+period
+\subsubsection*{Inputs:}
+\begin{itemize}
+  \small
+    \item \textbf{run}: 
+\begin{lstlisting}
+ServiceHistory
+\end{lstlisting}
+    \item \textbf{serviceName}: 
+\begin{lstlisting}
+string
+\end{lstlisting}
+    \item \textbf{OPT period}: in seconds
+\begin{lstlisting}
+number
+\end{lstlisting}
+  \end{itemize}
+\subsubsection*{Outputs:}
+\begin{itemize}
+  \small
+    \item \textbf{XOR error}: 
+\begin{lstlisting}
+string
+\end{lstlisting}
+    \item \textbf{XOR progress}: 
+\begin{lstlisting}
+json
+\end{lstlisting}
+    \item \textbf{XOR result}: 
+\begin{lstlisting}
+{
+  calls: {
+    { callID: {
+      callID: number, 
+      idleTime: number, 
+      readingTime: number, 
+      runningTime: number, 
+      timestamp: number, 
+      writingTime: number
+    }
+  }, 
+  workers: {
+    { allWorkers: {
+      allWorkers: number, 
+      idleWorkers: number, 
+      timestamp: number
+    }
+  }
+}
+\end{lstlisting}
+  \end{itemize}
+
+\subsection{ServiceInfo}
+\label{ch:builtinservices:ServiceInfo}
+Returns
+ all known information on selected services such as a short description 
+like this one, in- and output description and an example call. 
+\subsubsection*{Inputs:}
+\begin{itemize}
+  \small
+    \item \textbf{run}: 
+\begin{lstlisting}
+ServiceInfo
+\end{lstlisting}
+    \item \textbf{OPT inclDescr}: indicates whether descriptions such as this one should be included in the result
+\begin{lstlisting}
+boolean
+\end{lstlisting}
+    \item \textbf{OPT serviceNames}: Optional list of selected service names for which information should  be returned. If no such list is given, the result will show the  structure of general json structures such as 'attachment',  'jsongeometry'
+\begin{lstlisting}
+list
+\end{lstlisting}
+  \end{itemize}
+\subsubsection*{Outputs:}
+\begin{itemize}
+  \small
+    \item \textbf{XOR error}: 
+\begin{lstlisting}
+string
+\end{lstlisting}
+    \item \textbf{XOR result}: 
+\begin{lstlisting}
+{
+  ANY serviceName: {
+    OPT numNodes: number, 
+    example: json, 
+    inputs: json, 
+    outputs: json
+  }
+}
+\end{lstlisting}
+  \end{itemize}
+
+\subsection{ServiceList}
+\label{ch:builtinservices:ServiceList}
+Get a list of all loaded and registered services as a list of service names.
+\subsubsection*{Inputs:}
+\begin{itemize}
+  \small
+    \item \textbf{run}: 
+\begin{lstlisting}
+ServiceList
+\end{lstlisting}
+  \end{itemize}
+\subsubsection*{Outputs:}
+\begin{itemize}
+  \small
+    \item \textbf{XOR error}: 
+\begin{lstlisting}
+string
+\end{lstlisting}
+    \item \textbf{XOR progress}: 
+\begin{lstlisting}
+json
+\end{lstlisting}
+    \item \textbf{XOR result}: 
+\begin{lstlisting}
+{
+  installed: list, 
+  serviceNames: list
+}
+\end{lstlisting}
+  \end{itemize}
+
+\subsection{task.Create}
+\label{ch:builtinservices:task.Create}
+Create a task. A task corresponds to a node in the workflow diagram.
+\subsubsection*{Inputs:}
+\begin{itemize}
+  \small
+    \item \textbf{run}: 
+\begin{lstlisting}
+task.Create
+\end{lstlisting}
+    \item \textbf{parentID}: the taskID of the workflow in which this task is being created
+\begin{lstlisting}
+number
+\end{lstlisting}
+    \item \textbf{position}: x/y from top left
+\begin{lstlisting}
+{
+  x: number, 
+  y: number
+}
+\end{lstlisting}
+    \item \textbf{serviceName}: 
+\begin{lstlisting}
+string
+\end{lstlisting}
+    \item \textbf{OPT inputs}: if omitted example values will be inserted
+\begin{lstlisting}
+json
+\end{lstlisting}
+    \item \textbf{OPT listensToDone}: a list of taskIDs to which this task generally listens (=not listens to specific outputs)
+\begin{lstlisting}
+list
+\end{lstlisting}
+  \end{itemize}
+\subsubsection*{Outputs:}
+\begin{itemize}
+  \small
+    \item \textbf{XOR error}: 
+\begin{lstlisting}
+string
+\end{lstlisting}
+    \item \textbf{XOR result}: 
+\begin{lstlisting}
+{
+  name: string, 
+  taskID: number
+}
+\end{lstlisting}
+  \end{itemize}
+
+\subsection{task.Get}
+\label{ch:builtinservices:task.Get}
+Returns infos about a task (requesting a taskID) or returns a list if ids representingthe same service
+\subsubsection*{Inputs:}
+\begin{itemize}
+  \small
+    \item \textbf{run}: 
+\begin{lstlisting}
+task.Get
+\end{lstlisting}
+    \item \textbf{XOR serviceName}: requests a list of taskID representing the same service
+\begin{lstlisting}
+string
+\end{lstlisting}
+    \item \textbf{XOR taskID}: requests infos about a specific task
+\begin{lstlisting}
+number
+\end{lstlisting}
+  \end{itemize}
+\subsubsection*{Outputs:}
+\begin{itemize}
+  \small
+    \item \textbf{XOR error}: 
+\begin{lstlisting}
+string
+\end{lstlisting}
+    \item \textbf{XOR result}: 
+\begin{lstlisting}
+{
+  XOR task: {
+    OPT elements: list// if the task is a workflow this list contains all children, 
+    OPT services: list// if the task is a workflow this list contains all services that need to started up (if any are set), 
+    inputSchema: json// the current input values, 
+    inputs: json// the inputs with subscriptions being represented as  {'taskID':'number','key':'string (the name of the output key of the task  referenced by taskID)'}, 
+    listensToDone: list// a list of taskIDs the task is listening to generally (=not to specific outputs), 
+    name: string// can be different from service name, 
+    parentID: number// the taskID of a workflow to which this task belongs; 0 = no parent ID / root workflow, 
+    position: json// {'x':'number','y':'number'}, 
+    taskID: number
+  }, 
+  XOR taskIDs: list
+}
+\end{lstlisting}
+  \end{itemize}
+
+\subsection{task.Remove}
+\label{ch:builtinservices:task.Remove}
+Remove tasks.
+\subsubsection*{Inputs:}
+\begin{itemize}
+  \small
+    \item \textbf{run}: 
+\begin{lstlisting}
+task.Remove
+\end{lstlisting}
+    \item \textbf{XOR serviceName}: removes all tasks representing the service with this name
+\begin{lstlisting}
+string
+\end{lstlisting}
+    \item \textbf{XOR taskIDs}: a list of taskIDs to be removed
+\begin{lstlisting}
+list
+\end{lstlisting}
+  \end{itemize}
+\subsubsection*{Outputs:}
+\begin{itemize}
+  \small
+    \item \textbf{XOR error}: 
+\begin{lstlisting}
+string
+\end{lstlisting}
+    \item \textbf{XOR result}: 
+\begin{lstlisting}
+{
+  taskIDs: list
+}
+\end{lstlisting}
+  \end{itemize}
+
+\subsection{task.Revert}
+\label{ch:builtinservices:task.Revert}
+Reverts a task to the last saved state.
+\subsubsection*{Inputs:}
+\begin{itemize}
+  \small
+    \item \textbf{run}: 
+\begin{lstlisting}
+task.Revert
+\end{lstlisting}
+    \item \textbf{taskID}: 
+\begin{lstlisting}
+number
+\end{lstlisting}
+  \end{itemize}
+\subsubsection*{Outputs:}
+\begin{itemize}
+  \small
+    \item \textbf{XOR error}: 
+\begin{lstlisting}
+string
+\end{lstlisting}
+    \item \textbf{XOR result}: refer to <a href='\#task.get'>task.Get</a> for descriptions.
+\begin{lstlisting}
+{
+  OPT elements: list, 
+  OPT services: list, 
+  inputSchema: json, 
+  inputs: json, 
+  listensToDone: list, 
+  name: string, 
+  parentID: number, 
+  position: json, 
+  taskID: number
+}
+\end{lstlisting}
+  \end{itemize}
+
+\subsection{task.SubscribeTo}
+\label{ch:builtinservices:task.SubscribeTo}
+Subscribes the current client to a taskID or any call to a service indicated byserviceName
+\subsubsection*{Inputs:}
+\begin{itemize}
+  \small
+    \item \textbf{run}: 
+\begin{lstlisting}
+task.SubscribeTo
+\end{lstlisting}
+    \item \textbf{XOR serviceName}: if a client subscribes to a service, it gets a notification upon any  output created by a service with that name (technically: the client  subscribes to the service factory rather than to a specific service)
+\begin{lstlisting}
+string
+\end{lstlisting}
+    \item \textbf{XOR taskIDs}: a list of taskIDs to which the client should be subscribed
+\begin{lstlisting}
+list
+\end{lstlisting}
+    \item \textbf{OPT inclResults}: specifies whether the client that subscribes only get a notification (false) or all the results produced by a service (true)
+\begin{lstlisting}
+boolean
+\end{lstlisting}
+  \end{itemize}
+\subsubsection*{Outputs:}
+\begin{itemize}
+  \small
+    \item \textbf{XOR error}: 
+\begin{lstlisting}
+string
+\end{lstlisting}
+    \item \textbf{XOR progress}: 
+\begin{lstlisting}
+json
+\end{lstlisting}
+    \item \textbf{XOR result}: 
+\begin{lstlisting}
+{
+  success: boolean
+}
+\end{lstlisting}
+  \end{itemize}
+
+\subsection{task.UnsubscribeFrom}
+\label{ch:builtinservices:task.UnsubscribeFrom}
+Unsubscribe from a service or a list of taskIDs.
+\subsubsection*{Inputs:}
+\begin{itemize}
+  \small
+    \item \textbf{run}: 
+\begin{lstlisting}
+task.UnsubscribeFrom
+\end{lstlisting}
+    \item \textbf{XOR serviceName}: 
+\begin{lstlisting}
+string
+\end{lstlisting}
+    \item \textbf{XOR taskIDs}: 
+\begin{lstlisting}
+list
+\end{lstlisting}
+  \end{itemize}
+\subsubsection*{Outputs:}
+\begin{itemize}
+  \small
+    \item \textbf{XOR error}: 
+\begin{lstlisting}
+string
+\end{lstlisting}
+    \item \textbf{XOR progress}: 
+\begin{lstlisting}
+json
+\end{lstlisting}
+    \item \textbf{XOR result}: 
+\begin{lstlisting}
+{
+  success: boolean
+}
+\end{lstlisting}
+  \end{itemize}
+
+\subsection{task.Update}
+\label{ch:builtinservices:task.Update}
+Update a the input values / subscriptions of a task.
+\subsubsection*{Inputs:}
+\begin{itemize}
+  \small
+    \item \textbf{run}: 
+\begin{lstlisting}
+task.Update
+\end{lstlisting}
+    \item \textbf{taskID}: 
+\begin{lstlisting}
+number
+\end{lstlisting}
+    \item \textbf{OPT inputs}: inputs to be changed; subscriptions are represented by 'property':\{'taskID':'number','key':'string (output key)'\}
+\begin{lstlisting}
+json
+\end{lstlisting}
+    \item \textbf{OPT listensToDone}: a list of taskIDs to which the task should listen generally (=not to a specific output)
+\begin{lstlisting}
+list
+\end{lstlisting}
+    \item \textbf{OPT name}: the name of the task (can be different to service name)
+\begin{lstlisting}
+string
+\end{lstlisting}
+    \item \textbf{OPT outputs}: if the task to be updated is a workflow that is contained by another  workflow (e.g. a group) the workflow can have outputs that might be  linked to outputs of some task it contains
+\begin{lstlisting}
+json
+\end{lstlisting}
+    \item \textbf{OPT position}: 
+\begin{lstlisting}
+{
+  x: number, 
+  y: number
+}
+\end{lstlisting}
+  \end{itemize}
+\subsubsection*{Outputs:}
+\begin{itemize}
+  \small
+    \item \textbf{XOR error}: 
+\begin{lstlisting}
+string
+\end{lstlisting}
+    \item \textbf{XOR result}: 
+\begin{lstlisting}
+{
+  OPT unknownKeys: list, 
+  taskID: number
+}
+\end{lstlisting}
+  \end{itemize}
+
+\subsection{test.Delay}
+\label{ch:builtinservices:test.Delay}
+Used to simulate a service with a long calculation time.
+\subsubsection*{Inputs:}
+\begin{itemize}
+  \small
+    \item \textbf{run}: 
+\begin{lstlisting}
+test.Delay
+\end{lstlisting}
+    \item \textbf{seconds}: 
+\begin{lstlisting}
+number
+\end{lstlisting}
+    \item \textbf{ANY inputs}: any inputs are being forwarded
+\begin{lstlisting}
+any
+\end{lstlisting}
+  \end{itemize}
+\subsubsection*{Outputs:}
+\begin{itemize}
+  \small
+    \item \textbf{XOR error}: 
+\begin{lstlisting}
+string
+\end{lstlisting}
+    \item \textbf{XOR progress}: 
+\begin{lstlisting}
+json
+\end{lstlisting}
+    \item \textbf{XOR result}: 
+\begin{lstlisting}
+{
+  ANY outputs: any
+}
+\end{lstlisting}
+  \end{itemize}
+
+\subsection{test.Error}
+\label{ch:builtinservices:test.Error}
+A service that simulates an error being thrown.
+\subsubsection*{Inputs:}
+\begin{itemize}
+  \small
+    \item \textbf{run}: 
+\begin{lstlisting}
+test.Error
+\end{lstlisting}
+    \item \textbf{OPT message}: optional error message
+\begin{lstlisting}
+string
+\end{lstlisting}
+  \end{itemize}
+\subsubsection*{Outputs:}
+\begin{itemize}
+  \small
+    \item \textbf{error}: 
+\begin{lstlisting}
+string
+\end{lstlisting}
+  \end{itemize}
+
+\subsection{test.Fibonacci}
+\label{ch:builtinservices:test.Fibonacci}
+A service that serves as an (implementation) example.
+\subsubsection*{Inputs:}
+\begin{itemize}
+  \small
+    \item \textbf{run}: 
+\begin{lstlisting}
+test.Fibonacci
+\end{lstlisting}
+    \item \textbf{amount}: how many numbers should be calculated
+\begin{lstlisting}
+number
+\end{lstlisting}
+    \item \textbf{OPT onlyLast}: return only the last number
+\begin{lstlisting}
+boolean
+\end{lstlisting}
+  \end{itemize}
+\subsubsection*{Outputs:}
+\begin{itemize}
+  \small
+    \item \textbf{XOR error}: 
+\begin{lstlisting}
+string
+\end{lstlisting}
+    \item \textbf{XOR progress}: 
+\begin{lstlisting}
+json
+\end{lstlisting}
+    \item \textbf{XOR result}: 
+\begin{lstlisting}
+{
+  fibonacci_sequence: list
+}
+\end{lstlisting}
+  \end{itemize}
+
+\subsection{test.FileEcho}
+\label{ch:builtinservices:test.FileEcho}
+A service to test sending and receiving attachments. Mainly used by connectionlibrary developers.
+\subsubsection*{Inputs:}
+\begin{itemize}
+  \small
+    \item \textbf{run}: 
+\begin{lstlisting}
+test.FileEcho
+\end{lstlisting}
+    \item \textbf{ANY filenames}: 
+\begin{lstlisting}
+attachment
+\end{lstlisting}
+  \end{itemize}
+\subsubsection*{Outputs:}
+\begin{itemize}
+  \small
+    \item \textbf{XOR error}: 
+\begin{lstlisting}
+string
+\end{lstlisting}
+    \item \textbf{XOR result}: 
+\begin{lstlisting}
+{
+  ANY sameFilenames: attachment
+}
+\end{lstlisting}
+  \end{itemize}
+
+\subsection{test.Randomly}
+\label{ch:builtinservices:test.Randomly}
+Get either an amount of random numbers or create key-value-pairs from a key list.
+\subsubsection*{Inputs:}
+\begin{itemize}
+  \small
+    \item \textbf{run}: 
+\begin{lstlisting}
+test.Randomly
+\end{lstlisting}
+    \item \textbf{XOR amount}: 
+\begin{lstlisting}
+number
+\end{lstlisting}
+    \item \textbf{XOR keys}: 
+\begin{lstlisting}
+list
+\end{lstlisting}
+  \end{itemize}
+\subsubsection*{Outputs:}
+\begin{itemize}
+  \small
+    \item \textbf{XOR error}: 
+\begin{lstlisting}
+string
+\end{lstlisting}
+    \item \textbf{XOR progress}: 
+\begin{lstlisting}
+json
+\end{lstlisting}
+    \item \textbf{XOR result}: 
+\begin{lstlisting}
+{
+  XOR keyValuePairs: json, 
+  XOR randomNumbers: list
+}
+\end{lstlisting}
+  \end{itemize}
+
+\subsection{test.Validation}
+\label{ch:builtinservices:test.Validation}
+A
+ service to test how type and value constraint validation 
+works.@inputs.key1 normal string@inputs.key2 string values constraint to
+ 'string1' and 'string2'@inputs.key3 number values constraint to 4 
+ranges@inputs.key4 optional attachment that must be of type 
+'jpg'@inputs.key5 geojson geometry@inputs.key6 optional attachment that 
+requires types to be one of 'jpg' or 'png'@inputs.key7 optional 
+attachment with predefied required keys
+\subsubsection*{Inputs:}
+\begin{itemize}
+  \small
+    \item \textbf{run}: 
+\begin{lstlisting}
+test.Validation
+\end{lstlisting}
+    \item \textbf{key1}: 
+\begin{lstlisting}
+string
+\end{lstlisting}
+    \item \textbf{key2}: 
+\begin{lstlisting}
+{
+  constraints: [
+    string1, 
+    string2
+  ], 
+  type: string
+}
+\end{lstlisting}
+    \item \textbf{key3}: 
+\begin{lstlisting}
+{
+  constraints: error, 
+  type: number
+}
+\end{lstlisting}
+    \item \textbf{key5}: 
+\begin{lstlisting}
+jsongeometry/geojson
+\end{lstlisting}
+    \item \textbf{OPT key4}: 
+\begin{lstlisting}
+attachment/jpg
+\end{lstlisting}
+    \item \textbf{OPT key6}: 
+\begin{lstlisting}
+{
+  constraints: [
+    jpg, 
+    png
+  ], 
+  type: attachment
+}
+\end{lstlisting}
+    \item \textbf{OPT key7}: 
+\begin{lstlisting}
+attachment/jpg
+\end{lstlisting}
+  \end{itemize}
+\subsubsection*{Outputs:}
+\begin{itemize}
+  \small
+    \item \textbf{XOR error}: 
+\begin{lstlisting}
+string
+\end{lstlisting}
+    \item \textbf{XOR progress}: 
+\begin{lstlisting}
+json
+\end{lstlisting}
+    \item \textbf{XOR result}: 
+\begin{lstlisting}
+{
+  errorTestStrings: list, 
+  passed: boolean
+}
+\end{lstlisting}
+  \end{itemize}
+
+\subsection{user.Authenticate}
+\label{ch:builtinservices:user.Authenticate}
+Authenticates a user
+\subsubsection*{Inputs:}
+\begin{itemize}
+  \small
+    \item \textbf{run}: 
+\begin{lstlisting}
+user.Authenticate
+\end{lstlisting}
+    \item \textbf{email}: 
+\begin{lstlisting}
+string
+\end{lstlisting}
+    \item \textbf{password}: 
+\begin{lstlisting}
+string
+\end{lstlisting}
+  \end{itemize}
+\subsubsection*{Outputs:}
+\begin{itemize}
+  \small
+    \item \textbf{XOR error}: 
+\begin{lstlisting}
+string
+\end{lstlisting}
+    \item \textbf{XOR progress}: 
+\begin{lstlisting}
+json
+\end{lstlisting}
+    \item \textbf{XOR result}: 
+\begin{lstlisting}
+{
+  success: boolean
+}
+\end{lstlisting}
+  \end{itemize}
+
+\subsection{user.Create}
+\label{ch:builtinservices:user.Create}
+Create a user by giving username, email, and sha1 encrypted password representedwith hexadecimals
+\subsubsection*{Inputs:}
+\begin{itemize}
+  \small
+    \item \textbf{run}: 
+\begin{lstlisting}
+user.Create
+\end{lstlisting}
+    \item \textbf{email}: 
+\begin{lstlisting}
+string
+\end{lstlisting}
+    \item \textbf{password}: 
+\begin{lstlisting}
+string
+\end{lstlisting}
+    \item \textbf{OPT city}: 
+\begin{lstlisting}
+string
+\end{lstlisting}
+    \item \textbf{OPT country}: 
+\begin{lstlisting}
+string
+\end{lstlisting}
+    \item \textbf{OPT name}: 
+\begin{lstlisting}
+string
+\end{lstlisting}
+    \item \textbf{OPT organization}: 
+\begin{lstlisting}
+string
+\end{lstlisting}
+    \item \textbf{OPT street}: 
+\begin{lstlisting}
+string
+\end{lstlisting}
+    \item \textbf{OPT surname}: 
+\begin{lstlisting}
+string
+\end{lstlisting}
+    \item \textbf{OPT zip}: 
+\begin{lstlisting}
+number
+\end{lstlisting}
+  \end{itemize}
+\subsubsection*{Outputs:}
+\begin{itemize}
+  \small
+    \item \textbf{XOR error}: 
+\begin{lstlisting}
+string
+\end{lstlisting}
+    \item \textbf{XOR progress}: 
+\begin{lstlisting}
+json
+\end{lstlisting}
+    \item \textbf{XOR result}: 
+\begin{lstlisting}
+{
+  id: number
+}
+\end{lstlisting}
+  \end{itemize}
+
+\subsection{user.Delete}
+\label{ch:builtinservices:user.Delete}
+Deletes a user if it does not own a group or [TODO] own a scenario
+\subsubsection*{Inputs:}
+\begin{itemize}
+  \small
+    \item \textbf{run}: 
+\begin{lstlisting}
+user.Delete
+\end{lstlisting}
+    \item \textbf{id}: 
+\begin{lstlisting}
+number
+\end{lstlisting}
+  \end{itemize}
+\subsubsection*{Outputs:}
+\begin{itemize}
+  \small
+    \item \textbf{XOR error}: 
+\begin{lstlisting}
+string
+\end{lstlisting}
+    \item \textbf{XOR progress}: 
+\begin{lstlisting}
+json
+\end{lstlisting}
+    \item \textbf{XOR result}: 
+\begin{lstlisting}
+{
+  success: boolean
+}
+\end{lstlisting}
+  \end{itemize}
+
+\subsection{user.List}
+\label{ch:builtinservices:user.List}
+Get a list of users
+\subsubsection*{Inputs:}
+\begin{itemize}
+  \small
+    \item \textbf{run}: 
+\begin{lstlisting}
+user.List
+\end{lstlisting}
+  \end{itemize}
+\subsubsection*{Outputs:}
+\begin{itemize}
+  \small
+    \item \textbf{XOR error}: 
+\begin{lstlisting}
+string
+\end{lstlisting}
+    \item \textbf{XOR progress}: 
+\begin{lstlisting}
+json
+\end{lstlisting}
+    \item \textbf{XOR result}: 
+\begin{lstlisting}
+{
+  groups: {
+    { id: {
+      id: number, 
+      owner: number
+    }
+  }, 
+  users: {
+    { email: {
+      email: string, 
+      groupIDs: list, 
+      id: number
+    }
+  }
+}
+\end{lstlisting}
+  \end{itemize}
+
+\subsection{user.Logout}
+\label{ch:builtinservices:user.Logout}
+resets the connection to an unauthenticated state
+\subsubsection*{Inputs:}
+\begin{itemize}
+  \small
+    \item \textbf{run}: 
+\begin{lstlisting}
+user.Logout
+\end{lstlisting}
+  \end{itemize}
+\subsubsection*{Outputs:}
+\begin{itemize}
+  \small
+    \item \textbf{XOR error}: 
+\begin{lstlisting}
+string
+\end{lstlisting}
+    \item \textbf{XOR progress}: 
+\begin{lstlisting}
+json
+\end{lstlisting}
+    \item \textbf{XOR result}: 
+\begin{lstlisting}
+{
+  success: boolean
+}
+\end{lstlisting}
+  \end{itemize}
+
+\subsection{user.Permission}
+\label{ch:builtinservices:user.Permission}
+Allows to restrict given services only to given userIDs/groupIDs.
+\subsubsection*{Inputs:}
+\begin{itemize}
+  \small
+    \item \textbf{run}: 
+\begin{lstlisting}
+user.Permission
+\end{lstlisting}
+    \item \textbf{OPT add}: 
+\begin{lstlisting}
+{
+  ANY serviceName: list
+}
+\end{lstlisting}
+    \item \textbf{OPT remove}: 
+\begin{lstlisting}
+{
+  ANY serviceName: list
+}
+\end{lstlisting}
+  \end{itemize}
+\subsubsection*{Outputs:}
+\begin{itemize}
+  \small
+    \item \textbf{XOR error}: 
+\begin{lstlisting}
+string
+\end{lstlisting}
+    \item \textbf{XOR progress}: 
+\begin{lstlisting}
+json
+\end{lstlisting}
+    \item \textbf{XOR result}: 
+\begin{lstlisting}
+{
+  ANY serviceName: list
+}
+\end{lstlisting}
+  \end{itemize}
+
+\subsection{user.Update}
+\label{ch:builtinservices:user.Update}
+Udpate user information and does sanity checks on some of the properties.
+\subsubsection*{Inputs:}
+\begin{itemize}
+  \small
+    \item \textbf{run}: 
+\begin{lstlisting}
+user.Update
+\end{lstlisting}
+    \item \textbf{id}: 
+\begin{lstlisting}
+number
+\end{lstlisting}
+    \item \textbf{OPT city}: 
+\begin{lstlisting}
+string
+\end{lstlisting}
+    \item \textbf{OPT country}: 
+\begin{lstlisting}
+string
+\end{lstlisting}
+    \item \textbf{OPT email}: 
+\begin{lstlisting}
+string
+\end{lstlisting}
+    \item \textbf{OPT name}: 
+\begin{lstlisting}
+string
+\end{lstlisting}
+    \item \textbf{OPT organization}: 
+\begin{lstlisting}
+string
+\end{lstlisting}
+    \item \textbf{OPT password}: 
+\begin{lstlisting}
+string
+\end{lstlisting}
+    \item \textbf{OPT street}: 
+\begin{lstlisting}
+string
+\end{lstlisting}
+    \item \textbf{OPT surname}: 
+\begin{lstlisting}
+string
+\end{lstlisting}
+    \item \textbf{OPT zip}: 
+\begin{lstlisting}
+number
+\end{lstlisting}
+  \end{itemize}
+\subsubsection*{Outputs:}
+\begin{itemize}
+  \small
+    \item \textbf{XOR error}: 
+\begin{lstlisting}
+string
+\end{lstlisting}
+    \item \textbf{XOR progress}: 
+\begin{lstlisting}
+json
+\end{lstlisting}
+    \item \textbf{XOR result}: 
+\begin{lstlisting}
+{
+  success: boolean
+}
+\end{lstlisting}
+  \end{itemize}
+
+\subsection{workflow.Create}
+\label{ch:builtinservices:workflow.Create}
+Create a workflow.
+\subsubsection*{Inputs:}
+\begin{itemize}
+  \small
+    \item \textbf{run}: 
+\begin{lstlisting}
+workflow.Create
+\end{lstlisting}
+    \item \textbf{OPT group}: a list of taskIDs that should be grouped together into a workflow
+\begin{lstlisting}
+list
+\end{lstlisting}
+    \item \textbf{OPT name}: 
+\begin{lstlisting}
+string
+\end{lstlisting}
+  \end{itemize}
+\subsubsection*{Outputs:}
+\begin{itemize}
+  \small
+    \item \textbf{XOR error}: 
+\begin{lstlisting}
+string
+\end{lstlisting}
+    \item \textbf{XOR result}: 
+\begin{lstlisting}
+{
+  elements: list, 
+  inputSchema: json, 
+  inputs: json, 
+  listensToDone: list, 
+  name: string, 
+  parentID: number, 
+  position: json, 
+  services: list, 
+  taskID: number
+}
+\end{lstlisting}
+  \end{itemize}
+
+\subsection{workflow.List}
+\label{ch:builtinservices:workflow.List}
+Returns a list of all workflows (not only root workflows).
+\subsubsection*{Inputs:}
+\begin{itemize}
+  \small
+    \item \textbf{run}: 
+\begin{lstlisting}
+workflow.List
+\end{lstlisting}
+    \item \textbf{OPT name}: restrict the list to only one entry, e.g. \{'1':'New Workflow'\}
+\begin{lstlisting}
+string
+\end{lstlisting}
+  \end{itemize}
+\subsubsection*{Outputs:}
+\begin{itemize}
+  \small
+    \item \textbf{result}: \{'taskID':'name'\}, not a list but a json object; since keys in json cannot be numbers, the taskIDs are converted to string
+\begin{lstlisting}
+{
+  ANY numberAsString: string
+}
+\end{lstlisting}
+  \end{itemize}
+
+\subsection{workflow.Safe}
+\label{ch:builtinservices:workflow.Safe}
+Saves
+ a workflow to disk (in Luci). Luci uses H2's mvstore to serialize 
+workflows to disk. In the future this would also allow to restore 
+earlier versions of the workflow (no version tree, but linear versions).
+\subsubsection*{Inputs:}
+\begin{itemize}
+  \small
+    \item \textbf{run}: 
+\begin{lstlisting}
+workflow.Safe
+\end{lstlisting}
+    \item \textbf{taskID}: 
+\begin{lstlisting}
+number
+\end{lstlisting}
+  \end{itemize}
+\subsubsection*{Outputs:}
+\begin{itemize}
+  \small
+    \item \textbf{XOR error}: 
+\begin{lstlisting}
+string
+\end{lstlisting}
+    \item \textbf{XOR result}: 
+\begin{lstlisting}
+{
+  change: boolean
+}
+\end{lstlisting}
+  \end{itemize}
+
+\subsection{workflow.ServiceGet}
+\label{ch:builtinservices:workflow.ServiceGet}
+Gets the services, the instance ids and corresponding startup args associated with this workflow.
+\subsubsection*{Inputs:}
+\begin{itemize}
+  \small
+    \item \textbf{run}: 
+\begin{lstlisting}
+workflow.ServiceGet
+\end{lstlisting}
+    \item \textbf{taskID}: the taskID to indentify the workflow
+\begin{lstlisting}
+number
+\end{lstlisting}
+    \item \textbf{OPT ids}: filter the instances to show only the ones with the given ids
+\begin{lstlisting}
+list
+\end{lstlisting}
+  \end{itemize}
+\subsubsection*{Outputs:}
+\begin{itemize}
+  \small
+    \item \textbf{XOR error}: 
+\begin{lstlisting}
+string
+\end{lstlisting}
+    \item \textbf{XOR progress}: 
+\begin{lstlisting}
+json
+\end{lstlisting}
+    \item \textbf{XOR result}: 
+\begin{lstlisting}
+{
+  ANY IP: {
+    ANY id: {
+      args: string, 
+      isAutoID: boolean, 
+      serviceName: string
+    }
+  }
+}
+\end{lstlisting}
+  \end{itemize}
+
+\subsection{workflow.ServiceRemove}
+\label{ch:builtinservices:workflow.ServiceRemove}
+Remove a service instance from a workflow configuration.
+\subsubsection*{Inputs:}
+\begin{itemize}
+  \small
+    \item \textbf{run}: 
+\begin{lstlisting}
+workflow.ServiceRemove
+\end{lstlisting}
+    \item \textbf{id}: the instance id
+\begin{lstlisting}
+number
+\end{lstlisting}
+    \item \textbf{taskID}: 
+\begin{lstlisting}
+number
+\end{lstlisting}
+  \end{itemize}
+\subsubsection*{Outputs:}
+\begin{itemize}
+  \small
+    \item \textbf{XOR error}: 
+\begin{lstlisting}
+string
+\end{lstlisting}
+    \item \textbf{XOR progress}: 
+\begin{lstlisting}
+json
+\end{lstlisting}
+    \item \textbf{XOR result}: 
+\begin{lstlisting}
+{
+  success: boolean
+}
+\end{lstlisting}
+  \end{itemize}
+
+\subsection{workflow.ServiceStart}
+\label{ch:builtinservices:workflow.ServiceStart}
+Start up all the services that are configured to run with the given workflow (taskID).
+\subsubsection*{Inputs:}
+\begin{itemize}
+  \small
+    \item \textbf{run}: 
+\begin{lstlisting}
+workflow.ServiceStart
+\end{lstlisting}
+    \item \textbf{taskID}: 
+\begin{lstlisting}
+number
+\end{lstlisting}
+    \item \textbf{OPT serviceIDs}: optionally restrict the instances to be started only to the given IDs.
+\begin{lstlisting}
+list
+\end{lstlisting}
+  \end{itemize}
+\subsubsection*{Outputs:}
+\begin{itemize}
+  \small
+    \item \textbf{XOR error}: 
+\begin{lstlisting}
+string
+\end{lstlisting}
+    \item \textbf{XOR progress}: 
+\begin{lstlisting}
+json
+\end{lstlisting}
+    \item \textbf{XOR result}: 
+\begin{lstlisting}
+{
+  started: {
+    ANY IP: {
+      ANY serviceName: number
+    }
+  }
+}
+\end{lstlisting}
+  \end{itemize}
+
+\subsection{workflow.ServiceUpdate}
+\label{ch:builtinservices:workflow.ServiceUpdate}
+Update a service instance that is coupled to a workflow configuration.
+\subsubsection*{Inputs:}
+\begin{itemize}
+  \small
+    \item \textbf{run}: 
+\begin{lstlisting}
+workflow.ServiceUpdate
+\end{lstlisting}
+    \item \textbf{args}: arguments to be used to start the service with
+\begin{lstlisting}
+string
+\end{lstlisting}
+    \item \textbf{id}: the instance id
+\begin{lstlisting}
+number
+\end{lstlisting}
+    \item \textbf{ip}: the IPv4 of the machine on which the service should run
+\begin{lstlisting}
+string
+\end{lstlisting}
+    \item \textbf{serviceName}: the name of the service to start (using exec parameter from the service installation)
+\begin{lstlisting}
+string
+\end{lstlisting}
+    \item \textbf{taskID}: 
+\begin{lstlisting}
+number
+\end{lstlisting}
+    \item \textbf{OPT isAutoID}: 
+\begin{lstlisting}
+boolean
+\end{lstlisting}
+  \end{itemize}
+\subsubsection*{Outputs:}
+\begin{itemize}
+  \small
+    \item \textbf{XOR error}: 
+\begin{lstlisting}
+string
+\end{lstlisting}
+    \item \textbf{XOR progress}: 
+\begin{lstlisting}
+json
+\end{lstlisting}
+    \item \textbf{XOR result}: 
+\begin{lstlisting}
+{
+  success: boolean
+}
+\end{lstlisting}
+  \end{itemize}
+
+\subsection{workflow.UpdateIO}
+\label{ch:builtinservices:workflow.UpdateIO}
+Updates
+ in \& outputs of a workflow; difference to task.Update: it does not 
+set the values for in \& outputs, but actually creates in \& 
+outputs dynamically for a workflow, its key, type and default value
+\subsubsection*{Inputs:}
+\begin{itemize}
+  \small
+    \item \textbf{run}: 
+\begin{lstlisting}
+workflow.UpdateIO
+\end{lstlisting}
+    \item \textbf{taskID}: 
+\begin{lstlisting}
+number
+\end{lstlisting}
+    \item \textbf{OPT inputs}: 
+\begin{lstlisting}
+{
+  ANY keyname: {
+    default: error, 
+    type: string
+  }
+}
+\end{lstlisting}
+    \item \textbf{OPT outputs}: 
+\begin{lstlisting}
+{
+  ANY keyname: {
+    default: error, 
+    type: string
+  }
+}
+\end{lstlisting}
+  \end{itemize}
+\subsubsection*{Outputs:}
+\begin{itemize}
+  \small
+    \item \textbf{XOR error}: 
+\begin{lstlisting}
+string
+\end{lstlisting}
+    \item \textbf{XOR result}: 
+\begin{lstlisting}
+{
+  elements: list, 
+  inputSchema: json, 
+  inputs: json, 
+  listensToDone: list, 
+  name: string, 
+  parentID: number, 
+  position: json, 
+  services: list, 
+  taskID: number
+}
+\end{lstlisting}
+  \end{itemize}
+

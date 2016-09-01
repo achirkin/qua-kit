@@ -1,0 +1,521 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html><head>
+<meta http-equiv="content-type" content="text/html; charset=UTF-8">
+	<link rel="icon" type="image/png" href="http://localhost:8080/favicon.png">
+	<meta charset="UTF-8">
+	<title>Luci Service Specification</title>
+	<script src="spec_files/luciConnect.js"></script>
+	<style type="text/css">
+	body {
+		margin: 0;
+		background-color: #eee;
+		font-family: 'Helvetica Neue', Helvetica, Arial;
+		font-size: 12px;
+	}
+	
+	li {
+		list-style-type: none;
+	}
+	h1 {
+		font-size: 1.5em;
+		border-bottom: 1px solid grey;
+	}
+	
+	ul {
+		margin: 0;
+	}
+	p {
+		margin-top: 6px;
+		margin-bottom: 2px;
+		font-size: 1.2em;
+		font-weight: bold;
+	}
+	
+	#content {
+		margin: 0 auto;
+		max-width: 100vw;
+	}
+	
+	#list {
+		position: absolute;
+	/* 	margin: 0 auto; */
+		right: 8px;
+		padding-right:8px;
+	/* 	max-width: 600px; */
+		width: calc(100% - 200px);
+	}
+	
+	#index {
+		position: fixed;
+		top: 30px;
+		left: 30px;
+		text-align: right;
+		max-height: calc(100vh - 70px);
+		overflow-y: scroll;
+		z-index: 2;
+	}
+	
+	#index a {
+		font-size: 11px;
+		text-decoration: none;
+		color: black;
+		font-weight: 300;
+	}
+	#index a:hover {
+		text-decoration: underline;
+	}
+	
+	#content > div {
+		width: calc(33vw - 40px);
+		margin: 10px;
+		float: left;
+	}
+	#content > div > div, #list > div  {
+		background-color: #fefefe;
+		border: 1px solid #bbb;
+		padding: 10px;
+		margin: 10px;
+	}
+	
+	.XOR {
+	/* 	color: #c4e; */
+		color: #9c45ff;
+	}
+	.ANY {
+		color: #ff7663;
+	}
+	.OPT {
+		color: #0099ff;
+	}
+	.XOR, .ANY, .OPT {
+		text-decoration: underline;
+	}
+	
+	.string {
+		color: green;
+	}
+	.number {
+		color: blue;
+	}
+	
+	.inputs {
+		font-weight: bold;
+	/* 	background-color: #ffd; */
+		
+	}
+	
+	.outputs {
+		font-style: italic;
+	/* 	background-color: #f0faff; */
+	}
+	.example {
+		font-family : Monaco, Courier;
+	/* 	background-color: #efefef; */
+	}
+	.inputs, .outputs, .example {
+		padding-top: 5px;
+		padding-bottom: 8px;
+		border-top: 1px dotted #999;
+	}
+	
+	.inlineArray li{
+		display: inline-block;
+	}
+	
+	.descr {
+		font-size: 13px;
+		font-weight: normal;
+	}
+	
+	.comment {
+		color: grey;
+		font-weight: 300;
+		font-style: italic;
+	}
+	
+	
+	</style>
+	
+</head>
+
+<body>
+	<div id="content">
+		<div id="c1"></div>
+		<div id="c2"></div>
+		<div id="c3"></div>
+	</div>
+	<div id="list">
+	<div id="attachmentjson"><h1><a id="attachmentjson">AttachmentJSON</a></h1><p class="descr">Returns the json specification of attachments and json geometry objects.</p><p>inputs:</p><ul class="inputs"><li><span></span> run: <span class="string">"AttachmentJSON"</span></li></ul><p>outputs:</p><ul class="outputs"><li><span class="XOR">XOR</span> error: <span class="string">"string"</span>,</li><li><span class="XOR">XOR</span> progress: <span class="string">"json"</span>,</li><li><span class="XOR">XOR</span> result: {<ul><li><span></span> attachment: <span class="string">"attachment"</span>,</li><li><span></span> jsongeometry: <span class="string">"jsongeometry"</span></li></ul>}</li></ul><p>example call:</p><ul class="example">{<li><span></span> run: <span class="string">"AttachmentJSON"</span></li>}</ul></div><div id="download"><h1><a id="download">Download</a></h1><p class="descr">Downloads
+ a file from a given URL and stores is in Luci's attachment folder as 
+&amp;lt;md5 checksum&amp;gt;.&amp;lt;format&amp;gt; </p><p>inputs:</p><ul class="inputs"><li><span></span> run: <span class="string">"Download"</span>,</li><li><span></span> url: <span class="string">"string"</span><span class="comment"> // the URL to be used</span><br></li></ul><p>outputs:</p><ul class="outputs"><li><span class="XOR">XOR</span> error: <span class="string">"string"</span>,</li><li><span class="XOR">XOR</span> progress: <span class="string">"json"</span>,</li><li><span class="XOR">XOR</span> result: {<ul><li><span></span> checksum: <span class="string">"string"</span>,<span class="comment"> // the checksum in hexadecimal representation</span><br></li><li><span></span> format: <span class="string">"string"</span>,<span class="comment"> // equals the string typically put as a file ending</span><br></li><li><span></span> length: <span class="string">"number"</span><span class="comment"> // the length of the attachments as number of bytes</span><br></li></ul>}</li></ul><p>example call:</p><ul class="example">{<li><span></span> run: <span class="string">"Download"</span>,</li><li><span></span> url: <span class="string">"https://de.wikipedia.org/wiki/Luci"</span></li>}</ul></div><div id="exists"><h1><a id="exists">Exists</a></h1><p class="descr">Tests whether a service with the given serviceName or a task with given taskID exists.</p><p>inputs:</p><ul class="inputs"><li><span></span> run: <span class="string">"Exists"</span>,</li><li><span class="XOR">XOR</span> instanceID: <span class="string">"number"</span>,</li><li><span class="XOR">XOR</span> serviceName: <span class="string">"string"</span><span class="comment"> // the name of the service to be tested</span><br></li></ul><p>outputs:</p><ul class="outputs"><li><span class="XOR">XOR</span> error: <span class="string">"string"</span>,</li><li><span class="XOR">XOR</span> progress: <span class="string">"json"</span>,</li><li><span class="XOR">XOR</span> result: {<ul><li><span></span> exists: <span class="string">"boolean"</span></li></ul>}</li></ul><p>example call:</p><ul class="example">{<li><span></span> run: <span class="string">"Exists"</span>,</li><li><span></span> serviceName: <span class="string">"Download"</span></li>}</ul></div><div id="filterservices"><h1><a id="filterservices">FilterServices</a></h1><p class="descr">Filters
+ services according to a) its keys at a given recursion level, b) its 
+types at a given recursion level or c) a given json template with values
+ equal to 'null' meaning only keys are compared.</p><p>inputs:</p><ul class="inputs"><li><span></span> run: <span class="string">"FilterServices"</span>,</li><li><span class="XOR">XOR</span> jsonMatch: <span class="string">"json"</span>,</li><li class="inlineArray"><span class="XOR">XOR</span> keys: [<span class="string">"string"</span>],</li><li class="inlineArray"><span class="XOR">XOR</span> types: [<span class="string">"string"</span>],</li><li><span class="OPT">OPT</span> rcrLevel: <span class="string">"number"</span></li></ul><p>outputs:</p><ul class="outputs"><li><span class="XOR">XOR</span> error: <span class="string">"string"</span>,</li><li><span class="XOR">XOR</span> progress: <span class="string">"json"</span>,</li><li><span class="XOR">XOR</span> result: {<ul><li class="inlineArray"><span></span> serviceList: [<span class="string">"string"</span>]</li></ul>}</li></ul><p>example call:</p><ul class="example">{<li><span></span> run: <span class="string">"FilterServices"</span>,</li><li class="inlineArray"><span></span> keys: [<span class="string">"customKey1"</span>, <span class="string">"customKey2"</span>]</li>}</ul></div><div id="getstartuptime"><h1><a id="getstartuptime">GetStartupTime</a></h1><p class="descr">Returns the startup of time of Luci.</p><p>inputs:</p><ul class="inputs"><li><span></span> run: <span class="string">"GetStartupTime"</span></li></ul><p>outputs:</p><ul class="outputs"><li><span class="XOR">XOR</span> error: <span class="string">"string"</span>,</li><li><span class="XOR">XOR</span> progress: <span class="string">"json"</span>,</li><li><span class="XOR">XOR</span> result: {<ul><li><span></span> startupTime: <span class="string">"number"</span><span class="comment"> // in milliseconds since 1.1.1970</span><br></li></ul>}</li></ul><p>example call:</p><ul class="example">{<li><span></span> run: <span class="string">"GetStartupTime"</span></li>}</ul></div><div id="remotederegister"><h1><a id="remotederegister">RemoteDeregister</a></h1><p class="descr">Deregisters
+ a client from a service registration. This will cancel any running 
+service call, cancel all subscriptions of this client and, if the 
+service to be deregistered is the last remaining of its kind, its 
+serviceName will be removedfrom the list of available services.</p><p>inputs:</p><ul class="inputs"><li><span></span> run: <span class="string">"RemoteDeregister"</span></li></ul><p>outputs:</p><ul class="outputs"><li><span class="XOR">XOR</span> error: <span class="string">"string"</span>,</li><li><span class="XOR">XOR</span> result: {<ul><li><span></span> deregisteredName: <span class="string">"string"</span>,<span class="comment"> // Intended to inform listeners about the service name that was deregistered</span><br></li><li><span></span> id: <span class="string">"number"</span>,<span class="comment"> // int, the id that was deregistered</span><br></li><li><span></span> nodeIP: <span class="string">"string"</span>,<span class="comment"> // Intended to inform listeners about the IP of the machine that deregistered the service</span><br></li><li><span></span> remainsAvailable: <span class="string">"boolean"</span><span class="comment">
+ // boolean to indicate whether other services with the samename remain 
+available (true) or whether the service is being deleted from the listof
+ available services (false)</span><br></li></ul>}</li></ul><p>example call:</p><ul class="example">{<li><span></span> run: <span class="string">"RemoteDeregister"</span></li>}</ul></div><div id="remoteregister"><h1><a id="remoteregister">RemoteRegister</a></h1><p class="descr">Registers a client as a service.</p><p>inputs:</p><ul class="inputs"><li><span></span> run: <span class="string">"RemoteRegister"</span>,</li><li><span></span> description: <span class="string">"string"</span>,</li><li><span></span> exampleCall: <span class="string">"json"</span>,<span class="comment">
+ // Mandatory json object that shows an example call. Since OPT/XOR/ANY 
+modifiers are only allowed in in &amp; output specifications and not in 
+calls, an example call shows very clearly how a call could look like.</span><br></li><li><span></span> serviceName: <span class="string">"string"</span>,<span class="comment"> // mandatory string that identifies the service</span><br></li><li><span class="OPT">OPT</span> id: <span class="string">"number"</span>,<span class="comment">
+ // Optional int to be used to identify a remote service. E.g. for 
+viewer services it might be important to be able to identify remote 
+service instances. If the id is taken already an error will be thrown / 
+registration aborted.</span><br></li><li><span class="OPT">OPT</span> inputs: <span class="string">"json"</span>,<span class="comment"> // Optional json object holding the input description to be included by 'ServiceInfo' / the API</span><br></li><li><span class="OPT">OPT</span> outputs: <span class="string">"json"</span><span class="comment"> // Optional json object holding the output description to be included by 'ServiceInfo' / the API</span><br></li></ul><p>outputs:</p><ul class="outputs"><li><span class="XOR">XOR</span> error: <span class="string">"string"</span>,</li><li><span class="XOR">XOR</span> result: {<ul><li><span></span> id: <span class="string">"number"</span>,<span class="comment"> // The int given as input or an int generated by Luci</span><br></li><li><span></span> nodeIP: <span class="string">"string"</span>,<span class="comment"> // The IP of the client that was registered as a service (intended to inform listeners)</span><br></li><li><span></span> registeredName: <span class="string">"string"</span><span class="comment"> // Intended to inform listeners about the service name that was registered</span><br></li></ul>}</li></ul><p>example call:</p><ul class="example">{<li><span></span> run: <span class="string">"RemoteRegister"</span>,</li><li><span></span> exampleCall: {<ul><li><span></span> run: <span class="string">"example"</span>,</li><li><span></span> inputs: {<ul><li><span></span> namedInput1: <span class="number">4</span></li></ul>}</li></ul>},</li><li><span></span> inputs: {<ul><li><span></span> namedInput1: <span class="string">"number"</span></li></ul>},</li><li><span></span> serviceName: <span class="string">"example"</span></li>}</ul></div><div id="servicecontrol"><h1><a id="servicecontrol">ServiceControl</a></h1><p class="descr">Used
+ to remotely administrate installed services on a selected machine or on
+ allmachines having a 'ServiceControl' remote service running.</p><p>inputs:</p><ul class="inputs"><li><span></span> run: <span class="string">"ServiceControl"</span>,</li><li><span class="XOR">XOR</span> info: [<span class="comment">
+ // get filtered information about either selected machines (nodes) or 
+about selectedserviceNames on all machines or full information about all
+ machines in case this value is 'null'</span><br><ul><li>{<ul><li class="inlineArray"><span class="XOR">XOR</span> nodes: [<span class="string">"string"</span>],</li><li class="inlineArray"><span class="XOR">XOR</span> serviceNames: [<span class="string">"string"</span>],</li><li><span class="OPT">OPT</span> threadPool: <span class="string">"boolean"</span></li></ul>}, </li><li><span class="string">"null"</span></li></ul>],</li><li><span class="XOR">XOR</span> install: {<span class="comment"> // install files on either selected machines (nodes) or on all machines (services)</span><br><ul><li><span class="XOR">XOR</span> nodes: {<span class="comment"> // values for 'ANY IP' or 'services' is a list holding only attachments (and no other type)</span><br><ul><li class="inlineArray"><span class="ANY">ANY</span> IP: [<span class="string">"attachment"</span>]<span class="comment">
+ // the attachment must hold attributes: {'exec': 'string (the string to
+ start the service in console)','numRequestedCPUCores':'number (0=all 
+available cores)'}</span><br></li></ul>},</li><li class="inlineArray"><span class="XOR">XOR</span> services: [<span class="string">"attachment"</span>]</li></ul>},</li><li><span class="XOR">XOR</span> remove: {<span class="comment"> // remove services identified by their name (serviceName) either on selected machines (nodes) or on all machines (services)</span><br><ul><li><span class="XOR">XOR</span> nodes: {<ul><li class="inlineArray"><span class="ANY">ANY</span> IP: [<span class="string">"string"</span>]</li></ul>},</li><li class="inlineArray"><span class="XOR">XOR</span> services: [<span class="string">"string"</span>]</li></ul>},</li><li><span class="XOR">XOR</span> start: {<span class="comment"> // startup a given number of services either globally or on selected machines (nodes)</span><br><ul><li><span class="XOR">XOR</span> nodes: {<ul><li><span class="ANY">ANY</span> IP: {<ul><li><span class="ANY">ANY</span> serviceName: [<span class="comment">
+ // the service to start on a machine: either pass a number to specify 
+how many services should be started or pass a json object consisting of 
+id (=instanceID or persistentID) and the corresponding args stringto be 
+passed on startup</span><br><ul><li><span class="string">"number"</span>, </li><li>{<ul><li><span class="ANY">ANY</span> id: <span class="string">"string"</span></li></ul>}</li></ul>]</li></ul>}</li></ul>},</li><li><span class="XOR">XOR</span> services: {<ul><li><span class="ANY">ANY</span> serviceName: <span class="string">"number"</span></li></ul>}</li></ul>},</li><li><span class="XOR">XOR</span> stop: {<span class="comment"> // stop a given amount of services either globally or on specified machines (nodes).</span><br><ul><li><span class="XOR">XOR</span> nodes: {<ul><li><span class="ANY">ANY</span> IP: {<ul><li><span class="ANY">ANY</span> serviceName: <span class="string">"number"</span></li></ul>}</li></ul>},</li><li><span class="XOR">XOR</span> services: {<ul><li><span class="ANY">ANY</span> serviceName: <span class="string">"number"</span></li></ul>}</li></ul>}</li></ul><p>outputs:</p><ul class="outputs"><li><span class="XOR">XOR</span> error: <span class="string">"string"</span>,</li><li><span class="XOR">XOR</span> result: {<ul><li><span class="XOR">XOR</span> info: {<ul><li><span class="XOR">XOR</span> nodes: {<ul><li><span class="ANY">ANY</span> ip: {<ul><li><span></span> services: {<ul><li><span></span> busy: {<ul><li><span class="ANY">ANY</span> serviceName: <span class="string">"number"</span></li></ul>},</li><li><span></span> idle: {<ul><li><span class="ANY">ANY</span> serviceName: <span class="string">"number"</span></li></ul>},</li><li><span></span> running: {<ul><li><span class="ANY">ANY</span> serviceName: <span class="string">"number"</span></li></ul>}</li></ul>},</li><li><span class="OPT">OPT</span> installedServices: {<ul><li><span class="ANY">ANY</span> serviceName: {<ul><li><span></span> exec: <span class="string">"string"</span>,<span class="comment"> // to be run in console</span><br></li><li><span></span> numRequestedCPUCores: <span class="string">"number"</span><span class="comment"> // 0 = using all available cores</span><br></li></ul>}</li></ul>},</li><li><span class="OPT">OPT</span> system: {<ul><li><span></span> CPU: {<ul><li><span></span> archNumBits: <span class="string">"number"</span>,<span class="comment"> // int; 32 or 64</span><br></li><li><span></span> endian: <span class="string">"string"</span>,<span class="comment"> // 'big' or 'little'</span><br></li><li><span></span> numCores: <span class="string">"number"</span></li></ul>},</li><li><span></span> name: <span class="string">"string"</span>,</li><li><span></span> osname: <span class="string">"string"</span>,</li><li><span></span> osversion: <span class="string">"string"</span></li></ul>}</li></ul>}</li></ul>},</li><li><span class="XOR">XOR</span> services: {<ul><li><span class="ANY">ANY</span> serviceName: {<ul><li><span></span> avgDuration: <span class="string">"number"</span>,<span class="comment"> // in milliseconds</span><br></li><li><span></span> numCalls: <span class="string">"number"</span>,<span class="comment"> // how many times this service has been called already</span><br></li><li><span class="OPT">OPT</span> available: <span class="string">"number"</span>,<span class="comment"> // not busy</span><br></li><li><span class="OPT">OPT</span> nodes: <span class="string">"list"</span>,<span class="comment"> // list of IPv4</span><br></li><li><span class="OPT">OPT</span> running: <span class="string">"number"</span></li></ul>}</li></ul>},</li><li><span></span> remoteSummary: {<ul><li><span></span> busy: <span class="string">"number"</span>,</li><li><span></span> idle: <span class="string">"number"</span></li></ul>},</li><li><span class="OPT">OPT</span> quickPool: {<span class="comment"> // thread pool that handles all services (threads) having an avgDuration &lt; 2 seconds</span><br><ul><li><span></span> avgWaitingTime: <span class="string">"number"</span>,</li><li><span></span> maxPoolSize: <span class="string">"number"</span>,</li><li><span></span> numCalls: <span class="string">"number"</span>,</li><li><span></span> poolSize: <span class="string">"number"</span>,</li><li><span></span> waitingInQueue: <span class="string">"number"</span></li></ul>},</li><li><span class="OPT">OPT</span> slowPool: {<span class="comment"> // thread pool that handles all services (threads) having an avgDuration &gt; 2 seconds</span><br><ul><li><span></span> avgWaitingTime: <span class="string">"number"</span>,</li><li><span></span> maxPoolSize: <span class="string">"number"</span>,</li><li><span></span> numCalls: <span class="string">"number"</span>,</li><li><span></span> poolSize: <span class="string">"number"</span>,</li><li><span></span> waitingInQueue: <span class="string">"number"</span></li></ul>}</li></ul>},</li><li><span class="XOR">XOR</span> installed: {<ul><li class="inlineArray"><span class="ANY">ANY</span> IP: [<span class="string">"string"</span>]<span class="comment"> // list of service names installed per IP</span><br></li></ul>},</li><li><span class="XOR">XOR</span> removed: {<ul><li class="inlineArray"><span class="ANY">ANY</span> IP: [<span class="string">"string"</span>]<span class="comment"> // list of services names removed per IP</span><br></li></ul>},</li><li><span class="XOR">XOR</span> started: {<ul><li><span class="ANY">ANY</span> IP: {<span class="comment"> // number of services started per IP and service</span><br><ul><li><span class="ANY">ANY</span> serviceName: <span class="string">"number"</span></li></ul>}</li></ul>},</li><li><span class="XOR">XOR</span> stopped: {<ul><li><span class="ANY">ANY</span> IP: {<span class="comment"> // number of services stopped per IP and service</span><br><ul><li><span class="ANY">ANY</span> serviceName: <span class="string">"number"</span></li></ul>}</li></ul>},</li><li><span class="OPT">OPT</span> errors: <span class="string">"list"</span><span class="comment">
+ // 'TODO' in case at least one of the items to 
+install/remove/start/stop produced an error this list contains one error
+ string per item</span><br></li></ul>}</li></ul><p>example call:</p><ul class="example">{<li><span></span> run: <span class="string">"ServiceControl"</span>,</li><li><span></span> info: <span></span>,</li><li><span></span> serviceName: <span class="string">"ServiceControl"</span></li>}</ul></div><div id="servicehistory"><h1><a id="servicehistory">ServiceHistory</a></h1><p class="descr">Returns
+ the history of a requested service as in number of calls and 
+availableworkers either since startup time or during the requested 
+period</p><p>inputs:</p><ul class="inputs"><li><span></span> run: <span class="string">"ServiceHistory"</span>,</li><li><span></span> serviceName: <span class="string">"string"</span>,</li><li><span class="OPT">OPT</span> period: <span class="string">"number"</span><span class="comment"> // in seconds</span><br></li></ul><p>outputs:</p><ul class="outputs"><li><span class="XOR">XOR</span> error: <span class="string">"string"</span>,</li><li><span class="XOR">XOR</span> progress: <span class="string">"json"</span>,</li><li><span class="XOR">XOR</span> result: {<ul><li><span></span> calls: [<ul><li>{<ul><li><span></span> callID: <span class="string">"number"</span>,</li><li><span></span> idleTime: <span class="string">"number"</span>,</li><li><span></span> readingTime: <span class="string">"number"</span>,</li><li><span></span> runningTime: <span class="string">"number"</span>,</li><li><span></span> timestamp: <span class="string">"number"</span>,</li><li><span></span> writingTime: <span class="string">"number"</span></li></ul>}</li></ul>],</li><li><span></span> workers: [<ul><li>{<ul><li><span></span> allWorkers: <span class="string">"number"</span>,</li><li><span></span> idleWorkers: <span class="string">"number"</span>,</li><li><span></span> timestamp: <span class="string">"number"</span></li></ul>}</li></ul>]</li></ul>}</li></ul><p>example call:</p><ul class="example">{<li><span></span> run: <span class="string">"ServiceHistory"</span>,</li><li><span></span> serviceName: <span class="string">"ServiceControl"</span></li>}</ul></div><div id="serviceinfo"><h1><a id="serviceinfo">ServiceInfo</a></h1><p class="descr">Returns
+ all known information on selected services such as a short description 
+like this one, in- and output description and an example call. </p><p>inputs:</p><ul class="inputs"><li><span></span> run: <span class="string">"ServiceInfo"</span>,</li><li><span class="OPT">OPT</span> inclDescr: <span class="string">"boolean"</span>,<span class="comment"> // indicates whether descriptions such as this one should be included in the result</span><br></li><li><span class="OPT">OPT</span> serviceNames: <span class="string">"list"</span><span class="comment">
+ // Optional list of selected service names for which information should
+ be returned. If no such list is given, the result will show the 
+structure of general json structures such as 'attachment', 
+'jsongeometry'</span><br></li></ul><p>outputs:</p><ul class="outputs"><li><span class="XOR">XOR</span> error: <span class="string">"string"</span>,</li><li><span class="XOR">XOR</span> result: {<ul><li><span class="ANY">ANY</span> serviceName: {<ul><li><span></span> example: <span class="string">"json"</span>,</li><li><span></span> inputs: <span class="string">"json"</span>,</li><li><span></span> outputs: <span class="string">"json"</span>,</li><li><span class="OPT">OPT</span> numNodes: <span class="string">"number"</span></li></ul>}</li></ul>}</li></ul><p>example call:</p><ul class="example">{<li><span></span> run: <span class="string">"ServiceInfo"</span>,</li><li class="inlineArray"><span></span> serviceNames: [<span class="string">"RemoteRegister"</span>, <span class="string">"ServiceList"</span>]</li>}</ul></div><div id="servicelist"><h1><a id="servicelist">ServiceList</a></h1><p class="descr">Get a list of all loaded and registered services as a list of service names.</p><p>inputs:</p><ul class="inputs"><li><span></span> run: <span class="string">"ServiceList"</span></li></ul><p>outputs:</p><ul class="outputs"><li><span class="XOR">XOR</span> error: <span class="string">"string"</span>,</li><li><span class="XOR">XOR</span> progress: <span class="string">"json"</span>,</li><li><span class="XOR">XOR</span> result: {<ul><li><span></span> installed: <span class="string">"list"</span>,</li><li><span></span> serviceNames: <span class="string">"list"</span></li></ul>}</li></ul><p>example call:</p><ul class="example">{<li><span></span> run: <span class="string">"ServiceList"</span></li>}</ul></div><div id="task.create"><h1><a id="task.create">task.Create</a></h1><p class="descr">Create a task. A task corresponds to a node in the workflow diagram.</p><p>inputs:</p><ul class="inputs"><li><span></span> run: <span class="string">"task.Create"</span>,</li><li><span></span> parentID: <span class="string">"number"</span>,<span class="comment"> // the taskID of the workflow in which this task is being created</span><br></li><li><span></span> position: {<span class="comment"> // x/y from top left</span><br><ul><li><span></span> x: <span class="string">"number"</span>,</li><li><span></span> y: <span class="string">"number"</span></li></ul>},</li><li><span></span> serviceName: <span class="string">"string"</span>,</li><li><span class="OPT">OPT</span> inputs: <span class="string">"json"</span>,<span class="comment"> // if omitted example values will be inserted</span><br></li><li><span class="OPT">OPT</span> listensToDone: <span class="string">"list"</span><span class="comment"> // a list of taskIDs to which this task generally listens (=not listens to specific outputs)</span><br></li></ul><p>outputs:</p><ul class="outputs"><li><span class="XOR">XOR</span> error: <span class="string">"string"</span>,</li><li><span class="XOR">XOR</span> result: {<ul><li><span></span> name: <span class="string">"string"</span>,</li><li><span></span> taskID: <span class="string">"number"</span></li></ul>}</li></ul><p>example call:</p><ul class="example">{<li><span></span> run: <span class="string">"task.Create"</span>,</li><li><span></span> serviceName: <span class="string">"ServiceList"</span></li>}</ul></div><div id="task.get"><h1><a id="task.get">task.Get</a></h1><p class="descr">Returns infos about a task (requesting a taskID) or returns a list if ids representingthe same service</p><p>inputs:</p><ul class="inputs"><li><span></span> run: <span class="string">"task.Get"</span>,</li><li><span class="XOR">XOR</span> serviceName: <span class="string">"string"</span>,<span class="comment"> // requests a list of taskID representing the same service</span><br></li><li><span class="XOR">XOR</span> taskID: <span class="string">"number"</span><span class="comment"> // requests infos about a specific task</span><br></li></ul><p>outputs:</p><ul class="outputs"><li><span class="XOR">XOR</span> error: <span class="string">"string"</span>,</li><li><span class="XOR">XOR</span> result: {<ul><li><span class="XOR">XOR</span> task: {<ul><li><span></span> inputSchema: <span class="string">"json"</span>,<span class="comment"> // the current input values</span><br></li><li><span></span> inputs: <span class="string">"json"</span>,<span class="comment">
+ // the inputs with subscriptions being represented as 
+{'taskID':'number','key':'string (the name of the output key of the task
+ referenced by taskID)'}</span><br></li><li><span></span> listensToDone: <span class="string">"list"</span>,<span class="comment"> // a list of taskIDs the task is listening to generally (=not to specific outputs)</span><br></li><li><span></span> name: <span class="string">"string"</span>,<span class="comment"> // can be different from service name</span><br></li><li><span></span> parentID: <span class="string">"number"</span>,<span class="comment"> // the taskID of a workflow to which this task belongs; 0 = no parent ID / root workflow</span><br></li><li><span></span> position: <span class="string">"json"</span>,<span class="comment"> // {'x':'number','y':'number'}</span><br></li><li><span></span> taskID: <span class="string">"number"</span>,</li><li><span class="OPT">OPT</span> elements: <span class="string">"list"</span>,<span class="comment"> // if the task is a workflow this list contains all children</span><br></li><li><span class="OPT">OPT</span> services: <span class="string">"list"</span><span class="comment"> // if the task is a workflow this list contains all services that need to started up (if any are set)</span><br></li></ul>},</li><li><span class="XOR">XOR</span> taskIDs: <span class="string">"list"</span></li></ul>}</li></ul><p>example call:</p><ul class="example">{<li><span></span> run: <span class="string">"task.Get"</span>,</li><li><span></span> taskID: <span class="number">3</span></li>}</ul></div><div id="task.remove"><h1><a id="task.remove">task.Remove</a></h1><p class="descr">Remove tasks.</p><p>inputs:</p><ul class="inputs"><li><span></span> run: <span class="string">"task.Remove"</span>,</li><li><span class="XOR">XOR</span> serviceName: <span class="string">"string"</span>,<span class="comment"> // removes all tasks representing the service with this name</span><br></li><li><span class="XOR">XOR</span> taskIDs: <span class="string">"list"</span><span class="comment"> // a list of taskIDs to be removed</span><br></li></ul><p>outputs:</p><ul class="outputs"><li><span class="XOR">XOR</span> error: <span class="string">"string"</span>,</li><li><span class="XOR">XOR</span> result: {<ul><li><span></span> taskIDs: <span class="string">"list"</span></li></ul>}</li></ul><p>example call:</p><ul class="example">{<li><span></span> run: <span class="string">"task.Remove"</span>,</li><li class="inlineArray"><span></span> taskIDs: [<span class="number">3</span>, <span class="number">4</span>]</li>}</ul></div><div id="task.revert"><h1><a id="task.revert">task.Revert</a></h1><p class="descr">Reverts a task to the last saved state.</p><p>inputs:</p><ul class="inputs"><li><span></span> run: <span class="string">"task.Revert"</span>,</li><li><span></span> taskID: <span class="string">"number"</span></li></ul><p>outputs:</p><ul class="outputs"><li><span class="XOR">XOR</span> error: <span class="string">"string"</span>,</li><li><span class="XOR">XOR</span> result: {<span class="comment"> // refer to &lt;a href='#task.get'&gt;task.Get&lt;/a&gt; for descriptions.</span><br><ul><li><span></span> inputSchema: <span class="string">"json"</span>,</li><li><span></span> inputs: <span class="string">"json"</span>,</li><li><span></span> listensToDone: <span class="string">"list"</span>,</li><li><span></span> name: <span class="string">"string"</span>,</li><li><span></span> parentID: <span class="string">"number"</span>,</li><li><span></span> position: <span class="string">"json"</span>,</li><li><span></span> taskID: <span class="string">"number"</span>,</li><li><span class="OPT">OPT</span> elements: <span class="string">"list"</span>,</li><li><span class="OPT">OPT</span> services: <span class="string">"list"</span></li></ul>}</li></ul><p>example call:</p><ul class="example">{<li><span></span> run: <span class="string">"task.Revert"</span>,</li><li><span></span> taskID: <span class="number">3</span></li>}</ul></div><div id="task.subscribeto"><h1><a id="task.subscribeto">task.SubscribeTo</a></h1><p class="descr">Subscribes the current client to a taskID or any call to a service indicated byserviceName</p><p>inputs:</p><ul class="inputs"><li><span></span> run: <span class="string">"task.SubscribeTo"</span>,</li><li><span class="XOR">XOR</span> serviceName: <span class="string">"string"</span>,<span class="comment">
+ // if a client subscribes to a service, it gets a notification upon any
+ output created by a service with that name (technically: the client 
+subscribes to the service factory rather than to a specific service)</span><br></li><li><span class="XOR">XOR</span> taskIDs: <span class="string">"list"</span>,<span class="comment"> // a list of taskIDs to which the client should be subscribed</span><br></li><li><span class="OPT">OPT</span> inclResults: <span class="string">"boolean"</span><span class="comment"> // specifies whether the client that subscribes only get a notification (false) or all the results produced by a service (true)</span><br></li></ul><p>outputs:</p><ul class="outputs"><li><span class="XOR">XOR</span> error: <span class="string">"string"</span>,</li><li><span class="XOR">XOR</span> progress: <span class="string">"json"</span>,</li><li><span class="XOR">XOR</span> result: {<ul><li><span></span> success: <span class="string">"boolean"</span></li></ul>}</li></ul><p>example call:</p><ul class="example">{<li><span></span> run: <span class="string">"task.SubscribeTo"</span>,</li><li><span></span> inclResults: <span class="boolean">true</span>,</li><li class="inlineArray"><span></span> taskIDs: [<span class="number">12</span>, <span class="number">15</span>]</li>}</ul></div><div id="task.unsubscribefrom"><h1><a id="task.unsubscribefrom">task.UnsubscribeFrom</a></h1><p class="descr">Unsubscribe from a service or a list of taskIDs.</p><p>inputs:</p><ul class="inputs"><li><span></span> run: <span class="string">"task.UnsubscribeFrom"</span>,</li><li><span class="XOR">XOR</span> serviceName: <span class="string">"string"</span>,</li><li><span class="XOR">XOR</span> taskIDs: <span class="string">"list"</span></li></ul><p>outputs:</p><ul class="outputs"><li><span class="XOR">XOR</span> error: <span class="string">"string"</span>,</li><li><span class="XOR">XOR</span> progress: <span class="string">"json"</span>,</li><li><span class="XOR">XOR</span> result: {<ul><li><span></span> success: <span class="string">"boolean"</span></li></ul>}</li></ul><p>example call:</p><ul class="example">{<li><span></span> run: <span class="string">"task.UnsubscribeFrom"</span>,</li><li class="inlineArray"><span></span> taskIDs: [<span class="number">12</span>, <span class="number">15</span>]</li>}</ul></div><div id="task.update"><h1><a id="task.update">task.Update</a></h1><p class="descr">Update a the input values / subscriptions of a task.</p><p>inputs:</p><ul class="inputs"><li><span></span> run: <span class="string">"task.Update"</span>,</li><li><span></span> taskID: <span class="string">"number"</span>,</li><li><span class="OPT">OPT</span> inputs: <span class="string">"json"</span>,<span class="comment"> // inputs to be changed; subscriptions are represented by 'property':{'taskID':'number','key':'string (output key)'}</span><br></li><li><span class="OPT">OPT</span> listensToDone: <span class="string">"list"</span>,<span class="comment"> // a list of taskIDs to which the task should listen generally (=not to a specific output)</span><br></li><li><span class="OPT">OPT</span> name: <span class="string">"string"</span>,<span class="comment"> // the name of the task (can be different to service name)</span><br></li><li><span class="OPT">OPT</span> outputs: <span class="string">"json"</span>,<span class="comment">
+ // if the task to be updated is a workflow that is contained by another
+ workflow (e.g. a group) the workflow can have outputs that might be 
+linked to outputs of some task it contains</span><br></li><li><span class="OPT">OPT</span> position: {<ul><li><span></span> x: <span class="string">"number"</span>,</li><li><span></span> y: <span class="string">"number"</span></li></ul>}</li></ul><p>outputs:</p><ul class="outputs"><li><span class="XOR">XOR</span> error: <span class="string">"string"</span>,</li><li><span class="XOR">XOR</span> result: {<ul><li><span></span> taskID: <span class="string">"number"</span>,</li><li><span class="OPT">OPT</span> unknownKeys: <span class="string">"list"</span></li></ul>}</li></ul><p>example call:</p><ul class="example">{<li><span></span> run: <span class="string">"task.Update"</span>,</li><li><span></span> inputs: {<ul><li><span></span> in1: <span class="number">25</span></li></ul>},</li><li><span></span> taskID: <span class="number">5</span></li>}</ul></div><div id="test.delay"><h1><a id="test.delay">test.Delay</a></h1><p class="descr">Used to simulate a service with a long calculation time.</p><p>inputs:</p><ul class="inputs"><li><span></span> run: <span class="string">"test.Delay"</span>,</li><li><span></span> seconds: <span class="string">"number"</span>,</li><li><span class="ANY">ANY</span> inputs: <span class="string">"any"</span><span class="comment"> // any inputs are being forwarded</span><br></li></ul><p>outputs:</p><ul class="outputs"><li><span class="XOR">XOR</span> error: <span class="string">"string"</span>,</li><li><span class="XOR">XOR</span> progress: <span class="string">"json"</span>,</li><li><span class="XOR">XOR</span> result: {<ul><li><span class="ANY">ANY</span> outputs: <span class="string">"any"</span></li></ul>}</li></ul><p>example call:</p><ul class="example">{<li><span></span> run: <span class="string">"test.Delay"</span>,</li><li><span></span> input1: <span class="string">"a string"</span>,</li><li><span></span> seconds: <span class="number">5</span></li>}</ul></div><div id="test.error"><h1><a id="test.error">test.Error</a></h1><p class="descr">A service that simulates an error being thrown.</p><p>inputs:</p><ul class="inputs"><li><span></span> run: <span class="string">"test.Error"</span>,</li><li><span class="OPT">OPT</span> message: <span class="string">"string"</span><span class="comment"> // optional error message</span><br></li></ul><p>outputs:</p><ul class="outputs"><li><span></span> error: <span class="string">"string"</span></li></ul><p>example call:</p><ul class="example">{<li><span></span> run: <span class="string">"test.Error"</span>,</li><li><span></span> message: <span class="string">"Give me an error!"</span></li>}</ul></div><div id="test.fibonacci"><h1><a id="test.fibonacci">test.Fibonacci</a></h1><p class="descr">A service that serves as an (implementation) example.</p><p>inputs:</p><ul class="inputs"><li><span></span> run: <span class="string">"test.Fibonacci"</span>,</li><li><span></span> amount: <span class="string">"number"</span>,<span class="comment"> // how many numbers should be calculated</span><br></li><li><span class="OPT">OPT</span> onlyLast: <span class="string">"boolean"</span><span class="comment"> // return only the last number</span><br></li></ul><p>outputs:</p><ul class="outputs"><li><span class="XOR">XOR</span> error: <span class="string">"string"</span>,</li><li><span class="XOR">XOR</span> progress: <span class="string">"json"</span>,</li><li><span class="XOR">XOR</span> result: {<ul><li><span></span> fibonacci_sequence: <span class="string">"list"</span></li></ul>}</li></ul><p>example call:</p><ul class="example">{<li><span></span> run: <span class="string">"test.Fibonacci"</span>,</li><li><span></span> amount: <span class="number">10</span></li>}</ul></div><div id="test.fileecho"><h1><a id="test.fileecho">test.FileEcho</a></h1><p class="descr">A service to test sending and receiving attachments. Mainly used by connectionlibrary developers.</p><p>inputs:</p><ul class="inputs"><li><span></span> run: <span class="string">"test.FileEcho"</span>,</li><li><span class="ANY">ANY</span> filenames: <span class="string">"attachment"</span></li></ul><p>outputs:</p><ul class="outputs"><li><span class="XOR">XOR</span> error: <span class="string">"string"</span>,</li><li><span class="XOR">XOR</span> result: {<ul><li><span class="ANY">ANY</span> sameFilenames: <span class="string">"attachment"</span></li></ul>}</li></ul><p>example call:</p><ul class="example">{<li><span></span> run: <span class="string">"test.FileEcho"</span>,</li><li><span></span> file1: <span class="string">"test.jpg"</span></li>}</ul></div><div id="test.randomly"><h1><a id="test.randomly">test.Randomly</a></h1><p class="descr">Get either an amount of random numbers or create key-value-pairs from a key list.</p><p>inputs:</p><ul class="inputs"><li><span></span> run: <span class="string">"test.Randomly"</span>,</li><li><span class="XOR">XOR</span> amount: <span class="string">"number"</span>,</li><li><span class="XOR">XOR</span> keys: <span class="string">"list"</span></li></ul><p>outputs:</p><ul class="outputs"><li><span class="XOR">XOR</span> error: <span class="string">"string"</span>,</li><li><span class="XOR">XOR</span> progress: <span class="string">"json"</span>,</li><li><span class="XOR">XOR</span> result: {<ul><li><span class="XOR">XOR</span> keyValuePairs: <span class="string">"json"</span>,</li><li><span class="XOR">XOR</span> randomNumbers: <span class="string">"list"</span></li></ul>}</li></ul><p>example call:</p><ul class="example">{<li><span></span> run: <span class="string">"test.Randomly"</span>,</li><li class="inlineArray"><span></span> keys: [<span class="string">"first"</span>, <span class="string">"two"</span>, <span class="string">"car"</span>]</li>}</ul></div><div id="test.validation"><h1><a id="test.validation">test.Validation</a></h1><p class="descr">A
+ service to test how type and value constraint validation 
+works.@inputs.key1 normal string@inputs.key2 string values constraint to
+ 'string1' and 'string2'@inputs.key3 number values constraint to 4 
+ranges@inputs.key4 optional attachment that must be of type 
+'jpg'@inputs.key5 geojson geometry@inputs.key6 optional attachment that 
+requires types to be one of 'jpg' or 'png'@inputs.key7 optional 
+attachment with predefied required keys</p><p>inputs:</p><ul class="inputs"><li><span></span> run: <span class="string">"test.Validation"</span>,</li><li><span></span> key1: <span class="string">"string"</span>,</li><li><span></span> key2: {<ul><li class="inlineArray"><span></span> constraints: [<span class="string">"string1"</span>, <span class="string">"string2"</span>],</li><li><span></span> type: <span class="string">"string"</span></li></ul>},</li><li><span></span> key3: {<ul><li class="inlineArray"><span></span> constraints: [<span class="string">"1-10"</span>, <span class="string">"33"</span>, <span class="string">"[24.3-26.5]"</span>, <span class="string">"35"</span>, <span class="string">"34"</span>, <span class="string">"[88-99)"</span>],</li><li><span></span> type: <span class="string">"number"</span></li></ul>},</li><li><span></span> key5: <span class="string">"jsongeometry/geojson"</span>,</li><li><span class="OPT">OPT</span> key4: <span class="string">"attachment/jpg"</span>,</li><li><span class="OPT">OPT</span> key6: {<ul><li class="inlineArray"><span></span> constraints: [<span class="string">"jpg"</span>, <span class="string">"png"</span>],</li><li><span></span> type: <span class="string">"attachment"</span></li></ul>},</li><li><span class="OPT">OPT</span> key7: <span class="string">"attachment/jpg"</span></li></ul><p>outputs:</p><ul class="outputs"><li><span class="XOR">XOR</span> error: <span class="string">"string"</span>,</li><li><span class="XOR">XOR</span> progress: <span class="string">"json"</span>,</li><li><span class="XOR">XOR</span> result: {<ul><li><span></span> errorTestStrings: <span class="string">"list"</span>,</li><li><span></span> passed: <span class="string">"boolean"</span></li></ul>}</li></ul><p>example call:</p><ul class="example">{<li><span></span> run: <span class="string">"test.Validation"</span>,</li><li><span></span> key1: <span class="string">"test string"</span>,</li><li><span></span> key2: <span class="string">"string1"</span>,</li><li><span></span> key3: <span class="number">2</span>,</li><li><span></span> key5: {<ul><li><span></span> format: <span class="string">"geojson"</span>,</li><li><span></span> geometry: {<ul><li class="inlineArray"><span></span> coordinates: [<span></span>, <span></span>],</li><li><span></span> type: <span class="string">"Polygon"</span></li></ul>},</li><li><span></span> name: <span class="string">"key5"</span></li></ul>}</li>}</ul></div><div id="user.authenticate"><h1><a id="user.authenticate">user.Authenticate</a></h1><p class="descr">Authenticates a user</p><p>inputs:</p><ul class="inputs"><li><span></span> run: <span class="string">"user.Authenticate"</span>,</li><li><span></span> email: <span class="string">"string"</span>,</li><li><span></span> password: <span class="string">"string"</span></li></ul><p>outputs:</p><ul class="outputs"><li><span class="XOR">XOR</span> error: <span class="string">"string"</span>,</li><li><span class="XOR">XOR</span> progress: <span class="string">"json"</span>,</li><li><span class="XOR">XOR</span> result: {<ul><li><span></span> success: <span class="string">"boolean"</span></li></ul>}</li></ul><p>example call:</p><ul class="example">{<li><span></span> run: <span class="string">"user.Authenticate"</span>,</li><li><span></span> email: <span class="string">"fancy@address.com"</span>,</li><li><span></span> password: <span class="string">"13A45F568855DCAA4A3D1234FFFEBBEE8903DF03"</span></li>}</ul></div><div id="user.create"><h1><a id="user.create">user.Create</a></h1><p class="descr">Create a user by giving username, email, and sha1 encrypted password representedwith hexadecimals</p><p>inputs:</p><ul class="inputs"><li><span></span> run: <span class="string">"user.Create"</span>,</li><li><span></span> email: <span class="string">"string"</span>,</li><li><span></span> password: <span class="string">"string"</span>,</li><li><span class="OPT">OPT</span> city: <span class="string">"string"</span>,</li><li><span class="OPT">OPT</span> country: <span class="string">"string"</span>,</li><li><span class="OPT">OPT</span> name: <span class="string">"string"</span>,</li><li><span class="OPT">OPT</span> organization: <span class="string">"string"</span>,</li><li><span class="OPT">OPT</span> street: <span class="string">"string"</span>,</li><li><span class="OPT">OPT</span> surname: <span class="string">"string"</span>,</li><li><span class="OPT">OPT</span> zip: <span class="string">"number"</span></li></ul><p>outputs:</p><ul class="outputs"><li><span class="XOR">XOR</span> error: <span class="string">"string"</span>,</li><li><span class="XOR">XOR</span> progress: <span class="string">"json"</span>,</li><li><span class="XOR">XOR</span> result: {<ul><li><span></span> id: <span class="string">"number"</span></li></ul>}</li></ul><p>example call:</p><ul class="example">{<li><span></span> run: <span class="string">"user.Create"</span>,</li><li><span></span> email: <span class="string">"abc@domain.com"</span>,</li><li><span></span> password: <span class="string">"hexReprOfSha1"</span>,</li><li><span></span> username: <span class="string">"user1"</span></li>}</ul></div><div id="user.delete"><h1><a id="user.delete">user.Delete</a></h1><p class="descr">Deletes a user if it does not own a group or [TODO] own a scenario</p><p>inputs:</p><ul class="inputs"><li><span></span> run: <span class="string">"user.Delete"</span>,</li><li><span></span> id: <span class="string">"number"</span></li></ul><p>outputs:</p><ul class="outputs"><li><span class="XOR">XOR</span> error: <span class="string">"string"</span>,</li><li><span class="XOR">XOR</span> progress: <span class="string">"json"</span>,</li><li><span class="XOR">XOR</span> result: {<ul><li><span></span> success: <span class="string">"boolean"</span></li></ul>}</li></ul><p>example call:</p><ul class="example">{<li><span></span> run: <span class="string">"user.Delete"</span>,</li><li><span></span> id: <span class="number">5</span></li>}</ul></div><div id="user.list"><h1><a id="user.list">user.List</a></h1><p class="descr">Get a list of users</p><p>inputs:</p><ul class="inputs"><li><span></span> run: <span class="string">"user.List"</span></li></ul><p>outputs:</p><ul class="outputs"><li><span class="XOR">XOR</span> error: <span class="string">"string"</span>,</li><li><span class="XOR">XOR</span> progress: <span class="string">"json"</span>,</li><li><span class="XOR">XOR</span> result: {<ul><li><span></span> groups: [<ul><li>{<ul><li><span></span> id: <span class="string">"number"</span>,</li><li><span></span> owner: <span class="string">"number"</span></li></ul>}</li></ul>],</li><li><span></span> users: [<ul><li>{<ul><li><span></span> email: <span class="string">"string"</span>,</li><li><span></span> groupIDs: <span class="string">"list"</span>,</li><li><span></span> id: <span class="string">"number"</span></li></ul>}</li></ul>]</li></ul>}</li></ul><p>example call:</p><ul class="example">{<li><span></span> run: <span class="string">"user.List"</span></li>}</ul></div><div id="user.logout"><h1><a id="user.logout">user.Logout</a></h1><p class="descr">resets the connection to an unauthenticated state</p><p>inputs:</p><ul class="inputs"><li><span></span> run: <span class="string">"user.Logout"</span></li></ul><p>outputs:</p><ul class="outputs"><li><span class="XOR">XOR</span> error: <span class="string">"string"</span>,</li><li><span class="XOR">XOR</span> progress: <span class="string">"json"</span>,</li><li><span class="XOR">XOR</span> result: {<ul><li><span></span> success: <span class="string">"boolean"</span></li></ul>}</li></ul><p>example call:</p><ul class="example">{<li><span></span> run: <span class="string">"user.Logout"</span></li>}</ul></div><div id="user.permission"><h1><a id="user.permission">user.Permission</a></h1><p class="descr">Allows to restrict given services only to given userIDs/groupIDs.</p><p>inputs:</p><ul class="inputs"><li><span></span> run: <span class="string">"user.Permission"</span>,</li><li><span class="OPT">OPT</span> add: {<ul><li><span class="ANY">ANY</span> serviceName: <span class="string">"list"</span></li></ul>},</li><li><span class="OPT">OPT</span> remove: {<ul><li><span class="ANY">ANY</span> serviceName: <span class="string">"list"</span></li></ul>}</li></ul><p>outputs:</p><ul class="outputs"><li><span class="XOR">XOR</span> error: <span class="string">"string"</span>,</li><li><span class="XOR">XOR</span> progress: <span class="string">"json"</span>,</li><li><span class="XOR">XOR</span> result: {<ul><li><span class="ANY">ANY</span> serviceName: <span class="string">"list"</span></li></ul>}</li></ul><p>example call:</p><ul class="example">{<li><span></span> run: <span class="string">"user.Permission"</span>,</li><li><span></span> add: {<ul><li class="inlineArray"><span></span> ServiceControl: [<span class="number">1</span>, <span class="number">2</span>]</li></ul>}</li>}</ul></div><div id="user.update"><h1><a id="user.update">user.Update</a></h1><p class="descr">Udpate user information and does sanity checks on some of the properties.</p><p>inputs:</p><ul class="inputs"><li><span></span> run: <span class="string">"user.Update"</span>,</li><li><span></span> id: <span class="string">"number"</span>,</li><li><span class="OPT">OPT</span> city: <span class="string">"string"</span>,</li><li><span class="OPT">OPT</span> country: <span class="string">"string"</span>,</li><li><span class="OPT">OPT</span> email: <span class="string">"string"</span>,</li><li><span class="OPT">OPT</span> name: <span class="string">"string"</span>,</li><li><span class="OPT">OPT</span> organization: <span class="string">"string"</span>,</li><li><span class="OPT">OPT</span> password: <span class="string">"string"</span>,</li><li><span class="OPT">OPT</span> street: <span class="string">"string"</span>,</li><li><span class="OPT">OPT</span> surname: <span class="string">"string"</span>,</li><li><span class="OPT">OPT</span> zip: <span class="string">"number"</span></li></ul><p>outputs:</p><ul class="outputs"><li><span class="XOR">XOR</span> error: <span class="string">"string"</span>,</li><li><span class="XOR">XOR</span> progress: <span class="string">"json"</span>,</li><li><span class="XOR">XOR</span> result: {<ul><li><span></span> success: <span class="string">"boolean"</span></li></ul>}</li></ul><p>example call:</p><ul class="example">{<li><span></span> run: <span class="string">"user.Update"</span>,</li><li><span></span> email: <span class="string">"mynew@email.address"</span>,</li><li><span></span> id: <span class="number">4</span></li>}</ul></div><div id="workflow.create"><h1><a id="workflow.create">workflow.Create</a></h1><p class="descr">Create a workflow.</p><p>inputs:</p><ul class="inputs"><li><span></span> run: <span class="string">"workflow.Create"</span>,</li><li><span class="OPT">OPT</span> group: <span class="string">"list"</span>,<span class="comment"> // a list of taskIDs that should be grouped together into a workflow</span><br></li><li><span class="OPT">OPT</span> name: <span class="string">"string"</span></li></ul><p>outputs:</p><ul class="outputs"><li><span class="XOR">XOR</span> error: <span class="string">"string"</span>,</li><li><span class="XOR">XOR</span> result: {<ul><li><span></span> elements: <span class="string">"list"</span>,</li><li><span></span> inputSchema: <span class="string">"json"</span>,</li><li><span></span> inputs: <span class="string">"json"</span>,</li><li><span></span> listensToDone: <span class="string">"list"</span>,</li><li><span></span> name: <span class="string">"string"</span>,</li><li><span></span> parentID: <span class="string">"number"</span>,</li><li><span></span> position: <span class="string">"json"</span>,</li><li><span></span> services: <span class="string">"list"</span>,</li><li><span></span> taskID: <span class="string">"number"</span></li></ul>}</li></ul><p>example call:</p><ul class="example">{<li><span></span> run: <span class="string">"workflow.Create"</span>,</li><li class="inlineArray"><span></span> group: [<span class="number">5</span>, <span class="number">7</span>, <span class="number">8</span>, <span class="number">13</span>]</li>}</ul></div><div id="workflow.list"><h1><a id="workflow.list">workflow.List</a></h1><p class="descr">Returns a list of all workflows (not only root workflows).</p><p>inputs:</p><ul class="inputs"><li><span></span> run: <span class="string">"workflow.List"</span>,</li><li><span class="OPT">OPT</span> name: <span class="string">"string"</span><span class="comment"> // restrict the list to only one entry, e.g. {'1':'New Workflow'}</span><br></li></ul><p>outputs:</p><ul class="outputs"><li><span></span> result: {<span class="comment"> // {'taskID':'name'}, not a list but a json object; since keys in json cannot be numbers, the taskIDs are converted to string</span><br><ul><li><span class="ANY">ANY</span> numberAsString: <span class="string">"string"</span></li></ul>}</li></ul><p>example call:</p><ul class="example">{<li><span></span> run: <span class="string">"workflow.List"</span></li>}</ul></div><div id="workflow.safe"><h1><a id="workflow.safe">workflow.Safe</a></h1><p class="descr">Saves
+ a workflow to disk (in Luci). Luci uses H2's mvstore to serialize 
+workflows to disk. In the future this would also allow to restore 
+earlier versions of the workflow (no version tree, but linear versions).</p><p>inputs:</p><ul class="inputs"><li><span></span> run: <span class="string">"workflow.Safe"</span>,</li><li><span></span> taskID: <span class="string">"number"</span></li></ul><p>outputs:</p><ul class="outputs"><li><span class="XOR">XOR</span> error: <span class="string">"string"</span>,</li><li><span class="XOR">XOR</span> result: {<ul><li><span></span> change: <span class="string">"boolean"</span></li></ul>}</li></ul><p>example call:</p><ul class="example">{<li><span></span> run: <span class="string">"workflow.Safe"</span>,</li><li><span></span> taskID: <span class="number">6</span></li>}</ul></div><div id="workflow.serviceget"><h1><a id="workflow.serviceget">workflow.ServiceGet</a></h1><p class="descr">Gets the services, the instance ids and corresponding startup args associated with this workflow.</p><p>inputs:</p><ul class="inputs"><li><span></span> run: <span class="string">"workflow.ServiceGet"</span>,</li><li><span></span> taskID: <span class="string">"number"</span>,<span class="comment"> // the taskID to indentify the workflow</span><br></li><li><span class="OPT">OPT</span> ids: <span class="string">"list"</span><span class="comment"> // filter the instances to show only the ones with the given ids</span><br></li></ul><p>outputs:</p><ul class="outputs"><li><span class="XOR">XOR</span> error: <span class="string">"string"</span>,</li><li><span class="XOR">XOR</span> progress: <span class="string">"json"</span>,</li><li><span class="XOR">XOR</span> result: {<ul><li><span class="ANY">ANY</span> IP: {<ul><li><span class="ANY">ANY</span> id: {<ul><li><span></span> args: <span class="string">"string"</span>,</li><li><span></span> isAutoID: <span class="string">"boolean"</span>,</li><li><span></span> serviceName: <span class="string">"string"</span></li></ul>}</li></ul>}</li></ul>}</li></ul><p>example call:</p><ul class="example">{<li><span></span> run: <span class="string">"workflow.ServiceGet"</span>,</li><li><span></span> taskID: <span class="number">7</span></li>}</ul></div><div id="workflow.serviceremove"><h1><a id="workflow.serviceremove">workflow.ServiceRemove</a></h1><p class="descr">Remove a service instance from a workflow configuration.</p><p>inputs:</p><ul class="inputs"><li><span></span> run: <span class="string">"workflow.ServiceRemove"</span>,</li><li><span></span> id: <span class="string">"number"</span>,<span class="comment"> // the instance id</span><br></li><li><span></span> taskID: <span class="string">"number"</span></li></ul><p>outputs:</p><ul class="outputs"><li><span class="XOR">XOR</span> error: <span class="string">"string"</span>,</li><li><span class="XOR">XOR</span> progress: <span class="string">"json"</span>,</li><li><span class="XOR">XOR</span> result: {<ul><li><span></span> success: <span class="string">"boolean"</span></li></ul>}</li></ul><p>example call:</p><ul class="example">{<li><span></span> run: <span class="string">"workflow.ServiceRemove"</span>,</li><li><span></span> id: <span class="number">5</span>,</li><li><span></span> taskID: <span class="number">1</span></li>}</ul></div><div id="workflow.servicestart"><h1><a id="workflow.servicestart">workflow.ServiceStart</a></h1><p class="descr">Start up all the services that are configured to run with the given workflow (taskID).</p><p>inputs:</p><ul class="inputs"><li><span></span> run: <span class="string">"workflow.ServiceStart"</span>,</li><li><span></span> taskID: <span class="string">"number"</span>,</li><li><span class="OPT">OPT</span> serviceIDs: <span class="string">"list"</span><span class="comment"> // optionally restrict the instances to be started only to the given IDs.</span><br></li></ul><p>outputs:</p><ul class="outputs"><li><span class="XOR">XOR</span> error: <span class="string">"string"</span>,</li><li><span class="XOR">XOR</span> progress: <span class="string">"json"</span>,</li><li><span class="XOR">XOR</span> result: {<ul><li><span></span> started: {<ul><li><span class="ANY">ANY</span> IP: {<ul><li><span class="ANY">ANY</span> serviceName: <span class="string">"number"</span></li></ul>}</li></ul>}</li></ul>}</li></ul><p>example call:</p><ul class="example">{<li><span></span> run: <span class="string">"workflow.ServiceStart"</span>,</li><li><span></span> taskID: <span class="number">5</span></li>}</ul></div><div id="workflow.serviceupdate"><h1><a id="workflow.serviceupdate">workflow.ServiceUpdate</a></h1><p class="descr">Update a service instance that is coupled to a workflow configuration.</p><p>inputs:</p><ul class="inputs"><li><span></span> run: <span class="string">"workflow.ServiceUpdate"</span>,</li><li><span></span> args: <span class="string">"string"</span>,<span class="comment"> // arguments to be used to start the service with</span><br></li><li><span></span> id: <span class="string">"number"</span>,<span class="comment"> // the instance id</span><br></li><li><span></span> ip: <span class="string">"string"</span>,<span class="comment"> // the IPv4 of the machine on which the service should run</span><br></li><li><span></span> serviceName: <span class="string">"string"</span>,<span class="comment"> // the name of the service to start (using exec parameter from the service installation)</span><br></li><li><span></span> taskID: <span class="string">"number"</span>,</li><li><span class="OPT">OPT</span> isAutoID: <span class="string">"boolean"</span></li></ul><p>outputs:</p><ul class="outputs"><li><span class="XOR">XOR</span> error: <span class="string">"string"</span>,</li><li><span class="XOR">XOR</span> progress: <span class="string">"json"</span>,</li><li><span class="XOR">XOR</span> result: {<ul><li><span></span> success: <span class="string">"boolean"</span></li></ul>}</li></ul><p>example call:</p><ul class="example">{<li><span></span> run: <span class="string">"workflow.ServiceUpdate"</span>,</li><li><span></span> args: <span class="string">" -screen 4 -x 1920 -y 2160 -w 1920 -h 1080 -frameless yes"</span>,</li><li><span></span> id: <span class="number">5</span>,</li><li><span></span> serviceName: <span class="string">"ServiceList"</span>,</li><li><span></span> taskID: <span class="number">1</span></li>}</ul></div><div id="workflow.updateio"><h1><a id="workflow.updateio">workflow.UpdateIO</a></h1><p class="descr">Updates
+ in &amp; outputs of a workflow; difference to task.Update: it does not 
+set the values for in &amp; outputs, but actually creates in &amp; 
+outputs dynamically for a workflow, its key, type and default value</p><p>inputs:</p><ul class="inputs"><li><span></span> run: <span class="string">"workflow.UpdateIO"</span>,</li><li><span></span> taskID: <span class="string">"number"</span>,</li><li><span class="OPT">OPT</span> inputs: {<ul><li><span class="ANY">ANY</span> keyname: {<ul><li class="inlineArray"><span></span> default: [<span></span>, <span class="string">"json"</span>, <span class="string">"list"</span>, <span class="string">"string"</span>, <span class="string">"number"</span>, <span class="string">"boolean"</span>, <span class="string">"attachment"</span>, <span class="string">"jsongeometry"</span>, <span class="string">"any"</span>],</li><li><span></span> type: <span class="string">"string"</span></li></ul>}</li></ul>},</li><li><span class="OPT">OPT</span> outputs: {<ul><li><span class="ANY">ANY</span> keyname: {<ul><li class="inlineArray"><span></span> default: [<span></span>, <span class="string">"json"</span>, <span class="string">"list"</span>, <span class="string">"string"</span>, <span class="string">"number"</span>, <span class="string">"boolean"</span>, <span class="string">"attachment"</span>, <span class="string">"jsongeometry"</span>, <span class="string">"any"</span>],</li><li><span></span> type: <span class="string">"string"</span></li></ul>}</li></ul>}</li></ul><p>outputs:</p><ul class="outputs"><li><span class="XOR">XOR</span> error: <span class="string">"string"</span>,</li><li><span class="XOR">XOR</span> result: {<ul><li><span></span> elements: <span class="string">"list"</span>,</li><li><span></span> inputSchema: <span class="string">"json"</span>,</li><li><span></span> inputs: <span class="string">"json"</span>,</li><li><span></span> listensToDone: <span class="string">"list"</span>,</li><li><span></span> name: <span class="string">"string"</span>,</li><li><span></span> parentID: <span class="string">"number"</span>,</li><li><span></span> position: <span class="string">"json"</span>,</li><li><span></span> services: <span class="string">"list"</span>,</li><li><span></span> taskID: <span class="string">"number"</span></li></ul>}</li></ul><p>example call:</p><ul class="example">{<li><span></span> run: <span class="string">"workflow.UpdateIO"</span>,</li><li><span></span> inputs: {<ul><li><span></span> amount: {<ul><li><span></span> default: <span class="string">"11"</span>,</li><li><span></span> type: <span class="string">"number"</span></li></ul>}</li></ul>},</li><li><span></span> taskID: <span class="number">7</span></li>}</ul></div></div>
+	<script type="text/javascript">
+		if(!String.prototype.startsWith){
+			String.prototype.startsWith = function(str){
+				return this.indexOf(str) == 0;
+			}
+		}
+		
+		function keyString(key, span){
+			
+			if (key.startsWith("XOR ")) {
+				span.setAttribute("class", "XOR");
+				span.textContent = "XOR";
+				key = key.replace("XOR ", "");
+			} else if (key.startsWith("ANY ")) {
+				span.setAttribute("class", "ANY");
+				span.textContent = "ANY";
+				key = key.replace("ANY ", "");
+			} else if (key.startsWith("OPT ")) {
+				span.setAttribute("class", "OPT");
+				span.textContent = "OPT";
+				key = key.replace("OPT ", "");
+			}
+			
+			return key;
+		}
+		function typed(object){
+			var span = document.createElement("span");
+			if (Luci.typeof_o(object) == "string"){
+				span.setAttribute("class", "string");
+				span.textContent = "\""+object+"\"";
+			} else if (Luci.typeof_o(object) == "number"){
+				span.setAttribute("class", "number");
+				span.textContent = object;
+			} else if (Luci.typeof_o(object) == "boolean"){
+				span.setAttribute("class", "boolean");
+				span.textContent = object;
+			}
+			else if (Luci.typeof_o(object) == "Object"){
+				return childObject(object);
+			}
+			return span;
+		}
+		
+		function childObject(object, parentKey){
+			var ul = document.createElement("ul");
+			var keys = Object.keys(object);
+			keys.sort(compare);
+			for (var i = 0; i < keys.length; i++){
+				var subk = keys[i]
+				ul.appendChild(nested(subk, object[subk], i < keys.length -1, parentKey));
+			}
+			return ul;
+		}
+		
+		function removeAllChildrenOf(node){
+			while(node.hasChildNodes()){
+				node.removeChild(node.lastChild);
+			}
+		}
+		
+		function commentCheck(myKey, li){
+			if (myKey in parameterTags){
+				var comment = document.createElement("span");
+				comment.setAttribute("class", "comment");
+				comment.textContent = " // "+parameterTags[myKey];
+				li.appendChild(comment);
+				li.appendChild(document.createElement("br"));
+			}
+		}
+		
+		function nested(key, object, inclComa, parentKey){
+			// key
+			var li = document.createElement("li");
+			var span = document.createElement("span");
+			var k = keyString(key, span);
+			var myKey = parentKey+"."+k;
+			
+			li.appendChild(span);
+			li.appendChild(document.createTextNode(" "+k+": "));
+			
+			var typ = Luci.typeof_o(object);
+			if (typ == "Object"){
+				li.appendChild(document.createTextNode("{"))
+				commentCheck(myKey, li);
+				li.appendChild(childObject(object, myKey));
+				li.appendChild(document.createTextNode("}"))
+				if (inclComa)li.appendChild(document.createTextNode(","));
+			} else if (typ == "Array"){
+				var anyObj = false;
+				for (var i = 0; i < object.length; i++){
+					if (Luci.typeof_o(object[i]) == "Object"){
+						anyObj = true;
+						break;
+					}
+				}
+				if (anyObj){
+					
+					var ul = document.createElement("ul");
+// 					if (!anyObj) ul.setAttribute("class", "inlineArray");
+					
+					for (var i = 0; i < object.length; i++){
+						var li2 = document.createElement("li");
+						var isO = Luci.typeof_o(object[i]) == "Object";
+						if (isO) li2.appendChild(document.createTextNode("{"));
+						li2.appendChild(typed(object[i], myKey));
+						if (isO) li2.appendChild(document.createTextNode("}"));
+						if (i < object.length - 1){
+							li2.appendChild(document.createTextNode(", "));
+						}
+						ul.appendChild(li2);
+					}
+					li.appendChild(document.createTextNode("["));
+					commentCheck(myKey, li);
+					li.appendChild(ul);
+					li.appendChild(document.createTextNode("]"));
+				} else {
+					li.setAttribute("class", "inlineArray");
+					li.appendChild(document.createTextNode("["));
+					for (var i = 0; i < object.length; i++){
+						li.appendChild(typed(object[i]));
+						if (i < object.length - 1) li.appendChild(document.createTextNode(", "));
+					}
+					li.appendChild(document.createTextNode("]"));
+					commentCheck(myKey, li);
+				}
+				if (inclComa)li.appendChild(document.createTextNode(","));
+			} else {
+				li.appendChild(typed(object, inclComa));
+				if (inclComa)li.appendChild(document.createTextNode(","));
+				commentCheck(myKey, li);
+			}
+			
+			
+			return li;
+		}
+		
+		function compare(a,b){
+			if (a == "run") return -1;
+			if (b == "run") return +1;
+			var aXOR = a.startsWith("XOR ");
+			var aANY = a.startsWith("ANY ");
+			var aOPT = a.startsWith("OPT ");
+			var aNone = !aXOR && !aANY && !aOPT;
+			var bXOR = b.startsWith("XOR ");
+			var bANY = b.startsWith("ANY ");
+			var bOPT = b.startsWith("OPT ");
+			var bNone = !bXOR && !bANY && !bOPT;
+			if (aXOR){
+				if (bXOR) return (a<b) ? -1: (a>b) ? 1: 0;
+				return -1;
+			}
+			if (aNone){
+				if (bXOR) return 1;
+				if (bNone) return (a<b) ? -1: (a>b) ? 1: 0;
+				return -1;
+			}
+			if (aANY){
+				if (bXOR || bNone) return 1;
+				if (bANY) return (a<b) ? -1: (a>b) ? 1: 0;
+				return -1;
+			}
+			if (aOPT){
+				if (bXOR || bNone || bANY) return 1;
+				if (bOPT) return (a<b) ? -1: (a>b) ? 1: 0;
+				return -1;
+			}
+			return 0;
+		}
+		
+		function toggleComments(){
+			var comments = document.getElementsByClassName("comment");
+			for (var i = 0; i < comments.length; i++){
+				var d = comments[i].style.display;
+				if (d == "") comments[i].style.display = "None";
+				else comments[i].style.display = "";
+			}
+		}
+		
+		function build(container, from, type){
+			var keys = Object.keys(from);
+			keys.sort(compare);
+			for (var i = 0; i < keys.length; i++){
+				var k = keys[i];
+				container.appendChild(nested(k, from[k], i < keys.length-1, type));
+			}
+		}
+		
+		function stripParameterTags(descr){
+			parameterTags = {};
+			var d = descr.split("\n");
+			var ret = d.shift();
+			for (var i = 0; i < d.length; i++){
+				var s = d[i].trim();
+				var j = s.indexOf(" ");
+				var key = s.substring(1, j)
+				var val = s.substring(j+1);
+				parameterTags[key] = val;
+			}
+// 			console.log(parameterTags);
+			return ret;
+		}
+		
+		function display(service, serviceName, container){
+			var descr = document.createElement("p");
+			var inputs = document.createElement("ul");
+			var inputTitle = document.createElement("p");
+			var outputTitle = document.createElement("p");
+			var exTitle = document.createElement("p");
+			var outputs = document.createElement("ul")
+			var div = document.createElement("div");
+			var h1 = document.createElement("h1");
+			var ex = document.createElement("ul");
+			var a = document.createElement("a");
+			
+			a.setAttribute("id", serviceName.toLowerCase());
+			a.textContent = serviceName;
+			h1.appendChild(a);
+			descr.setAttribute("class", "descr");
+			descr.textContent = stripParameterTags(service.descr);
+			inputTitle.textContent = "inputs:";
+			outputTitle.textContent = "outputs:";
+			exTitle.textContent = "example call:";
+			div.appendChild(h1);
+			div.appendChild(descr);
+			div.appendChild(inputTitle);
+			div.appendChild(inputs);
+			div.appendChild(outputTitle);
+			div.appendChild(outputs);
+			div.appendChild(exTitle);
+			div.appendChild(ex);
+			div.setAttribute("id", serviceName.toLowerCase())
+			inputs.setAttribute("class", "inputs");
+			outputs.setAttribute("class", "outputs");
+			ex.setAttribute("class", "example");
+			build(inputs, service.inputs, "input");
+			build(outputs, service.outputs, "output");
+			ex.appendChild(document.createTextNode("{"))
+			build(ex, service.example);
+			ex.appendChild(document.createTextNode("}"))
+			container.appendChild(div)
+		}
+		
+		function min(list, fun){
+			var m = list[0] || null;
+			for (var i = 0; i < list.length; i++){
+				if (fun(m, list[i])) m = list[i];
+			}
+			return m;
+		}
+		var parameterTags = {};
+		var lc = new Luci.Client(location.hostname, 8008);
+		lc.connect(function(){
+			lc.sendAndReceive({'run':'ServiceList'}, function(message){
+				var h = message.getHeader();
+				lc.sendAndReceive({'run':'ServiceInfo', 'serviceNames': h.result.serviceNames, 'inclDescr':true}, 
+					function(message){
+						var h = message.getHeader();
+						var c = document.getElementById("content");
+						var c1 = document.getElementById("c1");
+						var c2 = document.getElementById("c2");
+						var c3 = document.getElementById("c3");
+						var cs = [c1, c2, c3];
+						var services = h.result;
+						var serviceNames = Object.keys(services)
+						serviceNames.sort();
+// 						for (var i = 0; i < serviceNames.length; i++){
+// 							var serviceName = serviceNames[i];
+// 							var cmin = min(cs, function(cm, tm){return tm.offsetHeight < cm.offsetHeight;})
+// 							display(services[serviceName], serviceName, cmin);
+// 						}
+						var index = document.createElement("div");
+						index.setAttribute("id", "index");
+						var comments = document.createElement("p");
+						comments.style.cursor = "pointer";
+						comments.textContent = "toggle comments";
+						comments.addEventListener("click", toggleComments);
+						index.appendChild(comments);
+						for (var i = 0; i < serviceNames.length; i++){
+							var serviceName = serviceNames[i];
+							display(services[serviceName], serviceName, document.getElementById("list"));
+							var a = document.createElement("a");
+							a.setAttribute("href", "#"+serviceName.toLowerCase());
+							a.textContent = serviceName;
+							var p = document.createElement("p");
+							p.appendChild(a);
+							index.appendChild(p);
+						}
+						document.getElementsByTagName("body")[0].appendChild(index);
+						var loc = window.location.href;
+						if (loc.indexOf("#") > 0){
+							window.location.href = loc;
+						}
+				});
+			});
+		}, function(e){
+			console.log(e)
+		}, function(e){
+			console.log(e);
+		});
+		
+		function exportHTML(){
+			window.open(window.URL.createObjectURL(
+				new Blob([document.documentElement.outerHTML], {type: 'text/plain'}))); 
+		}
+		
+	</script>
+
+<div id="index"><p style="cursor: pointer;">toggle comments</p><p><a href="#attachmentjson">AttachmentJSON</a></p><p><a href="#download">Download</a></p><p><a href="#exists">Exists</a></p><p><a href="#filterservices">FilterServices</a></p><p><a href="#getstartuptime">GetStartupTime</a></p><p><a href="#remotederegister">RemoteDeregister</a></p><p><a href="#remoteregister">RemoteRegister</a></p><p><a href="#servicecontrol">ServiceControl</a></p><p><a href="#servicehistory">ServiceHistory</a></p><p><a href="#serviceinfo">ServiceInfo</a></p><p><a href="#servicelist">ServiceList</a></p><p><a href="#task.create">task.Create</a></p><p><a href="#task.get">task.Get</a></p><p><a href="#task.remove">task.Remove</a></p><p><a href="#task.revert">task.Revert</a></p><p><a href="#task.subscribeto">task.SubscribeTo</a></p><p><a href="#task.unsubscribefrom">task.UnsubscribeFrom</a></p><p><a href="#task.update">task.Update</a></p><p><a href="#test.delay">test.Delay</a></p><p><a href="#test.error">test.Error</a></p><p><a href="#test.fibonacci">test.Fibonacci</a></p><p><a href="#test.fileecho">test.FileEcho</a></p><p><a href="#test.randomly">test.Randomly</a></p><p><a href="#test.validation">test.Validation</a></p><p><a href="#user.authenticate">user.Authenticate</a></p><p><a href="#user.create">user.Create</a></p><p><a href="#user.delete">user.Delete</a></p><p><a href="#user.list">user.List</a></p><p><a href="#user.logout">user.Logout</a></p><p><a href="#user.permission">user.Permission</a></p><p><a href="#user.update">user.Update</a></p><p><a href="#workflow.create">workflow.Create</a></p><p><a href="#workflow.list">workflow.List</a></p><p><a href="#workflow.safe">workflow.Safe</a></p><p><a href="#workflow.serviceget">workflow.ServiceGet</a></p><p><a href="#workflow.serviceremove">workflow.ServiceRemove</a></p><p><a href="#workflow.servicestart">workflow.ServiceStart</a></p><p><a href="#workflow.serviceupdate">workflow.ServiceUpdate</a></p><p><a href="#workflow.updateio">workflow.UpdateIO</a></p></div></body></html>

@@ -1,0 +1,29 @@
+\section{Built-In Services}
+\label{ch:builtinservices}
+
+((* for service in services|sort *))
+\subsection{((( service )))}
+\label{ch:builtinservices:((( service )))}
+((( services[service]["description"]|escape_tex )))
+\subsubsection*{Inputs:}
+\begin{itemize}
+  \small
+  ((* for input in services[service]["inputs"] *))
+  \item \textbf{((( input["name"]|escape_tex)))}: ((( input["comment"]|escape_tex )))
+\begin{lstlisting}
+(((input["json"]|replace("\"", "") )))
+\end{lstlisting}
+  ((* endfor *))
+\end{itemize}
+\subsubsection*{Outputs:}
+\begin{itemize}
+  \small
+  ((* for output in services[service]["outputs"] *))
+  \item \textbf{((( output["name"]|escape_tex )))}: ((( output["comment"]|escape_tex )))
+\begin{lstlisting}
+(((output["json"]|replace("\"", "") )))
+\end{lstlisting}
+  ((* endfor *))
+\end{itemize}
+
+((* endfor *))

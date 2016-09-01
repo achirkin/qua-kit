@@ -1,0 +1,25 @@
+\section{Introduction}
+
+\subsection{Notes}
+The words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT", "SHOULD", "SHOULD NOT", "RECOMMENDED", "MAY", and "OPTIONAL" are used in accordance to \href{https://www.ietf.org/rfc/rfc2119.txt}{RFC2119}.
+
+\subsection{Understanding the document}
+
+\subsection{Editing the document}
+\label{sec:editing}
+
+The document contains a number of JSON or GeoJSON listings representing content of \ac{Luci} actions.
+In the listings we use the following coloring scheme:
+%
+\begin{itemize}
+\item Key names are shown in black (e.g. \texttt{action});
+\item Reserved keywords, such as value types are shown in blue (e.g. \texttt{\color{blue}string});
+\item Fixed strings constants are shown in red (e.g. \texttt{\color{red}"create\_scenario"});
+\item Additional structural keywords are shown in grey
+(e.g. \texttt{\color{darkgray}OPT} means the key-value pair is optional, \texttt{\color{darkgray}XOR} before several key-value pairs means exactly one alternative).
+\item Comments are in purple, separated by double slash (e.g. \texttt{\color{purple}// comment})
+\end{itemize}
+%
+If there is a missing reserved keyword, you can add it into tex file annotation (\texttt{keywords} or \texttt{ndkeywords} lists in \texttt{lstdefinelanguage} command).
+
+\clearpage

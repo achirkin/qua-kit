@@ -1,0 +1,27 @@
+\documentclass[border=2mm]{standalone}
+\usepackage{bytefield}
+
+\begin{document}
+  \begin{bytefield}[endianness=big,rightcurlyspace=-1ex]{8}
+    \bitheader{0-7} \\
+    \bitbox{8}{$x$} \\
+    \bitbox{8}{$y$}\\
+    \begin{rightwordgroup}{$x$ byte}
+      \wordbox{3}{Header}
+    \end{rightwordgroup}\\
+    \begin{leftwordgroup}{$y$ byte}
+      \bitbox{8}{N}\\
+      \bitbox{8}{$y_1$}\\
+      \begin{rightwordgroup}{$y_1$ byte}
+        \wordbox{2}{Payload $1$}
+      \end{rightwordgroup}\\
+      \wordbox[lrt]{1}{} \\
+      \skippedwords \\
+      \wordbox[lrb]{1}{} \\
+      \bitbox{8}{$y_N$}\\
+      \begin{rightwordgroup}{$y_N$ byte}
+        \wordbox{2}{Payload $N$}
+      \end{rightwordgroup}
+    \end{leftwordgroup}
+  \end{bytefield}
+\end{document}

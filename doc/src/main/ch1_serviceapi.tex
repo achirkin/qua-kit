@@ -1,0 +1,106 @@
+\section{Service API}
+\label{ch:serviceapi}
+
+Luci is primarily intended to connect machines in a LAN. Luci works as a TCP server, and all remote services and clients are TCP clients. In the beginning, a service registers itself in Luci, and then Luci sends run requests to the service from time to time. The service on the other hand keeps Luci updated of its current status.
+
+\subsection{Registering a Service}
+
+For registering a service in Luci, a set of three parameters \textbf{must} be implemented into the service and connect to Luci using the built-in service \texttt{RemoteRegister} (Appendix \ref{ch:builtinservices:RemoteRegister}).
+
+The three required fields are
+\begin{itemize}
+  \item \texttt{serviceName}: The service name as a string
+  \item \texttt{description}: The service description as a string
+  \item \texttt{exampleCall}: An example call to the service as json encoded string
+\end{itemize}
+
+If a service accepts input arguments or outputs data, two additional parameters \textbf{can} be provided:
+\begin{itemize}
+  \item \texttt{input}: A json-schema that specifies the service input
+  \item \texttt{output}: A json-schema that specifies the service output
+\end{itemize}
+
+\subsection{Run and Cancel}
+When a client sends a message in the form
+\begin{lstlisting}
+{
+  run: string, // the service name.
+  callID: integer // a unique random number identifying the session
+}
+\end{lstlisting}
+to Luci, Luci simply forwards this message to the service. The service \textbf{MAY} returns with a message containing in its run id:
+\begin{lstlisting}
+{
+  newCallID: number, // the newly generated callID
+  callID: integer // the same callID, it has priority over newCallID
+}
+\end{lstlisting}
+If a client requests to stop the execution of a certain service call, he sends the following message which is subsequently forwarded to and handled by the service.
+\begin{lstlisting}
+{
+  cancel: number, // the callID
+  callID: integer // the same callID, it has priority over newCallID
+}
+\end{lstlisting}
+
+
+\subsection{Result, Error and Progress}
+Without any notification of Luci, the service is responsible of keeping Luci updated of the service's current status. The result is returned when the service is finished and is formatted in the following way:
+
+\begin{lstlisting}
+{
+  result: json, // the result as specified in the output field upon service registration
+  callID: integer
+}
+\end{lstlisting}
+
+From time to time, the service might want to keep Luci updated of it's progress. If the progress equals 0, the service has been ordered to start.
+\begin{lstlisting}
+{
+  progress: integer,
+  callID: integer,
+  OPT intermediateResult: json // some result, it is optional.
+}
+\end{lstlisting}
+
+Finally, if an error occured, the service will provide an error message to Luci:
+\begin{lstlisting}
+{
+  error: string,
+  callID: integer
+}
+\end{lstlisting}
+
+\subsection{Attachments}
+
+Luci messages can contain binary data. It is attached to messages as byte arrays. Every message must contain a JSON "header", attachments are optional. The UTF8 encoded JSON header is human-readable; a complete luci message consists of a json string and a thin binary wrapper around the json header plus a binary attachements part.
+
+Usually binary attachments should be referenced in a header using a special attachment description. Here is a convention for JSON format of such description:
+
+\begin{lstlisting}
+{
+  format: string, // e.g. "binary" or "4-byte float array"
+  attachment: {
+    length: number, // length of attachments in bytes
+    checksum: string, // MD5 checksum
+    position: integer // starting at 1; 0 = undefined position
+  }
+  OPT name: string,
+  ANY key: string
+}
+\end{lstlisting}
+
+Attachments can be referenced multiple times in a JSON header. Attachments - if they need to be forwarded to only one service - are forwarded directly to remote services, i.e. Luci will not wait until the whole attachment is being transferred to Luci before sending it to a remote service.
+
+\subsection{Geometry}
+Similar to attachments a JSON header can also contain JSON encoded geometry like GeoJSON. Since there are several JSON based geometry formats (e.g. TopoJSON) a JSONGeometry object must follow this structure:
+
+\begin{lstlisting}
+{
+  format: string, // e.g. "binary" or "4-byte float array"
+  geometry: json, // format specific
+  OPT name: string,
+  OPT crs: string, // reference system
+  OPT attributeMap: json,
+}
+\end{lstlisting}

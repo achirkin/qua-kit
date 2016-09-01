@@ -1,0 +1,135 @@
+\documentclass[pdftex,11pt,a4paper]{article} % or extarticle
+
+% *** PERSONAL & PAPER INFO ***
+\newcommand{\sAuthors}{Artem Chirkin, Lukas Treyer, Michael Franzen}
+\newcommand{\sTitle}{LC2 Specification}
+\newcommand{\sSubject}{\sTitle}
+\newcommand{\sKeywords}{Luci, middleware, json, geojson, planning}
+
+% *** ACRONYMS ***
+\usepackage{acronym}
+%\acrodef{label}[acronym]{written out form}
+\acrodef{Luci}{Lightweight Urban Computation Interchange}
+
+% ----------------------------------------------------------------------------
+% *** METADATA & TITLE ***
+\usepackage[pdfauthor={\sAuthors},
+            pdftitle={\sTitle},
+            pdfsubject={\sSubject},
+            pdfkeywords={\sKeywords},
+            pdfproducer={Latex with hyperref},
+            pdfcreator={pdflatex}]{hyperref}
+\author{\sAuthors}
+\title{\sTitle}
+
+% *** GRAPHICS RELATED PACKAGES ***
+\usepackage[pdftex]{graphicx}
+\usepackage{epstopdf}
+\usepackage{wrapfig}
+\usepackage{subcaption}
+\usepackage{bytefield}
+\usepackage{msc}
+\graphicspath{{resources/}}
+
+% *** MATH PACKAGES ***
+\usepackage{amsfonts}
+\usepackage[cmex10]{amsmath}
+% *** PDF, URL AND HYPERLINK PACKAGES ***
+\usepackage{url}
+
+% *** PAGE DIMENSIONS ***
+\usepackage{geometry}
+\geometry{top=1.0in, bottom=1.0in, left=1.0in, right=1.0in}
+%\usepackage[section]{placeins} % force images to be within sections
+\usepackage{parskip} % nicer indents in paragraphs
+\usepackage{indentfirst} % add indent at first paragraph of the section
+\usepackage{paralist} % denser lists
+
+% making possible to execute arbitrary comands within the document
+% \usepackage{bashful}
+% \begingroup\makeatletter\endlinechar=\m@ne\everyeof{\noexpand}
+% \edef\x{\endgroup\def\noexpand\TeXpath{\@@input|"ls ~/Documents" }}\x
+
+% *** COMMENTING ***
+%\usepackage[table]{xcolor}
+\newcommand{\comment}[1]{{\color{red} #1 }}
+
+% *** JAVASCRIPT LISTINGS ***
+
+\usepackage{listings}
+\definecolor{lightgray}{rgb}{.98,.98,.98}
+\definecolor{darkgray}{rgb}{.4,.4,.4}
+\definecolor{purple}{rgb}{0.65, 0.12, 0.82}
+
+\lstdefinelanguage{JSON}{
+  keywords={string,long,jsonGeometry,boolean,any,object,number,list,json,integer},
+  keywordstyle=\color{blue}\bfseries,
+  ndkeywords={OPT, XOR, MANY},
+  ndkeywordstyle=\color{darkgray}\bfseries,
+  identifierstyle=\color{black},
+  sensitive=false,
+  comment=[l]{//},
+  morecomment=[s]{/*}{*/},
+  commentstyle=\color{purple}\ttfamily,
+  stringstyle=\color{red}\ttfamily,
+  morestring=[b]',
+  morestring=[b]"
+}
+
+\lstset{
+   language=JSON,
+   backgroundcolor=\color{lightgray},
+   extendedchars=true,
+   basicstyle=\footnotesize\ttfamily,
+   showstringspaces=false,
+   showspaces=false,
+   numbers=left,
+   numberstyle=\footnotesize\color{darkgray},
+   numbersep=9pt,
+   tabsize=2,
+   breaklines=true,
+   showtabs=false,
+   captionpos=b
+}
+
+\usepackage{enumitem}
+\setlistdepth{9}
+
+\setlist[itemize,1]{label=$\bullet$}
+\setlist[itemize,2]{label=$\bullet$}
+\setlist[itemize,3]{label=$\bullet$}
+\setlist[itemize,4]{label=$\bullet$}
+\setlist[itemize,5]{label=$\bullet$}
+\setlist[itemize,6]{label=$\bullet$}
+\setlist[itemize,7]{label=$\bullet$}
+\setlist[itemize,8]{label=$\bullet$}
+\setlist[itemize,9]{label=$\bullet$}
+
+\renewlist{itemize}{itemize}{9}
+
+% *** DOCUMENT STARTS ***
+\begin{document}
+\maketitle
+\tableofcontents
+\section*{Changelog}
+\begin{itemize}
+  \item 2016-08-05: First draft
+\end{itemize}
+\clearpage
+
+
+% up here was the title, the document content starts here
+% ----------------------------------------------------------------------------
+
+\input{src/main/ch0_introduction.tex}
+\input{src/main/ch1_serviceapi.tex}
+\input{src/main/ch2_networking.tex}
+\input{src/main/ch3_scenarios.tex}
+\input{src/main/ch4_quacompliance.tex}
+
+\appendix
+
+\input{src/appendix/builtinservices.tex}
+
+% ----------------------------------------------------------------------------
+\end{document}

@@ -1,0 +1,44 @@
+\section{Built-In Services}
+\label{ch:builtinservices}
+
+((* for service in services *))
+\subsection{((( service )))}
+\label{ch:builtinservices:((( service )))}
+((( services[service]["description"]|escape_tex )))
+\subsubsection*{Inputs:}
+\begin{itemize}
+  ((* for input in services[service]["inputs"] recursive *))
+    ((* if "name" in input *))
+      \item \texttt{((( input["name"]|escape_tex )))}: ((( input["comment"]|escape_tex )))
+      ((* if input["type"] is string *))
+\begin{lstlisting}
+(((input["json"])))
+\end{lstlisting}
+      ((* else *))
+        \begin{itemize}
+          \item ((( loop(input["type"]) )))
+        \end{itemize}
+      ((* endif *))
+    ((* endif *))
+  ((* endfor *))
+\end{itemize}
+
+\subsubsection*{Outputs:}
+\begin{itemize}
+  ((* for output in services[service]["outputs"] recursive *))
+    ((* if "name" in output *))
+      \item \texttt{((( output["name"]|escape_tex )))}: ((( output["comment"]|escape_tex )))
+      ((* if output["type"] is string *))
+\begin{lstlisting}
+(((output["json"])))
+\end{lstlisting}
+      ((* else *))
+        \begin{itemize}
+          \item ((( loop(output["type"]) )))
+        \end{itemize}
+      ((* endif *))
+    ((* endif *))
+  ((* endfor *))
+\end{itemize}
+
+((* endfor *))
