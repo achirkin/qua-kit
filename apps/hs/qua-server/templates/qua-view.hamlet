@@ -52,8 +52,11 @@ $#  Popup windows
 ^{popupHelp urole}
 ^{uiButtonsSubmitPopup}
 $if showFull
-  ^{popupSave}
   ^{popupScenarioList}
 
-<script type="text/javascript">
-  \$( document ).ready(function() { $('#popuphelp').modal('show'); } );
+$if qua_view_mode /= "view"
+  <script type="text/javascript">
+    \$( document ).ready(function() { $('#popuphelp').modal('show'); } );
+$else
+  <script type="text/javascript">
+    toggleGUIPanel();
