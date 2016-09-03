@@ -24,6 +24,7 @@
 /mooc/proposals/edit                EditProposalR GET
 /mooc/proposals/view/#ScenarioId    ViewProposalR GET
 /mooc/proposals/compare             CompareProposalsR GET
+/mooc/proposals/review/#ScenarioId  WriteReviewR POST
 /mooc/criteria/browse               CriteriaListR GET
 /mooc/criteria/img/#CriterionId     CriteriaImgR GET
 /renameme                           RenameMeR GET

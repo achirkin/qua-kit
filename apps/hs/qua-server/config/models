@@ -55,6 +55,8 @@ Review
     criterionId CriterionId
     positive    Bool
     comment     Text
+    timestamp   UTCTime default=CURRENT_TIMESTAMP
+    ReviewOf reviewerId scenarioId criterionId
 
 Criterion
     name         Text

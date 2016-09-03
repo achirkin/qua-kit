@@ -16,6 +16,9 @@ import qualified Yesod.Core.Unsafe as Unsafe
 --import qualified Data.CaseInsensitive as CI
 --import qualified Data.Text.Encoding as TE
 
+import Database.Persist.Sql (toSqlKey)
+import Data.Text.Read (decimal)
+
 import Text.Blaze (Markup)
 import qualified Data.Map.Strict as Map
 import Handler.Mooc.EdxLogin
@@ -284,4 +287,23 @@ setupEdxParams params = do
     pm = Map.fromList params
     saveCustomParams ek = mapM_ (\(k,v) -> void $ upsert (EdxResourceParam ek k v) []) $
                            map (first (drop 7)) $ filter (isPrefixOf "custom_". fst ) params
+
+
+
+requireSession :: Text -> Text -> Handler Text
+requireSession pam errstr = lookupSession pam >>= \mv -> case mv of
+    Nothing -> invalidArgsI [errstr]
+    Just v  -> return v
+
+
+requirePostParam :: Text -> Text -> Handler Text
+requirePostParam pam errstr = lookupPostParam pam >>= \mv -> case mv of
+    Nothing -> invalidArgsI [errstr]
+    Just v  -> return v
+
+
+parseSqlKey :: (ToBackendKey SqlBackend a) => Text -> Maybe (Key a)
+parseSqlKey t = case decimal t of
+    Right (i,_) -> Just $ toSqlKey i
+    _ -> Nothing
 

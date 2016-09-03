@@ -36,8 +36,14 @@ $# main panel GUI
         ^{panelServices}
     ^{luciConnectForm}
   $else
-    <div style="height: 100%">
+    <div style="max-height: 100%">
       ^{panelInfo}
+    $if canComment
+      <div>
+
+    <div style="overflow-y: scroll">
+      ^{commentsW}
+
 
   $#  console
   <div #consolediv>

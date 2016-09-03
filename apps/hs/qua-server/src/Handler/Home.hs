@@ -9,6 +9,7 @@ import Handler.Home.PanelServices
 import Handler.Home.PanelGeometry
 import Handler.Home.PanelInfo
 import Handler.Home.LuciConnect
+import Handler.Mooc.Comment
 
 getHomeR :: Handler Html
 getHomeR = renderQuaView
@@ -20,9 +21,20 @@ postHomeR = renderQuaView
 renderQuaView :: Handler Html
 renderQuaView = do
 
-  urole <- muserRole <$> maybeAuth
+  muser <- maybeAuth
+  let urole = muserRole muser
   qua_view_mode <- fromMaybe "full" <$> lookupSession "qua_view_mode"
   let showFull = qua_view_mode == "full"
+
+  mscId <- (>>= parseSqlKey) <$> lookupSession "scenario_id"
+  commentsW <- case mscId of
+    Just scId -> viewComments scId
+    Nothing -> return mempty
+  canComment <- if isNothing muser || isNothing mscId
+                then return False
+                else case mscId of
+    Nothing -> return False
+    Just scId -> ((entityKey <$> muser) /=) . fmap scenarioAuthorId <$> runDB (get scId)
 
   -- connecting form + conteiners for optional content
   (lcConnectedClass, lcDisconnectedClass, luciConnectForm) <- luciConnectPane

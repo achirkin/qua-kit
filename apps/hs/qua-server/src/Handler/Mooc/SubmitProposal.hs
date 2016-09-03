@@ -117,13 +117,3 @@ completelyNewOne img geometry desc = runMaybeT $ do
                      lis_result_sourcedid
                      t
 
-requireSession :: Text -> Text -> Handler Text
-requireSession pam errstr = lookupSession pam >>= \mv -> case mv of
-    Nothing -> invalidArgsI [errstr]
-    Just v  -> return v
-
-
-requirePostParam :: Text -> Text -> Handler Text
-requirePostParam pam errstr = lookupPostParam pam >>= \mv -> case mv of
-    Nothing -> invalidArgsI [errstr]
-    Just v  -> return v
