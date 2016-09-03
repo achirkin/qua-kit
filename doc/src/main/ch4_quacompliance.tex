@@ -2,6 +2,17 @@
 \label{ch:quacompliance}
 
 To make a service compliant for use in the QUA-Kit, a service is subject to additional constraints that are described here.
+A qua-view-complient service must support one or more of following working modes:
+\begin{itemize}
+\item 
+    \texttt{scenario} -- a service gets a scenario as input and returns a single result for a whole scenario;
+\item 
+    \texttt{objects} -- a service gets a scenario and ids of individual objects and returns a result per every object;
+\item 
+    \texttt{points} -- a service gets a scenario and a grid of points, and returns a result per each point on the grid;
+\item 
+    \texttt{new} -- a service updates or creates a new geometry.
+\end{itemize}
 
 \subsection{QUA-View-Compliance}
 
