@@ -88,16 +88,126 @@ type Icon = Text
 type UserName = Text
 
 writeCommentFormW :: ScenarioId -> [Entity Criterion] -> Widget
-writeCommentFormW scId criteria = [whamlet|
-    <div.card>
-      <div.card-main>
-        <div.card-inner>
-        <div.card-action>
+writeCommentFormW scId criteria = do
+  toWidgetHead [cassius|
+    div.card-comment.card
+      padding: 0
+    div.card-comment.card-main
+      padding: 0
+      margin: 0
+    div.card-comment.card-inner
+      padding: 2px
+      margin: 0
+    div.card-comment.card-action
+      padding: 4px
+      margin: 0
+      min-height: 28px
+    span.card-comment.card-criterion
+      height: 24px
+      width: 24px
+      margin: 0px 4px 0px 4px
+      padding: 0px
+      float: left
+      opacity: 0.3
+    span.card-comment.card-criterion:hover
+      opacity: 1.0
+      cursor: pointer
+    span.card-comment.icon
+      height: 24px
+      width: 24px
+      font-size: 16px
+      padding: 4px
+      margin: 0px 2px 0px 2px
+      float: left
+      opacity: 0.3
+    span.card-comment
+      height: 24px
+      width: 24px
+      font-size: 16px
+      padding: 4px
+      margin: 0px 2px 0px 2px
+      float: left
+    span.card-comment:hover
+      opacity: 1.0
+    span.card-comment.icon:hover
+      opacity: 1.0
+      cursor: pointer
+    a.card-comment.btn
+      height: 24px
+      padding: 4px
+      font-size: 16px
+      float: right
+      display: none
+    div.card-comment.form-group
+      margin: 16px 4px 4px 4px
+    #voteinfo
+      margin: 2px
+      padding: 2px
+  |]
+  toWidgetHead [julius|
+    function submitComment(){
+        $.post(
+          { url: '@{WriteReviewR scId}'
+          , data: $('#commentForm').serialize()
+          , success: function(result){
+                  console.log(result);
+               }
+          });
+    }
+    var voteSet = false, critSet = false;
+    function voteCriterion(criterionId, criterionName) {
+      $('#criterionIdI').val(criterionId);
+      $('#voteCName').text(criterionName);
+      $('span.card-comment.card-criterion').css('opacity','0.3');
+      $('#cspan' + criterionId).css('opacity','1.0');
+      critSet = true;
+      checkVote();
+    }
+    function setUpvote() {
+      $('#criterionValI').val(1);
+      $('#voteIndication').text('Upvote ');
+      $('#downvoteSpan').css('opacity','0.3');
+      $('#upvoteSpan').css('opacity','1.0');
+      voteSet = true;
+      checkVote();
+    }
+    function setDownvote() {
+      $('#criterionValI').val(0);
+      $('#voteIndication').text('Downvote ');
+      $('#downvoteSpan').css('opacity','1.0');
+      $('#upvoteSpan').css('opacity','0.3');
+      voteSet = true;
+      checkVote();
+    }
+    function checkVote() {
+      if(voteSet && critSet) {
+        $('#voteSubmit').show();
+      }
+    }
+  |]
+  toWidgetBody [hamlet|
+    <div.card-comment.card>
+      <div.card-comment.card-main>
+        <div.card-comment.card-inner>
+          <form #commentForm method="post">
+            <input type="hidden" #criterionIdI name="criterion">
+            <input type="hidden" #criterionValI name="val">
+            <div.card-comment.form-group.form-group-label>
+              <label.floating-label for="commentI">Write a review
+              <textarea.form-control.textarea-autosize form="commentForm" id="commentI" rows="1" name="comment">
+            <p.card-comment #voteinfo>
+              <span #voteIndication>
+              <span #voteCName>
+        <div.card-comment.card-action>
           $forall (Entity cId criterion) <- criteria
-            <span criterion="#{fromSqlKey cId}" style="opacity: 0.7;">
+            <span.card-comment.card-criterion onclick="voteCriterion(#{fromSqlKey cId},'#{criterionName criterion}')" id="cspan#{fromSqlKey cId}">
               #{preEscapedToMarkup $ criterionIcon criterion}
-          <span.icon>thumb_up
-          <span.icon>thumb_down
+          <span.card-comment>&nbsp;
+          <span.card-comment.icon #upvoteSpan onclick="setUpvote()">thumb_up
+          <span.card-comment.icon #downvoteSpan onclick="setDownvote()">thumb_down
+          <a.card-comment.btn.btn-flat.btn-brand-accent.waves-attach.waves-effect #voteSubmit onclick="submitComment()">
+            <span.icon>check
+            Send
   |]
 
 commentW :: Icon -> UserName -> Review -> Widget

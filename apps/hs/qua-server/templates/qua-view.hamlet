@@ -38,10 +38,7 @@ $# main panel GUI
   $else
     <div style="max-height: 100%">
       ^{panelInfo}
-    $if canComment
-      <div>
-
-    <div style="overflow-y: scroll">
+    <div>
       ^{commentsW}
 
 

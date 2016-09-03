@@ -113,7 +113,6 @@ $doctype 5
                 \           }});
                 \    $('#ui_renameme_dialog').modal('hide');
                 \});
-                onclick="window.location.replace('@{RenameMeR}?newname=' + document.getElementById('ui_renameme_inputvalue').value)"
 
 
     <!-- material ui  js -->
