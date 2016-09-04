@@ -305,22 +305,12 @@ getReviews scId = rawSql query [toPersistValue scId]
           ,"        ON \"user\".id = review.reviewer_id"
           ,"INNER JOIN \"criterion\""
           ,"        ON \"criterion\".id = review.criterion_id"
-          ,"WHERE review.scenario_id = ?"
+          ,"WHERE review.scenario_id IN ("
+          ,"    SELECT scenario.id FROM scenario"
+          ,"    INNER JOIN (SELECT scenario.author_id, scenario.task_id FROM scenario WHERE scenario.id = ?) t"
+          ,"            ON scenario.task_id = t.task_id AND scenario.author_id = t.author_id)"
           ,"ORDER BY review.timestamp DESC;"
           ]
 
 
---Criterion
---    name         Text
---    description  Text
---    image        ByteString
---    icon         Text
---    CriterionDef name
 
---Review
---    reviewerId  UserId
---    scenarioId  ScenarioId
---    criterionId CriterionId
---    positive    Bool
---    comment     Text
---    ReviewOf reviewerId scenarioId criterionId
