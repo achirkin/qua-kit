@@ -13,6 +13,7 @@
 
 /about                              AboutR GET
 /feedback                           FeedbackR GET
+/feedback/post                      SubmitFeedbackR POST
 /admin                              AdminR GET
 
 /                                   MoocHomeR GET POST

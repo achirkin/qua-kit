@@ -91,6 +91,10 @@ Rating
     value       Double
     RatingOf authorId problemId criterionId
 
+Feedback
+    authorId    UserId Maybe
+    text        Text
+
 UserScenarioAction
     authorId     UserId
     scenarioId   ScenarioProblemId
