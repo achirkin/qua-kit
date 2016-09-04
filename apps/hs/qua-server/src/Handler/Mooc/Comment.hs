@@ -19,6 +19,7 @@ module Handler.Mooc.Comment
 
 
 import Import
+import Control.Monad.Trans.Except
 import Database.Persist.Sql (fromSqlKey, rawSql, Single(..))
 import qualified Data.Text as Text
 
@@ -27,36 +28,68 @@ import qualified Data.Text as Text
 --   * val - criterion good or bad (1 or 0)
 --   * comment - textual comment
 postWriteReviewR :: ScenarioId -> Handler Value
-postWriteReviewR scenarioId = do
-    userId <- requireAuthId
-    mcriterionId <- parseSqlKey <$> requirePostParam "criterion" "You must specify one criterion you review."
-    criterionVal <- ("1" ==) <$> requirePostParam "val" "You must specify one criterion you review."
-    comment <- fromMaybe "" <$> lookupPostParam "comment"
-    criterionId <- case mcriterionId of
-        Nothing -> invalidArgsI ["You must specify one criterion you review."::Text]
-        Just i -> return i
+postWriteReviewR scenarioId = runJSONExceptT $ do
+    userId <- maybeE "You must login to review." maybeAuthId
+    criterionId <- maybeE "You must specify one criterion you review." $
+      (>>= parseSqlKey) <$> lookupPostParam "criterion"
+    criterionVal <- fmap ("1" ==) $
+      maybeE "You must specify one criterion you review." $
+      lookupPostParam "val"
+    comment <- lift $ fromMaybe "" <$> lookupPostParam "comment"
+
     t <- liftIO getCurrentTime
-    runDB $ do
-      scenario <- get404 scenarioId
-      when (userId == scenarioAuthorId scenario) $ invalidArgsI ["You cannot review yourself!"::Text]
-      getBy (ReviewOf userId scenarioId criterionId) >>= \mr ->
-        when (isJust mr)
-             (invalidArgsI ["You have already voted this exact design according to this criterion"::Text])
-      insert_ $ Review userId scenarioId criterionId criterionVal comment t
+    ExceptT $ runDB $ runExceptT $ do
+      scenario <- maybeE "Cannot find a correcsponding scenario." $ get scenarioId
+      when (userId == scenarioAuthorId scenario) $
+        throwE "You cannot review yourself!"
+      oreview <- lift $ getBy (ReviewOf userId scenarioId criterionId)
+      when (isJust oreview) $
+        throwE "You have already voted on this exact design according w.r.t. this criterion."
+      lift $ insert_ $ Review userId scenarioId criterionId criterionVal comment t
     return $ object [ "criterion" .= fromSqlKey criterionId
                     , "val" .= Number (if criterionVal then 1 else 0)
                     , "comment" .= comment
                     , "timestamp" .= t]
 
-viewComments :: ScenarioId -> Handler Widget
-viewComments scId = runDB $ do
-    criteria <- selectList [] []
-    wrapIt criteria . foldl' (
-      \w (Single icon, Single name, Entity _ r) -> w <> commentW icon name r
-     ) mempty <$> getReviews scId
+
+maybeE :: (Monad m) => Text -> m (Maybe a) -> ExceptT Text m a
+maybeE errtxt m = ExceptT $ m >>= \mv -> case mv of
+  Nothing -> return $ Left errtxt
+  Just v  -> return $ Right v
+
+runJSONExceptT :: ExceptT Text Handler Value -> Handler Value
+runJSONExceptT m = f <$> runExceptT m
   where
-    wrapIt criteria w = do
+    f (Left err) = object ["error" .= err]
+    f (Right v ) = v
+
+viewComments :: ScenarioId -> Handler Widget
+viewComments scId = do
+    muserId <- maybeAuthId
+    runDB $ do
+      mscenario <- get scId
+      case mscenario of
+        Nothing -> return mempty
+        Just sc -> do
+          let canComment = case muserId of
+                Nothing -> False
+                Just uId -> uId /= scenarioAuthorId sc
+          criteria <- selectList [] []
+          wrapIt (scenarioDescription sc) canComment criteria . foldl' (
+            \w (Single icon, Single name, Entity _ r) -> w <> commentW icon name r
+           ) mempty <$> getReviews scId
+  where
+    wrapIt desc canComment criteria w = do
       toWidgetHead [cassius|
+        div.card-comment.card
+          padding: 0
+        div.card-comment.card-main
+          padding: 0
+          margin: 0
+        div.card-comment.card-inner
+          padding: 2px
+          margin: 0
+          min-height: 40px
         p.small-p > span.icon24
           height: 24px
           width: 24px
@@ -75,12 +108,34 @@ viewComments scId = runDB $ do
         .comment-table
           margin: 5px 5px 5px 20px
           padding: 0px
+        #commentContainer
+          overflow-x: visible
+          overflow-y: auto
+          margin: -1px
+          padding: 1px
+      |]
+      toWidgetHead [julius|
+        $(document).ready(function() {
+          var nh = $(window).height() - $('#commentContainer').offset().top,
+              oh = $('#commentContainer').height();
+          if (nh < oh) {
+            $('#commentContainer').css("margin-right", "-8px");
+            $('#commentContainer').height(nh);
+          }
+        });
       |]
       [whamlet|
         <div.comment-table>
-          ^{writeCommentFormW scId criteria}
-          <table.table>
-            ^{w}
+          <div.card-comment.card>
+            <div.card-comment.card-main>
+              <div.card-comment.card-inner>
+                <p style="white-space: pre-line; margin: 2px;">
+                  #{desc}
+          $if canComment
+            ^{writeCommentFormW scId criteria}
+          <div #commentContainer>
+            <table.table style="margin-top: 0px;">
+              ^{w}
       |]
 
 
@@ -90,14 +145,6 @@ type UserName = Text
 writeCommentFormW :: ScenarioId -> [Entity Criterion] -> Widget
 writeCommentFormW scId criteria = do
   toWidgetHead [cassius|
-    div.card-comment.card
-      padding: 0
-    div.card-comment.card-main
-      padding: 0
-      margin: 0
-    div.card-comment.card-inner
-      padding: 2px
-      margin: 0
     div.card-comment.card-action
       padding: 4px
       margin: 0
@@ -150,11 +197,27 @@ writeCommentFormW scId criteria = do
           { url: '@{WriteReviewR scId}'
           , data: $('#commentForm').serialize()
           , success: function(result){
-                  console.log(result);
-               }
+                resetAllComment();
+                $("body").snackbar({
+                  content: (result.error ? result.error : "Review sent. Refresh the page to see it.")
+                });
+            }
           });
     }
     var voteSet = false, critSet = false;
+    function resetAllComment() {
+      voteSet = false;
+      critSet = false;
+      $('#criterionIdI').val(undefined);
+      $('#criterionValI').val(undefined);
+      $('#commentI').val('');
+      $('#voteCName').text('');
+      $('#voteIndication').text('');
+      $('span.card-comment.card-criterion').css('opacity','0.3');
+      $('#downvoteSpan').css('opacity','0.3');
+      $('#upvoteSpan').css('opacity','0.3');
+      checkVote();
+    }
     function voteCriterion(criterionId, criterionName) {
       $('#criterionIdI').val(criterionId);
       $('#voteCName').text(criterionName);
@@ -182,6 +245,8 @@ writeCommentFormW scId criteria = do
     function checkVote() {
       if(voteSet && critSet) {
         $('#voteSubmit').show();
+      } else {
+        $('#voteSubmit').hide();
       }
     }
   |]

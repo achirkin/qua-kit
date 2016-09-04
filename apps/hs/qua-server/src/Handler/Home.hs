@@ -30,11 +30,18 @@ renderQuaView = do
   commentsW <- case mscId of
     Just scId -> viewComments scId
     Nothing -> return mempty
-  canComment <- if isNothing muser || isNothing mscId
-                then return False
-                else case mscId of
-    Nothing -> return False
-    Just scId -> ((entityKey <$> muser) /=) . fmap scenarioAuthorId <$> runDB (get scId)
+
+  showHelp <- if qua_view_mode == "view"
+              then return False
+              else case muser of
+      Nothing -> return True
+      Just (Entity uid _) -> runDB $ do
+        mx <- getBy $ UserProperty uid "qua-view-show-help"
+        case mx of
+          Just (Entity _ (UserProp _ _ "false")) -> return False
+          _ -> do
+            _ <- upsert (UserProp uid "qua-view-show-help" "false") [UserPropValue =. "false"]
+            return True
 
   -- connecting form + conteiners for optional content
   (lcConnectedClass, lcDisconnectedClass, luciConnectForm) <- luciConnectPane

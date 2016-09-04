@@ -57,9 +57,11 @@ $#  Popup windows
 $if showFull
   ^{popupScenarioList}
 
-$if qua_view_mode /= "view"
+
+$if showHelp
   <script type="text/javascript">
     \$( document ).ready(function() { $('#popuphelp').modal('show'); } );
-$else
+
+$if qua_view_mode == "view"
   <script type="text/javascript">
     toggleGUIPanel();

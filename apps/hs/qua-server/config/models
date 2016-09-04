@@ -8,6 +8,14 @@ User
     EdxUserId edxUserId !force
     deriving Show
 
+-- | Additional user properties
+UserProp
+    userId UserId
+    key    Text
+    value  Text
+    UserProperty userId key
+    deriving Show
+
 -- | Normally a course unit
 EdxResource
     linkId       Text
