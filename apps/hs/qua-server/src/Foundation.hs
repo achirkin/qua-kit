@@ -16,7 +16,7 @@ import qualified Yesod.Core.Unsafe as Unsafe
 --import qualified Data.CaseInsensitive as CI
 --import qualified Data.Text.Encoding as TE
 
-import Database.Persist.Sql (toSqlKey)
+import Database.Persist.Sql (toSqlKey, rawSql, Single(..))
 import Data.Text.Read (decimal)
 
 import Text.Blaze (Markup)
@@ -307,4 +307,51 @@ parseSqlKey t = case decimal t of
     Right (i,_) -> Just $ toSqlKey i
     _ -> Nothing
 
+
+
+findLatestReviews :: ReaderT SqlBackend Handler [( ScenarioProblemId
+                                                 , UserId
+                                                 , Int
+                                                 , CriterionId
+                                                 , Bool)]
+findLatestReviews = fmap getVal <$> rawSql query []
+  where
+    getVal (Single a, Single b, Single c, Single d, Single e) = (a,b,c,d,e)
+    query = Text.unlines
+        ["SELECT t.task_id,t.author_id,t.newers,review.criterion_id,review.positive"
+        ,"FROM review"
+        ,"INNER JOIN"
+        ,"(SELECT review.reviewer_id,review.criterion_id,"
+        ,"    MAX(review.timestamp) as lasttime,"
+        ,"    SUM(case when review.timestamp < scenario.last_update then 1 else 0 end) as newers,"
+        ,"    scenario.task_id, scenario.author_id"
+        ,"FROM review"
+        ,"INNER JOIN scenario"
+        ,"        ON scenario.id = review.scenario_id"
+        ,"GROUP BY review.reviewer_id,review.criterion_id, scenario.task_id, scenario.author_id) t"
+        ,"ON review.timestamp = t.lasttime AND review.reviewer_id = t.reviewer_id AND review.criterion_id = t.criterion_id;"]
+
+
+--SELECT tb.task_id,tb.author_id,tb.newers,tw.task_id,tw.author_id,tw.newers,vote.criterion_id
+--FROM vote
+--INNER JOIN
+--(SELECT vote.voter_id,vote.criterion_id,
+--    MAX(vote.timestamp) as lasttime,
+--    SUM(case when vote.timestamp < scenario.last_update then 1 else 0 end) as newers,
+--    scenario.task_id, scenario.author_id
+--FROM vote
+--INNER JOIN scenario
+--        ON scenario.id = vote.better_id
+--GROUP BY vote.voter_id,vote.criterion_id, scenario.task_id, scenario.author_id) tb
+--ON vote.timestamp = tb.lasttime AND vote.voter_id = tb.voter_id AND vote.criterion_id = tb.criterion_id
+--INNER JOIN
+--(SELECT vote.voter_id,vote.criterion_id,
+--    MAX(vote.timestamp) as lasttime,
+--    SUM(case when vote.timestamp < scenario.last_update then 1 else 0 end) as newers,
+--    scenario.task_id, scenario.author_id
+--FROM vote
+--INNER JOIN scenario
+--        ON scenario.id = vote.worse_id
+--GROUP BY vote.voter_id,vote.criterion_id, scenario.task_id, scenario.author_id) tw
+--ON vote.timestamp = tw.lasttime AND vote.voter_id = tw.voter_id AND vote.criterion_id = tw.criterion_id;
 
