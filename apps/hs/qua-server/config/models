@@ -85,11 +85,14 @@ Vote
     timestamp     UTCTime default=CURRENT_TIMESTAMP
 
 Rating
-    authorId    UserId
     problemId   ScenarioProblemId
     criterionId CriterionId
+    authorId    UserId
     value       Double
     RatingOf authorId problemId criterionId
+    deriving Eq
+    deriving Ord
+    deriving Show
 
 Feedback
     authorId    UserId Maybe

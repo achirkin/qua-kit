@@ -86,6 +86,8 @@ library
         Import.NoFoundation
         Model
         Model.CustomTypes
+        Model.Generated
+        Model.Rating
         Settings
         Settings.StaticFiles
     build-depends:
