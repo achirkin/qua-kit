@@ -24,6 +24,6 @@
 
 ```
 sudo apt-get install -y make python-jinja2 python-bs4 latexmk
-sudo apt-get install -y texlive-latex-recommended texlive-latex-extra texlive-science
+sudo apt-get install -y texlive-latex-recommended texlive-latex-extra texlive-science texlive-pictures
 make
 ```

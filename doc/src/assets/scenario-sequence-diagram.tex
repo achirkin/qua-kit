@@ -1,0 +1,20 @@
+\documentclass[tikz]{standalone}
+\usepackage{pgf-umlsd}
+\begin{document}
+\begin{sequencediagram}
+\newinst{remoteregister}{RemoteRegister:DefaultService}
+\newinst{scenario}{Scenario:DefaultService}
+\newinst{service}{SampleService:CustomService}
+\newinst{luci}{Luci}
+\newinst{client}{SampleClient:Client}
+\begin{call}{service}{run: "RemoteRegister"}{luci}{result}
+  \begin{call}{luci}{run: "RemoteRegister"}{remoteregister}{result}
+  \end{call}
+\end{call}
+
+\begin{call}{client}{run: "SampleService"}{luci}{result}
+  \begin{call}{luci}{run: "SampleService"}{service}{result}
+  \end{call}
+\end{call}
+\end{sequencediagram}
+\end{document}
