@@ -56,6 +56,9 @@ import Handler.LoggingWS
 
 import Handler.Mooc.Tests
 
+import Model.Rating
+
+import qualified Data.Map.Strict as Map
 
 -- This line actually creates our YesodDispatch instance. It is the second half
 -- of the call to mkYesodData which occurs in Foundation.hs. Please see the
@@ -118,9 +121,40 @@ makeFoundation appSettings = do
       _ <- upsert (Criterion "Aesthetic" "The district should look attractive." sctaskpreview criteriaIconAesthetic) []
       return ()
 
+    flip runSqlPool pool $
+      updateRatings
+       ( foldl' (\x (dt,dn,p) -> if p then x+1 else x-1) 0
+       )
+       ( Map.toList .  foldl' (\hm (dt, (u1,c1), (u2,c2)) -> Map.alter (Just . (+(-1)) . fromMaybe 0) u2 $ Map.alter (Just . (+1) . fromMaybe 0) u1 hm) Map.empty
+       )
+       ( combR
+       )
 
     -- Return the foundation
     return $ mkFoundation pool
+  where
+    combR (_,_,Nothing) (_,_,Nothing) = error "Impossible: both ratings not here."
+    combR (n,i,Just (Rating pid cid uid v)) (_,_,Nothing) = Rating pid cid uid (max 0 v)
+    combR (_,_,Nothing) (n,i,Just (Rating pid cid uid v)) = Rating pid cid uid (max 0 v)
+    combR (n,i,Just (Rating pid cid uid v)) (m,j,Just (Rating _ _ _ u))
+      = let cv = fromIntegral $ i * m
+            cu = fromIntegral $ j * n
+        in Rating pid cid uid $ (cv * max 0 v + cu * max 0 u) / (cv + cu)
+
+
+
+--updateRatings :: MonadIO a
+--              => ([(DiffTime,NDCount,Bool)] -> Double)
+--              -- ^ How to evaluate review rating of a design given time since vote,
+--              --    number of new versions since vote, and vote value [for all relevant votes]
+--              -> ([(DiffTime, (UserId, NDCount), (UserId, NDCount))] -> [(UserId,Double)])
+--              -- ^ How to evaluate comparison rating of all designs given a series of votes
+--              --   {time since vote, better design id and nr of versions, worse design id and nr of versions}
+--              -> ((Int, Int, Maybe Rating) -> (Int, Int, Maybe Rating) -> Rating)
+--              -- ^ How to combine review (first) and comarison (second) ratings.
+--              --   Each triple is (overall number of votes, number of votes for this design, rating value)
+
+
 
 -- | Convert our foundation to a WAI Application by calling @toWaiAppPlain@ and
 -- applying some additional middlewares.
