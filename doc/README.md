@@ -16,6 +16,7 @@
    * msc
    * paralist
    * parskip
+   * pgf-umlsd
    * subcaption
    * url
    * wrapfig
