@@ -13,6 +13,7 @@ module Application
     , db
     ) where
 
+import Data.Time.Clock (DiffTime)
 import Control.Monad.Logger                 (liftLoc, runLoggingT)
 import Database.Persist.Sql
 import Import
@@ -121,39 +122,57 @@ makeFoundation appSettings = do
       _ <- upsert (Criterion "Aesthetic" "The district should look attractive." sctaskpreview criteriaIconAesthetic) []
       return ()
 
-    flip runSqlPool pool $
-      updateRatings
-       ( foldl' (\x (dt,dn,p) -> if p then x+1 else x-1) 0
-       )
-       ( Map.toList .  foldl' (\hm (dt, (u1,c1), (u2,c2)) -> Map.alter (Just . (+(-1)) . fromMaybe 0) u2 $ Map.alter (Just . (+1) . fromMaybe 0) u1 hm) Map.empty
-       )
-       ( combR
-       )
+    -- | Update ratings once in an hour
+    flip runSqlPool pool $ scheduleUpdateRatings 3600 reviewRating compareRating combR
 
     -- Return the foundation
     return $ mkFoundation pool
   where
-    combR (_,_,Nothing) (_,_,Nothing) = error "Impossible: both ratings not here."
-    combR (n,i,Just (Rating pid cid uid v)) (_,_,Nothing) = Rating pid cid uid (max 0 v)
-    combR (_,_,Nothing) (n,i,Just (Rating pid cid uid v)) = Rating pid cid uid (max 0 v)
-    combR (n,i,Just (Rating pid cid uid v)) (m,j,Just (Rating _ _ _ u))
-      = let cv = fromIntegral $ i * m
-            cu = fromIntegral $ j * n
-        in Rating pid cid uid $ (cv * max 0 v + cu * max 0 u) / (cv + cu)
 
+    reviewRating :: [(DiffTime,NDCount,Bool)] -> Double
+    reviewRating = min 1 . max 0 . (+0.4) . uncurry (/) . second (max 1) . foldl' (\(x, a) (_dt,dn,p) -> let d = vote dn in (if p then x + d else x - d, a+d)) (0,0)
+      where
+        vote = recip . fromIntegral . (+1)
 
+    compareRating :: [(DiffTime, (UserId, NDCount), (UserId, NDCount))] -> [(UserId,Double)]
+    compareRating xs = normalize . Map.toList $ foldl' updateHM Map.empty xs
+      where
+        n = fromIntegral $ length xs
+        vote = recip . fromIntegral . (+1)
+        updateHMNaive hm (_dt, (u1,dn1), (u2,dn2)) = Map.alter (Just . (+(- vote dn2)) . fromMaybe 0) u2 $ Map.alter (Just . (+vote dn1) . fromMaybe 0) u1 hm
+        naiveMap :: Map.Map UserId Double
+        naiveMap = foldl' updateHMNaive Map.empty xs
+        updateHM :: Map.Map UserId Double -> (DiffTime, (UserId, NDCount), (UserId, NDCount)) -> Map.Map UserId Double
+        updateHM hm (_dt, (u1,dn1), (u2,dn2)) = let v1 = fromMaybe 0 $ Map.lookup u1 naiveMap
+                                                    v2 = fromMaybe 0 $ Map.lookup u2 naiveMap
+                                                    v1' = v1 + vote dn1 * v2 / n
+                                                    v2' = v2 - vote dn2 * v1 / n
+                                                in Map.alter (const $ Just v1') u1 $ Map.alter (const $ Just v2') u2 hm
+        minmax (l,u) ((_,v):ss) = minmax (min l v, max u v) ss
+        minmax b [] = b
+        normalize ss = let (l,u) = minmax (0, 1) ss
+                           s = u-l
+                       in map (second (\x -> max 0.1 . min 1 $ (x - l) / s)) ss
 
---updateRatings :: MonadIO a
---              => ([(DiffTime,NDCount,Bool)] -> Double)
---              -- ^ How to evaluate review rating of a design given time since vote,
---              --    number of new versions since vote, and vote value [for all relevant votes]
---              -> ([(DiffTime, (UserId, NDCount), (UserId, NDCount))] -> [(UserId,Double)])
---              -- ^ How to evaluate comparison rating of all designs given a series of votes
---              --   {time since vote, better design id and nr of versions, worse design id and nr of versions}
---              -> ((Int, Int, Maybe Rating) -> (Int, Int, Maybe Rating) -> Rating)
---              -- ^ How to combine review (first) and comarison (second) ratings.
---              --   Each triple is (overall number of votes, number of votes for this design, rating value)
+    combR :: (Int, Int, Maybe Rating) -> (Int, Int, Maybe Rating) -> Rating
+    combR (_,_,Nothing) (_,_,Nothing) = error "[combR] Impossible: both ratings not here."
+    combR (n,i,Just (Rating pid cid uid v)) (_,_,Nothing) = Rating pid cid uid $ filterV n i v
+    combR (_,_,Nothing) (m,j,Just (Rating pid cid uid v)) = Rating pid cid uid $ filterV m j v
+    combR rv@(n,i,Just (Rating pid cid uid v)) ru@(m,j,Just (Rating _ _ _ u))
+        | n >= minNn && i >= minNi = combR (n,i, Nothing) ru
+        | m >= minNn && j >= minNi = combR rv (m,j, Nothing)
+        | otherwise = let cv = fromIntegral $ i * m
+                          cu = fromIntegral $ j * n
+                      in Rating pid cid uid $ (cv * v + cu * u) / (cv + cu)
+    filterV n i x = if n >= minNn && i >= minNi then x else 0
 
+-- mininum number of votes for this particular design to participate
+minNi :: Int
+minNi = 2
+
+-- minimum number of votes for a criterion to participate
+minNn :: Int
+minNn = 5
 
 
 -- | Convert our foundation to a WAI Application by calling @toWaiAppPlain@ and

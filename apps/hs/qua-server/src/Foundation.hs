@@ -23,7 +23,6 @@ import Text.Blaze (Markup)
 import qualified Data.Map.Strict as Map
 import Handler.Mooc.EdxLogin
 
-import Model.Rating
 
 -- | The foundation datatype for your application. This can be a good place to
 -- keep settings and values requiring initialization before your application

@@ -11,7 +11,8 @@
 -----------------------------------------------------------------------------
 
 module Model.Rating
-  ( updateRatings
+  ( updateRatings, NDCount (..)
+  , scheduleUpdateRatings
   ) where
 
 
@@ -19,6 +20,8 @@ import Import.NoFoundation
 import Database.Persist.Sql (rawSql, Single(..))
 import qualified Data.Text as Text
 import Data.Time.Clock
+import Control.Concurrent (forkIO)
+import Control.Monad.Trans.Control
 
 --Rating
 --    authorId    UserId
@@ -30,6 +33,25 @@ import Data.Time.Clock
 -- | Number of submissions of a certain design later than a date specified
 newtype NDCount = NDCount Int
   deriving (Eq,Ord,Show,Enum,Num,Real,Integral,PersistField)
+
+-- | Update ratings for all designs based on several rules every n seconds
+scheduleUpdateRatings :: Int
+                      -- ^ time interval in seconds
+                      -> ([(DiffTime,NDCount,Bool)] -> Double)
+                      -- ^ How to evaluate review rating of a design given time since vote,
+                      --    number of new versions since vote, and vote value [for all relevant votes]
+                      -> ([(DiffTime, (UserId, NDCount), (UserId, NDCount))] -> [(UserId,Double)])
+                      -- ^ How to evaluate comparison rating of all designs given a series of votes
+                      --   {time since vote, better design id and nr of versions, worse design id and nr of versions}
+                      -> ((Int, Int, Maybe Rating) -> (Int, Int, Maybe Rating) -> Rating)
+                      -- ^ How to combine review (first) and comarison (second) ratings.
+                      --   Each triple is (overall number of votes, number of votes for this design, rating value)
+                      -> ReaderT SqlBackend IO ()
+scheduleUpdateRatings dt rf cf combinef = liftBaseWith $ \run -> void . forkIO . forever $ do
+     run $ updateRatings rf cf combinef
+     threadDelay dts
+  where
+    dts = dt * 1000000
 
 
 -- | Update ratings for all designs based on several rules.
@@ -46,7 +68,11 @@ updateRatings :: MonadIO a
               -> ReaderT SqlBackend a ()
 updateRatings rf cf combinef = do
     rr <- groups . sortOn fst <$> calculateReviewRatings rf
+--    liftIO $ mapM_ (mapM_ (\(Rating pid cid uid v, i) -> print (fromSqlKey pid, fromSqlKey cid, fromSqlKey uid, v, i))) rr
+--    liftIO $ putStrLn "------------------"
     cr <- groups . sortOn fst <$> calculateComparisonRatings cf
+--    liftIO $ mapM_ (mapM_ (\(Rating pid cid uid v, i) -> print (fromSqlKey pid, fromSqlKey cid, fromSqlKey uid, v, i))) cr
+--    liftIO $ putStrLn "------------------"
     deleteWhere ([] :: [Filter Rating])
     insertMany_ $ groupCombine rr cr
   where
@@ -105,8 +131,7 @@ calculateComparisonRatings f = do
     ratingTemplates [] = []
     groups = groupBy (\x y -> fst x == fst y)
     countv :: [(UserId,Double)] -> [(DiffTime, (UserId, NDCount), (UserId, NDCount))] -> [(UserId,Double, Int)]
-    countv ((userId, val):xs) ys = let (vs, ys') = partition (inhere userId) ys
-                                  in (userId, val, length vs) : countv xs ys'
+    countv ((userId, val):xs) ys = (userId, val, length $ filter (inhere userId) ys) : countv xs ys
     countv [] _ = []
     inhere i (_, (j,_), (k,_)) = i == j || i == k
 
