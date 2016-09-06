@@ -98,9 +98,20 @@ Feedback
     authorId    UserId Maybe
     text        Text
 
+UserScenarioLoad
+    authorId     UserId Maybe
+    scenarioId   ScenarioProblemId Maybe
+    timestamp    UTCTime default=CURRENT_TIMESTAMP
+    geometry     Text
+    scale        Double
+
+UserScenarioUpdate
+    loaded       UserScenarioLoadId
+    timestamp    UTCTime default=CURRENT_TIMESTAMP
+    geometry     Text
+
 UserScenarioAction
-    authorId     UserId
-    scenarioId   ScenarioProblemId
+    loaded       UserScenarioLoadId
     timestamp    UTCTime default=CURRENT_TIMESTAMP
     geomId       Int
     x11 Double
