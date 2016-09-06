@@ -2,7 +2,6 @@ all: assets pdf
 
 assets:
 	latexmk -pdf src/assets/binary-message-format -synctex=1 -outdir=bin/assets
-	latexmk -pdf src/assets/scenario-sequence-diagram -synctex=1 -outdir=bin/assets
 	python src/scripts/generate_luci_documentation.py \
 	  src/scripts/assets/documentation.html \
 	  src/appendix/builtinservices.tex
