@@ -171,4 +171,13 @@ dynamic geometry can be edited, static geometry is only used for evaluation and 
 Thus, I propose an optional property \texttt{static:\color{blue}boolean}.
 Absence of a property implies \texttt{static:\color{brown}false}.
 
+\subsubsection{Example for Scenario Usage}
+\label{ch:scenarios:example}
+The following example illustrates a service registering to Luci and being subsequently called by a client. The service queries a scenario from the scenario service and returns some analysis result to the client.
+\begin{figure}[h!]
+	\centering
+	\includegraphics[width=\textwidth]{bin/assets/scenario-sequence-diagram.pdf}
+	\caption{A SampleService that analyzes a scenario registers itself to Luci and is called by client as UML sequence diagram.}
+\end{figure}
+\vfill
 \clearpage
