@@ -13,6 +13,7 @@ module Application
     , db
     ) where
 
+
 import Data.Time.Clock (DiffTime)
 import Control.Monad.Logger                 (liftLoc, runLoggingT)
 import Database.Persist.Sql
@@ -135,24 +136,48 @@ makeFoundation appSettings = do
         vote = recip . fromIntegral . (+1)
 
     compareRating :: [(DiffTime, (UserId, NDCount), (UserId, NDCount))] -> [(UserId,Double)]
-    compareRating xs = normalize . Map.toList $ foldl' updateHM Map.empty xs
+    compareRating xs = Map.toList $ iterN 10 naiveMap
       where
-        n = fromIntegral $ length xs
+        -- cumsum
+        nn = recip $ foldl' (\s (_, (_,dn1), (_,dn2)) -> s + vote dn1 + vote dn2) 0 xs / 2
+
+        -- discount votes with nr of versions passed since last vote
         vote = recip . fromIntegral . (+1)
+
+        -- at first, we naively count votes for and against each proposal
         updateHMNaive hm (_dt, (u1,dn1), (u2,dn2)) = Map.alter (Just . (+(- vote dn2)) . fromMaybe 0) u2 $ Map.alter (Just . (+vote dn1) . fromMaybe 0) u1 hm
         naiveMap :: Map.Map UserId Double
-        naiveMap = foldl' updateHMNaive Map.empty xs
-        updateHM :: Map.Map UserId Double -> (DiffTime, (UserId, NDCount), (UserId, NDCount)) -> Map.Map UserId Double
-        updateHM hm (_dt, (u1,dn1), (u2,dn2)) = let v1 = fromMaybe 0 $ Map.lookup u1 naiveMap
-                                                    v2 = fromMaybe 0 $ Map.lookup u2 naiveMap
-                                                    v1' = v1 + vote dn1 * v2 / n
-                                                    v2' = v2 - vote dn2 * v1 / n
-                                                in Map.alter (const $ Just v1') u1 $ Map.alter (const $ Just v2') u2 hm
-        minmax (l,u) ((_,v):ss) = minmax (min l v, max u v) ss
-        minmax b [] = b
-        normalize ss = let (l,u) = minmax (0, 1) ss
-                           s = u-l
-                       in map (second (\x -> max 0.1 . min 1 $ (x - l) / s)) ss
+        naiveMap = normMap $ foldl' updateHMNaive Map.empty xs
+
+        -- then we use this logic to iteratively come closer to solution
+        updateR (ob,ow) (cb,cw) = let diff = log (1 + exp (ow-ob)) * nn
+                                  in (cb + diff, cw - diff)
+
+        iterN 0 hm = hm
+        iterN n hm = hm `seq` iterN (n-1 :: Int) (updateAllHM hm)
+
+        updateAllHM hm = normMap $ foldl' (updateHM hm) hm xs
+
+        updateHM :: Map.Map UserId Double -> Map.Map UserId Double -> (DiffTime, (UserId, NDCount), (UserId, NDCount)) -> Map.Map UserId Double
+        updateHM ohm hm (_, (u1,_), (u2,_)) = let ov1 = fromMaybe 0 $ Map.lookup u1 ohm
+                                                  ov2 = fromMaybe 0 $ Map.lookup u2 ohm
+                                                  v1 = fromMaybe 0 $ Map.lookup u1 hm
+                                                  v2 = fromMaybe 0 $ Map.lookup u2 hm
+                                                  (v1', v2') = updateR (ov1,ov2) (v1,v2)
+                                              in Map.alter (const $ Just v1') u1 $ Map.alter (const $ Just v2') u2 hm
+
+--        evaluateL :: [(DiffTime, (UserId, NDCount), (UserId, NDCount))] -> Map.Map UserId Double -> Double
+--        evaluateL ((_, (u1,dn1), (u2,dn2)):ss) hm = let v1 = fromMaybe 0 $ Map.lookup u1 hm
+--                                                        v2 = fromMaybe 0 $ Map.lookup u2 hm
+--                                                        l = (1 - signum (v1 - v2)) * (vote dn1 + vote dn2)
+--                                                    in l + evaluateL ss hm
+--        evaluateL [] _ = 0
+--        rn = foldl' (\(a:ss) _ -> updateAllHM a : a : ss) [naiveMap,Map.empty] [1..10::Double]
+--        ln = map (round . (100*) . evaluateL xs) $ reverse rn :: [Int]
+
+        normMap hm = let (mi, ma) = Map.foldl' (\(l,u) v -> (min l v, max u v)) (0,0) hm
+                         diff = max (ma-mi) 1
+                     in Map.map (\v -> (v - mi) / diff) hm
 
     combR :: (Int, Int, Maybe Rating) -> (Int, Int, Maybe Rating) -> Rating
     combR (_,_,Nothing) (_,_,Nothing) = error "[combR] Impossible: both ratings not here."

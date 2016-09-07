@@ -122,7 +122,7 @@ getCompareByCriterionR uId cId = do
               $('#votebutton').click(function(){$('#submitvoteform').submit();});
             }
             function selectRight() {
-              $('#submitvoteform').attr('action','@{VoteForProposalR cId k1 k2}');
+              $('#submitvoteform').attr('action','@{VoteForProposalR cId k2 k1}');
               $('#rightChoiceButton').css('opacity','1');
               $('#rightChoiceButtonA').html('<span class="icon">thumb_up</span> Selected');
               $('#rightChoiceButtonA').addClass('btn-red');

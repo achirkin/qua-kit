@@ -155,6 +155,13 @@ uiButtons = do
              *  onClick :: IO ()
              *  return :: IO ()
              */
+            function registerResetCamera(onClick) {
+              document.getElementById('resetposbutton').addEventListener("click", onClick);
+            }
+            /** Registers one callback; comes from Handler.Home.UIButtons.
+             *  onClick :: IO ()
+             *  return :: IO ()
+             */
             function registerServiceClear(onClick) {
               document.getElementById('#{rawJS serviceClear}').addEventListener("click", onClick);
             }
@@ -238,6 +245,10 @@ uiButtons = do
                   <span class="fbtn-ori icon">apps
                   <span class="fbtn-sub icon">close
                 <div class="fbtn-dropup">
+                  <a class="fbtn waves-attach waves-circle waves-effect fbtn-brand-accent" #resetposbutton>
+                    <span class="fbtn-text fbtn-text-left">Reset camera position
+                    <span class="icon icon-lg" style="font-size: 2em;margin-left:-8px;vertical-align:-32%;margin-top:-3px;">fullscreen
+                    <span class="icon icon" style="margin-left: -24px;font-size: 1em;line-height: 1em;">videocam
                   <a class="fbtn waves-attach waves-circle waves-effect" #helpbutton onclick="$('#popuphelp').modal('show')">
                     <span class="fbtn-text fbtn-text-left">Help
                     <span class="icon icon-lg">help_outline
