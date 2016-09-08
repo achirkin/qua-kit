@@ -11,7 +11,7 @@
 -- |
 --
 -----------------------------------------------------------------------------
-
+{-# Language CPP #-}
 module Handler.Mooc.CompareProposals
   ( getCompareProposalsR
   , getCompareByCriterionR
@@ -27,6 +27,7 @@ import qualified Data.Text.Read as Text
 
 postVoteForProposalR :: CriterionId -> ScenarioId -> ScenarioId -> Handler Html
 postVoteForProposalR cId better worse = do
+  liftIO $ putStrLn "Vote!"
   userId <- requireAuthId
   useSVars <- (\mt -> if mt == Just "compare" then id else const Nothing) <$> lookupSession "custom_exercise_type"
   resource_link_id        <- useSVars <$> lookupSession "resource_link_id"
@@ -38,8 +39,9 @@ postVoteForProposalR cId better worse = do
        Nothing -> return Nothing
        Just rlid -> fmap entityKey <$> getBy (EdxResLinkId rlid)
     t <- liftIO getCurrentTime
-    _ <- insert $ Vote userId cId better worse mexplanation mresId
+    i <- insert $ Vote userId cId better worse mexplanation mresId
                        lis_outcome_service_url lis_result_sourcedid t
+    liftIO $ print i
     return ()
 
   mcustom_exercise_count   <- (>>= parseInt) <$> lookupSession "custom_exercise_count"
@@ -80,7 +82,7 @@ getCompareProposalsR :: Handler Html
 getCompareProposalsR = do
   setUltDest MoocHomeR
   userId <- requireAuthId
-  runDB getLeastPopularCriterion >>= \mcID -> case mcID of
+  runDB (getLeastPopularCriterion userId) >>= \mcID -> case mcID of
      Nothing  -> notFound
      Just cid -> getCompareByCriterionR userId cid
 
@@ -94,10 +96,12 @@ getCompareByCriterionR uId cId = do
   when showPopup $ void getMessages
   (criterion,msubs) <- runDB $ do
       cr <- get404 cId
-      ms <- getLeastPopularSubmissions uId
+      ms <- getLeastPopularSubmissions uId cId
       return (cr,ms)
   case msubs of
-    Nothing -> notFound
+    Nothing -> do
+      setMessage "I am sorry, seems like you have voted too much already."
+      fullLayout Nothing "Error" mempty
     Just (Entity k1 s1, Entity k2 s2) -> do
       fullLayout (Just . preEscapedToMarkup $ criterionIcon criterion)
                  ("Compare designs according to a "
@@ -230,47 +234,67 @@ prepareDescription sc = if n > 3
 
 
 -- | Select a criterion that was used least among others
-getLeastPopularCriterion :: ReaderT SqlBackend Handler (Maybe CriterionId)
-getLeastPopularCriterion = getValue <$> rawSql query []
+getLeastPopularCriterion :: UserId -> ReaderT SqlBackend Handler (Maybe CriterionId)
+getLeastPopularCriterion uId = getValue <$> rawSql query [toPersistValue uId]
   where
-    getValue :: [(Single CriterionId, Single Int)] -> Maybe CriterionId
-    getValue ((Single n, _):_) = Just n
+    getValue :: [(Single CriterionId)] -> Maybe CriterionId
+    getValue ((Single n):_) = Just n
     getValue _ = Nothing
     query = Text.unlines
-          ["SELECT criterion.id as id, COALESCE(v.n, 0) + COALESCE(r.n, 0) as n"
+          ["SELECT criterion.id as id"
           ,"FROM criterion"
           ,"LEFT OUTER JOIN"
-          ,"    (SELECT  vote.criterion_id as cid, count(*) as n FROM vote GROUP BY  vote.criterion_id) v"
-          ,"    ON criterion.id = v.cid"
-          ,"LEFT OUTER JOIN"
-          ,"    (SELECT  review.criterion_id as cid, count(*) as n FROM review GROUP BY  review.criterion_id) r"
+          ,"    (SELECT  vote.criterion_id as cid,COALESCE(sum(CASE WHEN vote.voter_id = ? THEN 1 ELSE 0 END),0) as m, COALESCE(count(*),0) as n FROM vote GROUP BY  vote.criterion_id"
+          ,"     UNION ALL"
+          ,"     SELECT  review.criterion_id as cid,0 as m, COALESCE(count(*),0) as n FROM review GROUP BY  review.criterion_id) r"
           ,"    ON criterion.id = r.cid"
-          ,"ORDER BY n ASC;"
+          ,"GROUP BY criterion.id"
+          ,"ORDER BY SUM(r.m) ASC, SUM(r.n) ASC"
+          ,"LIMIT 1;"
           ]
 
-getLeastPopularSubmissions :: UserId -> ReaderT SqlBackend Handler (Maybe (Entity Scenario, Entity Scenario))
-getLeastPopularSubmissions uId = getValue <$> rawSql query [toPersistValue uId]
+getLeastPopularSubmissions :: UserId -> CriterionId -> ReaderT SqlBackend Handler (Maybe (Entity Scenario, Entity Scenario))
+getLeastPopularSubmissions uId cId = do
+    r <- rawSql query ( [uid, uid, uid, uid, cid])
+    case r of
+      ((Single i1,Single i2):_) -> do
+        ms1 <- get i1
+        ms2 <- get i2
+        return $ (,) <$> (Entity i1 <$> ms1) <*> (Entity i2 <$> ms2)
+      _ -> return Nothing
   where
-    getValue :: [Entity Scenario] -> Maybe (Entity Scenario, Entity Scenario)
-    getValue (a:b:_) = Just (a,b)
-    getValue _ = Nothing
+    uid = toPersistValue uId
+    cid = toPersistValue cId
     query = Text.unlines
-          ["SELECT ??"
+          ["-- first query gets all submissions ordered by how many times they were voted"
+          ,"WITH sc AS ("
+          ,"SELECT scenario.*, t.nn, t.mm"
           ,"FROM scenario"
-          ,"INNER JOIN ( SELECT scenario.author_id as author_id, scenario.task_id as task_id, MAX(scenario.last_update) as last_update"
+          ,"INNER JOIN ( SELECT scenario.author_id as author_id, scenario.task_id as task_id, MAX(scenario.last_update) as last_update, SUM (COALESCE(v.m, 0)) as mm, SUM (COALESCE(v.n, 0))  as nn"
           ,"             FROM scenario"
           ,"             LEFT OUTER JOIN"
-          ,"                 ( SELECT  vote.better_id as sid, count(*) as n FROM vote GROUP BY  vote.better_id"
+          ,"                 ( SELECT  vote.better_id as sid, COALESCE(sum(CASE WHEN vote.voter_id = ? THEN 1 ELSE 0 END),0) as m, count(*) as n FROM vote GROUP BY  vote.better_id"
           ,"                   UNION ALL"
-          ,"                   SELECT  vote.worse_id as sid, count(*) as n FROM vote GROUP BY  vote.worse_id"
+          ,"                   SELECT  vote.worse_id as sid, COALESCE(sum(CASE WHEN vote.voter_id = ? THEN 1 ELSE 0 END),0)  as m, count(*) as n FROM vote GROUP BY  vote.worse_id"
           ,"                 ) v"
           ,"                          ON scenario.id = v.sid"
           ,"             WHERE scenario.author_id != ?"
           ,"             GROUP BY scenario.author_id, scenario.task_id"
-          ,"             ORDER BY SUM (COALESCE(v.n, 0)) ASC"
-          ,"             LIMIT 2"
+          ,"             ORDER BY mm ASC, nn ASC"
           ,"           ) t"
-          ,"        ON t.author_id = scenario.author_id AND t.task_id = scenario.task_id AND t.last_update = scenario.last_update;"
+          ,"        ON t.author_id = scenario.author_id AND t.task_id = scenario.task_id AND t.last_update = scenario.last_update"
+          ,")"
+          ,"-- get all pairs of designs"
+          ,"SELECT s1.id, s2.id"
+          ,"FROM sc s1 CROSS JOIN sc s2"
+          ,"-- select only those pairs, wich never occured for a user"
+          ,"LEFT OUTER JOIN (SELECT vote.better_id, vote.worse_id FROM vote WHERE vote.voter_id = ? AND vote.criterion_id = ?) vv"
+          ,"        ON (vv.better_id = s1.id AND vv.worse_id = s2.id) OR (vv.better_id = s2.id AND vv.worse_id = s1.id)"
+          ,"-- remove duplicates and submissions from different exercises"
+          ,"WHERE vv.better_id IS NULL AND s1.id < s2.id AND s1.task_id = s2.task_id"
+          ,"-- order by popularity, but randomize a little"
+          ,"ORDER BY round(random()*4) ASC, (s1.mm + s2.mm) ASC, (s1.nn + s2.nn) ASC"
+          ,"LIMIT 1;"
           ]
 
 
