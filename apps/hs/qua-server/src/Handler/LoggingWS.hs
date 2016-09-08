@@ -34,20 +34,17 @@ loggingApp uId scpId = Reader.mapReaderT (`State.evalStateT` Nothing) $ sourceWS
        case decodeStrict' msg of
          Nothing   -> return ()
          Just (WSLoad msgF) -> do
-            liftIO $ putStrLn "Loading!"
             i <- lift . lift. runDB . insert $ (msgF uId scpId t :: UserScenarioLoad)
             lift . State.put $ Just i
          Just (WSUpdate msgF) -> do
-            liftIO $ putStrLn "Updating!"
             mi <- lift State.get
             case mi of
-              Nothing -> liftIO $ putStrLn "No!"
+              Nothing -> return ()
               Just i  -> lift . lift . runDB . insert_ $ (msgF i t :: UserScenarioUpdate)
          Just (WSAction msgF) -> do
-            liftIO $ putStrLn "Action!"
             mi <- lift State.get
             case mi of
-              Nothing -> liftIO $ putStrLn "NOOOOO!"
+              Nothing -> return ()
               Just i  -> lift . lift . runDB . insert_ $ (msgF i t :: UserScenarioAction)
      )
 

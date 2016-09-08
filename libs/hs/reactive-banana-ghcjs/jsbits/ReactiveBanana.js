@@ -128,8 +128,10 @@ var ReactiveBanana = (function () {
 
         // update keeper's pointer position tracking
         pk.curPointers = this.pointers;
-        if (t == 1) {
+        if (t != 2) {
             pk.downPointers = this.pointers;
+        }
+        if (t == 1) {
             pk.downTime = performance.now();
         }
     };
