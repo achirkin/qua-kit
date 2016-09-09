@@ -54,7 +54,9 @@ import Handler.Mooc.ViewProposal
 import Handler.Mooc.SubmitProposal
 import Handler.Mooc.CompareProposals
 import Handler.Mooc.ProposalPreview
+import Handler.Mooc.User
 import Handler.LoggingWS
+
 
 import Handler.Mooc.Tests
 

@@ -62,6 +62,7 @@ postSubmitProposalR = do
     completelyNewOne preview geometry description >>= \mscenarioId -> case mscenarioId of
         Just _ -> do
           setMessage . toHtml $ "Thank you, " <> userName user <> ", your design proposal has been saved."
+              ++ " Now you can come back to edX or "
           redirectUltDest MoocHomeR
         Nothing -> invalidArgsI ["Some error occurred. Consult the developer team." :: Text]
   where

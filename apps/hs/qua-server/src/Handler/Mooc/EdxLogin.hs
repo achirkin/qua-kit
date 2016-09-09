@@ -69,3 +69,4 @@ dispatchLti conf yreq = do
     saveCustomParams ((k,v):xs) = if "custom_" `isPrefixOf` k
                then (Text.decodeUtf8 k, Text.decodeUtf8 v) : saveCustomParams xs
                else saveCustomParams xs
+

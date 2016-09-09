@@ -20,7 +20,7 @@ module Handler.Mooc
 
 import Import
 import Handler.Mooc.EdxLogin
-
+import Handler.Mooc.User
 
 
 postMoocHomeR :: Handler TypedContent
@@ -32,6 +32,14 @@ postMoocHomeR = do
 getMoocHomeR :: Handler TypedContent
 getMoocHomeR  = toTypedContent <$> do
     setUltDestCurrent
+    muserId <- maybeAuthId
+    createAccW <- case muserId of
+      Nothing -> return mempty
+      Just userId -> do
+        unn <- runDB $ getBy $ UserProperty userId "username"
+        return $ if isNothing unn
+                 then setupLocalAccountW userId
+                 else mempty
 
 --    ses <- map (\(k,v) -> k <> " - " <> decodeUtf8 v) . Map.toList <$> getSession
 

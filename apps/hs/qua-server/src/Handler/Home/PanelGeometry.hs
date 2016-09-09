@@ -94,7 +94,7 @@ luciScenarios = do
                *  return :: IO ()
                */
               function registerSaveScenario(sendMsg) {
-                saveLuciScenario = function(scname){sendMsg(scname);hidePopups();};
+                saveLuciScenario = function(scname){sendMsg(scname.trim());hidePopups();};
               }
           |]
         toWidgetBody
@@ -186,8 +186,9 @@ luciScenarios = do
               function displayScenarios(xs) {
                 $('##{rawJS popupScenarioListId}').modal('show');
                 document.getElementById('#{rawJS popupScenarioListTable}').innerHTML = xs.reduce(function(text, scDesc, i){
-                    var classnames = i % 2 == 0 ? "#{rawJS scenariosRow}" : "#{rawJS scenariosRowOdd} #{rawJS scenariosRow}"
-                    return  "<div class=\"" + classnames + "\" onclick=\"askLuciForScenario(" + scDesc.ScID + ",'" + scDesc.name + "')\" >"
+                    var classnames = i % 2 == 0 ? "#{rawJS scenariosRow}" : "#{rawJS scenariosRowOdd} #{rawJS scenariosRow}";
+                    var nn = scDesc.name.replace(/"|'/g, "").trim();
+                    return  "<div class=\"" + classnames + "\" onclick='askLuciForScenario(" + scDesc.ScID + ",\"" + nn + "\")'>"
                              + "<div class=\"#{rawJS scenariosCell}\">" + scDesc.name + "</div>"
                              + "<div class=\"#{rawJS scenariosCell}\">" + formatDate(scDesc.created) + "</div>"
                              + "<div class=\"#{rawJS scenariosCell}\">" + formatDate(scDesc.lastmodified)  + "</div>"

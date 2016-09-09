@@ -208,9 +208,33 @@ instance YesodAuth App where
 
     -- You can add other plugins like Google Email, email or OAuth here
     authPlugins ye = [ authLdapWithForm ldapConf $ \loginR -> $(widgetFile "login-ethz")
-                     , authLtiPlugin (appLTICredentials $ appSettings ye)]
+                     , authLtiPlugin (appLTICredentials $ appSettings ye)
+                     , AuthPlugin "local" localDispatch $ \tp -> let loginR = tp (PluginR "local" ["login"]) in $(widgetFile "login-local")]
 
     authHttpManager = getHttpManager
+
+localDispatch :: Text -> [Text] -> HandlerT Auth Handler TypedContent
+localDispatch "POST" ["login"] = do
+    tp <- getRouteToParent
+    let goBack = lift $ redirect $ tp LoginR
+    (username, password) <- lift $ runInputPost $ (,)
+      <$> ireq textField "username"
+      <*> ireq textField "password"
+    lift . runDB $ do
+      muid <- fmap (userPropUserId . entityVal) . headMay <$> selectList [UserPropKey ==. "username", UserPropValue ==. username] []
+      case muid of
+        Nothing -> setMessage "Sign in failure: incorrect username or password." >> goBack
+        Just uid -> do
+          mp <- fmap (fmap (userPropValue . entityVal)) . getBy $ UserProperty uid "password"
+          if mp /= Just password
+          then setMessage "Sign in failure: incorrect username or password." >> goBack
+          else do
+           user <- get uid
+           case (user >>= userEdxUserId, user >>= userEthUserName) of
+             (_, Just ethn) -> lift . setCredsRedirect $ Creds "ldap" ethn []
+             (Just edxi, _) -> lift . setCredsRedirect $ Creds "lti" edxi []
+             (Nothing, Nothing) -> setMessage "Sign in failure: incorrect username or password." >> goBack
+localDispatch _ _ = notFound
 
 ldapConf :: LdapAuthConf
 ldapConf = setHost (Insecure "auth.arch.ethz.ch") $ setPort 636

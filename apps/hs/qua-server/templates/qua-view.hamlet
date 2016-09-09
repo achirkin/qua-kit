@@ -52,15 +52,19 @@ $# main panel GUI
 
 
 $#  Popup windows
-^{popupHelp urole}
+^{popupHelp}
 ^{uiButtonsSubmitPopup}
 $if showFull
   ^{popupScenarioList}
 
-
 $if showHelp
-  <script type="text/javascript">
-    \$( document ).ready(function() { $('#popuphelp').modal('show'); } );
+  $if urole == UR_STUDENT
+    ^{popupEdxGuide}
+    <script type="text/javascript">
+      \$( document ).ready(function() { $('#popupedxguide').modal('show'); } );
+  $else
+    <script type="text/javascript">
+      \$( document ).ready(function() { $('#popuphelp').modal('show'); } );
 
 $if qua_view_mode == "view"
   <script type="text/javascript">

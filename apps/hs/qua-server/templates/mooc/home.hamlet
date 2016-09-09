@@ -2,6 +2,8 @@
 <div class="ui-card-wrap">
   <div class="row">
 
+    ^{createAccW}
+
     <div class="col-lg-4 col-sm-6">
       <div class="card card-brand">
         <div class="card-main">

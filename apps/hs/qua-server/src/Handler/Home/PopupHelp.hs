@@ -18,8 +18,8 @@ import Import
 
 -- | Greetings and help popup;
 --   exposes dom id '#popuphelp' and some others.
-popupHelp :: UserRole -> Widget
-popupHelp urole = do
+popupHelp :: Widget
+popupHelp = do
   helpIcons <- newIdent
   toWidgetHead
     [cassius|
@@ -39,18 +39,7 @@ popupHelp urole = do
               <p class="modal-title">
                 Welcome to Quick Urban Analysis kit - the web geometry viewer
             <div class="modal-inner">
-              $case urole
-                $of UR_STUDENT
-                  Dear student,<br>
-                  You can work on a design proposal by moving and rotating objects (see below). #
-                  Use Tools -> Save button
-                  <span class="icon">save
-                  to submit your proposal to the system. #
-                  You can save your design several times and continue work on it later; #
-                  your latest submission will be visible in the gallery.
-                $of _
 
-              <hr>
               <table>
                 <tr>
                   <td>

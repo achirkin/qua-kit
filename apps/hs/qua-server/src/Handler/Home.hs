@@ -8,6 +8,7 @@ import Handler.Home.UIButtons
 import Handler.Home.PanelServices
 import Handler.Home.PanelGeometry
 import Handler.Home.PanelInfo
+import Handler.Home.PopupEdxGuide
 import Handler.Home.LuciConnect
 import Handler.Mooc.Comment
 

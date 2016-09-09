@@ -63,6 +63,7 @@ library
         Handler.Home.PanelGeometry
         Handler.Home.PanelInfo
         Handler.Home.PanelServices
+        Handler.Home.PopupEdxGuide
         Handler.Home.PopupHelp
         Handler.Home.UIButtons
         Handler.LoggingWS
@@ -80,6 +81,7 @@ library
         Handler.Mooc.Scenario
         Handler.Mooc.SubmitProposal
         Handler.Mooc.Tests
+        Handler.Mooc.User
         Handler.Mooc.ViewProposal
         Handler.QuaViewSettings
         Import
