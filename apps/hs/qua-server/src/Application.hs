@@ -32,6 +32,7 @@ import System.Log.FastLogger                (defaultBufSize, newStdoutLoggerSet,
                                              toLogStr)
 
 import qualified Data.ByteString as BS (readFile)
+import qualified Data.Text.IO as Text (readFile)
 --import qualified Data.ByteString.Base64 as BSB (encode)
 
 -- Import all relevant handler modules here.
@@ -104,11 +105,26 @@ makeFoundation appSettings = do
 
     sctaskfile <- BS.readFile "static/data/mooctask.geojson"
     sctaskpreview <- BS.readFile "static/data/mooctask.png"
-    criteriaIconSecurity      <- decodeUtf8 <$> BS.readFile "static/data/security.svg"
-    criteriaIconFire          <- decodeUtf8 <$> BS.readFile "static/data/fire.svg"
-    criteriaIconShading       <- decodeUtf8 <$> BS.readFile "static/data/shading.svg"
-    criteriaIconAccessibility <- decodeUtf8 <$> BS.readFile "static/data/accessibility.svg"
-    criteriaIconAesthetic     <- decodeUtf8 <$> BS.readFile "static/data/aesthetic.svg"
+
+    criteriaHtmlCentrality     <- Text.readFile "static/data/centrality.html"
+    criteriaImgCentrality      <- BS.readFile "static/data/centrality.png"
+    criteriaIconCentrality     <- decodeUtf8 <$> BS.readFile "static/data/centrality.svg"
+
+
+    criteriaHtmlConnectivity   <- Text.readFile "static/data/connectivity.html"
+    criteriaImgConnectivity    <- BS.readFile "static/data/connectivity.png"
+    criteriaIconConnectivity   <- decodeUtf8 <$> BS.readFile "static/data/connectivity.svg"
+
+
+    criteriaHtmlAccessibility  <- Text.readFile "static/data/accessibility.html"
+    criteriaImgAccessibility   <- BS.readFile "static/data/accessibility.png"
+    criteriaIconAccessibility  <- decodeUtf8 <$> BS.readFile "static/data/accessibility.svg"
+
+
+    criteriaHtmlVisibility     <- Text.readFile "static/data/visibility.html"
+    criteriaImgVisibility      <- BS.readFile "static/data/visibility.png"
+    criteriaIconVisibility     <- decodeUtf8 <$> BS.readFile "static/data/visibility.svg"
+
     flip runSqlPool pool $ do
       -- add dev sample problem
       repsert (toSqlKey 0) (ScenarioProblem sctaskpreview sctaskfile "Empower Shack scenario" 0.001)
@@ -117,12 +133,31 @@ makeFoundation appSettings = do
       case mme of
         Nothing -> insert_ $ User "Artem Chirkin" UR_ADMIN (Just "achirkin") Nothing
         Just (Entity key _) -> update key [UserRole =. UR_ADMIN]
-      -- add test criteria into DB
-      _ <- upsert (Criterion "Security" "Avoid dark corners and keep all paths easily visually observable." sctaskpreview criteriaIconSecurity) []
-      _ <- upsert (Criterion "Fire safety" "Keep distance between buildings or groups of buildings to reduce the chance of spreading fire." sctaskpreview criteriaIconFire) []
-      _ <- upsert (Criterion "Shading" "The area exhibits hight temperatures, therefore it makes sense to keep pathways in shade." sctaskpreview criteriaIconShading) []
-      _ <- upsert (Criterion "Accessibility" "All buildings must be accessible from outside, there should be no labyrinths in the discrict." sctaskpreview criteriaIconAccessibility) []
-      _ <- upsert (Criterion "Aesthetic" "The district should look attractive." sctaskpreview criteriaIconAesthetic) []
+
+      _ <- upsert (Criterion "Visibility" criteriaHtmlVisibility criteriaImgVisibility criteriaIconVisibility)
+            [ CriterionImage =. criteriaImgVisibility
+            , CriterionDescription =. criteriaHtmlVisibility
+            , CriterionIcon =. criteriaIconVisibility
+            ]
+
+      _ <- upsert (Criterion "Centrality" criteriaHtmlCentrality criteriaImgCentrality criteriaIconCentrality)
+            [ CriterionImage =. criteriaImgCentrality
+            , CriterionDescription =. criteriaHtmlCentrality
+            , CriterionIcon =. criteriaIconCentrality
+            ]
+
+      _ <- upsert (Criterion "Connectivity" criteriaHtmlConnectivity criteriaImgConnectivity criteriaIconConnectivity)
+            [ CriterionImage =. criteriaImgConnectivity
+            , CriterionDescription =. criteriaHtmlConnectivity
+            , CriterionIcon =. criteriaIconConnectivity
+            ]
+
+      _ <- upsert (Criterion "Accessibility" criteriaHtmlAccessibility criteriaImgAccessibility criteriaIconAccessibility)
+            [ CriterionImage =. criteriaImgAccessibility
+            , CriterionDescription =. criteriaHtmlAccessibility
+            , CriterionIcon =. criteriaIconAccessibility
+            ]
+
       return ()
 
     -- | Update ratings once in an hour
@@ -195,11 +230,11 @@ makeFoundation appSettings = do
 
 -- mininum number of votes for this particular design to participate
 minNi :: Int
-minNi = 2
+minNi = 5
 
 -- minimum number of votes for a criterion to participate
 minNn :: Int
-minNn = 5
+minNn = 20
 
 
 -- | Convert our foundation to a WAI Application by calling @toWaiAppPlain@ and
@@ -303,3 +338,6 @@ handler h = getAppSettings >>= makeFoundation >>= flip unsafeHandler h
 -- | Run DB queries
 db :: ReaderT SqlBackend (HandlerT App IO) a -> IO a
 db = handler . runDB
+
+
+

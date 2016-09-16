@@ -16,6 +16,7 @@ module Handler.Mooc.Criteria
   ) where
 
 import Import
+import Text.Blaze
 
 getCriteriaListR :: Handler Html
 getCriteriaListR = do
@@ -27,16 +28,17 @@ getCriteriaListR = do
           <div class="ui-card-wrap">
             <div class="row">
               $forall (Entity cId criterion) <- criteria
-                <div class="col-lg-9 col-md-9 col-sm-9 col-xs-9 story_cards">
+                <div class="col-lg-12 col-md-12 col-sm-12 col-xs-12">
                   <div class="card">
                     <aside class="card-side card-side-img pull-left card-side-moocimg">
                       <img src="@{CriteriaImgR cId}">
                     <div class="card-main">
+                      <div.card-header>
+                        <div.card-inner>
+                          <h5.h5.margin-bottom-no.margin-top-no.text-brand-accent>
+                            #{criterionName criterion}
                       <div class="card-inner" style="margin: 10px 12px;">
-                        <p style="margin: 6px 0px;">
-                          #{criterionName criterion}
-                        <p style="margin: 6px 0px; white-space: pre-line; overflow-y: hidden; color: #555;">
-                         #{criterionDescription criterion}
+                        #{preEscapedText $ criterionDescription criterion}
         |]
 
 getCriteriaImgR :: CriterionId -> Handler TypedContent

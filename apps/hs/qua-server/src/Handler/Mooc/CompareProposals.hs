@@ -20,6 +20,7 @@ module Handler.Mooc.CompareProposals
 
 
 import Import
+import Text.Blaze
 import Database.Persist.Sql (rawSql, Single(..))
 import qualified Data.Text as Text
 import qualified Data.Text.Read as Text
@@ -210,10 +211,9 @@ getCompareByCriterionR uId cId = do
                           Compare designs exercise
                         Read the criterion description and then compare a series of design pairs.
                     <div.card-inner>
-                      <p>
+                      <h4.h4.margin-bottom-no.margin-top-no>
                         #{criterionName criterion}
-                      <p style="white-space: pre-line; overflow-y: hidden; color: #555;">
-                       #{criterionDescription criterion}
+                      #{preEscapedText $ criterionDescription criterion}
                     <div.card-action>
                       <div.card-action-btn.pull-right>
                         <a.btn.btn-flat.btn-brand-accent.waves-attach.waves-effect data-dismiss="modal">

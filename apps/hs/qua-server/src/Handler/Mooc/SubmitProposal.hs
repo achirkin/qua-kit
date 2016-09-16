@@ -18,6 +18,9 @@ import Import
 import Database.Persist.Sql (toSqlKey)
 import Data.Text.Read (decimal)
 import Control.Monad.Trans.Maybe
+import qualified Data.Text as Text (unpack)
+--import Text.Blaze
+import Web.LTI
 
 import qualified Data.ByteString.Base64 as BSB (decodeLenient)
 
@@ -60,9 +63,22 @@ postSubmitProposalR = do
         Nothing -> return ()
 
     completelyNewOne preview geometry description >>= \mscenarioId -> case mscenarioId of
-        Just _ -> do
-          setMessage . toHtml $ "Thank you, " <> userName user <> ", your design proposal has been saved."
-              ++ " Now you can come back to edX or "
+        Just i -> do
+          setMessage . preEscapedToMarkup $
+              "Thank you, " <> userName user <> ", your design proposal has been saved.<br>"
+              <> "Now you can come back to edX or stay at qua-kit and explore submissions of other students.<br>"
+              <> "<p class=\"text-brand-accent\"><b>Note!</b><br>We identified you via a special link on edX (when you pressed \"Go!\" button). "
+              <> "You can come back and continue the work at the current state by going on the same link (button).<br>"
+              <> "We sent to edX your base grade (60% of maximum); the grade will be updated as soon"
+              <> " as other students start to vote and discuss your submission.</p>"
+          msc <- runDB $ get i
+          case (,) <$> (msc >>= scenarioEdxResultId)  <*> (msc >>= scenarioEdxOutcomeUrl) of
+            Nothing -> return ()
+            Just (sourcedId, outcomeUrl) -> do
+              ye <- getYesod
+              req <- replaceResultRequest (appLTICredentials $ appSettings ye) (Text.unpack outcomeUrl) sourcedId 0.6 Nothing
+              _ <- httpNoBody req
+              return ()
           redirectUltDest MoocHomeR
         Nothing -> invalidArgsI ["Some error occurred. Consult the developer team." :: Text]
   where
