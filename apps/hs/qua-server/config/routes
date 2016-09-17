@@ -35,5 +35,5 @@
 /mooc/proposals/vote/#CriterionId/#ScenarioId/#ScenarioId VoteForProposalR POST
 
 
-/test/designex  SimulateDesignExerciseR GET
-/test/compareex SimulateCompareExerciseR GET
+-- /test/designex  SimulateDesignExerciseR GET
+-- /test/compareex SimulateCompareExerciseR GET
