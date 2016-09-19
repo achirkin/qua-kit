@@ -41,6 +41,7 @@ dispatchAuth _ _ _                 = notFound
 --   root.root/auth/page/lti/login
 dispatchLti :: (RenderMessage site FormMessage, YesodAuth site) => LTIProvider -> YesodRequest -> HandlerT site IO TypedContent
 dispatchLti conf yreq = do
+    clearSession
     eltiRequest <- runExceptT $ processYesodRequest conf yreq
     case eltiRequest of
       Left (LTIException err) -> permissionDenied $ Text.pack err

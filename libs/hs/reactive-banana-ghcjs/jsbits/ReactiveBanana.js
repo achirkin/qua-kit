@@ -140,6 +140,7 @@ var ReactiveBanana = (function () {
         var pk = this;
         this.target = el;
         this.running = false;
+        this.toResize = false;
         this.update = update;
         el.pointerKeeper = this;
         this.downPointers = [];
@@ -150,7 +151,7 @@ var ReactiveBanana = (function () {
         this.movedInThisFrame = false;
         this.updateLocationCallback = function(updateScaling) { pk.updateLocation.apply(pk, [updateScaling]); resize([pk.width, pk.height]); };
         this.updateLocationCallback(true);
-        var observer = new MutationObserver( function() { pk.updateLocationCallback.apply(pk, [true]); } );
+        var observer = new MutationObserver( function() { setTimeout(function(){ pk.updateLocationCallback.apply(pk, [true]); }, 500);  } );
         var config = {};
         config['attributes'] = true;
         observer.observe(el, config);
@@ -173,15 +174,10 @@ var ReactiveBanana = (function () {
         el.addEventListener('mouseleave', pCancel);
         el.addEventListener('touchcancel', pCancel);
 
-        if (document['onmozfullscreenchange'] !== undefined) {
-            document['onmozfullscreenchange'] = function() { pk.updateLocationCallback.apply(pk, [false]); };
-        } else if (document['onwebkitfullscreenchange'] !== undefined) {
-            document['onwebkitfullscreenchange'] = function() { pk.updateLocationCallback.apply(pk, [false]); };
-        } else if (document['onmsfullscreenchange'] !== undefined) {
-            document['onmsfullscreenchange'] = function() { pk.updateLocationCallback.apply(pk, [false]); };
-        } else {
-            document['onfullscreenchange'] = function() { pk.updateLocationCallback.apply(pk, [false]); };
-        }
+        document.addEventListener('webkitfullscreenchange', function(e) {pk.toResize = true;}, false);
+        document.addEventListener('mozfullscreenchange', function(e) {pk.toResize = true;}, false);
+        document.addEventListener('msfullscreenchange', function(e) {pk.toResize = true;}, false);
+        document.addEventListener('fullscreenchange', function(e) {pk.toResize = true;}, false);
     };
 
     // Update position of an element so that it serves as a veiwport for pointer position;
@@ -219,6 +215,7 @@ var ReactiveBanana = (function () {
         this.running = true;
         var pk = this;
         var bbox = pk.target.getBoundingClientRect();
+        var toUpdateDelay = 10, toUpdateCounter = toUpdateDelay;
         function step(timestamp) {
             if (pk.running) {
                 pk.update(timestamp);
@@ -226,9 +223,20 @@ var ReactiveBanana = (function () {
                 pk.scrolledInThisFrame = false;
 
                 bbox = pk.target.getBoundingClientRect();
-                if (pk.bboxw != bbox.width || pk.bboxh != bbox.height) {
-                    //console.log('updating!', pk.bboxw, bbox.width, pk.bboxh, bbox.height);
+                if ((pk.bboxw != bbox.width || pk.bboxh != bbox.height) && !(pk.toResize)) {
+                    pk.toResize = true;
                     pk.updateLocationCallback(false);
+                    //console.log('updating!', pk.bboxw, bbox.width, pk.bboxh, bbox.height);
+                }
+                if (pk.toResize) {
+                  if (toUpdateCounter > 0) {
+                    toUpdateCounter--;
+                  } else {
+                    pk.updateLocationCallback(false);
+                    //console.log('updating 2!', pk.bboxw, bbox.width, pk.bboxh, bbox.height);
+                    toUpdateCounter = toUpdateDelay;
+                    pk.toResize = false;
+                  }
                 }
                 window.requestAnimationFrame(step);
             }

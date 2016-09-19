@@ -31,7 +31,7 @@ getEditProposalR = do
     Just (Right (i, _)) -> do
       mscId <- S.getScenarioId $ toSqlKey i
       case mscId of
-        Nothing -> return ()
+        Nothing -> deleteSession "scenario_id"
         Just scId -> setSession "scenario_id" (pack . show $ fromSqlKey scId)
-    _ -> return ()
+    _ -> deleteSession "scenario_id"
   redirect HomeR
