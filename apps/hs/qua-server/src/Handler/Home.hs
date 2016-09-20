@@ -24,10 +24,19 @@ renderQuaView = do
 
   muser <- maybeAuth
   let urole = muserRole muser
+  mscId <- (>>= parseSqlKey) <$> lookupSession "scenario_id"
+
+  -- if the user is an owner of scenario, let him edit it!
+  case (,,) urole <$> muser <*> mscId of
+    Just (UR_STUDENT, Entity userId _, scId) -> runDB $ do
+      scenario <- get scId
+      when (fmap scenarioAuthorId scenario == Just userId) $
+        lift (setSession "qua_view_mode" "edit")
+    _ -> return ()
+
   qua_view_mode <- fromMaybe "full" <$> lookupSession "qua_view_mode"
   let showFull = qua_view_mode == "full"
 
-  mscId <- (>>= parseSqlKey) <$> lookupSession "scenario_id"
   commentsW <- case mscId of
     Just scId -> viewComments scId
     Nothing -> return mempty
@@ -79,4 +88,3 @@ renderQuaView = do
 
     -- render all html
     $(widgetFile "qua-view")
-
