@@ -47,7 +47,7 @@ getBrowseProposalsR = do
         [hamlet|
           <div class="ui-card-wrap">
             <div class="row">
-              $forall (uname, Entity scId scenario, crits) <- usersscenarios
+              $forall (scId, lu, desc, uname, crits) <- usersscenarios
                 <div class="col-lg-4 col-md-6 col-sm-9 col-xs-9 story_cards">
                   <div.card>
                     <aside.card-side.card-side-img.pull-left.card-side-moocimg>
@@ -57,9 +57,9 @@ getBrowseProposalsR = do
                         <p style="margin: 6px 0px; color: #b71c1c;">
                           #{uname}
                             <br>
-                          #{show $ utctDay $ scenarioLastUpdate scenario}
+                          #{show $ utctDay $ lu}
                         <p style="margin: 6px 0px; white-space: pre-line; overflow-y: hidden; color: #555;">
-                         #{shortComment $ scenarioDescription scenario}
+                         #{shortComment desc}
                       <div.card-comment.card-action>
                         $forall (svg, rating) <- crits
                          $if rating > 0
@@ -104,17 +104,19 @@ shortComment t = dropInitSpace . remNewLines $
         dropInitSpace = Text.dropWhile (\c -> c == ' ' || c == '\n' || c == '\r' || c == '\t')
 
 -- | get user name, scenario, and ratings
-getLastSubmissions :: ReaderT SqlBackend Handler [(Text, Entity Scenario, [(Blaze.Markup, Int)])]
+getLastSubmissions :: ReaderT SqlBackend Handler [(ScenarioId, UTCTime, Text, Text, [(Blaze.Markup, Int)])]
 getLastSubmissions = getVals <$> rawSql query []
   where
-    getVal' scId xxs@((a, _, Single c, Single d):xs) | scId == entityKey a = first ((Blaze.preEscapedToMarkup (c :: Text),min 99 $ round (100*d::Double)) :) $ getVal' scId xs
-                                                     | otherwise = ([],xxs)
+    getVal' scId' xxs@((Single scId, Single _, Single _, Single _, Single icon, Single rating):xs)
+        | scId == scId' = first ((Blaze.preEscapedToMarkup (icon :: Text),min 99 $ round (100*rating::Double)) :) $ getVal' scId xs
+        | otherwise = ([],xxs)
     getVal' _ [] = ([],[])
-    getVals xxs@((s,Single t,_,_):_) = let (g,rest) = getVal' (entityKey s) xxs
-                                        in (t,s,g) : getVals rest
+    getVals xxs@((Single scId, Single lu, Single desc, Single uname, Single _icon, Single _rating):_)
+                                      = let (g,rest) = getVal' scId xxs
+                                        in (scId, lu, desc, uname,g) : getVals rest
     getVals [] = []
     query = Text.unlines
-          ["SELECT ??,\"user\".name,criterion.icon,COALESCE(rating.value, 0)"
+          ["SELECT scenario.id, scenario.last_update, scenario.description,\"user\".name,criterion.icon,COALESCE(rating.value, 0)"
           ,"FROM scenario"
           ,"INNER JOIN \"user\" ON \"user\".id = scenario.author_id"
           ,"INNER JOIN ( SELECT scenario.author_id, scenario.task_id, MAX(scenario.last_update) as x"
@@ -126,5 +128,5 @@ getLastSubmissions = getVals <$> rawSql query []
           ,"LEFT OUTER JOIN rating"
           ,"        ON scenario.task_id = rating.problem_id AND scenario.author_id = rating.author_id AND criterion.id = rating.criterion_id"
           ,""
-          ,"ORDER BY scenario.id ASC, criterion.id ASC;"
+          ,"ORDER BY scenario.id DESC, criterion.id ASC;"
           ]
