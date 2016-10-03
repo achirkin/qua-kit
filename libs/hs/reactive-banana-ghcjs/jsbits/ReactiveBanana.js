@@ -101,7 +101,7 @@ var ReactiveBanana = (function () {
         } else if (ev['buttons'] != undefined) {
             pk['buttons'] = ev['buttons'];
         } else {
-            var b = ev['button'] ? toButtons(ev['button']) : 0;
+            var b = ev['button'] != undefined ? toButtons(ev['button']) : 0;
             switch(t) {
                 case	0: // pointerUp
                     pk['buttons'] = pk['buttons'] & (~ b);

@@ -6,8 +6,9 @@
 
 /viewer HomeR GET POST
 /luci LuciR GET
-/chat ChatR GET
+-- /chat ChatR GET
 /logging QVLoggingR GET
+-- /mouseDebug MouseDebugR GET
 
 /qua-view-settings QuaViewSettingsR GET
 
@@ -20,7 +21,7 @@
 /mooc/submit                        SubmitProposalR POST
 /mooc/proposal/#ScenarioId          ScenarioR GET
 /mooc/scproblem/#ScenarioProblemId  ScenarioProblemR GET
-/mooc/proposals/browse              BrowseProposalsR GET
+/mooc/proposals/browse/#Int         BrowseProposalsR GET
 /mooc/proposals/preview/#ScenarioId ProposalPreviewR GET
 /mooc/proposals/edit                EditProposalR GET
 /mooc/proposals/view/#ScenarioId    ViewProposalR GET

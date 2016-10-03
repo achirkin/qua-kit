@@ -6,7 +6,7 @@
         <li>
           <a class="waves-attach waves-effect" href="@{EditProposalR}">
             Work on a design
-          <a class="waves-attach waves-effect" href="@{BrowseProposalsR}">
+          <a class="waves-attach waves-effect" href="@{BrowseProposalsR 1}">
             Explore submissions
           <a class="waves-attach waves-effect" href="@{CriteriaListR}">
             Understand criteria

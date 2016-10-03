@@ -19,9 +19,15 @@ import qualified Data.Text as Text
 import qualified Text.Blaze as Blaze
 import Database.Persist.Sql (rawSql, Single (..))
 
-getBrowseProposalsR :: Handler Html
-getBrowseProposalsR = do
-    usersscenarios <- runDB getLastSubmissions
+
+pageSize :: Int
+pageSize = 80
+
+getBrowseProposalsR :: Int -> Handler Html
+getBrowseProposalsR page = do
+    usersscenarios <- runDB $ getLastSubmissions page
+    pages <- negate . (`div` pageSize) . negate <$> runDB countUniqueSubmissions
+    let is = [1..pages]
     fullLayout Nothing "Qua-kit student designs" $ do
       setTitle "Qua-kit student designs"
       toWidgetHead $
@@ -75,6 +81,19 @@ getBrowseProposalsR = do
                           <a.btn.btn-flat.btn-brand-accent.waves-attach.waves-effect href="@{ViewProposalR scId}" target="_blank">
                             <span.icon>visibility
                             View
+
+          <!-- footer with page numbers -->
+          $if pages > 1
+           <div class="row">
+            <div class="col-lg-9 col-md-9 col-sm-9">
+              <div class="card margin-bottom-no">
+                <div class="card-main">
+                  <div class="card-inner">
+                   $forall i <- is
+                    $if i == page
+                      <p style="margin:2px;padding:0;display:inline">#{i}
+                    $else
+                      <a style="margin:2px;padding:0;display:inline" href="@{BrowseProposalsR i}">#{i}
         |]
  where
    cOpacity i = 0.5 + fromIntegral i / 198 :: Double
@@ -104,8 +123,8 @@ shortComment t = dropInitSpace . remNewLines $
         dropInitSpace = Text.dropWhile (\c -> c == ' ' || c == '\n' || c == '\r' || c == '\t')
 
 -- | get user name, scenario, and ratings
-getLastSubmissions :: ReaderT SqlBackend Handler [(ScenarioId, UTCTime, Text, Text, [(Blaze.Markup, Int)])]
-getLastSubmissions = getVals <$> rawSql query []
+getLastSubmissions :: Int -> ReaderT SqlBackend Handler [(ScenarioId, UTCTime, Text, Text, [(Blaze.Markup, Int)])]
+getLastSubmissions page = getVals <$> rawSql query [toPersistValue pageSize, toPersistValue $ (max 0 (page-1))*pageSize]
   where
     getVal' scId' xxs@((Single scId, Single _, Single _, Single _, Single icon, Single rating):xs)
         | scId == scId' = first ((Blaze.preEscapedToMarkup (icon :: Text),min 99 $ round (100*rating::Double)) :) $ getVal' scId xs
@@ -121,7 +140,9 @@ getLastSubmissions = getVals <$> rawSql query []
           ,"INNER JOIN \"user\" ON \"user\".id = scenario.author_id"
           ,"INNER JOIN ( SELECT scenario.author_id, scenario.task_id, MAX(scenario.last_update) as x"
           ,"             FROM scenario"
-          ,"             GROUP BY scenario.author_id, scenario.task_id ) t"
+          ,"             GROUP BY scenario.author_id, scenario.task_id"
+          ,"             ORDER BY x"
+          ,"             LIMIT ? OFFSET ?) t"
           ,"        ON t.task_id = scenario.task_id AND t.author_id = scenario.author_id AND t.x = scenario.last_update"
           ,"CROSS JOIN criterion"
           ,""
@@ -129,4 +150,13 @@ getLastSubmissions = getVals <$> rawSql query []
           ,"        ON scenario.task_id = rating.problem_id AND scenario.author_id = rating.author_id AND criterion.id = rating.criterion_id"
           ,""
           ,"ORDER BY scenario.id DESC, criterion.id ASC;"
+          ]
+
+countUniqueSubmissions :: ReaderT SqlBackend Handler Int
+countUniqueSubmissions= getVal <$> rawSql query []
+  where
+    getVal (Single c:_)  = c
+    getVal [] = 0
+    query = Text.unlines
+          ["SELECT count(DISTINCT scenario.author_id) FROM scenario;"
           ]

@@ -33,7 +33,7 @@
             The gallery is a collection of design proposals submitted by other users.
           <div class="card-action">
             <div class="card-action-btn pull-left">
-              <a class="btn btn-flat waves-attach waves-light waves-effect" href="@{BrowseProposalsR}">
+              <a class="btn btn-flat waves-attach waves-light waves-effect" href="@{BrowseProposalsR 1}">
                 <span class="icon">check
                 &nbsp;Go to gallery
 

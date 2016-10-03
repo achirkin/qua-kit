@@ -109,3 +109,33 @@ getLuciR = do
 --            inField.value = "";
 --          };
 --      |]
+
+
+mouseDebugApp :: WebSocketsT Handler ()
+mouseDebugApp = do
+  sourceWS $$ mapM_C $(logInfo)
+--  mluciAddr <- lift $ appLuciAddress . appSettings <$> getYesod
+--  case mluciAddr of
+--    Nothing -> return () -- sendTextData ("No default Luci host specified in settings." :: Text)
+--    Just luciAddr -> runGeneralTCPClient luciAddr $ \appData -> do
+--      -- sendTextData ("Connected to Luci on " <> getHost luciAddr <> ":" <> BSC.pack (show $ getPort luciAddr))
+--      let toLuci :: Consumer ByteString (WebSocketsT Handler) ()
+--          toLuci = Network.appSink appData
+--          fromLuci :: Producer (WebSocketsT Handler) ByteString
+--          fromLuci = Network.appSource appData
+--          toClient :: Consumer ByteString (WebSocketsT Handler) ()
+--          toClient = sinkWSBinary
+--          fromClient :: Producer (WebSocketsT Handler) ByteString
+--          fromClient = sourceWS
+--      race_
+--         (runConduit $ fromClient =$= CList.mapM (\x -> (liftIO . print $ "CLIENT: " <> x) >> return x) =$= toLuci)
+--         (runConduit $ fromLuci =$= CList.mapM (\x -> (liftIO . print $ "LUCI: " <> x) >> return x) =$= toClient)
+
+
+getMouseDebugR :: Handler Html
+getMouseDebugR = do
+    webSockets mouseDebugApp
+    defaultLayout $ do
+      [whamlet|
+        Debug mouse
+      |]

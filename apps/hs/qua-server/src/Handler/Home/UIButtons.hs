@@ -250,7 +250,7 @@ uiButtons = do
                     <span class="icon icon-lg" style="font-size: 2em;margin-left:-8px;vertical-align:-32%;margin-top:-3px;">fullscreen
                     <span class="icon icon" style="margin-left: -24px;font-size: 1em;line-height: 1em;">videocam
                   <a class="fbtn waves-attach waves-circle waves-effect" #helpbutton onclick="$('#popuphelp').modal('show')">
-                    <span class="fbtn-text fbtn-text-left">Help
+                    <span class="fbtn-text fbtn-text-left">How-to: mouse & finger controls
                     <span class="icon icon-lg">help_outline
                   <a class="fbtn waves-attach waves-circle waves-effect" #fullscreenbutton onclick="toggleFullScreen()">
                     <span class="fbtn-text fbtn-text-left">Toggle fullscreen
