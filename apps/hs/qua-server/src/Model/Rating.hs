@@ -13,15 +13,16 @@
 module Model.Rating
   ( updateRatings, NDCount (..)
   , scheduleUpdateRatings
+  , scheduleGradeVotes
   ) where
 
 
 import Import.NoFoundation
-import Database.Persist.Sql (rawSql, Single(..))
+import Database.Persist.Sql (rawSql, Single(..), toSqlKey)
 import qualified Data.Text as Text
 import Data.Time.Clock
 import Control.Concurrent (forkIO)
-import Control.Monad.Trans.Control
+--import Control.Monad.Trans.Control
 
 --Rating
 --    authorId    UserId
@@ -52,6 +53,15 @@ scheduleUpdateRatings dt rf cf combinef = liftBaseWith $ \run -> void . forkIO .
      threadDelay dts
   where
     dts = dt * 1000000
+
+
+scheduleGradeVotes :: Int -> ReaderT SqlBackend IO ()
+scheduleGradeVotes dt = liftBaseWith $ \run -> void . forkIO . forever $ do
+     run gradeVotes
+     threadDelay dts
+  where
+    dts = dt * 1000000
+
 
 
 -- | Update ratings for all designs based on several rules.
@@ -216,4 +226,63 @@ findLatestComparisons = fmap getVal <$> rawSql query []
         ,"GROUP BY vote.voter_id, vote.criterion_id, tb.task_id, tb.author_id, tw.task_id, tw.author_id, vote.\"timestamp\""
         ,""
         ,"ORDER BY tb.task_id ASC, vote.criterion_id ASC, vote.\"timestamp\" ASC;"]
+
+
+
+
+----------------------------------------------------------------------------------------------------
+
+
+
+gradeVotes :: MonadIO a => ReaderT SqlBackend a ()
+gradeVotes = do
+    voteGrades <- map makeResult . groupBy voteKeys <$> allVotes
+    deleteWhere ([] :: [Filter VoteGrade])
+    insertMany_ $ fjust voteGrades
+  where
+    voteKeys (a1,b1,c1,d1,_) (a2,b2,c2,d2,_) = a1 == a2 && b1 == b2 && c1 == c2 && d1 == d2
+--    takeSome  xs = let l = length xs
+--                   in take (max 10 ((l * 2) `div` 3)) xs
+    calculate xs = let n = fromIntegral $ length xs
+                       g = foldl' (\a dx -> a + dx*(1-dx)) 0 xs
+                   in max 0 . min 1 $ g/n + 1
+    makeResult xs@((uid, resId, ourl,sid,_):_)
+      = let vs = get5 xs
+        in Just $ VoteGrade uid resId ourl sid (calculate vs)
+    makeResult [] = Nothing
+    get5 ((_,_,_,_,a):xs) = a : get5 xs
+    get5 [] = []
+    fjust (Just x : xs) = x : fjust xs
+    fjust (Nothing: xs) = fjust xs
+    fjust [] = []
+
+
+allVotes :: MonadIO a => ReaderT SqlBackend a [( UserId
+                                               , EdxResourceId
+                                               , Text
+                                               , Text
+                                               , Double
+                                               )]
+allVotes = fmap getVal <$> rawSql query []
+  where
+    getVal (Single a, Single b, Single c, Single d, Single e) = (toSqlKey a, toSqlKey b,c,d,e)
+    query = Text.unlines
+        ["WITH rate AS ("
+        ,"    SELECT scenario.id, rating.criterion_id, rating.value"
+        ,"    FROM scenario INNER JOIN rating"
+        ,"                          ON scenario.author_id = rating.author_id AND scenario.task_id = rating.problem_id"
+        ,")"
+        ,""
+        ,"SELECT vote.voter_id, vote.edx_resource, vote.edx_outcome_url, vote.edx_result_id, (better.value - worse.value) as dx"
+        ,"FROM vote"
+        ,"INNER JOIN rate better"
+        ,"        ON vote.criterion_id = better.criterion_id AND vote.better_id = better.id"
+        ,"INNER JOIN rate worse"
+        ,"        ON vote.criterion_id = worse.criterion_id AND vote.worse_id = worse.id"
+        ,"WHERE vote.edx_resource IS NOT NULL"
+        ,"  AND vote.edx_outcome_url IS NOT NULL"
+        ,"  AND vote.edx_result_id IS NOT NULL"
+        ,"ORDER BY vote.voter_id ASC, vote.edx_outcome_url ASC, dx DESC;"
+        ]
+
 

@@ -21,9 +21,10 @@ module Handler.Mooc.CompareProposals
 
 import Import
 import Text.Blaze
-import Database.Persist.Sql (rawSql, Single(..))
+import Database.Persist.Sql (rawSql, Single(..), toSqlKey)
 import qualified Data.Text as Text
 import qualified Data.Text.Read as Text
+import Web.LTI
 
 
 postVoteForProposalR :: CriterionId -> ScenarioId -> ScenarioId -> Handler Html
@@ -32,13 +33,18 @@ postVoteForProposalR cId better worse = do
   userId <- requireAuthId
   useSVars <- (\mt -> if mt == Just "compare" then id else const Nothing) <$> lookupSession "custom_exercise_type"
   resource_link_id        <- useSVars <$> lookupSession "resource_link_id"
-  lis_outcome_service_url <- useSVars <$> lookupSession "lis_outcome_service_url"
-  lis_result_sourcedid    <- useSVars <$> lookupSession "lis_result_sourcedid"
+  lis_outcome_service_url' <- useSVars <$> lookupSession "lis_outcome_service_url"
+  lis_result_sourcedid'    <- useSVars <$> lookupSession "lis_result_sourcedid"
+  mresId' <- case resource_link_id of
+       Nothing -> return Nothing
+       Just rlid -> runDB $ fmap entityKey <$> getBy (EdxResLinkId rlid)
+  (mresId, lis_outcome_service_url, lis_result_sourcedid) <- case (,,) <$> mresId' <*> lis_outcome_service_url' <*> lis_result_sourcedid' of
+      Just _  -> return (mresId', lis_outcome_service_url', lis_result_sourcedid')
+      Nothing -> runDB (getLastExercise userId) >>= \mr -> case mr of
+          Nothing -> return (mresId', lis_outcome_service_url', lis_result_sourcedid')
+          Just (a,b,c) -> return (Just a, Just b, Just c)
   mexplanation <- lookupPostParam "explanation"
   runDB $ do
-    mresId <- case resource_link_id of
-       Nothing -> return Nothing
-       Just rlid -> fmap entityKey <$> getBy (EdxResLinkId rlid)
     t <- liftIO getCurrentTime
     i <- insert $ Vote userId cId better worse mexplanation mresId
                        lis_outcome_service_url lis_result_sourcedid t
@@ -62,6 +68,15 @@ postVoteForProposalR cId better worse = do
             setMessage "You are done with this exercise, thank you! You can continue exploring the site or go back to edX."
             deleteSession "custom_exercise_count"
             deleteSession "compare_counter"
+
+            -- send the base grade back to edX
+            case (,) <$> lis_result_sourcedid <*> lis_outcome_service_url of
+              Nothing -> return ()
+              Just (sourcedId, outcomeUrl) -> do
+                ye <- getYesod
+                req <- replaceResultRequest (appLTICredentials $ appSettings ye) (Text.unpack outcomeUrl) sourcedId 0.6 Nothing
+                _ <- httpNoBody req
+                return ()
             redirect MoocHomeR
 
 
@@ -296,6 +311,30 @@ getLeastPopularSubmissions uId cId = do
           ,"ORDER BY round(random()*4) ASC, (s1.mm + s2.mm) ASC, (s1.nn + s2.nn) ASC"
           ,"LIMIT 1;"
           ]
+
+
+getLastExercise :: UserId -> ReaderT SqlBackend Handler (Maybe (EdxResourceId,Text,Text))
+getLastExercise uId = getVal <$> rawSql query [toPersistValue uId]
+  where
+    getVal ((Single edre, Single o, Single i):_) = Just (toSqlKey edre,o,i)
+    getVal [] = Nothing
+    query = Text.unlines
+          ["SELECT edx_resource,edx_outcome_url,edx_result_id"
+          ,"FROM vote"
+          ,"WHERE edx_resource IS NOT NULL"
+          ,"  AND edx_outcome_url IS NOT NULL"
+          ,"  AND edx_result_id IS NOT NULL"
+          ,"  AND voter_id = ?"
+          ,"ORDER BY timestamp DESC"
+          ,"LIMIT 1;"
+          ]
+
+
+
+
+
+
+
 
 
 

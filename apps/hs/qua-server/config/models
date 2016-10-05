@@ -84,6 +84,17 @@ Vote
     edxResultId   Text Maybe
     timestamp     UTCTime default=CURRENT_TIMESTAMP
 
+VoteGrade
+    studentId     UserId
+    edxResource   EdxResourceId
+    edxOutcomeUrl Text
+    edxResultId   Text
+    grade         Double
+    GradeFor studentId edxResource edxOutcomeUrl edxResultId
+    deriving Eq
+    deriving Ord
+    deriving Show
+
 Rating
     problemId   ScenarioProblemId
     criterionId CriterionId

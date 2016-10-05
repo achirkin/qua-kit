@@ -14,7 +14,6 @@ module Application
     ) where
 
 
-import Data.Time.Clock (DiffTime)
 import Control.Monad.Logger                 (liftLoc, runLoggingT)
 import Database.Persist.Sql
 import Import
@@ -61,9 +60,10 @@ import Handler.LoggingWS
 
 import Handler.Mooc.Tests
 
-import Model.Rating
 
-import qualified Data.Map.Strict as Map
+import Model.Rating
+import Application.Grading
+
 
 -- This line actually creates our YesodDispatch instance. It is the second half
 -- of the call to mkYesodData which occurs in Foundation.hs. Please see the
@@ -162,79 +162,17 @@ makeFoundation appSettings = do
 
     -- | Update ratings once in an hour
     flip runSqlPool pool $ scheduleUpdateRatings 3600 reviewRating compareRating combR
+    flip runSqlPool pool $ scheduleGradeVotes 3600
+
+
+    let app = mkFoundation pool
+
+    -- send grades once every day
+    scheduleUpdateGrades (3600*24) app pool
 
     -- Return the foundation
-    return $ mkFoundation pool
-  where
+    return app
 
-    reviewRating :: [(DiffTime,NDCount,Bool)] -> Double
-    reviewRating = min 1 . max 0 . (+0.4) . uncurry (/) . second (max 1) . foldl' (\(x, a) (_dt,dn,p) -> let d = vote dn in (if p then x + d else x - d, a+d)) (0,0)
-      where
-        vote = recip . fromIntegral . (+1)
-
-    compareRating :: [(DiffTime, (UserId, NDCount), (UserId, NDCount))] -> [(UserId,Double)]
-    compareRating xs = Map.toList $ iterN 10 naiveMap
-      where
-        -- cumsum
-        nn = recip $ foldl' (\s (_, (_,dn1), (_,dn2)) -> s + vote dn1 + vote dn2) 0 xs / 2
-
-        -- discount votes with nr of versions passed since last vote
-        vote = recip . fromIntegral . (+1)
-
-        -- at first, we naively count votes for and against each proposal
-        updateHMNaive hm (_dt, (u1,dn1), (u2,dn2)) = Map.alter (Just . (+(- vote dn2)) . fromMaybe 0) u2 $ Map.alter (Just . (+vote dn1) . fromMaybe 0) u1 hm
-        naiveMap :: Map.Map UserId Double
-        naiveMap = normMap $ foldl' updateHMNaive Map.empty xs
-
-        -- then we use this logic to iteratively come closer to solution
-        updateR (ob,ow) (cb,cw) = let diff = log (1 + exp (ow-ob)) * nn
-                                  in (cb + diff, cw - diff)
-
-        iterN 0 hm = hm
-        iterN n hm = hm `seq` iterN (n-1 :: Int) (updateAllHM hm)
-
-        updateAllHM hm = normMap $ foldl' (updateHM hm) hm xs
-
-        updateHM :: Map.Map UserId Double -> Map.Map UserId Double -> (DiffTime, (UserId, NDCount), (UserId, NDCount)) -> Map.Map UserId Double
-        updateHM ohm hm (_, (u1,_), (u2,_)) = let ov1 = fromMaybe 0 $ Map.lookup u1 ohm
-                                                  ov2 = fromMaybe 0 $ Map.lookup u2 ohm
-                                                  v1 = fromMaybe 0 $ Map.lookup u1 hm
-                                                  v2 = fromMaybe 0 $ Map.lookup u2 hm
-                                                  (v1', v2') = updateR (ov1,ov2) (v1,v2)
-                                              in Map.alter (const $ Just v1') u1 $ Map.alter (const $ Just v2') u2 hm
-
---        evaluateL :: [(DiffTime, (UserId, NDCount), (UserId, NDCount))] -> Map.Map UserId Double -> Double
---        evaluateL ((_, (u1,dn1), (u2,dn2)):ss) hm = let v1 = fromMaybe 0 $ Map.lookup u1 hm
---                                                        v2 = fromMaybe 0 $ Map.lookup u2 hm
---                                                        l = (1 - signum (v1 - v2)) * (vote dn1 + vote dn2)
---                                                    in l + evaluateL ss hm
---        evaluateL [] _ = 0
---        rn = foldl' (\(a:ss) _ -> updateAllHM a : a : ss) [naiveMap,Map.empty] [1..10::Double]
---        ln = map (round . (100*) . evaluateL xs) $ reverse rn :: [Int]
-
-        normMap hm = let (mi, ma) = Map.foldl' (\(l,u) v -> (min l v, max u v)) (0,0) hm
-                         diff = max (ma-mi) 1
-                     in Map.map (\v -> (v - mi) / diff) hm
-
-    combR :: (Int, Int, Maybe Rating) -> (Int, Int, Maybe Rating) -> Rating
-    combR (_,_,Nothing) (_,_,Nothing) = error "[combR] Impossible: both ratings not here."
-    combR (n,i,Just (Rating pid cid uid v)) (_,_,Nothing) = Rating pid cid uid $ filterV n i v
-    combR (_,_,Nothing) (m,j,Just (Rating pid cid uid v)) = Rating pid cid uid $ filterV m j v
-    combR rv@(n,i,Just (Rating pid cid uid v)) ru@(m,j,Just (Rating _ _ _ u))
-        | n >= minNn && i >= minNi = combR (n,i, Nothing) ru
-        | m >= minNn && j >= minNi = combR rv (m,j, Nothing)
-        | otherwise = let cv = fromIntegral $ i * m
-                          cu = fromIntegral $ j * n
-                      in Rating pid cid uid $ (cv * v + cu * u) / (cv + cu)
-    filterV n i x = if n >= minNn && i >= minNi then x else 0
-
--- mininum number of votes for this particular design to participate
-minNi :: Int
-minNi = 5
-
--- minimum number of votes for a criterion to participate
-minNn :: Int
-minNn = 20
 
 
 -- | Convert our foundation to a WAI Application by calling @toWaiAppPlain@ and

@@ -141,7 +141,7 @@ getLastSubmissions page = getVals <$> rawSql query [toPersistValue pageSize, toP
           ,"INNER JOIN ( SELECT scenario.author_id, scenario.task_id, MAX(scenario.last_update) as x"
           ,"             FROM scenario"
           ,"             GROUP BY scenario.author_id, scenario.task_id"
-          ,"             ORDER BY x"
+          ,"             ORDER BY x DESC"
           ,"             LIMIT ? OFFSET ?) t"
           ,"        ON t.task_id = scenario.task_id AND t.author_id = scenario.author_id AND t.x = scenario.last_update"
           ,"CROSS JOIN criterion"
