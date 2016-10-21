@@ -19,11 +19,13 @@ import Text.Julius
 luciConnectPane :: Handler (Text,Text, Widget)
 luciConnectPane = do
   luciConnectedClass <- newIdent
+  luciConnectingClass <- newIdent
   luciDisconnectedClass <- newIdent
   return . (,,) luciConnectedClass luciDisconnectedClass $ do
     connectButton <- newIdent
     luciProxyUrl <- newIdent
     luciConnectedInfo <- newIdent
+    luciConnectingInfo <- newIdent
 
     hiddenPaneClass  <- newIdent
     visiblePaneClass <- newIdent
@@ -45,6 +47,13 @@ luciConnectPane = do
             <div style="margin: 10px 0 0 20px;">
               Connected to Luci at
               <p ##{luciConnectedInfo} style="display: inline;">
+           |]
+        connectingInfo =
+          [hamlet|
+            <div style="margin: 10px 0 0 20px;">
+              Connecting to Luci at
+              <p ##{luciConnectingInfo} style="display: inline;">
+              ...
            |]
 
     toWidgetHead
@@ -79,10 +88,34 @@ luciConnectPane = do
             document.getElementsByClassName('#{rawJS luciDisconnectedClass}')).forEach(function(e){
                e.className = "#{rawJS luciDisconnectedClass} #{rawJS hiddenPaneClass}";
              });
+          Array.prototype.slice.call(
+            document.getElementsByClassName('#{rawJS luciConnectingClass}')).forEach(function(e){
+               e.className = "#{rawJS luciConnectingClass} #{rawJS hiddenPaneClass}";
+             });
           document.getElementById('#{rawJS luciConnectedInfo}').innerText = connectedHost;
           Array.prototype.slice.call(
             document.getElementsByClassName('#{rawJS luciConnectedClass}')).forEach(function(e){
                e.className = "#{rawJS luciConnectedClass} #{rawJS visiblePaneClass}";
+             });
+        }
+
+        /** Display "luci connected message"; comes from Handler.Home.PanelServices.
+         *  connectedHost :: JSString -- address of websocket host
+         *  return :: IO ()
+         */
+        function showLuciConnecting(connectedHost){
+          Array.prototype.slice.call(
+            document.getElementsByClassName('#{rawJS luciDisconnectedClass}')).forEach(function(e){
+               e.className = "#{rawJS luciDisconnectedClass} #{rawJS hiddenPaneClass}";
+             });
+          Array.prototype.slice.call(
+            document.getElementsByClassName('#{rawJS luciConnectedClass}')).forEach(function(e){
+               e.className = "#{rawJS luciConnectedClass} #{rawJS hiddenPaneClass}";
+             });
+          document.getElementById('#{rawJS luciConnectingInfo}').innerText = connectedHost;
+          Array.prototype.slice.call(
+            document.getElementsByClassName('#{rawJS luciConnectingClass}')).forEach(function(e){
+               e.className = "#{rawJS luciConnectingClass} #{rawJS visiblePaneClass}";
              });
         }
 
@@ -94,6 +127,10 @@ luciConnectPane = do
           Array.prototype.slice.call(
             document.getElementsByClassName('#{rawJS luciConnectedClass}')).forEach(function(e){
                e.className = "#{rawJS luciConnectedClass} #{rawJS hiddenPaneClass}";
+             });
+          Array.prototype.slice.call(
+            document.getElementsByClassName('#{rawJS luciConnectingClass}')).forEach(function(e){
+               e.className = "#{rawJS luciConnectingClass} #{rawJS hiddenPaneClass}";
              });
           if (defaultHost) {
             document.getElementById('#{rawJS luciProxyUrl}').value = defaultHost;
@@ -112,4 +149,6 @@ luciConnectPane = do
           ^{connectForm}
         <div .#{luciConnectedClass}>
           ^{connectedInfo}
+        <div .#{luciConnectingClass} .#{hiddenPaneClass}>
+          ^{connectingInfo}
       |]

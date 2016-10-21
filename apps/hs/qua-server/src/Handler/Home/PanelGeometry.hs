@@ -88,13 +88,13 @@ luciScenarios = do
         toWidgetHead
           [julius|
               "use strict"
-              var saveLuciScenario = function(scname){console.log("save scenario: " + scname); hidePopups();};
+              var saveLuciScenario = function(scname){console.log("save scenario: " + scname);$('##{rawJS popupScenarioSaveId}').modal('hide');};
               /** Registers one callback; comes from Handler.Home.PanelGeometry.
                *  sendMsg :: JSString -> IO ()
                *  return :: IO ()
                */
               function registerSaveScenario(sendMsg) {
-                saveLuciScenario = function(scname){sendMsg(scname.trim());hidePopups();};
+                saveLuciScenario = function(scname){sendMsg(scname.trim());$('##{rawJS popupScenarioSaveId}').modal('hide');};
               }
           |]
         toWidgetBody
@@ -164,7 +164,7 @@ luciScenarios = do
         toWidgetHead
           [julius|
               "use strict"
-              var askLuciForScenario = function(id,scname){hidePopups();};
+              var askLuciForScenario = function(id,scname){$('##{rawJS popupScenarioListId}').modal('hide');};
               /** Registers one callback; comes from Handler.Home.PanelGeometry.
                *  h :: ScID -> JSString -> IO ()
                *  return :: IO ()

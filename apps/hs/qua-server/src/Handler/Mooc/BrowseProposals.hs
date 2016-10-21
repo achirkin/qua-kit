@@ -138,10 +138,12 @@ getLastSubmissions page = getVals <$> rawSql query [toPersistValue pageSize, toP
           ["SELECT scenario.id, scenario.last_update, scenario.description,\"user\".name,criterion.icon,COALESCE(rating.value, 0)"
           ,"FROM scenario"
           ,"INNER JOIN \"user\" ON \"user\".id = scenario.author_id"
-          ,"INNER JOIN ( SELECT scenario.author_id, scenario.task_id, MAX(scenario.last_update) as x"
+          ,"INNER JOIN ( SELECT scenario.author_id, scenario.task_id, MAX(scenario.last_update) as x, AVG(COALESCE(rating.value, 0)) as score"
           ,"             FROM scenario"
+          ,"             LEFT OUTER JOIN rating"
+          ,"                          ON rating.author_id = scenario.author_id"
           ,"             GROUP BY scenario.author_id, scenario.task_id"
-          ,"             ORDER BY x DESC"
+          ,"             ORDER BY score DESC, x DESC"
           ,"             LIMIT ? OFFSET ?) t"
           ,"        ON t.task_id = scenario.task_id AND t.author_id = scenario.author_id AND t.x = scenario.last_update"
           ,"CROSS JOIN criterion"
@@ -149,7 +151,7 @@ getLastSubmissions page = getVals <$> rawSql query [toPersistValue pageSize, toP
           ,"LEFT OUTER JOIN rating"
           ,"        ON scenario.task_id = rating.problem_id AND scenario.author_id = rating.author_id AND criterion.id = rating.criterion_id"
           ,""
-          ,"ORDER BY scenario.id DESC, criterion.id ASC;"
+          ,"ORDER BY t.score DESC, scenario.id DESC, criterion.id ASC;"
           ]
 
 countUniqueSubmissions :: ReaderT SqlBackend Handler Int

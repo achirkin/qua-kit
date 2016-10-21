@@ -35,16 +35,16 @@ flag postgresql
         Use PostgreSQL database. Otherwise use sqlite.
 
 library
-    
+
     if ((flag(postgresql) && !flag(dev)) && !flag(library-only))
         cpp-options: -DPOSTGRESQL
-    
+
     if (flag(dev) || flag(library-only))
         cpp-options: -DDEVELOPMENT
         ghc-options: -Wall -fwarn-tabs -O0
     else
         ghc-options: -Wall -fwarn-tabs -O2
-    
+
     if ((flag(postgresql) && !flag(dev)) && !flag(library-only))
         build-depends:
             persistent-postgresql -any
@@ -53,6 +53,7 @@ library
             persistent-sqlite -any
     exposed-modules:
         Application
+        Application.Grading
         Foundation
         Handler.About
         Handler.Common
@@ -148,10 +149,10 @@ library
     hs-source-dirs: src
 
 executable qua-server
-    
+
     if ((flag(postgresql) && !flag(dev)) && !flag(library-only))
         cpp-options: -DPOSTGRESQL
-    
+
     if flag(library-only)
         buildable: False
     main-is: main.hs

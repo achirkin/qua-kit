@@ -27,7 +27,7 @@ import Web.LTI
 
 -- mininum number of votes for this particular design to participate
 minNi :: Int
-minNi = 5
+minNi = 2
 
 -- minimum number of votes for a criterion to participate
 minNn :: Int

@@ -62,3 +62,15 @@ mvn exec:java -pl scenario
 Path: `libs/hs/luci-connect`.
 Luci-connect is a haskell library for clients and services of Luci.
 Refer to `libs/hs/luci-connect/README.md` for further documentation.
+
+
+### Notes
+
+Some SQL queries become really slow when database grows (I have 1331 votes now).
+Having added couple indices speeds up "compare designs" query about 5-10x.
+```
+CREATE INDEX ON vote (better_id);
+CREATE INDEX ON vote (worse_id);
+```
+Maybe a better solution is to make the request itself faster later,
+but for now it solved the problem.
