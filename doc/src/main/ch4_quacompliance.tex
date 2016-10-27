@@ -14,9 +14,9 @@ A qua-view-complient service must support one or more of following working modes
     \texttt{new} -- a service updates or creates a new geometry.
 \end{itemize}
 
-\subsection{QUA-View-Compliance}
-
 \subsubsection{Registering}
+
+In the following section, we will introduce the required fields and formats for a qua-view-compliant service. A full registration message can be seen in Listing \ref{lst:quacompliance}.
 
 \begin{lstlisting}[caption={Registering a QUA-compliant service}, label={lst:quacompliance}]
 {
@@ -51,7 +51,7 @@ A qua-view-complient service must support one or more of following working modes
   exampleCall : {
     {
       run : "RandomQUA",
-      geomID : 123,
+      ScId : 123,
       mode : "points",
       points : {
         format : "float32 array",
@@ -72,20 +72,35 @@ A qua-view-complient service must support one or more of following working modes
 \paragraph{Metadata}
 When registering a service, the attribute \texttt{description} of the RemoteRegister service becomes obligatory. Furthermore, the boolean field \texttt{qua-view-compliant} must be provided and set to \texttt{True} at root-level.
 
-Moreover, the optional field \texttt{constraints} is introduced and takes the form as seen in Listing \ref{lst:quacompliance}.
-For each input, a field in the constraints can be provided that specifies the domain of this input field further. Each constraint is either a list of values corresponding to an input field's type, or, for numeric values, a range. If no constraint is given for an input field, the input field's domain is considered unrestricted and every value of it's type is valid. There must be a constraint for \texttt{string}-inputs. There is a maximum of one constraint per input field allowed. If more than one constraint exists for a given input field, the service is considered broken and must be rejected.
+\paragraph{Constraints}
+The optional field \texttt{constraints} is introduced. The field specifies the possible values for service inputs. Each input possibly represents an element in the constraints-dictionary. Depending on the input type, the constraint takes the following formats:
 
-The example above specifieds three inputs for a service. The first input argument is either \texttt{foo} or \texttt{bar}. The second one takes any whole number in the interval [0,100]. The third one can be any number since no constraint has been specified.
+\begin{lstlisting}[caption={A string constraint}, label={lst:constraints}]
+{
+  constraint : {
+      some number input : {
+          min : 42,
+          max : 100,
+          integer : true
+      },
+      some string input : ["foo", "bar"]
+  }
+}
+\end{lstlisting}
 
-Note that a range constraint does not necessarily contain all three arguments min, max and integer.
 
-\paragraph{Inputs}
+\begin{itemize}
+	\item If the input field is of type \texttt{number}, then its corresponding constraint-value is a dictionary with up to three keys: \texttt{min}, \texttt{max} and \texttt{integer} specifying the minimum and maximum of the valid input range as well as whether the input must be an integer. In Listings \ref{lst:quacompliance} and \ref{lst:constraints}, the number-input \texttt{some other input} is constrained to $[42,100] \cap \mathbb{Z}$.
+	\item If the input field is of type \texttt{string}, then its corresponding constraint-value is a list of possible values for this string as seen in Listing \ref{lst:constraints} where \texttt{some string input} has two valid input values: \emph{foo} and \emph{bar}
+\end{itemize}
+
+\subsubsection{Inputs}
 While services originally can have arbitrary inputs, in QUA-compliant services, two input fields become obligatory: \texttt{mode} and \texttt{ScID}.The mode is how the service should operate, normally it operates on a \texttt{scenario}, \texttt{objects} or \texttt{points} level; or creates a new scenario in the mode \texttt{new}.
 
 The scenario-id specifies the scenario which should be analyzed by the service. If the mode is either \texttt{objects} or \texttt{points}, a binary attachment must be included in the service call:
 \begin{itemize}
   \item \texttt{points}: Points are serialized to a binary file of \texttt{float32} values wherein three consecutive values correspond to one three dimensional vector.
-  \item \textbf{Objects} are serialized to a binary file \texttt{ulong64} values wherein each value corresponds to one object id contained in the specified scenario.
+  \item \texttt{objects} are serialized to a binary file \texttt{ulong64} values wherein each value corresponds to one object id contained in the specified scenario.
 \end{itemize}
 
 Examples are given in Listings \ref{lst:quacompliantinput:scenario}, \ref{lst:quacompliantinput:objects}, \ref{lst:quacompliantinput:points}, \ref{lst:quacompliantinput:new}.
@@ -94,7 +109,7 @@ Examples are given in Listings \ref{lst:quacompliantinput:scenario}, \ref{lst:qu
 {
   run : "RandomQUA",
   callID : 0,
-  geomID : 123,
+  ScId : 123,
   mode : "scenario"
 }
 \end{lstlisting}
@@ -103,7 +118,7 @@ Examples are given in Listings \ref{lst:quacompliantinput:scenario}, \ref{lst:qu
 {
   run : "RandomQUA",
   callID : 0,
-  geomID : 123,
+  ScId : 123,
   mode : "points",
   points : {
     format : "float32 array",
@@ -121,9 +136,9 @@ Examples are given in Listings \ref{lst:quacompliantinput:scenario}, \ref{lst:qu
 {
   run : "RandomQUA",
   callID : 0,
-  geomID : 123,
+  ScId : 123,
   mode : "objects",
-  points : {
+  objVals : {
     format : "ulong64 array",
     name : "objects",
     attachment {
@@ -140,11 +155,11 @@ Examples are given in Listings \ref{lst:quacompliantinput:scenario}, \ref{lst:qu
 {
   run : "RandomQUA",
   callID : 0,
-  mode : "new" // Note how the call does not contain a geomID
+  mode : "new" // Note how the call does not contain a ScId
 }
 \end{lstlisting}
 
-\paragraph{Outputs}
+\subsubsection{Outputs}
 The output of a qua-compliant service depends on the mode it operates in. The header is therefore appended with the field \texttt{mode} which corresponds to the given input mode. The additional fields are defined as follows:
 
 \begin{itemize}
@@ -164,7 +179,7 @@ The output of a qua-compliant service depends on the mode it operates in. The he
   \end{lstlisting}
 \end{itemize}
 
-Example outputs given in Listings \ref{lst:quacompliantresult:scenario}, \ref{lst:quacompliantresult:objects}, \ref{lst:quacompliantresult:points}, \ref{lst:quacompliantresult:new}.
+Example outputs are given in Listings \ref{lst:quacompliantresult:scenario}, \ref{lst:quacompliantresult:objects}, \ref{lst:quacompliantresult:points}, \ref{lst:quacompliantresult:new}.
 
 \begin{lstlisting}[caption={A qua-compliant service output for mode \texttt{scenario}}, label={lst:quacompliantresult:scenario}]
 {
