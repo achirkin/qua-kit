@@ -99,15 +99,15 @@ luciScenarios = do
           |]
         toWidgetBody
               [hamlet|
-                <div style="display: none;" aria-hidden="true" class="modal modal-va-middle fade" ##{popupScenarioListId} role="dialog" tabindex="-1">
-                  <div class="modal-dialog">
-                    <div class="modal-content">
-                      <div class="modal-heading">
+                <div style="display: none;" aria-hidden="true" class="modal modal-va-middle fade" ##{popupScenarioListId} role="dialog" tabindex="-1" style="max-height: 100%">
+                  <div class="modal-dialog" style="max-height: 100%">
+                    <div class="modal-content" style="max-height: 100%">
+                      <div class="modal-heading" style="max-height: 10%">
                         <p class="modal-title">
                           Select scenario
-                      <div class="modal-inner">
-                        <div ##{popupScenarioListTable} style="display: table; width: 100%;">
-                      <div class="modal-footer">
+                      <div class="modal-inner" style="max-height: 80%">
+                        <div ##{popupScenarioListTable} style="display: table; width: 100%; max-height: 80%; overflow-y: scroll">
+                      <div class="modal-footer" style="max-height: 10%">
                         <p class="text-right">
                           <a class="btn btn-flat btn-brand-accent waves-attach waves-effect" data-dismiss="modal">
                             Cancel
