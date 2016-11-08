@@ -95,7 +95,7 @@ So you need to run the three things, and then use the running website to execute
   3. Compile and run your service connected to localhost `luci`.
      Alternatively, you can try `dist-walls-service` executable - it has been tested to work with current version of luci.
      It is available at `libs/hs/luci-connect` folder.
-     Use `stack install && dist-walls-service` to run it, or refer to corresponding readme to solve any problems.
+     Use `stack setup && stack install --ghc-options="-pgmlo opt-3.5 -pgmlc llc-3.5" && dist-walls-service` to run it, or refer to corresponding readme to solve any problems.
      Note, that you have to use linux and have `llvm-3.5` dev libraries to run it.
   4. Go to page `http://localhost:3000/viewer`
   4. (hint) Open browser console to see debug output.
