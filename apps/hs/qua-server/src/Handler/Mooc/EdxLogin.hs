@@ -50,21 +50,25 @@ dispatchLti conf yreq = do
         user_id                 <- lookupParam msg "user_id"
         resource_link_id        <- lookupParam msg "resource_link_id"
         context_id              <- lookupParam msg "context_id"
-        lis_outcome_service_url <- lookupParam msg "lis_outcome_service_url"
-        lis_result_sourcedid    <- lookupParam msg "lis_result_sourcedid"
+        lis_outcome_service_url <- lookupParamM msg "lis_outcome_service_url"
+        lis_result_sourcedid    <- lookupParamM msg "lis_result_sourcedid"
         -- set LTI credentials
         setCredsRedirect
              . Creds pluginName user_id
              $ ("resource_link_id"       , resource_link_id)
              : ("context_id"             , context_id)
-             : ("lis_outcome_service_url", lis_outcome_service_url)
-             : ("lis_result_sourcedid"   , lis_result_sourcedid)
-             : saveCustomParams (Map.toList msg)
+             : catMaybes
+                [ (,) "lis_outcome_service_url" <$> lis_outcome_service_url
+                , (,) "lis_result_sourcedid" <$> lis_result_sourcedid
+                ]
+             ++ saveCustomParams (Map.toList msg)
   where
     -- try to get essential edxParameters
     lookupParam msg p = case Map.lookup p msg of
                         Just v -> return $ Text.decodeUtf8 v
                         Nothing -> permissionDenied $ "Cannot access request parameter " <> Text.decodeUtf8 p
+    -- try to get optional edxParameters
+    lookupParamM msg p = return $ Text.decodeUtf8 <$> Map.lookup p msg
     -- store all special parameters in user session
     saveCustomParams [] = []
     saveCustomParams ((k,v):xs) = if "custom_" `isPrefixOf` k

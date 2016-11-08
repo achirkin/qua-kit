@@ -119,6 +119,7 @@ getCompareByCriterionR uId cId = do
       setMessage "I am sorry, seems like you have voted too much already."
       fullLayout Nothing "Error" mempty
     Just (Entity k1 s1, Entity k2 s2) -> do
+      _ <- getMessages
       fullLayout (Just . preEscapedToMarkup $ criterionIcon criterion)
                  ("Compare designs according to a "
                   <> toLower (criterionName criterion)

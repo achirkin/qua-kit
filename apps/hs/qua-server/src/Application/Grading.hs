@@ -122,7 +122,7 @@ sendGrades app = do
     -- send grades for all design tasks
     allRatingGrades >>= mapM_
           (\(ourl, rid, val) -> do
-            req <- replaceResultRequest (appLTICredentials $ appSettings app) (Text.unpack ourl) rid (0.6 + 0.4*val) Nothing
+            req <- replaceResultRequest (appLTICredentials $ appSettings app) (Text.unpack ourl) rid (min 1 $ 0.7 + 0.5*val)  Nothing
             _ <- lift $ httpNoBody req
             return ()
           )
