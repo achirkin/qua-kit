@@ -29,7 +29,6 @@ import Web.LTI
 
 postVoteForProposalR :: CriterionId -> ScenarioId -> ScenarioId -> Handler Html
 postVoteForProposalR cId better worse = do
-  liftIO $ putStrLn "Vote!"
   userId <- requireAuthId
   useSVars <- (\mt -> if mt == Just "compare" then id else const Nothing) <$> lookupSession "custom_exercise_type"
   resource_link_id        <- useSVars <$> lookupSession "resource_link_id"
@@ -46,9 +45,8 @@ postVoteForProposalR cId better worse = do
   mexplanation <- lookupPostParam "explanation"
   runDB $ do
     t <- liftIO getCurrentTime
-    i <- insert $ Vote userId cId better worse mexplanation mresId
+    _ <- insert $ Vote userId cId better worse mexplanation mresId
                        lis_outcome_service_url lis_result_sourcedid t
-    liftIO $ print i
     return ()
 
   mcustom_exercise_count   <- (>>= parseInt) <$> lookupSession "custom_exercise_count"
