@@ -95,15 +95,21 @@ So you need to run the three things, and then use the running website to execute
   3. Compile and run your service connected to localhost `luci`.
      Alternatively, you can try `dist-walls-service` executable - it has been tested to work with current version of luci.
      It is available at `libs/hs/luci-connect` folder.
-     Use `stack setup && stack install --ghc-options="-pgmlo opt-3.5 -pgmlc llc-3.5" && dist-walls-service` to run it, or refer to corresponding readme to solve any problems.
+     To run it use following command:
+     
+        stack setup # you only need this once to set up GHC
+        stack install --ghc-options="-pgmlo opt-3.5 -pgmlc llc-3.5" && dist-walls-service
+     
+     Refer to corresponding readme to solve any problems.
      Note, that you have to use linux and have `llvm-3.5` dev libraries to run it.
   4. Go to page `http://localhost:3000/viewer`
-  4. (hint) Open browser console to see debug output.
+      * (hint) Open browser console to see debug output if you have any troubles.
   5. Open toolbox -> connect to luci.
-  6. (a) Load some scenario via luci (if uploaded something before).
-  6. (b) Upload some scenario using `FILES` button.
-     There is one available at `apps/hs/qua-server/static/data/mooctask.geojson`.
-     Save it to luci.
+  6. Run scenario:
+      * (a) Load some scenario via luci (if uploaded something before).
+      * (b) Upload some scenario using `FILES` button.
+            There is one available at `apps/hs/qua-server/static/data/mooctask.geojson`.
+            Save it to luci.
   7. Make sure that `luci` and some service is running, then go to `SERVICES` tab.
      It should show a list of available services.
      You can select one to run it.
