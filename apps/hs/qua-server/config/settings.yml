@@ -27,5 +27,5 @@ copyright: (c) Artem Chirkin
 #analytics: UA-YOURCODE
 lti-key: "_env:LTI_KEY:oauth_lti_provider_key"
 lti-secret: "_env:LTI_SECRET:oauth_lti_provider_secret"
-luci-host: 127.0.0.1 #129.132.6.33
-luci-port: 7654
+luci-host: "_env:LUCI_HOST:127.0.0.1" #129.132.6.33
+luci-port: "_env:LUCI_PORT:7654"

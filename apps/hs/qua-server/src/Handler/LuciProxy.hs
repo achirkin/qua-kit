@@ -79,8 +79,8 @@ luciApp = do
             fromLuci :: Producer (WebSocketsT Handler) ByteString
             fromLuci = Network.appSource appData
         race_
-           (runConduit $ fromClient =$= CList.mapM (\x -> ($(logDebug) $ "CLIENT: " <> decodeUtf8 x) >> return x) =$= toLuci)
-           (runConduit $ fromLuci =$= CList.mapM (\x -> ($(logDebug) $ "LUCI: " <> decodeUtf8 x) >> return x) =$= toClient)
+           (runConduit $ fromClient =$= CList.mapM (\x -> ($(logDebug) $ "CLIENT: " <> pack (show x)) >> return x) =$= toLuci)
+           (runConduit $ fromLuci =$= CList.mapM (\x -> ($(logDebug) $ "LUCI: " <> pack (show x)) >> return x) =$= toClient)
       sendBinaryData (makeSimpleLuciMessage $
               "{\"wsTerminate\":\""
               <> "Connection to Luci has been closed."

@@ -1,4 +1,5 @@
 {-# OPTIONS_GHC -fno-warn-orphans #-}
+{-# Language CPP #-}
 module Application
     ( getApplicationDev
     , appMain
@@ -168,7 +169,10 @@ makeFoundation appSettings = do
     let app = mkFoundation pool
 
     -- send grades once every day
+#if DEVELOPMENT
+#else
     scheduleUpdateGrades (3600*24) app pool
+#endif
 
     -- Return the foundation
     return app

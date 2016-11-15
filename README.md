@@ -104,10 +104,10 @@ So you need to run the three things, and then use the running website to execute
   6. (b) Upload some scenario using `FILES` button.
      There is one available at `apps/hs/qua-server/static/data/mooctask.geojson`.
      Save it to luci.
-  7. Make sure that `luci` and some service is running, then go to `SERVICES` tab and click on `refresh` button.
-     You need it to update service manager inside JS app.
-     At this moment service controls are broken, so do not look at them!
-     When you press refresh you should see a list of available services in console output.
-     The first service in the list is the one that runs.
+  7. Make sure that `luci` and some service is running, then go to `SERVICES` tab.
+     It should show a list of available services.
+     You can select one to run it.
+     Click on `refresh` button if you do not see your service in a list.
+     At this moment service parameters are broken, so do not look at them!
   8. Press green `play` button.
      

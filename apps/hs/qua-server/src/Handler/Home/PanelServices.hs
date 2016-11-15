@@ -30,21 +30,49 @@ panelServices = do
     function registerRefreshServiceList(onClick) {
       document.getElementById('refreshServicesBtn').addEventListener("click", onClick);
     }
+    /** Updates visible service list; comes from Handler.Home.PanelServices.
+     *  xs :: [ServiceName]
+     *  return :: IO ()
+     */
+    function updateServiceNames(xs) {
+      var e = document.getElementById("serviceListControlMenu");
+      while (e.length > 0) {
+        e.remove(e[0]);
+      }
+      var option, i;
+      for (i = 0; i < xs.length; i++) {
+        option = document.createElement("option");
+        option.text = xs[i];
+        option.value = xs[i];
+        e.add(option);
+        if (i == 0) {
+          option.selected = true;
+          activeVisService(xs[i]);
+        } else {
+          option.selected = false;
+        }
+      }
+    }
+    var activeVisService = function(s){console.log("Set active service: ", s)};
+    /** Registers one callback; comes from Handler.Home.PanelServices.
+     *  setActiveService :: String -> IO ()
+     *  return :: IO ()
+     */
+    function registerSetActiveService(setActiveService) {
+      activeVisService = setActiveService;
+    }
     |]
   toWidgetBody
     [hamlet|
       <div>
         Select a remote service to run
-          <table style="width: 100%">
+          <table style="width: 98%">
             <tr>
               <td style="width: 5%">
                 <a.btn.btn-flat.btn-red.waves-attach title="Refresh list of available services" #refreshServicesBtn>
                   <span.icon.icon-lg>refresh
-              <td style="width: 95%">
-                <select.form-control>
-                  <option value="iso">Isovist
-                  <option value="sol">Solar analysis
-                  <option value="dis">Distance to walls
+              <td style="width: 95%" onchange="activeVisService($(this).find(':selected').val())">
+                <select.form-control #serviceListControlMenu>
 
       <div.form-group>
 
