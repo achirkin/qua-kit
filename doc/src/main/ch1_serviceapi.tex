@@ -16,11 +16,78 @@ The three required fields are
 
 If a service accepts input arguments or outputs data, two additional parameters \textbf{can} be provided:
 \begin{itemize}
-  \item \texttt{input}: A json-schema that specifies the service input
+  \item \texttt{input}: A json-schema that specifies the service input.
   \item \texttt{output}: A json-schema that specifies the service output
 \end{itemize}
 
-\subsection{Run and Cancel}
+\subsubsection{JSON-Schema}
+
+The schema for service inputs and outputs is a dictionary assigning each argument its type. A basic example schema is given in listing \ref{lst:schema}. A json-dictionary is valid for this schema if it contains the keys \texttt{foo}, \texttt{bar} and \texttt{baz} and assigns a number, string and boolean to them, respectively.
+\begin{lstlisting}[caption={JSON Schema}, label={lst:schema}]
+  {
+    foo : number,
+    bar : string,
+    baz : boolean
+  }
+\end{lstlisting}
+
+Arguments can be made optional and mutually exclusive using the prefixes OPT and XOR. In listing \ref{lst:schemaadvanced-optional}, only the field \texttt{foo} is obligatory. A valid JSON dictionary \textbf{must} contain the key \texttt{foo} and \textbf{can} contain the key \texttt{bar}.
+\begin{lstlisting}[caption={JSON Schema with optional arguments}, label={lst:schemaadvanced-optional}]
+  {
+    foo : number,
+    OPT bar : string
+  }
+\end{lstlisting}
+
+Finally, consecutive arguments can be mutually exclusive. In listing \ref{lst:schemaadvanced-xor} the arguments \texttt{baz1}, \texttt{baz2}, \texttt{baz3} are mutually exclusive, indicating that exactly one of the three must be included.
+\begin{lstlisting}[caption={JSON Schema with mutually exclusive arguments}, label={lst:schemaadvanced-xor}]
+{
+  XOR baz1 : boolean,
+  XOR baz2 : boolean,
+  XOR baz3 : boolean
+}
+\end{lstlisting}
+
+\subsubsection{Example Register-message}
+Listing \ref{lst:register-service} shows an example message how to register a service named \emph{ExampleService}. The schema in the section \texttt{inputs} indicates, that the service takes up to 2 input values: an obligatory number in the field \texttt{obligatory\_input} and
+a string in the field \texttt{optional\_input}. The OPT-keyword indicates that the latter field is not a required one for the service to run.
+
+After its execution, the service then outputs a dictionary containing the following keys:
+\begin{itemize}
+  \item \texttt{obligatory\_output} which is assigned a string value
+  \item \texttt{output\_value1} \textbf{or} \texttt{output\_value2}. Only one of the keys is allowed to be included in the outputs.
+  \item \texttt{optional\_output} which is a boolean and \textbf{optional}. In some cases, the service might output this value and in other cases it might omit it.
+\end{itemize}
+
+\begin{lstlisting}[caption={Registering a service}, label={lst:register-service}]
+{
+  run : "RemoteRegister",
+  description : "I am an exemplary service",
+  serviceName : "ExampleService",
+  callID : 1,
+  inputs : {
+    obligatory_input : number,
+    OPT optional_input : string
+  },
+  outputs : {
+    obligatory_output : string,
+    XOR output_value1 : number,
+    XOR output_value2 : number.
+    OPT optional_output : boolean
+  },
+  exampleCall : {
+    {
+      run : "ExampleService",
+      optional_input : "foo",
+      obligatory_input : 12
+    }
+  }
+}
+\end{lstlisting}
+
+The whole message is sent as a \emph{run}-message (see section \ref{sec:runandcancel}) to the pseudo-service \emph{RemoteRegister}. Afterwards, Luci is aware of the service and associates the service \emph{ExampleService} with the IP from which this registration message originated.
+
+\subsection{Run and Cancel}\label{sec:runandcancel}
 When a client sends a message in the form
 \begin{lstlisting}
 {
