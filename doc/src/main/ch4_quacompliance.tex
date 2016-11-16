@@ -1,22 +1,288 @@
 \section{QUA-Compliance}
 \label{ch:quacompliance}
 
-To make a service compliant for use in the QUA-Kit, a service is subject to additional constraints that are described here.
-A qua-view-complient service must support one or more of following working modes:
+To make a service compliant for use in the qua-kit, a service is subject to additional constraints that are described here.
+A qua-view-compliant service must support one or more of following working modes:
 \begin{itemize}
-\item 
+\item
     \texttt{scenario} -- a service gets a scenario as input and returns a single result for a whole scenario;
-\item 
+\item
     \texttt{objects} -- a service gets a scenario and ids of individual objects and returns a result per every object;
-\item 
+\item
     \texttt{points} -- a service gets a scenario and a grid of points, and returns a result per each point on the grid;
-\item 
+\item
     \texttt{new} -- a service updates or creates a new geometry.
 \end{itemize}
 
-\subsubsection{Registering}
+\subsection{QUA-View-Compliance}
 
-In the following section, we will introduce the required fields and formats for a qua-view-compliant service. A full registration message can be seen in Listing \ref{lst:quacompliance}.
+Defining a service being
+\texttt{qua-view-compliant} means promising to follow a strict predefined format of service input, output, and parameters.
+To declare a service \texttt{qua-view-compliant}, one needs to add \texttt{qua-view-compliant:true} flag in the root
+of \texttt{RemoteRegister} JSON message sent to luci/helen at the start of a service execution.
+To test if a service follows strictly the specification is a responsibility of a service developer.
+
+\subsubsection{Optional parameters}
+
+A \texttt{qua-view-compliant} service may have arbitrary number of optional parameters.
+All optional parameters must be defined in an \texttt{inputs} object of \texttt{RemoteRegister} JSON message
+using \texttt{paramName:paramType} syntax.
+Valid parameter types are:
+\begin{enumerate}
+\item \texttt{boolean} -- either \texttt{true} or \texttt{false};
+\item \texttt{number} -- any number type;
+\item \texttt{string} -- a fixed string, must have a corresponding field in \texttt{constraints} object.
+\end{enumerate}
+
+\subsubsection{Constraints}
+
+Parameters may have constraints defined on them.
+These constraints are used by qua-view control panel to configure user input fields.
+To define a constraint, one needs to use \texttt{constraints} object in the root of \texttt{RemoteRegister} JSON message
+(see listing~\ref{lst:quaconstraints}).
+\begin{lstlisting}[caption={qua-compliance -- parameter constraints}, label={lst:quaconstraints}]
+{
+  run : "RemoteRegister",
+  ...
+  qua-view-compliant : true,
+  inputs : {
+    ...
+    mode : "string",
+    constrainedInput1 : "number",
+    constrainedInput2 : "string"
+  },
+  outputs : {
+    ...
+  },
+  constraints : {
+      mode: ["points", "scenario"],
+      constrainedInput1 : {
+          min : 42,
+          integer : true
+      },
+      constrainedInput2 : ["hello", "world", "3rd option"]
+  },
+  ...
+}
+\end{lstlisting}
+
+\paragraph{Number}
+To describe constraints on a number type, one needs to create a JSON object with following (all optional) records:
+\begin{itemize}
+\item \texttt{min:number} -- minimum allowed value;
+\item \texttt{max:number} -- maximum allowed value;
+\item \texttt{def:number} -- default value visible in a viewer;
+   \texttt{\begin{itemize}
+   \item (min = undef, max = undef, def = undef): def = 0;
+   \item (min = exist, max = undef, def = undef): def = min;
+   \item (min = undef, max = exist, def = undef): def = max;
+   \item (min = exist, max = exist, def = undef): def = (max - min) / 2;
+   \end{itemize}}
+\item \texttt{integer:boolean} -- whether to treat a number as an integer; default \texttt{integer:false}.
+\end{itemize}
+
+\paragraph{String}
+To describe contraints on a string, one needs to create a JSON array of strings -- an enumeration of possible value.
+Without a constraint object, a parameter accepts any string value;
+with a constraint object, a parameter is displayed as a drop-down list of possible options
+(see listing~\ref{lst:quaconstraints} constraints on a \texttt{constrainedInput2} input key).
+The first option in a list is the default one.
+
+
+\paragraph{Boolean}
+One possible constraint for a boolean is a default value in qua-view.
+Use \texttt{\{def:true\}} or \texttt{\{def:false\}} constructs.
+
+
+\subsection{Execution modes}
+The execution modes define how a service is visualized in qua-view.
+Each mode dictates obligatory input and output parameters.
+A service may support more than one execution modes.
+At runtime, an execution mode is defined by \texttt{inputs} record \texttt{mode:string}.
+A qua-view-compliant service must define \texttt{inputs/mode} field in \texttt{RemoteRegister} JSON message
+and a corresponding constraint (the same way as optional parameters).
+
+\subsubsection{points}
+In this mode, qua-view generate a grid of points in 3D and sends them to a service together with scenario reference.
+A service sends back floating point values for each point.
+Then, qua-view visualizes the values as a coloured heat map.
+The grid of points is sent in a binary attachment in form \texttt{XYZXYZ...XYZ}, 4 byte floating point value per coordinate
+in Little Endian format (\texttt{float32}) -- $3 \cdot 4 n$ bytes in total, where $n$ is the number of points.
+A service determines a number of points by the size of incoming data.
+\begin{lstlisting}[caption={A qua-compliant service run request for mode \texttt{points}}, label={lst:quacompliantinput:points}]
+{
+  run : "RandomQUA",
+  callID : 283,
+  ScID : 123,
+  mode : "points",
+  points : {
+    format : "float32 array",
+    attachment {
+      length : 3072,
+      position : 1,
+      checksum : "2929bead3ee3cf55113ec9aade2b6add"
+    }
+  }
+}
+\end{lstlisting}
+
+\begin{lstlisting}[caption={A qua-compliant service output for mode \texttt{points}}, label={lst:quacompliantresult:points}]
+{
+  callID : 283,
+  result : {
+    units : "metre",
+    values : {
+      format : "float32 array",
+      attachment : {
+        length: 1024,
+        checksum: "50752c7cb358a5fffd913d9aa3605433",
+        position: 1
+      }
+    }
+  }
+}
+\end{lstlisting}
+A result of a service execution must contain following fields:
+\begin{enumerate}
+\item \texttt{units} -- any string, e.g. "metre", "kg", "mm/s", etc.;
+\item \texttt{values} -- attachment object containing a reference to a blob of \texttt{float32} data;
+ its size must be exactly $4 n$, where $n$ is the number of points received.
+\end{enumerate}
+
+\subsubsection{objects}
+
+This mode is similar to \texttt{points} mode except instead of point coordinates a client (qua-view) sends ids of geometric objects
+within a scenario.
+Qua-view visualizes it by colouring objects according to the values received for each object.
+A user also can click on a building and see exact numeric value received from a service.
+
+A service in this mode has two obligatory inputs:
+\begin{enumerate}
+\item \texttt{ScID} -- id of a current scenario;
+\item \texttt{objIds} -- an attachment reference to a binary blob of size $8n$, where $n$ is the number of objects to process by a service;
+                         the blob consists of unsigned 8-byte integers in Little Endian format (\texttt{ulong64}) -- \texttt{geomID} of each object.
+\end{enumerate}
+\begin{lstlisting}[caption={A qua-compliant service run request for mode \texttt{objects}}, label={lst:quacompliantinput:objects}]
+{
+  run : "RandomQUA",
+  callID : 172,
+  ScID : 123,
+  mode : "objects",
+  objIds : {
+    format : "ulong64 array",
+    attachment {
+      length : 2048,
+      position : 1,
+      checksum : "50752c7cb358a5fffd913d9aa3605433"
+    }
+  }
+}
+\end{lstlisting}
+
+A result of a service execution must contain following fields:
+\begin{enumerate}
+\item \texttt{units} -- any string, e.g. "metre", "kg", "mm/s", etc.;
+\item \texttt{values} -- attachment object containing a reference to a blob of \texttt{float32} data;
+ its size must be exactly $2 n$, where $n$ is the number of objects' \texttt{geomID} received.
+\end{enumerate}
+\begin{lstlisting}[caption={A qua-compliant service output for mode \texttt{objects}}, label={lst:quacompliantresult:objects}]
+{
+  callID : 172,
+  result : {
+    units : "metre",
+    values : {
+      format : "float32 array",
+      attachment : {
+        length: 1024,
+        checksum: "2929bead3ee3cf55113ec9aade2b6add",
+        position: 1
+      }
+    }
+  }
+}
+\end{lstlisting}
+
+\subsubsection{scenario}
+A scenario execution mode returns only one value for a whole scenario.
+The value can be an arbitrary string or a \texttt{.png} image (in attachment).
+In either way, the result is displayed on a side panel in qua-view.
+
+The only obligatory field in this mode is a scenario id \texttt{ScID}.
+\begin{lstlisting}[caption={A qua-compliant service run request for mode \texttt{scenario}}, label={lst:quacompliantinput:scenario}]
+{
+  run : "RandomQUA",
+  callID : 213,
+  ScID : 125,
+  mode : "scenario"
+}
+\end{lstlisting}
+One possible result of a scenario-mode-service is a text string.
+\begin{lstlisting}[caption={A qua-compliant service output for mode \texttt{scenario} (string output)}, label={lst:quacompliantresult:scenario}]
+{
+  callID : 213,
+  result : {
+    answer : "This scenario looks good! The goodness level is 9.125."
+  }
+}
+\end{lstlisting}
+
+Another possible result type is a \texttt{.png} image attached to a message.
+Recommended size of an image is 512x512px.
+An image may contain a graph or an arbitrary figure.
+\begin{lstlisting}[caption={A qua-compliant service output for mode \texttt{scenario} (image output)}, label={lst:quacompliantresult:scenario}]
+{
+  callID : 213,
+  result : {
+    image : {
+      format : "image/png",
+      attachment : {
+        length: 12623,
+        checksum: "8329beex3ee3cf55113ec9aade2b6a02a",
+        position: 1
+      }
+    }
+  }
+}
+\end{lstlisting}
+
+
+\subsubsection{new}
+
+In this mode, a service updates or creates a new geometry.
+It can be used by various geometry-generating services.
+A \texttt{ScID} key is optional. This mode does not have obligatory parameters.
+A service should write its output directly into scenario via luci/helen.
+The output of a service must have following fields:
+\begin{lstlisting}
+result: {
+  ScID : long, // the id of the newly created scenario
+  timestamp_accessed : long, // optional - the timestamp at which the scenario was accessed if the ScID-field was set in the input
+  timestamp_modified : long // the timestamp at which the new scenario was stored
+}
+\end{lstlisting}
+
+\begin{lstlisting}[caption={A qua-compliant service run request for mode \texttt{new}}, label={lst:quacompliantinput:new}]
+{
+  run : "RandomQUA",
+  callID : 244,
+  mode : "new" // Note how the call does not contain a ScID
+}
+\end{lstlisting}
+
+\begin{lstlisting}[caption={A qua-compliant service output for mode \texttt{new}}, label={lst:quacompliantresult:new}]
+{
+  callID : 244,
+  result : {
+    ScID : 1337,
+    timestamp_accessed : 1472137755,
+    timestamp_modified : 1472137758
+  }
+}
+\end{lstlisting}
+
+\subsection{Registering a service}
+
+TODO: more explanations
 
 \begin{lstlisting}[caption={Registering a QUA-compliant service}, label={lst:quacompliance}]
 {
@@ -51,11 +317,10 @@ In the following section, we will introduce the required fields and formats for 
   exampleCall : {
     {
       run : "RandomQUA",
-      ScId : 123,
+      geomID : 123,
       mode : "points",
       points : {
         format : "float32 array",
-        name : "points"
         attachment {
           length : 100,
           position : 1,
@@ -69,182 +334,5 @@ In the following section, we will introduce the required fields and formats for 
 }
 \end{lstlisting}
 
-\paragraph{Metadata}
-When registering a service, the attribute \texttt{description} of the RemoteRegister service becomes obligatory. Furthermore, the boolean field \texttt{qua-view-compliant} must be provided and set to \texttt{True} at root-level.
-
-\paragraph{Constraints}
-The optional field \texttt{constraints} is introduced. The field specifies the possible values for service inputs. Each input possibly represents an element in the constraints-dictionary. Depending on the input type, the constraint takes the following formats:
-
-\begin{lstlisting}[caption={A string constraint}, label={lst:constraints}]
-{
-  constraint : {
-      some number input : {
-          min : 42,
-          max : 100,
-          integer : true
-      },
-      some string input : ["foo", "bar"]
-  }
-}
-\end{lstlisting}
-
-
-\begin{itemize}
-	\item If the input field is of type \texttt{number}, then its corresponding constraint-value is a dictionary with up to three keys: \texttt{min}, \texttt{max} and \texttt{integer} specifying the minimum and maximum of the valid input range as well as whether the input must be an integer. In Listings \ref{lst:quacompliance} and \ref{lst:constraints}, the number-input \texttt{some other input} is constrained to $[42,100] \cap \mathbb{Z}$.
-	\item If the input field is of type \texttt{string}, then its corresponding constraint-value is a list of possible values for this string as seen in Listing \ref{lst:constraints} where \texttt{some string input} has two valid input values: \emph{foo} and \emph{bar}
-\end{itemize}
-
-\subsubsection{Inputs}
-While services originally can have arbitrary inputs, in QUA-compliant services, two input fields become obligatory: \texttt{mode} and \texttt{ScID}.The mode is how the service should operate, normally it operates on a \texttt{scenario}, \texttt{objects} or \texttt{points} level; or creates a new scenario in the mode \texttt{new}.
-
-The scenario-id specifies the scenario which should be analyzed by the service. If the mode is either \texttt{objects} or \texttt{points}, a binary attachment must be included in the service call:
-\begin{itemize}
-  \item \texttt{points}: Points are serialized to a binary file of \texttt{float32} values wherein three consecutive values correspond to one three dimensional vector.
-  \item \texttt{objects} are serialized to a binary file \texttt{ulong64} values wherein each value corresponds to one object id contained in the specified scenario.
-\end{itemize}
-
-Examples are given in Listings \ref{lst:quacompliantinput:scenario}, \ref{lst:quacompliantinput:objects}, \ref{lst:quacompliantinput:points}, \ref{lst:quacompliantinput:new}.
-
-\begin{lstlisting}[caption={A qua-compliant service run request for mode \texttt{scenario}}, label={lst:quacompliantinput:scenario}]
-{
-  run : "RandomQUA",
-  callID : 0,
-  ScId : 123,
-  mode : "scenario"
-}
-\end{lstlisting}
-
-\begin{lstlisting}[caption={A qua-compliant service run request for mode \texttt{points}}, label={lst:quacompliantinput:points}]
-{
-  run : "RandomQUA",
-  callID : 0,
-  ScId : 123,
-  mode : "points",
-  points : {
-    format : "float32 array",
-    name : "points",
-    attachment {
-      length : 3072,
-      position : 1,
-      checksum : "2929bead3ee3cf55113ec9aade2b6add"
-    }
-  }
-}
-\end{lstlisting}
-
-\begin{lstlisting}[caption={A qua-compliant service run request for mode \texttt{objects}}, label={lst:quacompliantinput:objects}]
-{
-  run : "RandomQUA",
-  callID : 0,
-  ScId : 123,
-  mode : "objects",
-  objVals : {
-    format : "ulong64 array",
-    name : "objects",
-    attachment {
-      length : 2048,
-      position : 1,
-      checksum : "50752c7cb358a5fffd913d9aa3605433"
-    }
-  }
-}
-\end{lstlisting}
-
-
-\begin{lstlisting}[caption={A qua-compliant service run request for mode \texttt{new}}, label={lst:quacompliantinput:new}]
-{
-  run : "RandomQUA",
-  callID : 0,
-  mode : "new" // Note how the call does not contain a ScId
-}
-\end{lstlisting}
-
-\subsubsection{Outputs}
-The output of a qua-compliant service depends on the mode it operates in. The header is therefore appended with the field \texttt{mode} which corresponds to the given input mode. The additional fields are defined as follows:
-
-\begin{itemize}
-  \item \texttt{scenario}: The fields \texttt{unit : string} and \texttt{value : number} have to be added at root-level to the output header.
-
-  \item \texttt{objects}: The field \texttt{unit : string} is added at root level to the output header. Furthermore an attachment named \texttt{values} is added that consists of a numeric array in which the service results for all objects are stored in input-order.
-
-  \item \texttt{points}: The field \texttt{unit : string} is added at root level to the output header. Furthermore an attachment named \texttt{values} is added that consists of a numeric array in which the service results for all points are stored in input-order.
-
-  \item \texttt{new}: The header is appended at root-level with the following fields:
-  \begin{lstlisting}
-{
-  scenario_id : long, // the id of the newly created scenario
-  timestamp_accessed : long, // the timestamp at which the scenario was accessed if the ScID-field was set in the input
-  timestamp_modified : long // the timestamp at which the new scenario was stored
-}
-  \end{lstlisting}
-\end{itemize}
-
-Example outputs are given in Listings \ref{lst:quacompliantresult:scenario}, \ref{lst:quacompliantresult:objects}, \ref{lst:quacompliantresult:points}, \ref{lst:quacompliantresult:new}.
-
-\begin{lstlisting}[caption={A qua-compliant service output for mode \texttt{scenario}}, label={lst:quacompliantresult:scenario}]
-{
-  result : {
-    unit : "metre",
-    mode : "scenario",
-    value : 15.0
-  },
-  callID : 213,
-  duration : 10.2
-}
-\end{lstlisting}
-
-\begin{lstlisting}[caption={A qua-compliant service output for mode \texttt{objects}}, label={lst:quacompliantresult:objects}]
-{
-  result : {
-    unit : "metre",
-    mode : "objects"
-  },
-  callID : 213,
-  duration : 10.2,
-  values : {
-    name : "values",
-    format : "float32 array",
-    attachment : {
-      length: 1024,
-      checksum: "2929bead3ee3cf55113ec9aade2b6add",
-      position: 1
-    }
-  }
-}
-\end{lstlisting}
-
-\begin{lstlisting}[caption={A qua-compliant service output for mode \texttt{points}}, label={lst:quacompliantresult:points}]
-{
-  result : {
-    unit : "metre",
-    mode : "points"
-  },
-  callID : 213,
-  duration : 10.2,
-  values : {
-    name : "values",
-    format : "float32 array",
-    attachment : {
-      length: 1024,
-      checksum: "50752c7cb358a5fffd913d9aa3605433",
-      position: 1
-    }
-  }
-}
-\end{lstlisting}
-
-\begin{lstlisting}[caption={A qua-compliant service output for mode \texttt{new}}, label={lst:quacompliantresult:new}]
-{
-  result : {
-    unit : "metre",
-    mode : "new"
-  },
-  callID : 213,
-  duration : 3.0,
-  scenario_id : 1337,
-  timestamp_accessed : 1472137755,
-  timestamp_modified : 1472137758
-}
-\end{lstlisting}
 
 \clearpage

@@ -24,6 +24,25 @@ getAboutR =
         [hamlet|
           <div class="row">
 
+            <div class="col-lg-6 col-md-5 col-sm-8 col-xs-9">
+              <div.card.card-orange>
+                <div.card-main>
+                  <div.card-header>
+                    <div.card-inner>
+                      <h5.h5.margin-bottom-no.margin-top-no>
+                        Chair of Information Architecture
+                  <div.card-inner>
+                    <p>
+                      The project is developed within our chair at ETH Zurich.
+                    <blockquote>
+                      “We develop visual methods for the analysis, design and simulation #
+                      of urban systems for a sustainable future”
+                  <div.card-action>
+                    <div.card-action-btn.pull-left>
+                      <a.btn.btn-flat.waves-attach.waves-light.waves-effect href="http://www.ia.arch.ethz.ch/" target="_blank">
+                        <span.icon>check
+                        &nbsp;Visit our site
+
 
             <div class="col-lg-6 col-md-5 col-sm-8 col-xs-9">
               <div.card>
@@ -52,25 +71,6 @@ getAboutR =
                         &nbsp;Visit project's page
 
 
-            <div class="col-lg-6 col-md-5 col-sm-8 col-xs-9">
-              <div.card.card-orange>
-                <div.card-main>
-                  <div.card-header>
-                    <div.card-inner>
-                      <h5.h5.margin-bottom-no.margin-top-no>
-                        Chair of Information Architecture
-                  <div.card-inner>
-                    <p>
-                      The project is developed within our chair at ETH Zurich.
-                    <blockquote>
-                      “We develop visual methods for the analysis, design and simulation #
-                      of urban systems for a sustainable future”
-                  <div.card-action>
-                    <div.card-action-btn.pull-left>
-                      <a.btn.btn-flat.waves-attach.waves-light.waves-effect href="http://www.ia.arch.ethz.ch/" target="_blank">
-                        <span.icon>check
-                        &nbsp;Visit our site
-
 
             <div class="col-lg-6 col-md-5 col-sm-8 col-xs-9">
               <div.card.card-brand>
@@ -97,5 +97,31 @@ getAboutR =
                         <span.icon>check
                         &nbsp;Visit project's page
 
+
+
+            <div class="col-lg-6 col-md-5 col-sm-8 col-xs-9">
+              <div.card.card-red>
+                <div.card-main>
+                  <div.card-header>
+                    <div.card-inner>
+                      <h5.h5.margin-bottom-no.margin-top-no>
+                        Empower Shack by U-TT ETH Zurich
+                  <div.card-inner>
+                    <p>
+                      Our first case study for the online course on edX platform is provided by Urban-ThinkTank group at ETH Zurich.
+                    <p>
+                      Empower Shack is an interdisciplinary development project directed by U-TT, #
+                      ETH Zurich and the local NGO Ikhayalami Development Services, in collaboration with the BT-Section #
+                      community and associated local and international partners.
+                    <p>
+                      The ongoing pilot phase is focused on a cluster of 68 houses within the BT-Section of Khayelitsha. #
+                      Through innovative design and organisational models, the project aims to develop a comprehensive and #
+                      sustainable informal settlement upgrading strategy centred on four core components: a two-story housing prototype, #
+                      participatory spatial planning, ecological landscape management, and integrated livelihoods programming.
+                  <div.card-action>
+                    <div.card-action-btn.pull-left>
+                      <a.btn.btn-flat.waves-attach.waves-light.waves-effect href="http://u-tt.com/project/empower-shack/" target="_blank">
+                        <span.icon>check
+                        &nbsp;Visit Empower Shack page
         |]
 

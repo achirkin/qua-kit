@@ -21,6 +21,7 @@ import Import.NoFoundation
 import Database.Persist.Sql (rawSql, Single(..), toSqlKey)
 import qualified Data.Text as Text
 import Data.Time.Clock
+import qualified Control.Monad.Trans.Control as Control
 import Control.Concurrent (forkIO)
 --import Control.Monad.Trans.Control
 
@@ -48,7 +49,7 @@ scheduleUpdateRatings :: Int
                       -- ^ How to combine review (first) and comarison (second) ratings.
                       --   Each triple is (overall number of votes, number of votes for this design, rating value)
                       -> ReaderT SqlBackend IO ()
-scheduleUpdateRatings dt rf cf combinef = liftBaseWith $ \run -> void . forkIO . forever $ do
+scheduleUpdateRatings dt rf cf combinef = Control.liftBaseWith $ \run -> void . forkIO . forever $ do
      run $ updateRatings rf cf combinef
      threadDelay dts
   where
@@ -56,7 +57,7 @@ scheduleUpdateRatings dt rf cf combinef = liftBaseWith $ \run -> void . forkIO .
 
 
 scheduleGradeVotes :: Int -> ReaderT SqlBackend IO ()
-scheduleGradeVotes dt = liftBaseWith $ \run -> void . forkIO . forever $ do
+scheduleGradeVotes dt = Control.liftBaseWith $ \run -> void . forkIO . forever $ do
      run gradeVotes
      threadDelay dts
   where

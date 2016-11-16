@@ -108,27 +108,24 @@ scheduleUpdateGrades dt app pool = void . forkIO . forever $ do
   where
     dts = dt * 1000000
 
-
-
 sendGrades :: App -> ReaderT SqlBackend (ReaderT Manager (ResourceT IO)) ()
 sendGrades app = do
     -- send grades for all vote tasks
     selectSource [] [] $$ awaitForever
-          (\(Entity _ (VoteGrade _ _ ourl rid val)) -> do
-            req <- replaceResultRequest (appLTICredentials $ appSettings app) (Text.unpack ourl) rid (0.6 + 0.4*val) Nothing
-            _ <- lift . lift $ httpNoBody req
-            return ()
+          (\(Entity _ vg) -> do
+            req <- replaceResultRequest (appLTICredentials $ appSettings app)
+                (Text.unpack $ voteGradeEdxOutcomeUrl vg) (voteGradeEdxResultId vg) (0.6 + 0.4 * voteGradeGrade vg) Nothing
+            lift . lift $ catch (void $ httpNoBody req) (\e -> putStrLn $ "[edX send vote grades error] " <> Text.pack (show (e :: SomeException)))
           )
     -- send grades for all design tasks
     allRatingGrades >>= mapM_
           (\(ourl, rid, val) -> do
-            req <- replaceResultRequest (appLTICredentials $ appSettings app) (Text.unpack ourl) rid (0.6 + 0.4*val) Nothing
-            _ <- lift $ httpNoBody req
-            return ()
+            req <- replaceResultRequest (appLTICredentials $ appSettings app) ourl rid (min 1 $ 0.7 + 0.5*val)  Nothing
+            lift $ catch (void $ httpNoBody req) (\e -> putStrLn $ "[edX send design grades error] " <> Text.pack (show (e :: SomeException)))
           )
 
 
-allRatingGrades :: MonadIO a => ReaderT SqlBackend a [( Text
+allRatingGrades :: MonadIO a => ReaderT SqlBackend a [( String
                                                       , Text
                                                       , Double
                                                       )]

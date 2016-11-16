@@ -40,11 +40,19 @@ Client side of qua-kit. Browse the submodule for details.
 
 Path: `apps/hs/qua-server`.
 
+This app requires `gd` library at least (`libgd-dev` in Ubuntu).
+Follow error messages when installing to check if there are any other requirements.
 To build and run a particular app, use `build` and `exec` commands provided by `stack`.
-For examplre, to run `qua-server` you shoud:
+For example, to run `qua-server` you shoud:
 ```
-stack build qua-server
+stack build qua-server --flag qua-server:dev
 stack exec qua-server
+```
+Flag `qua-server:dev` is needed to use sqlite database instead of postgresql
+Alternatively, you can use `yesod-bin` package to run it:
+```
+stack install yesod-bin
+yesod devel
 ```
 
 #### Luci
@@ -74,3 +82,39 @@ CREATE INDEX ON vote (worse_id);
 ```
 Maybe a better solution is to make the request itself faster later,
 but for now it solved the problem.
+
+
+# Running luci service together with qua-kit and luci.
+
+If you develop a luci (qua-view-compliant) service, at some point you need to test the whole system altogether.
+The framework consist of three parties: `luci`, `qua-kit`, and your service.
+So you need to run the three things, and then use the running website to execute your service.
+
+  1. Compile and run `luci`.
+  2. Compile and run `qua-server`.
+  3. Compile and run your service connected to localhost `luci`.
+     Alternatively, you can try `dist-walls-service` executable - it has been tested to work with current version of luci.
+     It is available at `libs/hs/luci-connect` folder.
+     To run it use following command:
+     
+        stack setup # you only need this once to set up GHC
+        stack install --ghc-options="-pgmlo opt-3.5 -pgmlc llc-3.5"
+        dist-walls-service
+     
+     Refer to corresponding readme to solve any problems.
+     Note, that you have to use linux and have `llvm-3.5` dev libraries to run it.
+  4. Go to page `http://localhost:3000/viewer`
+      * (hint) Open browser console to see debug output if you have any troubles.
+  5. Open toolbox -> connect to luci.
+  6. Run scenario:
+      * (a) Load some scenario via luci (if uploaded something before).
+      * (b) Upload some scenario using `FILES` button.
+            There is one available at `apps/hs/qua-server/static/data/mooctask.geojson`.
+            Save it to luci.
+  7. Make sure that `luci` and some service is running, then go to `SERVICES` tab.
+     It should show a list of available services.
+     You can select one to run it.
+     Click on `refresh` button if you do not see your service in a list.
+     At this moment service parameters are broken, so do not look at them!
+  8. Press green `play` button.
+     

@@ -67,9 +67,9 @@ getBrowseProposalsR page = do
                         <p style="margin: 6px 0px; white-space: pre-line; overflow-y: hidden; color: #555;">
                          #{shortComment desc}
                       <div.card-comment.card-action>
-                        $forall (svg, rating) <- crits
+                        $forall (svg, cname, rating) <- crits
                          $if rating > 0
-                          <span.card-comment.card-criterion style="opacity: #{cOpacity rating}">
+                          <span.card-comment.card-criterion style="opacity: #{cOpacity rating}" title="#{cname}">
                             #{svg}
                             <p style="display: inline; margin: 0; padding:0; color: rgb(#{156 + rating}, 111, 0)">
                               #{rating}
@@ -123,19 +123,19 @@ shortComment t = dropInitSpace . remNewLines $
         dropInitSpace = Text.dropWhile (\c -> c == ' ' || c == '\n' || c == '\r' || c == '\t')
 
 -- | get user name, scenario, and ratings
-getLastSubmissions :: Int -> ReaderT SqlBackend Handler [(ScenarioId, UTCTime, Text, Text, [(Blaze.Markup, Int)])]
+getLastSubmissions :: Int -> ReaderT SqlBackend Handler [(ScenarioId, UTCTime, Text, Text, [(Blaze.Markup, Text, Int)])]
 getLastSubmissions page = getVals <$> rawSql query [toPersistValue pageSize, toPersistValue $ (max 0 (page-1))*pageSize]
   where
-    getVal' scId' xxs@((Single scId, Single _, Single _, Single _, Single icon, Single rating):xs)
-        | scId == scId' = first ((Blaze.preEscapedToMarkup (icon :: Text),min 99 $ round (100*rating::Double)) :) $ getVal' scId xs
+    getVal' scId' xxs@((Single scId, Single _, Single _, Single _, Single icon, Single cname, Single rating):xs)
+        | scId == scId' = first ((Blaze.preEscapedToMarkup (icon :: Text), cname, min 99 $ round (100*rating::Double)) :) $ getVal' scId xs
         | otherwise = ([],xxs)
     getVal' _ [] = ([],[])
-    getVals xxs@((Single scId, Single lu, Single desc, Single uname, Single _icon, Single _rating):_)
+    getVals xxs@((Single scId, Single lu, Single desc, Single uname, Single _icon, Single _name, Single _rating):_)
                                       = let (g,rest) = getVal' scId xxs
                                         in (scId, lu, desc, uname,g) : getVals rest
     getVals [] = []
     query = Text.unlines
-          ["SELECT scenario.id, scenario.last_update, scenario.description,\"user\".name,criterion.icon,COALESCE(rating.value, 0)"
+          ["SELECT scenario.id, scenario.last_update, scenario.description,\"user\".name,criterion.icon, criterion.name,COALESCE(rating.value, 0)"
           ,"FROM scenario"
           ,"INNER JOIN \"user\" ON \"user\".id = scenario.author_id"
           ,"INNER JOIN ( SELECT scenario.author_id, scenario.task_id, MAX(scenario.last_update) as x, AVG(COALESCE(rating.value, 0)) as score"
