@@ -168,7 +168,7 @@ A service in this mode has two obligatory inputs:
   callID : 172,
   ScID : 123,
   mode : "objects",
-  objIds : {
+  geomIDs : {
     format : "ulong64 array",
     attachment {
       length : 2048,
@@ -265,7 +265,7 @@ result: {
 {
   run : "RandomQUA",
   callID : 244,
-  mode : "new" // Note how the call does not contain a ScID
+  mode : "new" // Note that the call does not contain a ScID (though it can)
 }
 \end{lstlisting}
 
@@ -282,36 +282,46 @@ result: {
 
 \subsection{Registering a service}
 
+When a service connects to luci/helen, it must register itself, so clients know what does the service do and how to call it.
+This is done via \texttt{RemoteRegister} service call.
+Content of this message is the only source of information for a client (such as qua-view) to determine how to call the service.
+Especially important in this sense is the \texttt{constraints} field of a message, because 
+it defines in which modes a service can be called and how to visualize parameters selection in GUI.
 Listing \ref{lst:quacompliance} shows a registration message of a qua-compliant service named \emph{RandomQUA}. In the following, we will briefly reiterate what each field indicates.
 
 \begin{itemize}
   \item Lines 1-5: A service of name \emph{RandomQUA} is registered. The fields are not subject to any change by qua-compliance. See Section \ref{ch:serviceapi}, for how to register a generic service.
   \item Line 6: The field \texttt{qua-view-compliant} indicates that the service is qua-view-compliant.
-  \item Lines 7-14 specify the service's inputs
+  \item Lines 7-15 specify the service's inputs
     \begin{itemize}
       \item The field \texttt{ScID} is optional, it is used to specify the scenario on which the service is asked to operate. Since not every execution mode requires such a scenario, the field is optional.
-      \item The execution mode \texttt{mode} is obligatory and, as can be noted from the constraints in lines 23-33, takes the four execution mode names \emph{points, objects, scenario} and \emph{new}.
+      \item The execution mode \texttt{mode} is obligatory and, as can be noted from the constraints in line 26, takes the four execution mode names \emph{points, objects, scenario} and \emph{new}.
       \item The field \texttt{points} is an optional binary attachment that is required when the service is executed in the \emph{points}-execution-mode
-      \item The field \texttt{objIds} is an optional binary attachment specifying the object ids when the service is executed in the \emph{objects}-execution-mode
-      \item The other fields are service-specific fields, in this case two required numbers. Generally, a service can add an arbitrary amount of additional inputs for the service.
+      \item The field \texttt{geomIDs} is an optional binary attachment specifying the object ids when the service is executed in the \emph{objects}-execution-mode
+      \item The other fields are service-specific fields. Generally, a service can add an arbitrary amount of additional inputs for the service.
     \end{itemize}
-  \item Lines 15-22 specify the service's outputs
+  \item Lines 16-24 specify the service's outputs
     \begin{itemize}
-      \item The field \texttt{unit} gives the unit of the service result
-      \item The mutually exclusive fields \texttt{value} or \texttt{values} contain the service's result value(s).
-        If the service operated in the \emph{points} or \emph{objects} execution modes.
-        The field \emph{values} will contain a binary attachment in which the result values are encoded as floating point numbers.
-
-        On the other hand, if the service operated in the \emph{scenario}-mode, the field \texttt{value} will contain the result for the entire scenario.
-      \item The fields \texttt{scenario\_id}, \texttt{timestamp\_accessed} and \texttt{timestamp\_modified} describe the outputs if the service has been run in the \emph{new}-mode. They describe the scenario id, its version number (timestamp) when it was accessed and its version number after it has been modified, respectively.
+      \item The field \texttt{units} gives the units of the service result
+      \item The \texttt{values} field contains the service's result values in the modes \texttt{points} or \texttt{objects}.
+        The \texttt{values} field refers to a binary attachment in which the result values are encoded as floating point numbers (32bit, LE).
+        On the other hand, if the service operates in the \emph{scenario}-mode,
+it contains an \texttt{image} or a string \texttt{answer} as a single result.
+      \item The fields \texttt{ScID}, \texttt{timestamp\_accessed} and \texttt{timestamp\_modified} describe the outputs
+            if the service runs in the mode \emph{new}.
+            They describe the scenario id, its version number (timestamp) when it was accessed and
+            its version number after it has been modified, respectively.
     \end{itemize}
-  \item Lines 23-33 specify the service's input constraints
+  \item Lines 25-41 specify the service's input constraints
     \begin{itemize}
-      \item Lines 24-26: The input argument ScID must be an integer
-      \item Line 27: The mode must be either \emph{points}, \emph{objects}, \emph{scenario} or \emph{new}
-      \item Line 28-32: The number field \texttt{some\_other\_input} must be within the domain $[42,100] \cap \mathbb{Z}$.
+      \item Line 26: The mode must be a subset of \texttt{\{points, objects, scenario, new\}}
+      \item Line 27-40: all other constraints are optional.
     \end{itemize}
-  \item Lines 34-52 give an example of a valid call of the service. In this case, the service is asked to operate on scenario no. $123$. The service is executed in mode \emph{points} length of the \emph{points}-attachment is 36 bytes which corresponds to 3 three-dimensional points. Finally, the two additional input arguments \texttt{some\_other\_input} and \texttt{some\_4th\_input} are set to with parameters 42 and 13.37, respectively.
+  \item Lines 42-60 give an example of a valid call of the service.
+       In this case, the service is asked to operate on scenario no. $123$.
+       The service is executed in mode \emph{points};
+       length of the \emph{points}-attachment is 36 bytes which corresponds to 3 three-dimensional points.
+       Finally, the call specified all service parameters.
 \end{itemize}
 
 \newpage
@@ -324,30 +334,38 @@ Listing \ref{lst:quacompliance} shows a registration message of a qua-compliant 
   callID : 1,
   qua-view-compliant : true,
   inputs : {
-    OPT ScID : number,
+    OPT ScID : number,  // obligatory for any mode except "new"
     mode : string,
-    OPT points : attachment,
-    OPT objIds : attachment,
-    some other input : number,
-    some 4th input : number
+    OPT points : attachment, // obligatory for mode "points"
+    OPT geomIDs : attachment, // obligatory for mode "objects"
+    ANY numberKeyX : number,
+    ANY stringKeyX : number,
+    ANY booleanKeyX : number
   },
   outputs : {
-    unit : string,
-    XOR value : number,
-    XOR values : attachment,
-    OPT scenario_id : long,
-    OPT timestamp_accessed : int,
-    OPT timestamp_modified : int
+    OPT units  : string,     // only in mode "points" or "objects"
+    OPT values : attachment, // only in mode "points" or "objects"
+    OPT answer : string,     // only in mode "scenario"
+    OPT image  : attachment, // only in mode "scenario"
+    OPT ScID   : long,             // only in mode "new"
+    OPT timestamp_accessed : long, // only in mode "new"
+    OPT timestamp_modified : long  // only in mode "new"
   }
-  constraint : {
-      ScID : {
-        integer : true
-      }
-      mode : ["points", "objects", "scenario", "new"],
-      some other input : {
+  constraints : {
+      mode : ["points", "objects", "scenario", "new"], // obligatory
+      OPT numberKey1 : {
           min : 42,
           max : 100,
+          def : 50,
           integer : true
+      },
+      OPT numberKey2 : {
+          min : 0.001,
+          def : 2
+      },
+      OPT stringKey1 : ["hello", "world"],
+      OPT booleanKey1 : {
+          def : true      
       }
   },
   exampleCall : {
@@ -363,8 +381,10 @@ Listing \ref{lst:quacompliance} shows a registration message of a qua-compliant 
           checksum : "2929bead3ee3cf55113ec9aade2b6add"
         }
       }
-      some other input : 42,
-      some 4th input : 13.37
+      numberKey1 : 42,
+      numberKey2 : 13.37,
+      stringKey1 : "hello",
+      booleanKey1 : false
     }
   }
 }
