@@ -24,6 +24,7 @@ import Data.Aeson as JSON
 import Data.Text (Text)
 import qualified Data.Text as Text
 import Data.Conduit
+import qualified Data.Vector as Vector
 import Data.Monoid ((<>))
 import Data.ByteString (ByteString)
 import qualified Data.ByteString.Internal as BSI
@@ -68,10 +69,10 @@ processMessages = do
 -- | Respond to one message at a time
 responseMsgs :: Message -> Conduit Message (LuciProgram ServiceState) Message
 -- Respond only to run messages with correct input
-responseMsgs (MsgRun token "DistanceToWalls" pams [pts])
+responseMsgs (MsgRun token "Test multi-parameter" pams [pts])
   | Just (Success scId) <- fromJSON <$> HashMap.lookup "ScID" pams = do
     currentRunToken %= const token
-    liftIO (deserializePoints pts) >>= evaluate scId
+    liftIO (deserializePoints pts) >>= evaluatePoints scId
 responseMsgs (MsgRun token _ _ _) = do
     currentRunToken %= const token
     yield $ MsgError token "Incorrect input in the 'run' message."
@@ -80,8 +81,8 @@ responseMsgs (MsgError _ s) = logWarnN $ "[Luci error message] " <> s
 responseMsgs msg = logInfoN . ("[Ignore Luci message] " <>) . showJSON . toJSON . fst $ makeMessage msg
 
 
-evaluate :: Int -> [G.Vector3 Float] -> Conduit Message (LuciProgram ServiceState) Message
-evaluate scId pts = do
+evaluatePoints :: Int -> [G.Vector3 Float] -> Conduit Message (LuciProgram ServiceState) Message
+evaluatePoints scId pts = do
   curToken <- _currentRunToken <$> get
   logInfoN "***Received a task***"
   mscenario <- obtainScenario scId
@@ -91,7 +92,7 @@ evaluate scId pts = do
       let segments = Lens.view (geofeatures . traverse . geometry . Lens.lens polygonLines const) scenario
           result = map (`distToClosest` segments) pts
       resultBytes <- liftIO $ serializeValules result
-      yield $ resultMessage curToken resultBytes
+      yield $ resultMessagePoints curToken resultBytes
       logInfoN "***Sent results back****"
   where
     polygonLines ::  GeospatialGeometry -> [(G.Vector3 Float, G.Vector3 Float)]
@@ -190,38 +191,71 @@ registerMessage :: Token -> Message
 registerMessage token = MsgRun token "RemoteRegister" o []
   where
     o = HashMap.fromList
-      [ "description"        .= String "Show the distance to the closest building line"
-      , "serviceName"        .= String "DistanceToWalls"
+      [ "description"        .= String "Service with many modes and parameters"
+      , "serviceName"        .= String "Test multi-parameter"
       , "qua-view-compliant" .= Bool True
       , "inputs"             .= object
-          [ "ScID"   .= String "number"
-          , "mode"   .= String "string"
-          , "points" .= String "attachment"
+          [ "ScID"   .= String "number" -- in our case this parameter is always obligatory, so do not put OPT
+          , "mode"   .= String "string" -- mode is obligatory always
+          , "OPT points"  .= String "attachment" -- Optional, because required only for mode "points"
+          , "OPT geomIDs" .= String "attachment" -- Optional, because required only for mode "objects"
+          -- Further go several service parameters
+          , "rating"      .= String "number"
+          , "goodness"    .= String "number"
+          , "OPT message" .= String "string"
+          , "type"        .= String "string"
+          , "joke"        .= String "boolean"
           ]
       , "outputs"            .= object
-          [ "units"  .= String "string"
-          , "values" .= String "attachment"
+          [ "OPT units"   .= String "string"     -- Optional, because returned only for modes "points" and "objects"
+          , "OPT values"  .= String "attachment" -- Optional, because returned only for modes "points" and "objects"
+          , "OPT image"   .= String "attachment" -- .png Image; optional, because only for "scenario" mode.
+                                                 -- Note, you should use only either image or answer in that mode.
+          , "OPT ScID"    .= String "number"     -- Only makes sense for mode "new"
+          , "OPT timestamp_accessed" .= String "number" -- Mode "new"
+          , "OPT timestamp_modified" .= String "number" -- Mode "new"
           ]
       , "constraints"         .= object
-          [ "mode" .= ["points" :: Text]
+          [ "mode" .= ["points", "objects", "scenario", "new" :: Text]
+          , "rating" .= object
+            [ "min" .= Number 1
+            , "max" .= Number 5
+            , "def" .= Number 3
+            , "integer" .= Bool True
+            ]
+          , "goodness" .= object
+            [ "min" .= Number 0
+            , "def" .= Number 10
+            , "integer" .= Bool False
+            ]
+          , "type" .= Array (Vector.fromList
+                [ String "Medium" -- medium is a default type
+                , String "Easy"
+                , String "Hard"
+                ])
+          , "joke" .= object ["def" .= Bool True]
           ]
       , "exampleCall"        .= object
-          [ "run"    .= String "DistanceToWalls"
+          [ "run"    .= String "Test multi-parameter"
           , "ScId"   .= Number 1
           , "mode"   .= String "points"
           , "points" .= object
             [ "format"     .= String "Float32Array"
             ]
+          , "rating"   .= Number 4
+          , "goodness" .= Number 15.1
+          , "message"  .= String "Hello world!"
+          , "type"     .= String "Easy"
+          , "joke"     .= Bool False
           ]
       ]
 
 -- | This is what we return to Luci
-resultMessage :: Token -> ByteString -> Message
-resultMessage t bs = MsgResult t (ServiceResult o) [bs]
+resultMessagePoints :: Token -> ByteString -> Message
+resultMessagePoints t bs = MsgResult t (ServiceResult o) [bs]
   where
     o = HashMap.fromList
-      [ "mode"   .= String "points"
-      , "units"  .= String "meters?"
+      [ "units"  .= String "meters?"
       , "values" .= makeAReference bs "Float32Array" 1 Nothing
       ]
 
