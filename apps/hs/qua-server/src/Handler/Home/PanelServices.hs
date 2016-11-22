@@ -66,6 +66,14 @@ panelServices = do
     function registerSetActiveService(setActiveService) {
       activeVisService = setActiveService;
     }
+    var updateValSCB = function(s, v){console.log("Update parameter: ", s, v)};
+    /** Registers one callback; comes from Handler.Home.PanelServices.
+     *  updateParam :: String -> JSVal -> IO ()
+     *  return :: IO ()
+     */
+    function registerUpdateSParamValue(updateParam) {
+      updateValSCB = updateParam;
+    }
     |]
   toWidgetBody
     [hamlet|

@@ -115,6 +115,7 @@ So you need to run the three things, and then use the running website to execute
      It should show a list of available services.
      You can select one to run it.
      Click on `refresh` button if you do not see your service in a list.
-     At this moment service parameters are broken, so do not look at them!
+     Selecting an active service invokes parameter refreshing and display.
+     Check if all optional parameters of your service are displayed as intended.
   8. Press green `play` button.
      
