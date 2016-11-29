@@ -142,4 +142,8 @@ UserScenarioAction
     x43 Double
     x44 Double
 
-
+Survey
+    userId   UserId Maybe
+    question Text
+    answer   Text
+    deriving Show

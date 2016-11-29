@@ -29,6 +29,7 @@
 /mooc/proposals/review/#ScenarioId  WriteReviewR POST
 /mooc/criteria/browse               CriteriaListR GET
 /mooc/criteria/img/#CriterionId     CriteriaImgR GET
+/mooc/survey                        SurveyR GET POST
 
 /renameme                           RenameMeR GET
 /setupAcc/#UserId                   SetupLocalAccount POST
