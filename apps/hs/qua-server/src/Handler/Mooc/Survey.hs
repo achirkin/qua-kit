@@ -99,6 +99,10 @@ testForm = sequenceA
          : longTextInput "We would like to change a case study for the next run of the course. Would you suggest any place?\
               \ It must be a similar size and context existing settlement. Give a link to google map location and some reasoning, if you do not mind.\n\
               \ [If we select your proposed location, we will credit the name you specified above]."
+         : longTextInput "Now, couple questsions regarding data collection exercise.\n\
+                         \What could be changed / added to the website to improve data collection and/or its visualisation?\
+                         \Please also explain why this would be an improvement."
+         : longTextInput "Would it be helpful to allow uploading pictures? Please also explain why this would be an improvement."
          : []
 
 textInput :: Text -> AForm Handler (Text,Maybe Text)
