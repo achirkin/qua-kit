@@ -7,6 +7,9 @@
 -- Maintainer  :  chirkin@arch.ethz.ch
 --
 --
+-- Keep a 2D scenario consisting of building blocks and walls.
+-- Scenario is organized as a quad-tree.
+--
 -----------------------------------------------------------------------------
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE TypeFamilies, FlexibleInstances #-}
@@ -17,18 +20,12 @@ module Lib.Scenario
     Block (..), bCenter, bWalls, bBound
   , Wall (..), wCenter, wOrientation
   , Region (..), rBound, rBlocks, rLL, rLR, rUL, rUR, rCenter, findClosest
-  , Scenario, scenarioBound
-  , Grid (..), createGrid, indexedMap
-  , gPoints, gCorner, gScale, gN, gM, gDef
-  , gPointPos, closestGP, indexGrid
-  , isInside, drawBlocksIds, drawBlocksDists
-  , updatePatch
+  , Scenario
+  , isInside
   , fromList, toList
   ) where
 
-import Data.IntMap.Strict (IntMap)
-import qualified Data.IntMap.Strict as IntMap
-import Data.Maybe (isJust, fromMaybe, fromJust)
+import Data.Maybe (fromJust)
 
 import GHC.Exts (IsList(..))
 --import Data.Text (Text)
@@ -39,7 +36,6 @@ import qualified Data.Foldable as F
 import Data.List.NonEmpty (NonEmpty (..))
 import qualified Control.Lens as Lens
 --import Control.Lens.Operators ((%%=), (%=))
-import qualified Control.Parallel.Strategies as PS
 
 import Numeric.EasyTensor
 import Lib.ExtraTypes
@@ -104,141 +100,15 @@ data Region a = Region
 type Scenario = Region Block
 
 
--- | A grid in R2 for rasterised view on scenario results.
---   A grid is always aligned with XY axes.
---   Position of a point on a grid is ((i-1)*gScale + x(gCorner), (j-1)*gScale + y(gCorner))
-data Grid a = Grid
-  { _gPoints :: !(IntMap (IntMap a))
-    -- ^ matrix represents all points of a grid
-  , _gCorner :: !Vec2f
-    -- ^ position of lower-left coordinate
-  , _gScale  :: !Scf
-    -- ^ uniform scale of grid point coordinates
-  , _gN      :: !Int
-    -- ^ number of elements in x direction
-  , _gM      :: !Int
-    -- ^ number of elements in y direction
-  , _gDef    :: !a
-    -- ^ default value used when initializing
-  }
-  deriving Show
-
-instance Functor Grid where
-  fmap f g = Grid
-   { _gPoints = fmap f <$> _gPoints g
-   , _gCorner = _gCorner g
-   , _gScale  = _gScale g
-   , _gN      = _gN g
-   , _gM      = _gM g
-   , _gDef    = f (_gDef g)
-   }
-
-instance Foldable Grid where
-  foldMap f Grid{_gPoints = pts} = foldMap (foldMap f) pts
-
-
-indexGrid :: Grid a -> Int -> Int -> a
-indexGrid g@Grid{ _gPoints = m} i j = fromMaybe (_gDef g) $ IntMap.lookup i m >>= IntMap.lookup j
-
--- | Get position of a point in R2 given grid coordinates
-gPointPos :: Int -> Int -> Grid a -> Vec2f
-gPointPos i j g = vec2 x y + _gCorner g
-  where
-    x = (realToFrac i - 1) * realToFrac (_gScale g)
-    y = (realToFrac j - 1) * realToFrac (_gScale g)
-
--- | Get closest point on a grid, given a position in R2
-getClosestGP :: Vec2f -> Grid a -> (Int, Int)
-getClosestGP v g = (clamp (_gN g) i', clamp (_gM g) j')
-  where
-    p = (v - _gCorner g) / fill (_gScale g)
-    i' = round $ _x p
-    j' = round $ _y p
-    clamp n = min n . max 1
-
-
--- | Get closest point on a grid, given a position in R2
-getClosestValM :: Vec2f -> Grid a -> Maybe a
-getClosestValM v g = do
-    i <- clamp (_gN g) (round $ _x p)
-    j <- clamp (_gM g) (round $ _y p)
-    colI <- IntMap.lookup i (_gPoints g)
-    IntMap.lookup j colI
-  where
-    p = (v - _gCorner g) / fill (_gScale g)
-    clamp n i = if i < 1 || i > n then Nothing else Just i
-
-
--- | A lens on a closest point on a grid to a given point.
-closestGP :: Functor f => Vec2f -> (a -> f a) -> Grid a -> f (Grid a)
-closestGP x k g@Grid{ _gPoints = m} = upd <$> mk closestValM
-  where
-    mk Nothing = Nothing <$ k closestVal
-    mk (Just v) = Just <$> k v
-    closestValM = getClosestValM x g
-    (i,j) = getClosestGP x g
-    closestVal = fromMaybe (_gDef g) closestValM
-    upd Nothing = g
-    upd (Just v) = if isJust closestValM
-                   then g{ _gPoints = IntMap.adjust (IntMap.adjust (const v) j) i m}
-                   else g
-
 
 
 Lens.makeLenses ''Block
 Lens.makeLenses ''Wall
-Lens.makeLenses ''Grid
 Lens.makeLenses ''Region
 
 ----------------------------------------------------------------------------------------------------
 -- * All the useful functions
 ----------------------------------------------------------------------------------------------------
-
--- | Get minimum and maximum coordinates of a scenario
-scenarioBound :: Scenario -> MinMax Vec2f
-scenarioBound = _rBound
-
--- | Create a rectangular grid.
---   Resolution is determined by an a number of points along X or Y dimension,
---   depending on along wich direction the scenario is larger.
-createGrid :: a -- ^ default value
-           -> Int -- ^ Number of points in a larger dimension
-           -> Scenario -- ^ A set of buildings to rasterize
-           -> Grid a -- ^ Result grid
-createGrid def n' sc = Grid
-   { _gPoints = IntMap.fromList $ zip [1..n] (repeat oneCol)
-   , _gCorner = ll
-   , _gScale  = scale
-   , _gN      = n
-   , _gM      = m
-   , _gDef    = def
-   }
-  where
-    MinMax ll ur = scenarioBound sc
-    dd = ur - ll
-    oneCol = IntMap.fromList $ zip [1..m] (repeat def)
-    (scale, n, m) =
-       let xd = _x dd
-           yd = _y dd
-           d  = max xd yd
-           s  = d / realToFrac n'
-           m' = round $ min xd yd / s
-       in if xd >= yd then ( s, n', m')
-                      else ( s, m', n')
-
--- | Map a function over a grid
-indexedMap :: (Int -> Int -> a -> b) -> Grid a -> Grid b
-indexedMap f g = Grid
-   { _gPoints = IntMap.fromList . (PS.withStrategy (PS.parList $ PS.evalTuple2 PS.rpar PS.rpar) .
-                                     map (\ (i, m) -> (i, IntMap.mapWithKey (f i) m))
-                                  )
-                                . IntMap.toList $ _gPoints g
-   , _gCorner = _gCorner g
-   , _gScale  = _gScale g
-   , _gN      = _gN g
-   , _gM      = _gM g
-   , _gDef    = f 0 0 (_gDef g)
-   }
 
 
 -- | Test whether a point is under a building block
@@ -257,35 +127,6 @@ isInside p' bl | MinMax l u <- _bBound bl
                           , rb <- det2 ray b >= 0
                           , ab <- det2 a b > 0 = (ra /= rb) && (ra /= ab)
 
-drawBlocksDists :: Scenario -> Grid a -> Grid Float
-drawBlocksDists bs g = indexedMap f g
-  where
-    f i j _ = case findClosest (gPointPos i j g) bs of
-                Nothing -> 0
-                (Just (Arg x _)) -> realToFrac x
-
--- | [Terribly inefficient] put BlockIds on a raster grid
-drawBlocksIds :: Scenario -> Grid a -> Grid Int
-drawBlocksIds bs g = indexedMap f g
-  where
-    bs' = zip [1..] $ toList bs
-    f 0 0 _ = 0
-    f i j _ = isAnyInside (gPointPos i j g) bs'
-    isAnyInside v ((i,x):xs) = if v `isInside` x then i else isAnyInside v xs
-    isAnyInside _ [] = 0
-
--- | Update a certain range of a grid
-updatePatch :: (Vec2f -> a -> a) -> MinMax Vec2f -> Grid a -> Grid a
-updatePatch f (MinMax ll ur) grid = indexedMap g grid
-  where
-    (i1,j1) = getClosestGP ll grid
-    (i2,j2) = getClosestGP ur grid
-    g i j | i1 <= i && i <= i2 && j1 <= j && j <= j2 = f (gPointPos i j grid)
-          | otherwise = id
-
-
-
-----------------------------------------------------------------------------------------------------
 
 instance Functor Region where
   fmap f Region {..} = Region
@@ -407,15 +248,4 @@ findClosest p = fmap getMin . getOption . closerBlockInR p (Option Nothing)
 
 foldMap1 :: (Semigroup m, Foldable t) => (a -> m) -> m -> t a -> m
 foldMap1 f = F.foldl' (\m a -> m <> f a)
-
-
---findClosest :: Vec2f -> Region Block -> Option (ArgMin Block Scf)
---findClosest p Region {..} | d4 <- mmDiff _rBound / 2
---                          , d4' <- vec2 (_x d4) (- _y d4) =
---    -- the point is somewhere in the center: need to look into all four leafs
---    if (p < _x _rCenter, _y p <= _y _rCenter) of
---        (True , True ) ->
-
-
-
 
