@@ -98,11 +98,9 @@ So you need to run the three things, and then use the running website to execute
      To run it use following command:
      
         stack setup # you only need this once to set up GHC
-        stack install --ghc-options="-pgmlo opt-3.5 -pgmlc llc-3.5"
+        stack install
         dist-walls-service
      
-     Refer to corresponding readme to solve any problems.
-     Note, that you have to use linux and have `llvm-3.5` dev libraries to run it.
   4. Go to page `http://localhost:3000/viewer`
       * (hint) Open browser console to see debug output if you have any troubles.
   5. Open toolbox -> connect to luci.

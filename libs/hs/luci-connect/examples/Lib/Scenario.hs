@@ -325,8 +325,8 @@ instance IsList (Region Block) where
     where
       scBound = sconcat . ( mmBound :|) $ map _bBound xs
       addBuilding softBound@(MinMax bmin bmax) (Just r@Region{..}) b@Block{..}
-        | mmDiff _bBound < 0.5 * mmDiff _rBound
-        , d <- mmDiff softBound / 2
+        | d <- mmDiff softBound * 0.5
+        , mmDiff _bBound < d
         , dx <- vec2 (realToFrac $ _x d) 0
         , dy <- vec2 0 (realToFrac $ _y d) = Just $
             case (_x _bCenter <= _x _rCenter, _y _bCenter <= _y _rCenter) of
@@ -375,16 +375,17 @@ distToBlock p b = if p `isInside` b then 0
 closerBlock :: Vec2f -> Option (ArgMin Scf Block) -> Block -> Option (ArgMin Scf Block)
 closerBlock p (Option Nothing) b = Option . Just . Min $ Arg (distToBlock p b) b
 closerBlock p (Option (Just ax@(Min (Arg x _)))) b =
-    if let y = _bCenter b - p
+    if let y = mmAvg (_bBound b) - p
            dy = mmDiff $ _bBound b
-       in dot y y - dot dy dy * 0.25 > x*x
+       in normL2 y - normL2 dy * 0.5 > x
     then Option (Just ax)
     else Option . Just $ ax <> Min (Arg (distToBlock p b) b)
 
 closerBlockInR :: Vec2f -> Option (ArgMin Scf Block) -> Region Block -> Option (ArgMin Scf Block)
-closerBlockInR p (Option (Just ax)) Region {..}
-    | d <- mmDiff _rBound * 1.5
-    , not (_rCenter-d <= p && p <= _rCenter+d) = Option (Just ax)
+closerBlockInR p (Option (Just ax@(Min (Arg x _)))) Region {..}
+    | y <- mmAvg _rBound - p
+    , dy <- mmDiff _rBound
+    , normL2 y - normL2 dy * 0.5 > x = Option (Just ax)
 closerBlockInR p ax Region {..} =
     case (_x p <= _x _rCenter, _y p <= _y _rCenter) of
       (True , True ) -> ax' +^+ _rLL +^+ _rUL +^+ _rLR +^+ _rUR

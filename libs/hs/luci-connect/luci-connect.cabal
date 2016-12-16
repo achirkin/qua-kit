@@ -142,6 +142,10 @@ executable multi-parametric-service
     if !flag(examples)
         buildable: False
     main-is: MultiParametricService.hs
+    other-modules:
+        Lib.Scenario
+        Lib.ExtraTypes
+        Lib.ParseGeoJSON
     build-depends:
         base >=4.8.2 && <5.0,
         aeson -any,
