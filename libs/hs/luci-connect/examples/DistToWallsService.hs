@@ -24,15 +24,18 @@ import Data.Aeson as JSON
 import Data.Text (Text)
 import qualified Data.Text as Text
 import Data.Conduit
-import Data.Monoid ((<>))
+import Data.Semigroup
+--import Data.Monoid ((<>))
 import Data.ByteString (ByteString)
 import qualified Data.ByteString.Internal as BSI
 import qualified Data.HashMap.Strict as HashMap
-import qualified Data.Geometry as G
-import           Data.Geospatial
-import           Data.LinearRing
 import qualified Control.Lens as Lens
 import Control.Lens.Operators ((%%=), (%=))
+
+import Lib.ParseGeoJSON
+import Lib.Scenario
+import Numeric.EasyTensor
+import Numeric.Commons
 
 
 ----------------------------------------------------------------------------------------------------
@@ -80,61 +83,30 @@ responseMsgs (MsgError _ s) = logWarnN $ "[Luci error message] " <> s
 responseMsgs msg = logInfoN . ("[Ignore Luci message] " <>) . showJSON . toJSON . fst $ makeMessage msg
 
 
-evaluate :: Int -> [G.Vector3 Float] -> Conduit Message (LuciProgram ServiceState) Message
+evaluate :: Int -> [Vec2f] -> Conduit Message (LuciProgram ServiceState) Message
 evaluate scId pts = do
   curToken <- _currentRunToken <$> get
   logInfoN "***Received a task***"
+  logDebugN $ Text.pack (show pts)
+  logDebugN $ "***Asking for scenario " <> Text.pack (show scId) <> " ***"
   mscenario <- obtainScenario scId
   case mscenario of
     Nothing -> yield . MsgError curToken $ "Could not get scenario from luci (" <> Text.pack (show scId) <> ")"
-    Just scenario -> do
-      let segments = Lens.view (geofeatures . traverse . geometry . Lens.lens polygonLines const) scenario
-          result = map (`distToClosest` segments) pts
+    Just buildings -> do
+      logDebugN "***Got scenario***"
+      logDebugN $ Text.pack (show buildings)
+      let result = map (\p -> case findClosest p buildings of
+                                Nothing -> 0
+                                (Just (Arg x _)) -> realToFrac x
+                       ) pts
+      logDebugN "***Result computed:***"
+      logDebugN $ Text.pack (show result)
       resultBytes <- liftIO $ serializeValules result
       yield $ resultMessage curToken resultBytes
       logInfoN "***Sent results back****"
-  where
-    polygonLines ::  GeospatialGeometry -> [(G.Vector3 Float, G.Vector3 Float)]
-    polygonLines NoGeometry = []
-    polygonLines Point{} = []
-    polygonLines MultiPoint{} = []
-    polygonLines Line{} = []
-    polygonLines MultiLine{} = []
-    polygonLines (Polygon p) = concatMap (splitRings . map toVect) $ fromLinearRing <$>_unGeoPolygon p
-    polygonLines (MultiPolygon p) = concatMap (splitRings . map toVect) $ fromLinearRing <$> concat (_unGeoMultiPolygon p)
-    polygonLines (Collection xs) = xs >>= polygonLines
-    splitRings :: [G.Vector3 Float] -> [(G.Vector3 Float, G.Vector3 Float)]
-    splitRings (a:b:xs) = (a,b) : splitRings (b:xs)
-    splitRings [_] = []
-    splitRings [] = []
-    toVect (a:b:c:_) = G.vector3 (realToFrac a) (realToFrac b) (realToFrac c)
-    toVect [a,b] = G.vector3 (realToFrac a) (realToFrac b) 0
-    toVect [a] = G.vector3 (realToFrac a) 0 0
-    toVect [] = G.vector3 0 0 0
-
-    distToClosest x (s:ss) = min (distToSegment x s) (distToClosest x ss)
-    distToClosest _ []     = read "Infinity"
-
-
-distToSegment :: G.Vector3 Float -> (G.Vector3 Float, G.Vector3 Float) -> Float
-distToSegment x0 (x1,x2) = sqrt $ if between then d2 else min lu2 lv2
-   where
-     a = x2 - x1
-     u = x0 - x1
-     v = x2 - x0
-     between = G.dot a u > 0 && G.dot a v > 0
-     lu2 = G.dot u u
-     lv2 = G.dot v v
-     la2 = G.dot a a
-     c = cross a u
-     d2 = G.dot c c / la2
-
-cross :: G.Vector3 Float -> G.Vector3 Float -> G.Vector3 Float
-cross u v | (a,b,c) <- G.unpackV3 u
-          , (x,y,z) <- G.unpackV3 v = G.vector3 (b*z - c*y) (c*x - a*z) (a*y - b*x)
 
 -- | Try our best to get scenario by its ScID
-obtainScenario :: Int -> ConduitM Message Message (LuciProgram ServiceState) (Maybe (GeoFeatureCollection JSON.Object))
+obtainScenario :: Int -> ConduitM Message Message (LuciProgram ServiceState) (Maybe Scenario)
 obtainScenario scId = do
     scToken <- genToken
     yield (getScenarioMessage scToken scId)
@@ -152,12 +124,12 @@ obtainScenario scId = do
             logInfoN . ("[Get scenario - ignore Luci message] " <>) . showJSON . toJSON . fst $ makeMessage msg
             waitForScenario scToken
           else
-            case JSON.fromJSON <$> (HashMap.lookup "geometry_output" sc >>= lookupVal "geometry") of
+            case parseGeoJSONValue <$> (HashMap.lookup "geometry_output" sc >>= lookupVal "geometry") of
                Nothing          -> logWarnN ("[Get scenario] Cannot find (result.geometry_output.geometry). Result was: " <> showJSON (JSON.Object sc))
                                 >> return Nothing
-               Just (Error s)   -> logWarnN ("[Get scenario] Not a FeatureCollection: " <> Text.pack s <> " Result was: " <> showJSON (JSON.Object sc))
+               Just (Left s)   -> logWarnN ("[Get scenario] Not a FeatureCollection: " <> Text.pack s <> " Result was: " <> showJSON (JSON.Object sc))
                                 >> return Nothing
-               Just (Success g) -> return $ Just g
+               Just (Right g) -> return $ Just g
         -- Luci error
         Just (MsgError _ err) -> logWarnN ("[Get scenario message error] " <> err) >> return Nothing
         -- keep waiting for message
@@ -169,12 +141,8 @@ obtainScenario scId = do
 
 
 -- | convert BytesString to vector of 3D points
-deserializePoints :: ByteString -> IO [G.Vector3 Float]
-deserializePoints (BSI.PS fptr off len) = withForeignPtr fptr $ \ptr -> mapM (\i -> do
-    x <- peekByteOff ptr i
-    y <- peekByteOff ptr (i + 4)
-    z <- peekByteOff ptr (i + 8)
-    return (G.vector3 x y z)) [off,off+12..off+len-12]
+deserializePoints :: ByteString -> IO [Vec2f]
+deserializePoints (BSI.PS fptr off len) = withForeignPtr fptr $ \ptr -> mapM (fmap unStore . peekByteOff ptr) [off,off+12..off+len-12]
 
 -- | convert a list of floating points to a bytestring
 serializeValules :: [Float] -> IO ByteString

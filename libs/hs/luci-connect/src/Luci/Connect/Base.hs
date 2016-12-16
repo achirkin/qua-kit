@@ -106,7 +106,10 @@ module Luci.Connect.Base
 
 import Control.Monad.IO.Class
 import Control.Monad.Trans.Class
+#if MIN_VERSION_transformers(0,5,0)
+#else
 import Data.Functor.Classes
+#endif
 
 import Control.Applicative
 import Control.Monad
@@ -229,6 +232,10 @@ instance Monoid e => Alternative (LuciProcessing e) where
 newtype LuciProcessingT e m r = LuciProcessingT
   { runLuciProcessingT :: m (LuciProcessing e r) }
 
+
+
+#if MIN_VERSION_transformers(0,5,0)
+#else
 instance (Eq e, Eq1 m) => Eq1 (LuciProcessingT e m) where
     eq1 (LuciProcessingT x) (LuciProcessingT y) = eq1 x y
 instance (Ord e, Ord1 m) => Ord1 (LuciProcessingT e m) where
@@ -241,6 +248,7 @@ instance (Eq e, Eq1 m, Eq a) => Eq (LuciProcessingT e m a) where (==) = eq1
 instance (Ord e, Ord1 m, Ord a) => Ord (LuciProcessingT e m a) where compare = compare1
 instance (Read e, Read1 m, Read a) => Read (LuciProcessingT e m a) where readsPrec = readsPrec1
 instance (Show e, Show1 m, Show a) => Show (LuciProcessingT e m a) where showsPrec = showsPrec1
+#endif
 
 -- | Map the unwrapped computation using the given function.
 --

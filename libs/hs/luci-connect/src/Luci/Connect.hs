@@ -61,10 +61,10 @@ import           Control.Concurrent.MVar
 import           Control.Concurrent (threadDelay, forkIO)
 import           Control.Monad.Base (MonadBase)
 import           Control.Monad.IO.Class
+import qualified Control.Monad.Trans.State
 import           Control.Monad.Trans.Control
 import           Control.Monad.Trans.Class
 import           Control.Monad.State.Lazy
-import qualified Control.Monad.Trans.State
 import           Control.Monad.Logger
 import           Crypto.Random (MonadRandom (..))
 import qualified Data.Aeson as JSON
