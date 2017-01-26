@@ -1,0 +1,8 @@
+resolver: nightly-2017-01-25
+
+packages:
+  - '.'
+  - location:
+      git: https://github.com/achirkin/easytensor.git
+      commit: 9dc888591da5e5e90c2d1ce32c9582f90a187f45
+    extra-dep: true
