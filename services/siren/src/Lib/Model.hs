@@ -1,13 +1,14 @@
 {-# LANGUAGE GADTs                      #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE MultiParamTypeClasses      #-}
 {-# LANGUAGE OverloadedStrings          #-}
 {-# LANGUAGE QuasiQuotes                #-}
 {-# LANGUAGE TemplateHaskell            #-}
 {-# LANGUAGE TypeFamilies               #-}
-import Database.Persist
-import Database.Persist.TH
-import Database.Persist.Sqlite
-import Control.Monad.IO.Class (liftIO)
+-- import           Control.Monad.IO.Class      (liftIO)
+-- import           Database.Persist
+import           Database.Persist.Postgresql
+import           Database.Persist.TH
 
 mkPersist sqlSettings [persistLowerCase|
 Person
