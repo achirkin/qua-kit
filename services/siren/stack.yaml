@@ -1,8 +1,17 @@
 resolver: nightly-2017-01-25
 
+extra-deps:
+  - validation-0.5.4
+
 packages:
   - '.'
+  - location: ../../libs/hs/luci-connect
+    extra-dep: true
   - location:
       git: https://github.com/achirkin/easytensor.git
       commit: 9dc888591da5e5e90c2d1ce32c9582f90a187f45
+    extra-dep: true
+  - location:
+      git: https://github.com/achirkin/hs-geojson.git
+      commit: ad9e0f3d80e133d88657832988ab9aff2cb51691
     extra-dep: true

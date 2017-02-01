@@ -18,20 +18,24 @@ library
   hs-source-dirs:      src
   exposed-modules:     Lib
   build-depends:       base >= 4.9 && < 5,
-                       bytestring -any,
-                       text -any,
+                       bytestring >=0.10.6.0,
                        postgresql-libpq -any,
-                       aeson -any,
-                       file-embed -any,
-                       monad-logger >=0.3.19
+                       file-embed -any
   default-language:    Haskell2010
   ghc-options:         -Wall -fwarn-tabs
 
-executable siren-exe
+executable siren
   hs-source-dirs:      app
   main-is:             Main.hs
   ghc-options:         -threaded -rtsopts -with-rtsopts=-N -Wall -fwarn-tabs
-  build-depends:       base
+  build-depends:       base >= 4.9 && < 5
+                     , aeson -any
+                     , text -any
+                     , bytestring >=0.10.6.0
+                     , conduit >=1.2.6.6
+                     , lens -any
+                     , unordered-containers -any
+                     , luci-connect -any
                      , siren
   default-language:    Haskell2010
 
@@ -39,7 +43,7 @@ test-suite siren-test
   type:                exitcode-stdio-1.0
   hs-source-dirs:      test
   main-is:             Spec.hs
-  build-depends:       base
+  build-depends:       base >= 4.9 && < 5
                      , siren
   ghc-options:         -threaded -rtsopts -with-rtsopts=-N -Wall -fwarn-tabs
   default-language:    Haskell2010

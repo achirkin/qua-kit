@@ -2,7 +2,7 @@
 {-# LANGUAGE RecordWildCards   #-}
 {-# LANGUAGE TemplateHaskell   #-}
 module Lib
-    ( PSSettings (..)
+    ( PSSettings (..), Connection
     , withPostgres
     , createScenario, updateScenario
     , deleteScenario, recoverScenario
