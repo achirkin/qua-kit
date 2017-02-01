@@ -4,9 +4,14 @@ $func$
 DECLARE
   curTime TIMESTAMP;
   geomID_max bigint;
+  scSRID integer;
 BEGIN
   -- get time of insertion
   curTime := CURRENT_TIMESTAMP;
+  SELECT scenario.srid
+    FROM scenario
+   WHERE scenario.id = ScID
+    INTO scSRID;
 
   -- create a new scenario and keep its id in ScID variable
   IF (SELECT count(*) < 1 FROM scenario WHERE scenario.id = ScID) THEN
@@ -42,7 +47,7 @@ BEGIN
   CREATE TEMP TABLE features ON COMMIT DROP AS
   ( WITH fcs AS (SELECT jsonb_array_elements(fc -> 'features') AS data)
     SELECT CAST(coalesce(nullif(fcs.data -> 'properties' ->> 'geomID',''),nullif(fcs.data ->> 'id','')) AS integer) as geomID
-         , ST_Force3D(ST_SetSRID(ST_GeomFromGeoJSON(fcs.data ->> 'geometry'), 4326)) as geom
+         , ST_Force3D(ST_Transform(ST_SetSRID(ST_GeomFromGeoJSON(fcs.data ->> 'geometry'), scSRID), 4326)) as geom
          , (jsonb_strip_nulls(fcs.data -> 'properties') - 'geomID') AS props
     FROM fcs
     WHERE fcs.data ? 'geometry' AND jsonb_typeof(fcs.data -> 'geometry') = 'object'
@@ -53,7 +58,7 @@ BEGIN
                          , (SELECT max(g.id) FROM sc_geometry_history g WHERE g.scenario_id = ScID)
                          )
                ) INTO geomID_max;
-  
+
   -- fill in null geomIDs
   UPDATE features
      SET geomID = nextval('geomID_seq')
@@ -61,8 +66,8 @@ BEGIN
   -- .. and remove temp sequence
   geomID_max := currval('geomID_seq');
   DROP SEQUENCE geomID_seq;
-  
-  -- Create a temporary table with all ids of features to delete 
+
+  -- Create a temporary table with all ids of features to delete
   CREATE TEMP TABLE todelete ON COMMIT DROP AS
   ( WITH fcs AS (SELECT jsonb_array_elements(fc -> 'features') AS data)
     SELECT DISTINCT CAST(ids.value AS bigint) as id
@@ -84,7 +89,7 @@ BEGIN
         WHERE gh.ts_update = curTime AND gh.scenario_id = ScID
   ON CONFLICT (scenario_id, id) DO UPDATE
           SET last_update = curTime;
- 
+
 
   -- update all feature properties
   INSERT INTO sc_geometry_prop_history (scenario_id, geometry_id, name, ts_update, ts_prev_update, alive, value)

@@ -22,10 +22,13 @@ I download osm map from http://ftp.snt.utwente.nl/pub/misc/openstreetmap/
 
 First, you need to create a user and a database:
 ```
-  psql -c "CREATE USER siren WITH PASSWORD 'sirenpass';"
-  psql -c "CREATE DATABASE sirendb;"
-  psql -c "GRANT ALL PRIVILEGES ON DATABASE sirendb to siren;"
-
+psql -c "CREATE USER siren WITH PASSWORD 'sirenpass';"
+psql -c "CREATE DATABASE sirendb;"
+psql -c "GRANT ALL PRIVILEGES ON DATABASE sirendb to siren;"
+psql sirendb -c "CREATE EXTENSION IF NOT EXISTS postgis;"
+psql sirendb -c "CREATE EXTENSION IF NOT EXISTS postgis_topology;"
+psql sirendb -c "CREATE EXTENSION IF NOT EXISTS hstore;"
+psql sirendb -c "GRANT SELECT, INSERT, REFERENCES ON TABLE spatial_ref_sys to siren;"
 ```
 The rest is done automatically in the program.
 
@@ -53,6 +56,27 @@ where
     <flat nodes> is the same location as above.
     <osmosis dir> is the location osmosis replication was initialized to.
 
+
+### Reference systems
+
+Globally, all data is referenced in WGS84.
+For scenarios I want to use local reference system with center in long/lat point
+and metric units.
+
+Here is how I can transform coordinates FROM WGS84 to my local coordinate system.
+I use following `proj.4` text to describe a custom projection:
+```
++proj=laea +lat_0=<LAT> +lon_0=<LON> +ellps=WGS84 +units=m +no_defs
+```
+The `laea` is the cartographic projection, Lambert's Azimutal Equal Area, in this case.
+Other parameters specify a long/lat coordinate shift, units (meters) and
+a projection ellipe (to be the same as in WGS84).
+
+In the end, all geometry is stored in WGS84, but transferred in scenario reference system.
+
+
+Look at this post for some projection explanations
+http://gis.stackexchange.com/questions/87152/how-to-reproject-wgs84-to-a-metric-coordinate-system-with-own-reference-point-in
 
 
 #### NB on using Atom

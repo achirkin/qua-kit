@@ -22,7 +22,7 @@ BEGIN
         SELECT jsonb_build_object(
           'type',       'Feature',
           'id',         g.id,
-          'geometry',   ST_AsGeoJSON(g.geom,15,5)::jsonb,
+          'geometry',   ST_AsGeoJSON(ST_Transform(g.geom, (SELECT srid FROM scenario WHERE id = ScID)))::jsonb,
           'properties', ( SELECT jsonb_object_agg(ph.name, ph.value)
                             FROM sc_geometry_prop p, sc_geometry_prop_history ph
                            WHERE p.scenario_id = ScID

@@ -23,6 +23,17 @@ Run test suite:
 ```
 yesod test
 ```
+#### Usging stack
+
+Make sure local ghc version is there and build yesod build tools:
+```
+stack setup
+stack build yesod-bin cabal-install
+```
+And then all commands should work via stack, e.g.:
+```
+stack exec yesod devel
+```
 
 #### Acknowledgements
 

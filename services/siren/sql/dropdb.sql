@@ -3,8 +3,8 @@ $$
 BEGIN
   -- drop all tables in DB
   IF EXISTS
-           ( SELECT 1 
-             FROM information_schema.columns 
+           ( SELECT 1
+             FROM information_schema.columns
              WHERE table_name='sc_geometry_history' AND column_name='geom'
            ) THEN
     PERFORM DropGeometryColumn ('sc_geometry_history','geom');
@@ -62,6 +62,12 @@ BEGIN
   EXCEPTION
     WHEN undefined_column THEN RAISE NOTICE 'Constraint "scenario_properies" does not exist, skipping.';
     WHEN undefined_table THEN RAISE NOTICE 'Table "scenario_prop" does not exist, skipping.';
+  END;
+  BEGIN
+    ALTER TABLE scenario DROP CONSTRAINT scenario_srid;
+  EXCEPTION
+    WHEN undefined_column THEN RAISE NOTICE 'Constraint "scenario_srid" does not exist, skipping.';
+    WHEN undefined_table THEN RAISE NOTICE 'Table "scenario" does not exist, skipping.';
   END;
 
   DROP TABLE IF EXISTS sc_geometry CASCADE;
