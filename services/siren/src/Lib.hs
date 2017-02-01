@@ -89,24 +89,7 @@ createScenario conn scName scenario mlonlatalt = do
         Just (lon, lat, Just alt) -> [mkNum lon, mkNum lat, mkNum alt]
     )
     Text
-  case mrez of
-    Nothing -> return $ Left "Failed to execute an SQL query for an unknown reason (result is Nothing)."
-    Just rez -> do
-      rstatus <- resultStatus rez
-      nrow <- ntuples rez
-      ncol <- nfields rez
-      if nrow > 0 && ncol > 0 &&
-         (rstatus == CommandOk || rstatus == TuplesOk)
-      then getvalue rez 0 0 >>= \mv -> case mv of
-         Just v -> return . Right $ read (BSC.unpack v)
-         Nothing -> return . Left $ "Could not read a value from DB, even though the status is ok."
-      else do
-        statusText <- resStatus rstatus
-        merror <- resultErrorMessage rez
-        return . Left $ BSC.unlines
-          [ statusText
-          , fromMaybe "" merror
-          ]
+  justResult mrez $ \rez -> checkResult rez (read . BSC.unpack)
 
 
 
@@ -115,19 +98,7 @@ deleteScenario :: Connection
                -> IO (Either BS.ByteString ()) -- ^ Either error or ()
 deleteScenario conn scID = do
   mrez <- execParams conn "SELECT delete_scenario($1);" [mkBigInt scID] Text
-  case mrez of
-    Nothing -> return $ Left "Failed to execute an SQL query for an unknown reason (result is Nothing)."
-    Just rez -> do
-      rstatus <- resultStatus rez
-      if rstatus == CommandOk || rstatus == TuplesOk
-      then return $ Right ()
-      else do
-        statusText <- resStatus rstatus
-        merror <- resultErrorMessage rez
-        return . Left $ BSC.unlines
-          [ statusText
-          , fromMaybe "" merror
-          ]
+  justResult mrez checkStatus
 
 
 recoverScenario :: Connection
@@ -135,19 +106,7 @@ recoverScenario :: Connection
                -> IO (Either BS.ByteString ()) -- ^ Either error or ()
 recoverScenario conn scID = do
   mrez <- execParams conn "SELECT recover_scenario($1);" [mkBigInt scID] Text
-  case mrez of
-    Nothing -> return $ Left "Failed to execute an SQL query for an unknown reason (result is Nothing)."
-    Just rez -> do
-      rstatus <- resultStatus rez
-      if rstatus == CommandOk || rstatus == TuplesOk
-      then return $ Right ()
-      else do
-        statusText <- resStatus rstatus
-        merror <- resultErrorMessage rez
-        return . Left $ BSC.unlines
-          [ statusText
-          , fromMaybe "" merror
-          ]
+  justResult mrez checkStatus
 
 updateScenario :: Connection
                -> Int64 -- ^ ScID (scenario id)
@@ -155,86 +114,62 @@ updateScenario :: Connection
                -> IO (Either BS.ByteString ()) -- ^ Either error or ()
 updateScenario conn scID scenario = do
   mrez <- execParams conn "SELECT update_scenario($1,$2);" [mkBigInt scID, Just (oidJSONB, scenario, Text)] Text
-  case mrez of
-    Nothing -> return $ Left "Failed to execute an SQL query for an unknown reason (result is Nothing)."
-    Just rez -> do
-      rstatus <- resultStatus rez
-      if rstatus == CommandOk || rstatus == TuplesOk
-      then return $ Right ()
-      else do
-        statusText <- resStatus rstatus
-        merror <- resultErrorMessage rez
-        return . Left $ BSC.unlines
-          [ statusText
-          , fromMaybe "" merror
-          ]
+  justResult mrez checkStatus
 
 
 listScenarios :: Connection
               -> IO (Either BS.ByteString BS.ByteString) -- ^ Either error or json with a list of scenarios
 listScenarios conn = do
   mrez <- execParams conn "SELECT list_scenarios();" [] Text
-  case mrez of
-    Nothing -> return $ Left "Failed to execute an SQL query for an unknown reason (result is Nothing)."
-    Just rez -> do
-      rstatus <- resultStatus rez
-      nrow <- ntuples rez
-      ncol <- nfields rez
-      if nrow > 0 && ncol > 0 &&
-         (rstatus == CommandOk || rstatus == TuplesOk)
-      then getvalue rez 0 0 >>= \mv -> case mv of
-         Just v -> return . Right $ v
-         Nothing -> return . Left $ "Could not read a value from DB, even though the status is ok."
-      else do
-        statusText <- resStatus rstatus
-        merror <- resultErrorMessage rez
-        return . Left $ BSC.unlines
-          [ statusText
-          , fromMaybe "" merror
-          ]
+  justResult mrez $ \rez -> checkResult rez id
 
 getScenario :: Connection
             -> Int64 -- ^ ScID (scenario id)
             -> IO (Either BS.ByteString BS.ByteString) -- ^ Either error or GeoJSON Feature Collection
 getScenario conn scID = do
   mrez <- execParams conn "SELECT get_scenario($1);" [mkBigInt scID] Text
-  case mrez of
-    Nothing -> return $ Left "Failed to execute an SQL query for an unknown reason (result is Nothing)."
-    Just rez -> do
-      rstatus <- resultStatus rez
-      nrow <- ntuples rez
-      ncol <- nfields rez
-      if nrow > 0 && ncol > 0 &&
-         (rstatus == CommandOk || rstatus == TuplesOk)
-      then getvalue rez 0 0 >>= \mv -> case mv of
-         Just v -> return . Right $ v
-         Nothing -> return . Left $ "Could not read a value from DB, even though the status is ok."
-      else do
-        statusText <- resStatus rstatus
-        merror <- resultErrorMessage rez
-        return . Left $ BSC.unlines
-          [ statusText
-          , fromMaybe "" merror
-          ]
+  justResult mrez $ \rez -> checkResult rez id
 
 populateDB :: Connection
            -> IO (Either BS.ByteString ()) -- ^ Either error or ()
 populateDB conn = do
   mrez <- exec conn "SELECT populatedb();"
-  case mrez of
-    Nothing -> return $ Left "Failed to execute an SQL query for an unknown reason (result is Nothing)."
-    Just rez -> do
-      rstatus <- resultStatus rez
-      if rstatus == CommandOk || rstatus == TuplesOk
-      then return $ Right ()
-      else do
-        statusText <- resStatus rstatus
-        merror <- resultErrorMessage rez
-        return . Left $ BSC.unlines
-          [ statusText
-          , fromMaybe "" merror
-          ]
+  justResult mrez checkStatus
 
+
+
+justResult :: Maybe Result -> (Result -> IO (Either ByteString a)) -> IO (Either ByteString a)
+justResult Nothing _ = return $ Left "Failed to execute an SQL query for an unknown reason (result is Nothing)."
+justResult (Just rez) f = f rez
+
+
+checkStatus :: Result -> IO (Either ByteString ())
+checkStatus rez = do
+    rstatus <- resultStatus rez
+    if rstatus == CommandOk || rstatus == TuplesOk
+    then return $ Right ()
+    else returnError rez rstatus
+
+checkResult :: Result -> (ByteString -> a) -> IO (Either ByteString a)
+checkResult rez f = do
+  rstatus <- resultStatus rez
+  nrow <- ntuples rez
+  ncol <- nfields rez
+  if nrow > 0 && ncol > 0 &&
+     (rstatus == CommandOk || rstatus == TuplesOk)
+  then getvalue rez 0 0 >>= \mv -> case mv of
+     Just v -> return . Right $ f v
+     Nothing -> return . Left $ "Could not read a value from DB, even though the status is ok."
+  else returnError rez rstatus
+
+returnError :: Result -> ExecStatus -> IO (Either ByteString a)
+returnError rez rstatus = do
+  statusText <- resStatus rstatus
+  merror <- resultErrorMessage rez
+  return . Left $ BSC.unlines
+    [ statusText
+    , fromMaybe "" merror
+    ]
 
 
 -- | All sql functions definitions
