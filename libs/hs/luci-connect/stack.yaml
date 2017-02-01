@@ -1,5 +1,5 @@
-extra-deps:
-  - binary-0.8.2.1
+#extra-deps:
+#  - binary-0.8.2.1
 
 flags:
   luci-connect:
@@ -16,6 +16,6 @@ packages:
       commit: c46c12f16941ce107934d318b92f87ba3b84238b
     extra-dep: true
 
-resolver: lts-7.11
+resolver: lts-7.18
 require-stack-version: ">= 1.1.0"
 extra-package-dbs: []

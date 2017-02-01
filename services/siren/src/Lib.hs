@@ -38,7 +38,7 @@ withPostgres PSSettings {..} commands = do
                       <> BSC.pack (show dbPort) <> "/"
                       <> dbName
   -- make sure all functions exist
-  mapM_ (exec conn) sqlFunDefs
+  mapM_ (\s -> exec conn s >>= flip justResult (`checkResult` id) >>= print) sqlFunDefs
   -- make sure database is here
   populateDB conn >>= \erez -> case erez of
     Right () -> return ()
@@ -73,6 +73,8 @@ mkNum i = Just (oidNUMERIC, BSC.pack (show i), Text)
 mkBigInt :: (Show a, Integral a) => a -> Maybe (Oid, ByteString, Format)
 mkBigInt i = Just (oidBIGINT, BSC.pack (show i), Text)
 
+mkToken :: Int64 -> Maybe (Oid, ByteString, Format)
+mkToken i = Just (oidJSONB, BSC.pack (show i), Text)
 
 createScenario :: Connection
                -> BS.ByteString -- ^ scenario name
@@ -118,9 +120,10 @@ updateScenario conn scID scenario = do
 
 
 listScenarios :: Connection
+              -> Int64 -- ^ token (callID)
               -> IO (Either BS.ByteString BS.ByteString) -- ^ Either error or json with a list of scenarios
-listScenarios conn = do
-  mrez <- execParams conn "SELECT list_scenarios();" [] Text
+listScenarios conn token = do
+  mrez <- execParams conn "SELECT list_scenarios($1);" [mkToken token] Text
   justResult mrez $ \rez -> checkResult rez id
 
 getScenario :: Connection

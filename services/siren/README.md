@@ -22,13 +22,13 @@ I download osm map from http://ftp.snt.utwente.nl/pub/misc/openstreetmap/
 
 First, you need to create a user and a database:
 ```
-psql -c "CREATE USER siren WITH PASSWORD 'sirenpass';"
-psql -c "CREATE DATABASE sirendb;"
-psql -c "GRANT ALL PRIVILEGES ON DATABASE sirendb to siren;"
-psql sirendb -c "CREATE EXTENSION IF NOT EXISTS postgis;"
-psql sirendb -c "CREATE EXTENSION IF NOT EXISTS postgis_topology;"
-psql sirendb -c "CREATE EXTENSION IF NOT EXISTS hstore;"
-psql sirendb -c "GRANT SELECT, INSERT, REFERENCES ON TABLE spatial_ref_sys to siren;"
+sudo -u postgres psql -c "CREATE USER siren WITH PASSWORD 'sirenpass';"
+sudo -u postgres psql -c "CREATE DATABASE sirendb;"
+sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE sirendb to siren;"
+sudo -u postgres psql sirendb -c "CREATE EXTENSION IF NOT EXISTS postgis;"
+sudo -u postgres psql sirendb -c "CREATE EXTENSION IF NOT EXISTS postgis_topology;"
+sudo -u postgres psql sirendb -c "CREATE EXTENSION IF NOT EXISTS hstore;"
+sudo -u postgres psql sirendb -c "GRANT SELECT, INSERT, REFERENCES ON TABLE spatial_ref_sys to siren;"
 ```
 The rest is done automatically in the program.
 

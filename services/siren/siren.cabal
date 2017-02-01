@@ -35,6 +35,7 @@ executable siren
                      , conduit >=1.2.6.6
                      , lens -any
                      , unordered-containers -any
+                     , monad-logger -any
                      , luci-connect -any
                      , siren
   default-language:    Haskell2010

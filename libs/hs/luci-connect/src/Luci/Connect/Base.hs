@@ -54,7 +54,7 @@ module Luci.Connect.Base
       -- | Write conduits for message processing and connect them using
       --   the '=&=' combinator.
     , (=&=), (=$=), await, yield
-    , yieldMessage, throwLuciError
+    , yieldMessage, yieldRawMessage, throwLuciError
       -- * Reading & writing functionality
       -- | Combine conduits for reading and writing arbitrary Luci messages.
       --   Connect the provided conduits to corresponding TCP sink and source conduits
@@ -65,7 +65,7 @@ module Luci.Connect.Base
       -- @
       --   runConduit $ (yield ...) =$= writeMessages =$= parseMessages =$= ...await...
       -- @
-    , writeMessages
+    , writeMessages, writeRawMessages
     , parseMessages
     , ComError (..), LuciError (..)
       -- * Panic recovery procedure
@@ -122,6 +122,7 @@ import Control.Monad.Zip (MonadZip(mzipWith))
 #endif
 
 
+import           Control.Arrow (first)
 import qualified Control.Monad.ST as ST
 import           Control.Monad.Logger
 import           Crypto.Random (getRandomBytes, MonadRandom)
@@ -278,6 +279,12 @@ yieldMessage :: MonadLogger m
 yieldMessage msg = yield msg =$= mapOutput ProcessedData writeMessages
 
 
+-- | Put raw data into LuciProcessing pipeline
+yieldRawMessage :: MonadLogger m
+                => (ByteString, [ByteString])
+                -> Conduit a m (LuciProcessing e LuciMessage)
+yieldRawMessage msg = yield msg =$= mapOutput ProcessedData writeRawMessages
+
 -- | Throw an error from within a conduit, much like 'ExceptT'.
 throwLuciError :: Monad m => e -> Conduit a m (LuciProcessing e b)
 throwLuciError = yield . ProcessingError
@@ -363,13 +370,23 @@ type LuciConduitE e m = Conduit (LuciProcessing ComError LuciMessage) m
 --   * Connect its output to a TCP sink.
 writeMessages :: MonadLogger m
               => Conduit LuciMessage m ByteString
-writeMessages = do
+writeMessages = mapInput (first (BSL.toStrict . JSON.encode))
+                         (\(bs,atts) -> flip (,) atts <$> JSON.decodeStrict' bs)
+                         writeRawMessages
+
+-- | Conduit pipe that receives Luci messages (JSON header is already encoded), encodes them,
+--   and outputs plain bytestring.
+--
+--   * Connect its input to a Luci message producer that with header being already encoded
+--   * Connect its output to a TCP sink.
+writeRawMessages :: MonadLogger m
+                 => Conduit (ByteString, [ByteString]) m ByteString
+writeRawMessages = do
   minput <- await
   case minput of
     Nothing -> return ()
-    Just (msg, atts) -> do
-      let mainpart = BSL.toStrict $ JSON.encode msg
-          attSize = 8 * (length atts + 1) + foldr (\a s -> s + BS.length a) 0 atts
+    Just (mainpart, atts) -> do
+      let attSize = 8 * (length atts + 1) + foldr (\a s -> s + BS.length a) 0 atts
       yieldInt64be (fromIntegral $ BS.length mainpart)
       yieldInt64be (fromIntegral attSize)
       yield mainpart
@@ -377,7 +394,7 @@ writeMessages = do
       mapM_ writeAtt atts
       $(logDebug) $ "Write: written msg" <>
          if null atts then "." else " (" <> Text.pack (show $ length atts) <> " atts)."
-      writeMessages
+      writeRawMessages
   where
     writeAtt bs = do
       yieldInt64be (fromIntegral $ BS.length bs)
@@ -588,4 +605,3 @@ panicResponseConduit = await >>= \m ->
          JSON.Error _ -> Nothing
          JSON.Success str -> Just . BS.decodeLenient $ BSC.pack str
     findPanicId _ = Nothing
-
