@@ -1,10 +1,13 @@
-CREATE OR REPLACE FUNCTION update_scenario(ScID bigint, fc jsonb)
-  RETURNS bigint AS
+CREATE OR REPLACE FUNCTION update_scenario( token jsonb
+                                          , ScID bigint
+                                          , geom_input jsonb)
+  RETURNS jsonb AS
 $func$
 DECLARE
   curTime TIMESTAMP;
   geomID_max bigint;
   scSRID integer;
+  fc jsonb;
 BEGIN
   -- get time of insertion
   curTime := CURRENT_TIMESTAMP;
@@ -19,21 +22,25 @@ BEGIN
           USING HINT = 'Use "create_scenario" function instead';
   END IF;
 
+  -- FeatureCollection is in 'geometry' property of 'geometry_input' json
+  fc := geom_input -> 'geometry';
+
   -- update all scenario properties
+  WITH latest_props AS
+    ( SELECT ph.* FROM scenario_prop p, scenario_prop_history ph
+                 WHERE p.scenario_id = ScID
+                   AND ph.scenario_id = ScID
+                   AND p.last_update = ph.ts_update
+                   AND p.name = ph.name
+    )
   INSERT INTO scenario_prop_history (scenario_id, name, ts_update, ts_prev_update, alive, value)
        SELECT ScID, sprops.key, curTime, ph.ts_update
             , jsonb_typeof(sprops.value) <> 'null'
             , CASE WHEN jsonb_typeof(sprops.value) = 'null' THEN ph.value
                    ELSE sprops.value #>> '{}'
               END
-         FROM jsonb_each(fc -> 'properties') sprops
-    LEFT JOIN ( SELECT scenario_prop_history.*
-                  FROM scenario_prop, scenario_prop_history
-                 WHERE scenario_prop.name = scenario_prop_history.name
-                   AND scenario_prop.scenario_id = ScID
-                   AND scenario_prop_history.scenario_id = ScID
-                   AND scenario_prop.last_update = scenario_prop_history.ts_update
-              ) ph
+         FROM jsonb_each(geom_input -> 'properties') sprops
+    LEFT JOIN latest_props ph
            ON sprops.key = ph.name AND ScID = ph.scenario_id;
   -- update latest property references
   INSERT INTO scenario_prop (scenario_id, name, last_update)
@@ -92,6 +99,14 @@ BEGIN
 
 
   -- update all feature properties
+  WITH latest_props AS
+    ( SELECT ph.* FROM sc_geometry_prop p, sc_geometry_prop_history ph
+                 WHERE p.scenario_id = ScID
+                   AND ph.scenario_id = ScID
+                   AND p.geometry_id = ph.geometry_id
+                   AND p.last_update = ph.ts_update
+                   AND p.name = ph.name
+    )
   INSERT INTO sc_geometry_prop_history (scenario_id, geometry_id, name, ts_update, ts_prev_update, alive, value)
        SELECT ScID, fprops.geomID, fprops.key, curTime, ph.ts_update
             , jsonb_typeof(fprops.value) <> 'null'
@@ -99,7 +114,7 @@ BEGIN
                    ELSE fprops.value #>> '{}'
               END
          FROM (SELECT f.geomID, ps.key, ps.value FROM features f, jsonb_each(f.props) ps) fprops
-    LEFT JOIN sc_geometry_prop_history ph
+    LEFT JOIN latest_props ph
            ON fprops.key = ph.name AND ScID = ph.scenario_id AND fprops.geomID = ph.geometry_id;
   -- update latest property references
   INSERT INTO sc_geometry_prop (scenario_id, geometry_id, name, last_update)
@@ -120,6 +135,16 @@ BEGIN
      AND sc_geometry.last_update = sc_geometry_history.ts_update;
 
   -- finish!
-  RETURN ScID;
+  RETURN (
+      SELECT jsonb_build_object(
+        'result', jsonb_build_object
+          ( 'ScID'        , ScID
+          , 'name'        , (SELECT name FROM scenario WHERE scenario.id = ScID)
+          , 'created'     , (SELECT round(EXTRACT(epoch FROM MIN(ts_update))) FROM sc_geometry_history WHERE scenario_id = ScID)
+          , 'lastmodified', round(EXTRACT(epoch FROM curTime))
+          ),
+        'callID', token
+      )
+    );
 END;
 $func$ LANGUAGE plpgsql;

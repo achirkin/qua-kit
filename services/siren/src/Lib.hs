@@ -64,11 +64,11 @@ oidJSONB = Oid 3802
 oidTEXT :: Oid
 oidTEXT = Oid 25
 
-oidNUMERIC :: Oid
-oidNUMERIC = Oid 1700
-
-mkNum :: (Show a, Num a) => a -> Maybe (Oid, ByteString, Format)
-mkNum i = Just (oidNUMERIC, BSC.pack (show i), Text)
+-- oidNUMERIC :: Oid
+-- oidNUMERIC = Oid 1700
+--
+-- mkNum :: (Show a, Num a) => a -> Maybe (Oid, ByteString, Format)
+-- mkNum i = Just (oidNUMERIC, BSC.pack (show i), Text)
 
 mkBigInt :: (Show a, Integral a) => a -> Maybe (Oid, ByteString, Format)
 mkBigInt i = Just (oidBIGINT, BSC.pack (show i), Text)
@@ -77,60 +77,67 @@ mkToken :: Int64 -> Maybe (Oid, ByteString, Format)
 mkToken i = Just (oidJSONB, BSC.pack (show i), Text)
 
 createScenario :: Connection
+               -> Int64 -- ^ token (callID)
                -> BS.ByteString -- ^ scenario name
                -> BS.ByteString -- ^ GeoJSON Feature Collection
-               -> Maybe (Double, Double, Maybe Double) -- ^ lon/lat coords and altitude in metres, above sea level
-               -> IO (Either BS.ByteString Int64) -- ^ Either error or ScID
-createScenario conn scName scenario mlonlatalt = do
-  mrez <- execParams conn "SELECT create_scenario($1,$2,$3,$4);"
-    ( Just (oidTEXT, BSC.filter (\c -> isAlphaNum c || c == ' ') scName, Text)
-    : Just (oidJSONB, scenario, Text)
-    : case mlonlatalt of
-        Nothing                   -> [Nothing, Nothing, Nothing]
-        Just (lon, lat, Nothing)  -> [mkNum lon, mkNum lat, Nothing]
-        Just (lon, lat, Just alt) -> [mkNum lon, mkNum lat, mkNum alt]
-    )
+               -> IO (Either BS.ByteString BS.ByteString) -- ^ Either error or json result
+createScenario conn token scName scenario = do
+  mrez <- execParams conn "SELECT create_scenario($1,$2,$3);"
+    [ mkToken token
+    , Just (oidTEXT, BSC.filter (\c -> isAlphaNum c || c == ' ') scName, Text)
+    , Just (oidJSONB, scenario, Text)
+    ]
     Text
-  justResult mrez $ \rez -> checkResult rez (read . BSC.unpack)
+  justResult mrez $ flip checkResult id
 
 
 
 deleteScenario :: Connection
+               -> Int64 -- ^ token (callID)
                -> Int64 -- ^ ScID (scenario id)
-               -> IO (Either BS.ByteString ()) -- ^ Either error or ()
-deleteScenario conn scID = do
-  mrez <- execParams conn "SELECT delete_scenario($1);" [mkBigInt scID] Text
-  justResult mrez checkStatus
+               -> IO (Either BS.ByteString BS.ByteString) -- ^ Either error or json result
+deleteScenario conn token scID = do
+  mrez <- execParams conn "SELECT delete_scenario($1,$2);" [mkToken token, mkBigInt scID] Text
+  justResult mrez $ flip checkResult id
 
 
 recoverScenario :: Connection
-               -> Int64 -- ^ ScID (scenario id)
-               -> IO (Either BS.ByteString ()) -- ^ Either error or ()
-recoverScenario conn scID = do
-  mrez <- execParams conn "SELECT recover_scenario($1);" [mkBigInt scID] Text
-  justResult mrez checkStatus
+                -> Int64 -- ^ token (callID)
+                -> Int64 -- ^ ScID (scenario id)
+                -> IO (Either BS.ByteString BS.ByteString) -- ^ Either error or json result
+recoverScenario conn token scID = do
+  mrez <- execParams conn "SELECT recover_scenario($1,$2);" [mkToken token, mkBigInt scID] Text
+  justResult mrez $ flip checkResult id
+
 
 updateScenario :: Connection
+               -> Int64 -- ^ token (callID)
                -> Int64 -- ^ ScID (scenario id)
                -> BS.ByteString -- ^ GeoJSON Feature Collection
-               -> IO (Either BS.ByteString ()) -- ^ Either error or ()
-updateScenario conn scID scenario = do
-  mrez <- execParams conn "SELECT update_scenario($1,$2);" [mkBigInt scID, Just (oidJSONB, scenario, Text)] Text
-  justResult mrez checkStatus
+               -> IO (Either BS.ByteString BS.ByteString) -- ^ Either error or json result
+updateScenario conn token scID scenario = do
+  mrez <- execParams conn "SELECT update_scenario($1,$2,$3);"
+    [ mkToken token
+    , mkBigInt scID
+    , Just (oidJSONB, scenario, Text)
+    ]
+    Text
+  justResult mrez $ flip checkResult id
 
 
 listScenarios :: Connection
               -> Int64 -- ^ token (callID)
-              -> IO (Either BS.ByteString BS.ByteString) -- ^ Either error or json with a list of scenarios
+              -> IO (Either BS.ByteString BS.ByteString) -- ^ Either error or json result
 listScenarios conn token = do
   mrez <- execParams conn "SELECT list_scenarios($1);" [mkToken token] Text
   justResult mrez $ \rez -> checkResult rez id
 
 getScenario :: Connection
+            -> Int64 -- ^ token (callID)
             -> Int64 -- ^ ScID (scenario id)
-            -> IO (Either BS.ByteString BS.ByteString) -- ^ Either error or GeoJSON Feature Collection
-getScenario conn scID = do
-  mrez <- execParams conn "SELECT get_scenario($1);" [mkBigInt scID] Text
+            -> IO (Either BS.ByteString BS.ByteString) -- ^ Either error or json result
+getScenario conn token scID = do
+  mrez <- execParams conn "SELECT get_scenario($1,$2);" [mkToken token, mkBigInt scID] Text
   justResult mrez $ \rez -> checkResult rez id
 
 populateDB :: Connection

@@ -56,9 +56,7 @@ genToken = tokenGen %%= (id &&& (+1))
 
 -- | entry point
 main :: IO ()
-main = withPostgres sets $ \conn -> do
-    listScenarios conn 14 >>= print
-    getScenario conn 2 >>= print
+main = withPostgres sets $ \conn ->
     void $ runLuciClient (ServiceState 0 0 conn) processMessages
   where
     sets = PSSettings
@@ -91,8 +89,13 @@ defaultRunSettings = RunSettings
 processMessages :: Conduit Message (LuciProgram ServiceState) ByteString
 processMessages = do
   -- send a first message to register as a service
-  regMsgToken <- genToken
-  yield . headerBytes $ registerGetList regMsgToken
+  genToken >>= yield . headerBytes . registerGetList
+  genToken >>= yield . headerBytes . registerGetScenario
+  genToken >>= yield . headerBytes . registerCreateScenario
+  genToken >>= yield . headerBytes . registerUpdateScenario
+  genToken >>= yield . headerBytes . registerDeleteScenario
+  genToken >>= yield . headerBytes . registerRecoverScenario
+
   -- reply to all run requests
   awaitForever responseMsgs
 
@@ -102,35 +105,56 @@ responseMsgs :: Message -> Conduit Message (LuciProgram ServiceState) ByteString
 -- Respond only to run messages with correct input
 
 responseMsgs (MsgRun token "scenario.GetList" _ _) = do
-  conn <- _connection <$> get
-  eresultBS <- liftIO $ listScenarios conn (fromIntegral token)
-  yield $ case eresultBS of
-    Left errbs -> headerBytes $ MsgError token (Text.decodeUtf8 errbs)
-    Right resultBS -> resultBS
+    conn <- _connection <$> get
+    eresultBS <- liftIO $ listScenarios conn (fromIntegral token)
+    yieldAnswer token eresultBS
 
+responseMsgs (MsgRun token "scenario.geojson.Get" pams _)
+  | Just (Success scId) <- fromJSON <$> HashMap.lookup "ScID" pams = do
+    conn <- _connection <$> get
+    eresultBS <- liftIO $ getScenario conn (fromIntegral token) scId
+    yieldAnswer token eresultBS
 
--- responseMsgs (MsgRun token "scenario.geojson.Get" pams [pts])
---   | Just (Success scId) <- fromJSON <$> HashMap.lookup "ScID" pams = do
---     currentRunToken %= const token
---     conn <- _connection <$> get
---     escenarioBS <- liftIO $ getScenario conn scId
---     yield $ case escenarioBS of
---       Left errbs -> headerBytes $ MsgError token (Text.decodeUtf8 errbs)
---       Right scenarioBS -> undefined -- resultScenarioGet token scenarioBS
---   --  liftIO (deserializePoints pts) >>= evaluate scId
--- -- {\"result\":{\"lastmodified\":1485936144,\"geometry_output\":{\"format\":\"geojson\",\"name\":\"My great scenario\",\"geometry\":{\"features\":[{\"geometry\"
+responseMsgs (MsgRun token "scenario.geojson.Create" pams _)
+  | Just (Success scName) <- fromJSON <$> HashMap.lookup "name" pams
+  , Just geom_input <- BSL.toStrict . JSON.encode <$> HashMap.lookup "geometry_input" pams = do
+    conn <- _connection <$> get
+    eresultBS <- liftIO $ createScenario conn (fromIntegral token) (BSC.pack scName) geom_input
+    yieldAnswer token eresultBS
 
+responseMsgs (MsgRun token "scenario.geojson.Update" pams _)
+  | Just (Success scID) <- fromJSON <$> HashMap.lookup "ScID" pams
+  , Just geom_input <- BSL.toStrict . JSON.encode <$> HashMap.lookup "geometry_input" pams = do
+    conn <- _connection <$> get
+    eresultBS <- liftIO $ updateScenario conn (fromIntegral token) scID geom_input
+    yieldAnswer token eresultBS
 
+responseMsgs (MsgRun token "scenario.geojson.Delete" pams _)
+  | Just (Success scID) <- fromJSON <$> HashMap.lookup "ScID" pams = do
+    conn <- _connection <$> get
+    eresultBS <- liftIO $ deleteScenario conn (fromIntegral token) scID
+    yieldAnswer token eresultBS
+
+responseMsgs (MsgRun token "scenario.geojson.Recover" pams _)
+  | Just (Success scID) <- fromJSON <$> HashMap.lookup "ScID" pams = do
+    conn <- _connection <$> get
+    eresultBS <- liftIO $ recoverScenario conn (fromIntegral token) scID
+    yieldAnswer token eresultBS
 
 responseMsgs (MsgRun token _ _ _) = do
     currentRunToken %= const token
-    yield . headerBytes $ MsgError token "Incorrect input in the 'run' message."
--- Log luci errors
+    yield . headerBytes $ MsgError token "Failed to understand scenario service request: incorrect input in the 'run' message."
+
 
 responseMsgs (MsgError _ s) = logWarnN $ "[Luci error message] " <> s
 responseMsgs msg = logInfoN . ("[Ignore Luci message] " <>) . showJSON . toJSON . fst $ makeMessage msg
 
-
+yieldAnswer :: Token
+            -> Either ByteString ByteString
+            -> Conduit Message (LuciProgram ServiceState) ByteString
+yieldAnswer token eresultBS = yield $ case eresultBS of
+  Left errbs -> headerBytes $ MsgError token (Text.decodeUtf8 errbs)
+  Right resultBS -> resultBS
 
 ----------------------------------------------------------------------------------------------------
 
@@ -148,6 +172,150 @@ registerGetList token = MsgRun token "RemoteRegister" o []
       , "exampleCall"        .= object
           [ "run"    .= String "scenario.GetList" ]
       ]
+
+
+-- | A message we send to register in luci
+registerGetScenario :: Token -> Message
+registerGetScenario token = MsgRun token "RemoteRegister" o []
+  where
+    o = HashMap.fromList
+      [ "description"        .= String "Get a scenario in GeoJSON format"
+      , "serviceName"        .= String "scenario.geojson.Get"
+      , "inputs"             .= object
+          [ "ScID" .= String "number" ]
+      , "outputs"            .= object
+          [ "created" .= String "number"
+          , "lastmodified" .= String "number"
+          , "geometry_output" .= object
+            [ "format"      .= String "'GeoJSON'"
+            , "name"        .= String "string"
+            , "geometry"    .= String "{FeatureCollection}"
+            , "properties"  .= String "object"
+            ]
+          ]
+      , "exampleCall"        .= object
+          [ "run"    .= String "scenario.geojson.Get"
+          , "ScId"   .= Number 1
+          ]
+      ]
+
+
+-- | A message we send to register in luci
+registerCreateScenario :: Token -> Message
+registerCreateScenario token = MsgRun token "RemoteRegister" o []
+  where
+    o = HashMap.fromList
+      [ "description"        .= String "Create a new scenario in GeoJSON format"
+      , "serviceName"        .= String "scenario.geojson.Create"
+      , "inputs"             .= object
+          [ "name" .= String "string"
+          , "geometry_input" .= object
+            [ "geometry" .= String "FeatureCollection"
+            , "OPT A: lat" .= String "number"
+            , "OPT A: lon" .= String "number"
+            , "OPT A: alt" .= String "number"
+            , "OPT B: srid" .= String "number"
+            , "properties" .= String "object"
+            ]
+          ]
+      , "outputs"            .= object
+          [ "ScID" .= String "number"
+          , "created" .= String "number"
+          , "lastmodified" .= String "number"
+          , "name" .= String "name"
+          ]
+      , "exampleCall"        .= object
+          [ "run"    .= String "scenario.geojson.Create"
+          , "name"   .= String "My First Scenario"
+          , "geometry_input" .= object
+            [ "geometry" .= object
+              [ "type" .= String "FeatureCollection"
+              , "features" .= [object [ "type" .= String "Feature", "geometry" .= object []]]
+              , "lat"  .= Number 12.162
+              , "lon"  .= Number 8.222
+              , "alt"  .= Number 1200
+              ]
+            ]
+          ]
+      ]
+
+
+-- | A message we send to register in luci
+registerDeleteScenario :: Token -> Message
+registerDeleteScenario token = MsgRun token "RemoteRegister" o []
+  where
+    o = HashMap.fromList
+      [ "description"        .= String "Delete a scenario (mark it as dead to make it invisible)."
+      , "serviceName"        .= String "scenario.geojson.Delete"
+      , "inputs"             .= object
+          [ "ScID" .= String "number"
+          ]
+      , "outputs"            .= object
+          [ "ScID" .= String "number"
+          , "created" .= String "number"
+          , "lastmodified" .= String "number"
+          , "name" .= String "name"
+          ]
+      , "exampleCall"        .= object
+          [ "run"    .= String "scenario.geojson.Delete"
+          , "ScID"   .= Number 3
+          ]
+      ]
+
+-- | A message we send to register in luci
+registerRecoverScenario :: Token -> Message
+registerRecoverScenario token = MsgRun token "RemoteRegister" o []
+  where
+    o = HashMap.fromList
+      [ "description"        .= String "Recover a scenario (mark it as alive to make it visible)."
+      , "serviceName"        .= String "scenario.geojson.Recover"
+      , "inputs"             .= object
+          [ "ScID" .= String "number"
+          ]
+      , "outputs"            .= object
+          [ "ScID" .= String "number"
+          , "created" .= String "number"
+          , "lastmodified" .= String "number"
+          , "name" .= String "name"
+          ]
+      , "exampleCall"        .= object
+          [ "run"    .= String "scenario.geojson.Recover"
+          , "ScID"   .= Number 3
+          ]
+      ]
+
+-- | A message we send to register in luci
+registerUpdateScenario :: Token -> Message
+registerUpdateScenario token = MsgRun token "RemoteRegister" o []
+  where
+    o = HashMap.fromList
+      [ "description"        .= String "Update a scenario in GeoJSON format"
+      , "serviceName"        .= String "scenario.geojson.Update"
+      , "inputs"             .= object
+          [ "ScID" .= String "number"
+          , "geometry_input" .= object
+            [ "geometry" .= String "FeatureCollection"
+            , "properties" .= String "object"
+            ]
+          ]
+      , "outputs"            .= object
+          [ "ScID" .= String "number"
+          , "created" .= String "number"
+          , "lastmodified" .= String "number"
+          , "name" .= String "name"
+          ]
+      , "exampleCall"        .= object
+          [ "run"    .= String "scenario.geojson.Update"
+          , "ScID"   .= Number 3
+          , "geometry_input" .= object
+            [ "geometry" .= object
+              [ "type" .= String "FeatureCollection"
+              , "features" .= [object [ "type" .= String "Feature", "geometry" .= object []]]
+              ]
+            ]
+          ]
+      ]
+
 
 -- -- | A message we send to register in luci
 -- registerMessage :: Token -> Message
