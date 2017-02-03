@@ -51,8 +51,8 @@ stack exec qua-server
 Flag `qua-server:dev` is needed to use sqlite database instead of postgresql
 Alternatively, you can use `yesod-bin` package to run it:
 ```
-stack install yesod-bin
-yesod devel
+stack install yesod-bin cabal-install
+stack exec yesod devel
 ```
 
 #### Luci
@@ -64,6 +64,16 @@ cd apps/java/luci2
 mvn clean install
 mvn exec:java -pl scenario
 ```
+
+#### Helen
+
+Path: `apps/hs/helen`.
+Given Java and maven are set up correctly, run Luci as follows:
+```
+cd apps/hs/helen
+stack install
+```
+
 
 #### luci-connect
 
@@ -84,16 +94,23 @@ Maybe a better solution is to make the request itself faster later,
 but for now it solved the problem.
 
 
-# Running luci service together with qua-kit and luci.
+# Running luci service together with qua-kit and helen.
 
 If you develop a luci (qua-view-compliant) service, at some point you need to test the whole system altogether.
-The framework consist of three parties: `luci`, `qua-kit`, and your service.
+The framework consist of foure parties: `helen`, `siren`, `qua-kit`, and your service.
 So you need to run the three things, and then use the running website to execute your service.
+Note, all haskell apps (`helen`, `siren`, `qua-kit`) can be compiled using 
+haskell stack tool by running `stack install --install-ghc` from the projects folders.
+Note also, `siren` requires `postgis` database to be set up and running;
+refer to `siren` docs for details.
 
-  1. Compile and run `luci`.
-  2. Compile and run `qua-server`.
-  3. Compile and run your service connected to localhost `luci`.
-     Alternatively, you can try `dist-walls-service` executable - it has been tested to work with current version of luci.
+  1. Compile and run `helen` (`apps/hs/helen`).
+     Helen is a small app that replicates Luci core. 
+  3. Compile and run `siren` (`services/siren`).
+     Siren provides scenario support for helen and services.
+  2. Compile and run `qua-server` (`apps/hs/qua-server`).
+  4. Compile and run your service connected to localhost `helen`.
+     Alternatively, you can try `dist-walls-service` executable - it has been tested to work with current version of luci and helen.
      It is available at `libs/hs/luci-connect` folder.
      To run it use following command:
      
@@ -101,19 +118,19 @@ So you need to run the three things, and then use the running website to execute
         stack install
         dist-walls-service
      
-  4. Go to page `http://localhost:3000/viewer`
+  5. Go to page `http://localhost:3000/viewer`
       * (hint) Open browser console to see debug output if you have any troubles.
-  5. Open toolbox -> connect to luci.
-  6. Run scenario:
+  6. Open toolbox -> connect to luci.
+  7. Run scenario:
       * (a) Load some scenario via luci (if uploaded something before).
       * (b) Upload some scenario using `FILES` button.
             There is one available at `apps/hs/qua-server/static/data/mooctask.geojson`.
             Save it to luci.
-  7. Make sure that `luci` and some service is running, then go to `SERVICES` tab.
+  8. Make sure that `luci` and some service is running, then go to `SERVICES` tab.
      It should show a list of available services.
      You can select one to run it.
      Click on `refresh` button if you do not see your service in a list.
      Selecting an active service invokes parameter refreshing and display.
      Check if all optional parameters of your service are displayed as intended.
-  8. Press green `play` button.
+  9. Press green `play` button.
      

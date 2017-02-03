@@ -16,22 +16,22 @@ module Helen.Core.Service.Registration
   ) where
 
 
-import           Control.Monad (when, unless, foldM, forM_)
-import qualified Control.Lens as Lens
-import qualified Data.Aeson as JSON
-import           Data.Aeson ((.=))
-import qualified Data.Foldable as Foldable (toList)
-import qualified Data.HashMap.Strict as HashMap
-import           Data.Monoid ((<>))
-import qualified Data.Text as Text
-import qualified Data.Text.Lazy as LText
+import qualified Control.Lens            as Lens
+import           Control.Monad           (foldM, forM_, unless, when)
+import           Data.Aeson              ((.=))
+import qualified Data.Aeson              as JSON
+import qualified Data.Foldable           as Foldable (toList)
+import qualified Data.HashMap.Strict     as HashMap
+import           Data.Monoid             ((<>))
+import qualified Data.Text               as Text
+import qualified Data.Text.Lazy          as LText
 import qualified Data.Text.Lazy.Encoding as LText
 
-import Luci.Messages
-import Luci.Connect
+import           Luci.Connect
+import           Luci.Messages
 
-import Helen.Core.Types
-import Helen.Core.Service
+import           Helen.Core.Service
+import           Helen.Core.Types
 
 
 registrationService :: HelenWorld ()
@@ -130,7 +130,7 @@ runRegService (TargetedMessage clientId myId (MsgRun token "RemoteDeregister" pa
     idles = Lens.to (filter (\(ServiceInstance cId _) -> cId == clientId) . Foldable.toList)
     msName = HashMap.lookup "serviceName" pams >>= toSName
     toSName (JSON.String s) =  Just $ ServiceName s
-    toSName _ = Nothing
+    toSName _               = Nothing
     clientBusyServices hm = let f ss (SessionId cId _) (ssi, _)
                                   = if cId == clientId then ssi:ss else ss
                             in HashMap.foldlWithKey' f [] hm
@@ -155,7 +155,13 @@ remoteRegisterMessage :: Message
 remoteRegisterMessage = MsgRun (-123456789) "RemoteRegister" o []
   where
     o = HashMap.fromList
-      [ "description"        .= JSON.String "Show the distance to the closest building line"
+      [ "description"        .=  Text.unlines
+          [ "Registers a client as a service"
+          , "Use nonBlocking=true option if you do not want helen to manage workload for the service."
+          , "If nonBlocking=true then helen sends all messages to the service immediately, not wating for an answer from the service."
+          , "When nonBlocking=false or ommitted, helen never sends a new run request when the service is busy."
+          , "Note: helen sends cancel messages only to nonBlocking services."
+          ]
       , "serviceName"        .= JSON.String "RemoteRegister"
       , "qua-view-compliant" .= JSON.Bool False
       , "inputs"             .= JSON.object
@@ -166,6 +172,7 @@ remoteRegisterMessage = MsgRun (-123456789) "RemoteRegister" o []
           , "OPT outputs"       .= JSON.String "json"
           , "OPT constraints"   .= JSON.String "json"
           , "OPT qua-view-compliant"   .= JSON.String "boolean"
+          , "OPT nonBlocking"   .= JSON.String "boolean"
           ]
       , "outputs"            .= JSON.object
           [ "registeredName"   .= JSON.String "string"
@@ -219,4 +226,3 @@ remoteDeregisterMessage = MsgRun (-987654321) "RemoteRegister" o []
       , "exampleCall"        .= JSON.object
           [ "run" .= JSON.String "RemoteDeregister"]
       ]
-

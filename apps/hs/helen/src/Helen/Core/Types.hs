@@ -11,10 +11,13 @@
 -- |
 --
 -----------------------------------------------------------------------------
-{-# LANGUAGE OverloadedStrings, GeneralizedNewtypeDeriving  #-}
-{-# LANGUAGE MultiParamTypeClasses, FlexibleInstances, TypeFamilies #-}
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE FlexibleContexts           #-}
+{-# LANGUAGE FlexibleInstances          #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE MultiParamTypeClasses      #-}
+{-# LANGUAGE OverloadedStrings          #-}
+{-# LANGUAGE TemplateHaskell            #-}
+{-# LANGUAGE TypeFamilies               #-}
 module Helen.Core.Types
   ( -- * Base server-client relationship
     Helen (..), ClientId (..), Client (..), sendMessage
@@ -32,30 +35,31 @@ module Helen.Core.Types
   , incomingMsgs, idleInstances, busyInstances
   , serviceMap, nextToken, currentCalls, namedPool
   , serviceInfo
+  , isNonBlocking
   ) where
 
-import Data.Unique
-import Data.Hashable
+import           Data.Hashable
+import           Data.Unique
 
-import Luci.Messages
-import Luci.Connect
-import Data.ByteString (ByteString)
-import qualified Data.Aeson as JSON
-import qualified Data.HashMap.Strict as HashMap
-import qualified Data.Sequence as Seq
-import qualified Control.Monad.STM as STM
-import qualified Control.Concurrent.STM.TVar as STM
+import           Control.Concurrent           (forkIO)
 import qualified Control.Concurrent.STM.TChan as STM
-import           Control.Concurrent (forkIO)
+import qualified Control.Concurrent.STM.TVar  as STM
 import           Control.Lens
-import           Control.Monad.Base (MonadBase)
-import           Control.Monad.Trans.Control
-import           Control.Monad.Trans.Class
-import           Control.Monad.State.Lazy
-import qualified Control.Monad.Trans.State
-import           Control.Monad.Trans.Reader
+import           Control.Monad.Base           (MonadBase)
 import           Control.Monad.Logger
-import           Crypto.Random (MonadRandom (..))
+import           Control.Monad.State.Lazy
+import qualified Control.Monad.STM            as STM
+-- import           Control.Monad.Trans.Class
+import           Control.Monad.Trans.Control
+import           Control.Monad.Trans.Reader
+-- import qualified Control.Monad.Trans.State
+import           Crypto.Random                (MonadRandom (..))
+import qualified Data.Aeson                   as JSON
+import           Data.ByteString              (ByteString)
+import qualified Data.HashMap.Strict          as HashMap
+import qualified Data.Sequence                as Seq
+-- import           Luci.Connect
+import           Luci.Messages
 
 -- | Represent a connected client
 newtype ClientId = ClientId Unique
@@ -113,6 +117,8 @@ serviceManager k h  = fmap (\newM -> h { _serviceManager = newM }) (k $ _service
 data ServiceInstance = ServiceInstance !ClientId !ServiceName
   deriving (Eq)
 
+
+
 -- | Helper to get service name
 siName :: ServiceInstance -> ServiceName
 siName (ServiceInstance _ sn) = sn
@@ -127,14 +133,18 @@ data ServicePool = ServicePool
     -- ^ data coming with "RemoteRegister" message
   }
 
+-- | Can this service handle multiple run requests concurrently?
+--   If so then helen will never remove it from idle instances pool.
+isNonBlocking :: ServicePool -> Bool
+isNonBlocking = nonBlocking . _serviceInfo
 
 -- | Keep all services in one place
 data ServiceManager = ServiceManager
-  { _serviceMap   :: !(HashMap.HashMap ServiceName ServicePool)
+  { _serviceMap    :: !(HashMap.HashMap ServiceName ServicePool)
     -- ^ store services by name
-  , _nextToken   :: !Token
+  , _nextToken     :: !Token
     -- ^ keep track of last Token to assign sequential numbers
-  , _currentCalls :: !(HashMap.HashMap SessionId ServiceName)
+  , _currentCalls  :: !(HashMap.HashMap SessionId ServiceName)
     -- ^ lookup service name by session id of a client calling this service
   , _busyInstances :: !(HashMap.HashMap SessionId (ServiceInstance, SessionId))
     -- ^ map of busy instances, so that it is easy to find instance that finished a task

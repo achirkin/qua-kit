@@ -16,30 +16,31 @@ module Helen.Core
   , Client (), clientAddr
   ) where
 
-import qualified Control.Concurrent.STM.TMVar as STM
-import qualified Control.Concurrent.STM.TChan as STM
-import qualified Control.Monad.STM as STM
-import           Control.Monad.Trans.Class (lift)
-import           Control.Monad (forever, when)
-import qualified Data.Aeson as JSON
+import qualified Control.Concurrent.STM.TChan    as STM
+import qualified Control.Concurrent.STM.TMVar    as STM
+import           Control.Monad                   (forever, when)
+import qualified Control.Monad.STM               as STM
+import           Control.Monad.Trans.Class       (lift)
+import qualified Data.Aeson                      as JSON
+import qualified Data.ByteString.Lazy.Char8      as LazyBSC
 import           Data.Conduit
-import qualified Data.Conduit.Network as Network
-import qualified Data.ByteString.Lazy.Char8 as LazyBSC
-import qualified Data.HashMap.Strict as HashMap
-import           Data.Maybe (fromMaybe)
-import           Data.Monoid ((<>))
-import qualified Data.Text as Text
+import qualified Data.Conduit.Network            as Network
+import qualified Data.HashMap.Strict             as HashMap
+import           Data.Maybe                      (fromMaybe)
+import           Data.Monoid                     ((<>))
+import qualified Data.Text                       as Text
 import           Data.Unique
 import           System.Mem.Weak
 
-import Luci.Messages
-import Luci.Connect
-import Luci.Connect.Base
+import           Luci.Connect
+import           Luci.Connect.Base
+import           Luci.Messages
 
-import Helen.Core.Types
-import Helen.Core.Service (defServiceManager, processMessage)
-import Helen.Core.Service.Registration (registrationService)
-import Helen.Core.Service.Information  (infoService)
+import           Helen.Core.Service              (defServiceManager,
+                                                  processMessage)
+import           Helen.Core.Service.Information  (infoService)
+import           Helen.Core.Service.Registration (registrationService)
+import           Helen.Core.Types
 
 
 -- | Initialize state
@@ -55,7 +56,7 @@ initHelen = do
     , sendDirectMessage = \msg@(TargetedMessage _ cId _) -> do
          mc <- fmap (HashMap.lookup cId) . liftIO . STM.atomically $ STM.readTMVar clientStore
          case mc of
-           Nothing -> return ()
+           Nothing     -> return ()
            Just (c, _) -> queueMessage c msg
     , registerClient = \client -> liftIO $ do
          cId <- ClientId <$> newUnique
@@ -148,7 +149,7 @@ helenChannels' appData = do
                         rtoken = case h of
                             MessageHeader (JSON.Object o) -> case JSON.fromJSON <$> HashMap.lookup "token" o of
                                     Just (JSON.Success t) -> t
-                                    _ -> -1
+                                    _                     -> -1
                             _ -> -1
                     logWarnN msgerr
                     liftIO . STM.atomically . STM.writeTChan sendQueue . Just . makeMessage $ MsgError rtoken msgerr
@@ -177,6 +178,3 @@ helenChannels' appData = do
     messagesLeft tchan = STM.tryReadTChan tchan >>= \mv -> case mv of
                               Nothing -> return (0 :: Int)
                               Just _  -> (1+) <$> messagesLeft tchan
-
-
-

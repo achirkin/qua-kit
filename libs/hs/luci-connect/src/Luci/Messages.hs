@@ -11,7 +11,9 @@
 -- for common Luci messages.
 --
 -----------------------------------------------------------------------------
-{-# LANGUAGE RecordWildCards, OverloadedStrings, GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE OverloadedStrings          #-}
+{-# LANGUAGE RecordWildCards            #-}
 module Luci.Messages
     ( -- * Attachment references
       -- | Helper functions to check and make references for attachments in JSON message header.
@@ -29,20 +31,20 @@ module Luci.Messages
 
 
 
-import qualified Data.ByteString as BS
-import           Data.HashMap.Strict as HashMap
-import qualified Crypto.Hash as Hash
-import           Crypto.Hash.Algorithms (MD5)
-import           Data.Aeson as JSON
-import qualified Data.Aeson.Types as JSON
-import           Data.Maybe (fromMaybe)
+import qualified Crypto.Hash             as Hash
+import           Crypto.Hash.Algorithms  (MD5)
+import           Data.Aeson              as JSON
+import qualified Data.Aeson.Types        as JSON
+import qualified Data.ByteString         as BS
 import           Data.Hashable
-import           Data.String (IsString)
-import qualified Data.Text.Lazy as LText
+import           Data.HashMap.Strict     as HashMap
+import           Data.Maybe              (fromMaybe)
+import           Data.String             (IsString)
+import qualified Data.Text.Lazy          as LText
 import qualified Data.Text.Lazy.Encoding as LText
 
-import Luci.Connect.Base
-import Luci.Connect.Internal
+import           Luci.Connect.Base
+import           Luci.Connect.Internal
 
 
 -- | Make a message without attachments
@@ -68,6 +70,11 @@ data ServiceInfo = ServiceInfo
   , outputs          :: !(Maybe JSON.Value)
   , constraints      :: !(Maybe JSON.Value)
   , quaQitCompliance :: !Bool
+    -- ^ Does service comply to qua-kit visual service specification?
+  , nonBlocking      :: !Bool
+    -- ^ If nonBlocking = true, then luci/helen should not manage workload for the service,
+    --   i.e. the service can receive multiple run requrests and send corresponding results
+    --      not in a strict order
   }
 
 
@@ -80,6 +87,7 @@ instance ToJSON ServiceInfo where
     , "outputs"     .=? outputs
     , "constraints" .=? constraints
     , "qua-view-compliant" .=! quaQitCompliance
+    , "nonBlocking" .=! nonBlocking
     ]
 
 instance FromJSON ServiceInfo where
@@ -91,6 +99,7 @@ instance FromJSON ServiceInfo where
      <*> v .:? "outputs"
      <*> v .:? "constraints"
      <*> (fromMaybe False <$> v .:? "qua-view-compliant")
+     <*> (fromMaybe False <$> v .:? "nonBlocking")
   parseJSON invalid = JSON.typeMismatch "ServiceInfo" invalid
 
 
@@ -220,11 +229,11 @@ data Message
 
 -- | All messsages have a unique for connection token
 msgToken :: Message -> Token
-msgToken (MsgRun t _ _ _) = t
-msgToken (MsgCancel t) = t
-msgToken (MsgResult t _ _) = t
+msgToken (MsgRun t _ _ _)      = t
+msgToken (MsgCancel t)         = t
+msgToken (MsgResult t _ _)     = t
 msgToken (MsgProgress t _ _ _) = t
-msgToken (MsgError t _) = t
+msgToken (MsgError t _)        = t
 
 
 -- | Get attachment from a message, checking its MD5 hash
@@ -241,7 +250,7 @@ attachment (MsgError _ _) _ = Nothing
 indexList :: [a] -> Int -> Maybe a
 indexList xs i = headMaybe $ drop i xs
   where
-    headMaybe [] = Nothing
+    headMaybe []    = Nothing
     headMaybe (x:_) = Just x
 
 -- | Parse all registered message types
@@ -260,7 +269,7 @@ parseMessage (MessageHeader (JSON.Object js), bss)
               Just (Error _)   -> 66666666666
               Just (Success t) -> t
     toResult (JSON.Object o) = Just $ ServiceResult o
-    toResult _ = Nothing
+    toResult _               = Nothing
 parseMessage (MessageHeader _, _) = Error "Invalid JSON type (expected object)."
 
 
@@ -278,13 +287,9 @@ makeMessage (MsgProgress token p msr bss) =
   (MessageHeader . JSON.object $ ["progress" .= p, "callID" .= token] ++ srMaybe msr, seqList bss)
   where
     srMaybe (Just (ServiceResult x)) = ["intermediateResult" .= x]
-    srMaybe _ = []
+    srMaybe _                        = []
 
 
 seqList :: [a] -> [a]
-seqList [] = []
+seqList []     = []
 seqList (x:xs) = x `seq` (x : seqList xs)
-
-
-
-

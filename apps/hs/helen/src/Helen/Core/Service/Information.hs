@@ -16,22 +16,23 @@ module Helen.Core.Service.Information
   ) where
 
 --import           Control.Monad (when, unless, foldM, forM_)
-import qualified Control.Lens as Lens
-import qualified Data.Aeson as JSON
-import           Data.Aeson ((.=))
-import qualified Data.HashMap.Strict as HashMap
-import qualified Data.List as List (sort, intersect,foldl',union)
-import           Data.List ((\\))
-import           Data.Maybe (maybeToList, fromMaybe)
-import           Data.Monoid ((<>))
-import qualified Data.Text as Text
-import qualified Data.Text.Lazy as LText
+import qualified Control.Lens            as Lens
+import           Data.Aeson              ((.=))
+import qualified Data.Aeson              as JSON
+import qualified Data.HashMap.Strict     as HashMap
+import           Data.List               ((\\))
+import qualified Data.List               as List (foldl', intersect, sort,
+                                                  union)
+import           Data.Maybe              (fromMaybe, maybeToList)
+import           Data.Monoid             ((<>))
+import qualified Data.Text               as Text
+import qualified Data.Text.Lazy          as LText
 import qualified Data.Text.Lazy.Encoding as LText
 
-import Luci.Messages
-import Luci.Connect
+import           Luci.Connect
+import           Luci.Messages
 
-import Helen.Core.Types
+import           Helen.Core.Types
 
 infoService :: HelenWorld ()
 infoService = do
@@ -83,14 +84,14 @@ runInfoService (TargetedMessage _ myId (MsgRun token "FilterServices" pams _)) =
           | otherwise = const True
     rcrLevel = case JSON.fromJSON <$> HashMap.lookup "rcrLevel" pams of
                  Just (JSON.Success l) -> max 0 (l :: Int)
-                 _ -> 0
+                 _                     -> 0
     keys = case JSON.fromJSON <$> HashMap.lookup "keys" pams of
                  Just (JSON.Success l) -> List.sort l
-                 _ -> []
+                 _                     -> []
     jsonMatch = fromMaybe (JSON.object []) $ HashMap.lookup "jsonMatch" pams
-    findKeys 0 ks (JSON.Object v) = List.foldl' List.union ks' . map (findKeys 0 (ks \\ ks') . snd) $ HashMap.toList v
-                             where ks' = ks `List.intersect` List.sort (HashMap.keys v)
-    findKeys 1 ks (JSON.Object v) = ks `List.intersect` List.sort (HashMap.keys v)
+    findKeys 0 ks (JSON.Object v) = List.foldl' List.union ks' . map (findKeys 0 (ks \\ ks') . snd) $ HashMap.toList (HashMap.filter nonNullary v)
+                             where ks' = ks `List.intersect` List.sort (HashMap.keys $ HashMap.filter nonNullary v)
+    findKeys 1 ks (JSON.Object v) = ks `List.intersect` List.sort (HashMap.keys $ HashMap.filter nonNullary v)
     findKeys n ks (JSON.Object v) = List.foldl' List.union [] . map (findKeys (n-1) ks . snd) $ HashMap.toList v
     findKeys _ _ _ = []
     matchJSON JSON.Null _  = True
@@ -106,6 +107,12 @@ runInfoService (TargetedMessage _ myId (MsgRun token "FilterServices" pams _)) =
     findJSONMatches 1 val = matchJSON jsonMatch val
     findJSONMatches n (JSON.Object v) = HashMap.foldl' (\a x -> findJSONMatches (n-1) x || a) False v
     findJSONMatches _ _ = False
+    nonNullary JSON.Null       = False
+    nonNullary (JSON.Array _)  = True
+    nonNullary (JSON.String _) = True
+    nonNullary (JSON.Number _) = True
+    nonNullary (JSON.Bool   b) = b
+    nonNullary (JSON.Object b) = not $ HashMap.null b
 
 --jsonMatch
 
@@ -189,6 +196,3 @@ filterServicesMessage = MsgRun (-123456782) "RemoteRegister" o []
           , "keys" .= ["customKey1", "customKey2" :: Text.Text]
           ]
       ]
-
-
-

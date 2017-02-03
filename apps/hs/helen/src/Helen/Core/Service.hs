@@ -18,21 +18,21 @@ module Helen.Core.Service
   , registerService, unregisterService
   ) where
 
-import           Control.Arrow ((&&&))
+import           Control.Arrow            ((&&&))
+import qualified Control.Lens             as Lens
 import           Control.Lens.Operators
-import qualified Control.Lens as Lens
 import           Control.Monad.State.Lazy
-import           Data.ByteString (ByteString)
-import qualified Data.HashMap.Strict as HashMap
-import qualified Data.Foldable as Foldable (toList,foldl',any)
-import           Data.Maybe (isJust)
-import           Data.Monoid ((<>))
-import           Data.Sequence (ViewL(..))
-import qualified Data.Sequence as Seq
+import           Data.ByteString          (ByteString)
+import qualified Data.Foldable            as Foldable (any, foldl', toList)
+import qualified Data.HashMap.Strict      as HashMap
+import           Data.Maybe               (isJust, maybeToList)
+import           Data.Monoid              ((<>))
+import           Data.Sequence            (ViewL (..))
+import qualified Data.Sequence            as Seq
 --import           Data.Text (Text)
 
-import Helen.Core.Types
-import Luci.Messages
+import           Helen.Core.Types
+import           Luci.Messages
 
 
 -- | Empty service manager
@@ -149,11 +149,11 @@ processMessage smsg@(SourcedMessage _ (MsgCancel _)) | sesId <- sessionId smsg =
   msName <- serviceManager.currentCalls %%= (HashMap.lookup sesId &&& HashMap.delete sesId)
   case msName of
     -- probably, a task has already been finished
-    Nothing -> return ()
+    Nothing -> return []
     -- Try to cancel task if it is still in queue
-    Just sName ->
-      serviceManager.namedPool sName %= processCancelMessage (RequestCancel sesId)
-  return []
+    Just sName -> do
+      hmmsq <- serviceManager.namedPool sName %%= processCancelMessage (RequestCancel sesId)
+      maybeToList <$> hmmsq
 
 
 -- result
@@ -199,7 +199,9 @@ processRunMessage msg@(RequestRun (SessionId clientId _) sName pams bs) (Just po
       = ( Just ( \t -> TargetedMessage clientId servClientId $ MsgRun t sName pams bs
                , Just ins
                )
-        , Just pool { _idleInstances = is }
+          -- if a service is non-blocking, then just rotate instances;
+          --  otherwise, remove an instance from idle instances queue.
+        , Just pool { _idleInstances = if isNonBlocking pool then is |> ins else is }
         )
     -- If there are no idle instance, then queue the message
   | otherwise
@@ -209,15 +211,33 @@ processRunMessage msg@(RequestRun (SessionId clientId _) sName pams bs) (Just po
 
 
 
--- | The most important part - logic of processing run message
+-- | Cancel a run request from a client.
 processCancelMessage :: RequestCancel
                      -> Maybe ServicePool
-                     -> Maybe ServicePool
-processCancelMessage _ Nothing = Nothing
+                     -> (HelenRoom (Maybe TargetedMessage), Maybe ServicePool)
+processCancelMessage _ Nothing = (return Nothing, Nothing)
 processCancelMessage (RequestCancel sesId) (Just pool)
-    = Just $ Lens.over incomingMsgs (Seq.filter dontRemove) pool
+      -- If non-blocking service, forward the cancel message to it.
+      -- We need to remove the instance from busy list, so the message is wrapped into the monad
+    | isNonBlocking pool = (mkCancelMsg toCancel, Just $ Lens.set incomingMsgs toKeep pool)
+      -- Just remove run request from the queue, so that response dose not come back to client
+    | otherwise = (return Nothing, Just $ Lens.over incomingMsgs (Seq.filter dontRemove) pool)
   where
     dontRemove (RequestRun sId _ _ _) = sId /= sesId
+    (toKeep, toCancel') = Seq.partition dontRemove $ _incomingMsgs pool
+    toCancel = case Seq.viewl toCancel' of
+        EmptyL -> Nothing
+        a :< _ -> Just a
+    mkCancelMsg :: Maybe RequestRun -> HelenRoom (Maybe TargetedMessage)
+    mkCancelMsg Nothing = return Nothing
+    mkCancelMsg (Just (RequestRun sId@(SessionId clientId _) _ _ _)) =
+      fmap ( fmap
+            ( \(_, SessionId serviceId serviceToken) ->
+                    TargetedMessage clientId serviceId (MsgCancel serviceToken)
+            )
+           )
+      $ serviceManager.busyInstances %%= (HashMap.lookup sId &&& HashMap.delete sId)
+
 
 
 -- | Process terminal message in a session (either result or error).
@@ -249,11 +269,11 @@ processErrorOrResult smsg@(SourcedMessage serviceId msg) | sesId <- sessionId sm
 
 -- | Change a message token
 setToken :: Token -> Message -> Message
-setToken t (MsgRun _ s p b) = MsgRun t s p b
-setToken t (MsgCancel _) = MsgCancel t
-setToken t (MsgError _ e) = MsgError t e
+setToken t (MsgRun _ s p b)      = MsgRun t s p b
+setToken t (MsgCancel _)         = MsgCancel t
+setToken t (MsgError _ e)        = MsgError t e
 setToken t (MsgProgress _ p r b) = MsgProgress t p r b
-setToken t (MsgResult _ r b) = MsgResult t r b
+setToken t (MsgResult _ r b)     = MsgResult t r b
 
 
 
@@ -271,7 +291,9 @@ releaseInstance si@(ServiceInstance serviceId _) (Just pool)
   -- otherwise add instance to idle list
   | otherwise
     = ( Nothing
-      , Just $ Lens.over idleInstances (|> si) pool
+      , Just $ if isNonBlocking pool
+               then pool -- if a service is non-blocking, then an instance is already in the idle queue
+               else Lens.over idleInstances (|> si) pool
       )
 
 
@@ -280,10 +302,9 @@ releaseInstance si@(ServiceInstance serviceId _) (Just pool)
 data ResponseProgress = ResponseProgress !SessionId !Percentage !(Maybe ServiceResult) ![ByteString]
 
 -- | MsgCancel with requester clientId
-data RequestCancel = RequestCancel !SessionId
+newtype RequestCancel = RequestCancel SessionId
 
 instance BelongsToSession RequestCancel where
   sessionId (RequestCancel s) = s
 instance BelongsToSession ResponseProgress where
   sessionId (ResponseProgress s _ _ _) = s
-

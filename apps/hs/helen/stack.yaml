@@ -9,7 +9,7 @@ flags:
     luci-test: false
 packages:
   - .
-  - location: ../luci-connect
+  - location: ../../../libs/hs/luci-connect
     extra-dep: true
   - location:
       git: https://github.com/achirkin/hs-geojson.git
