@@ -10,6 +10,9 @@
 -- This module is responsible for managing all services:
 --   register, unregister, process message.
 --
+-- TODO: When any client disconnects, I need to send cancel messages to all
+--       nonBlocking pending services.
+--       At this moment, without this, memory leak can happen on a service side.
 -----------------------------------------------------------------------------
 {-# LANGUAGE OverloadedStrings #-}
 module Helen.Core.Service

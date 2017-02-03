@@ -1,15 +1,23 @@
-CREATE OR REPLACE FUNCTION get_scenario(ScID bigint)
+CREATE OR REPLACE FUNCTION get_last_sc_update(ScID bigint)
   RETURNS jsonb AS
+  -- TODO: add feature with deleted geom ids
 $func$
 DECLARE
   features jsonb;
   geometry_output jsonb;
-  result jsonb;
+  lastTime TIMESTAMP;
 BEGIN
   IF (SELECT count(*) < 1 FROM scenario WHERE scenario.id = ScID) THEN
     RAISE EXCEPTION 'Nonexistent scenario (ScID = %)', ScID
           USING HINT = 'You are trying to get a scenario that has not ever existed!';
   END IF;
+
+  -- get the time of the last scenario update
+  lastTime := greatest
+    ( (SELECT max(last_update) FROM sc_geometry WHERE scenario_id = ScID)
+    , (SELECT max(last_update) FROM sc_geometry_prop WHERE scenario_id = ScID)
+    , (SELECT max(last_update) FROM scenario_prop WHERE scenario_id = ScID)
+    );
 
   SELECT jsonb_build_object(
         'type',     'FeatureCollection',
@@ -22,22 +30,17 @@ BEGIN
           'geometry',   ST_AsGeoJSON(ST_Transform(g.geom, (SELECT srid FROM scenario WHERE id = ScID)))::jsonb,
           'properties', coalesce(
                         ( SELECT jsonb_object_agg(ph.name, ph.value)
-                            FROM sc_geometry_prop p, sc_geometry_prop_history ph
-                           WHERE p.last_update = ph.ts_update
-                             AND p.scenario_id = ScID
+                            FROM sc_geometry_prop_history ph
+                           WHERE ph.ts_update = lastTime
                              AND ph.scenario_id = ScID
-                             AND p.geometry_id = g.id
                              AND ph.geometry_id = g.id
-                             AND p.name = ph.name
                              AND ph.alive
                         ), '{}') || jsonb_build_object('geomID' , g.id)
         ) as feature
         FROM (SELECT gh.*
-                FROM sc_geometry, sc_geometry_history gh
-               WHERE sc_geometry.last_update = gh.ts_update
-                 AND sc_geometry.scenario_id = ScID
+                FROM sc_geometry_history gh
+               WHERE gh.ts_update = lastTime
                  AND gh.scenario_id = ScID
-                 AND gh.id = sc_geometry.id
                  AND gh.alive) g
         WHERE g.geom IS NOT NULL
         ) fcs
@@ -48,18 +51,16 @@ BEGIN
     , 'name'         , (SELECT name FROM scenario WHERE id = ScID)
     , 'geometry'     , features
     , 'properties'   , ( SELECT jsonb_object_agg(ph.name, ph.value)
-                           FROM scenario_prop p, scenario_prop_history ph
-                          WHERE p.last_update = ph.ts_update
-                            AND p.scenario_id = ScID
+                           FROM scenario_prop_history ph
+                          WHERE ph.ts_update = lastTime
                             AND ph.scenario_id = ScID
-                            AND p.name = ph.name
                             AND ph.alive )
     );
 
   RETURN jsonb_build_object
     ( 'geometry_output' , geometry_output
     , 'created'         , (SELECT round(EXTRACT(epoch FROM MIN(ts_update))) FROM sc_geometry_history WHERE scenario_id = ScID)
-    , 'lastmodified'    , (SELECT round(EXTRACT(epoch FROM MAX(ts_update))) FROM sc_geometry_history WHERE scenario_id = ScID)
+    , 'lastmodified'    , round(EXTRACT(epoch FROM lastTime))
     );
 END;
 $func$ LANGUAGE plpgsql;

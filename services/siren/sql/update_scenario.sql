@@ -1,5 +1,4 @@
-CREATE OR REPLACE FUNCTION update_scenario( token jsonb
-                                          , ScID bigint
+CREATE OR REPLACE FUNCTION update_scenario( ScID bigint
                                           , geom_input jsonb)
   RETURNS jsonb AS
 $func$
@@ -135,16 +134,11 @@ BEGIN
      AND sc_geometry.last_update = sc_geometry_history.ts_update;
 
   -- finish!
-  RETURN (
-      SELECT jsonb_build_object(
-        'result', jsonb_build_object
+  RETURN jsonb_build_object
           ( 'ScID'        , ScID
           , 'name'        , (SELECT name FROM scenario WHERE scenario.id = ScID)
           , 'created'     , (SELECT round(EXTRACT(epoch FROM MIN(ts_update))) FROM sc_geometry_history WHERE scenario_id = ScID)
           , 'lastmodified', round(EXTRACT(epoch FROM curTime))
-          ),
-        'callID', token
-      )
-    );
+          );
 END;
 $func$ LANGUAGE plpgsql;

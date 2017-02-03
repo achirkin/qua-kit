@@ -1,12 +1,14 @@
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE RecordWildCards   #-}
-{-# LANGUAGE TemplateHaskell   #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE OverloadedStrings          #-}
+{-# LANGUAGE RecordWildCards            #-}
+{-# LANGUAGE TemplateHaskell            #-}
 module Lib
-    ( PSSettings (..), Connection
+    ( PSSettings (..), Connection, ScenarioId (..)
     , withPostgres
     , createScenario, updateScenario
     , deleteScenario, recoverScenario
     , getScenario, listScenarios
+    , getLastScUpdates
     ) where
 
 import           Data.ByteString           (ByteString)
@@ -15,9 +17,12 @@ import qualified Data.ByteString.Char8     as BSC
 import           Data.Char
 import           Data.FileEmbed
 import           Data.Int
-import           Data.Maybe                (fromMaybe)
+import           Data.Maybe                (catMaybes, fromMaybe)
 import           Data.Monoid               ((<>))
 import           Database.PostgreSQL.LibPQ
+
+newtype ScenarioId = ScenarioId Int64
+  deriving (Eq, Ord, Show, Num, Integral, Real, Enum)
 
 data PSSettings = PSSettings
   { uName  :: !ByteString
@@ -64,17 +69,21 @@ oidJSONB = Oid 3802
 oidTEXT :: Oid
 oidTEXT = Oid 25
 
+-- oidARRAY :: Oid
+-- oidARRAY = Oid 2277
+-- select oid,typname from pg_type where typname like '%arr%';
+
 -- oidNUMERIC :: Oid
 -- oidNUMERIC = Oid 1700
 --
 -- mkNum :: (Show a, Num a) => a -> Maybe (Oid, ByteString, Format)
 -- mkNum i = Just (oidNUMERIC, BSC.pack (show i), Text)
 
-mkBigInt :: (Show a, Integral a) => a -> Maybe (Oid, ByteString, Format)
-mkBigInt i = Just (oidBIGINT, BSC.pack (show i), Text)
+mkBigInt :: ScenarioId -> Maybe (Oid, ByteString, Format)
+mkBigInt (ScenarioId i) = Just (oidBIGINT, BSC.pack (show i), Text)
 
 mkToken :: Int64 -> Maybe (Oid, ByteString, Format)
-mkToken i = Just (oidJSONB, BSC.pack (show i), Text)
+mkToken i = Just (oidBIGINT, BSC.pack (show i), Text)
 
 createScenario :: Connection
                -> Int64 -- ^ token (callID)
@@ -82,7 +91,7 @@ createScenario :: Connection
                -> BS.ByteString -- ^ GeoJSON Feature Collection
                -> IO (Either BS.ByteString BS.ByteString) -- ^ Either error or json result
 createScenario conn token scName scenario = do
-  mrez <- execParams conn "SELECT create_scenario($1,$2,$3);"
+  mrez <- execParams conn "SELECT wrap_result($1,create_scenario($2,$3));"
     [ mkToken token
     , Just (oidTEXT, BSC.filter (\c -> isAlphaNum c || c == ' ') scName, Text)
     , Just (oidJSONB, scenario, Text)
@@ -94,29 +103,29 @@ createScenario conn token scName scenario = do
 
 deleteScenario :: Connection
                -> Int64 -- ^ token (callID)
-               -> Int64 -- ^ ScID (scenario id)
+               -> ScenarioId -- ^ ScID (scenario id)
                -> IO (Either BS.ByteString BS.ByteString) -- ^ Either error or json result
 deleteScenario conn token scID = do
-  mrez <- execParams conn "SELECT delete_scenario($1,$2);" [mkToken token, mkBigInt scID] Text
+  mrez <- execParams conn "SELECT wrap_result($1,delete_scenario($2));" [mkToken token, mkBigInt scID] Text
   justResult mrez $ flip checkResult id
 
 
 recoverScenario :: Connection
                 -> Int64 -- ^ token (callID)
-                -> Int64 -- ^ ScID (scenario id)
+                -> ScenarioId -- ^ ScID (scenario id)
                 -> IO (Either BS.ByteString BS.ByteString) -- ^ Either error or json result
 recoverScenario conn token scID = do
-  mrez <- execParams conn "SELECT recover_scenario($1,$2);" [mkToken token, mkBigInt scID] Text
+  mrez <- execParams conn "SELECT wrap_result($1,recover_scenario($2));" [mkToken token, mkBigInt scID] Text
   justResult mrez $ flip checkResult id
 
 
 updateScenario :: Connection
                -> Int64 -- ^ token (callID)
-               -> Int64 -- ^ ScID (scenario id)
+               -> ScenarioId -- ^ ScID (scenario id)
                -> BS.ByteString -- ^ GeoJSON Feature Collection
                -> IO (Either BS.ByteString BS.ByteString) -- ^ Either error or json result
 updateScenario conn token scID scenario = do
-  mrez <- execParams conn "SELECT update_scenario($1,$2,$3);"
+  mrez <- execParams conn "SELECT wrap_result($1,update_scenario($2,$3));"
     [ mkToken token
     , mkBigInt scID
     , Just (oidJSONB, scenario, Text)
@@ -129,16 +138,34 @@ listScenarios :: Connection
               -> Int64 -- ^ token (callID)
               -> IO (Either BS.ByteString BS.ByteString) -- ^ Either error or json result
 listScenarios conn token = do
-  mrez <- execParams conn "SELECT list_scenarios($1);" [mkToken token] Text
+  mrez <- execParams conn "SELECT wrap_result($1,list_scenarios());" [mkToken token] Text
   justResult mrez $ \rez -> checkResult rez id
 
 getScenario :: Connection
             -> Int64 -- ^ token (callID)
-            -> Int64 -- ^ ScID (scenario id)
+            -> ScenarioId -- ^ ScID (scenario id)
             -> IO (Either BS.ByteString BS.ByteString) -- ^ Either error or json result
 getScenario conn token scID = do
-  mrez <- execParams conn "SELECT get_scenario($1,$2);" [mkToken token, mkBigInt scID] Text
+  mrez <- execParams conn "SELECT wrap_result($1,get_scenario($2));" [mkToken token, mkBigInt scID] Text
   justResult mrez $ \rez -> checkResult rez id
+
+
+getLastScUpdates :: Connection
+                 -> [Int64] -- ^ token (callID)
+                 -> ScenarioId -- ^ ScID (scenario id)
+                 -> IO (Either BS.ByteString [BS.ByteString]) -- ^ Either error or json results
+getLastScUpdates conn tokens scID = do
+  mrez <- execParams conn
+      ( mconcat
+        [ "SELECT wrap_progress_many(ARRAY"
+        , BSC.pack (show tokens)
+        , ",50.0,get_last_sc_update($1));"
+        ]
+      )
+    [ mkBigInt scID ]
+    Text
+  justResult mrez $ \rez -> checkResults rez id
+
 
 populateDB :: Connection
            -> IO (Either BS.ByteString ()) -- ^ Either error or ()
@@ -172,6 +199,17 @@ checkResult rez f = do
      Nothing -> return . Left $ "Could not read a value from DB, even though the status is ok."
   else returnError rez rstatus
 
+checkResults :: Result -> (ByteString -> a) -> IO (Either ByteString [a])
+checkResults rez f = do
+  rstatus <- resultStatus rez
+  ncol <- nfields rez
+  nrow <- ntuples rez
+  if nrow > 0 && ncol > 0 &&
+     (rstatus == CommandOk || rstatus == TuplesOk)
+  then Right . fmap f. catMaybes <$> traverse (flip (getvalue rez) 0) [0..nrow-1]
+  else returnError rez rstatus
+
+
 returnError :: Result -> ExecStatus -> IO (Either ByteString a)
 returnError rez rstatus = do
   statusText <- resStatus rstatus
@@ -193,6 +231,8 @@ sqlFunDefs =
   , updateScenarioF
   , populateDBF
   , dropDBF
+  , getLastScUpdateF
+  , wrapResultF
   ]
 
 createScenarioF :: BS.ByteString
@@ -214,9 +254,15 @@ updateScenarioF :: BS.ByteString
 updateScenarioF = $(embedFile "sql/update_scenario.sql")
 
 
+getLastScUpdateF :: BS.ByteString
+getLastScUpdateF = $(embedFile "sql/get_last_sc_update.sql")
 
 populateDBF :: BS.ByteString
 populateDBF = $(embedFile "sql/populatedb.sql")
 
 dropDBF :: BS.ByteString
 dropDBF = $(embedFile "sql/dropdb.sql")
+
+
+wrapResultF :: BS.ByteString
+wrapResultF = $(embedFile "sql/wrap_result.sql")

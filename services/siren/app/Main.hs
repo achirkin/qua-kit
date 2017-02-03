@@ -7,22 +7,23 @@ module Main (main) where
 import Luci.Connect
 import Luci.Messages
 import Luci.Connect.Base
-import Control.Arrow ((&&&))
 import Control.Monad (void)
 import Data.Aeson as JSON
 import Data.Text (Text)
 import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
 import Data.Conduit
+import Data.Int
 import Data.Semigroup
 --import Data.Monoid ((<>))
--- import Data.Maybe (fromMaybe)
+import Data.Maybe (fromMaybe)
 import Data.ByteString (ByteString)
 -- import qualified Data.ByteString.Internal as BSI
 import qualified Data.ByteString.Lazy as BSL
+import           Data.HashMap.Strict (HashMap)
 import qualified Data.HashMap.Strict as HashMap
 import qualified Control.Lens as Lens
-import Control.Lens.Operators ((%%=), (%=))
+import Control.Lens.Operators ((%=), (<+=))
 
 import           Data.List (stripPrefix)
 -- import           Control.Monad.Logger
@@ -42,22 +43,22 @@ import           Lib
 ----------------------------------------------------------------------------------------------------
 
 data ServiceState = ServiceState
-  { _currentRunToken :: Token
-  , _tokenGen :: Token
-  , _connection :: Connection
+  { _tokenGen    :: !Token
+  , _connection  :: !Connection
+  , _subscribers :: !(HashMap Int64 [Token])
   }
+
 
 Lens.makeLenses ''ServiceState
 
 genToken :: MonadState ServiceState m => m Token
-genToken = tokenGen %%= (id &&& (+1))
-
+genToken = tokenGen <+= 1
 
 
 -- | entry point
 main :: IO ()
 main = withPostgres sets $ \conn ->
-    void $ runLuciClient (ServiceState 0 0 conn) processMessages
+    void $ runLuciClient (ServiceState 0 conn HashMap.empty) processMessages
   where
     sets = PSSettings
       { uName  = "siren"
@@ -95,6 +96,7 @@ processMessages = do
   genToken >>= yield . headerBytes . registerUpdateScenario
   genToken >>= yield . headerBytes . registerDeleteScenario
   genToken >>= yield . headerBytes . registerRecoverScenario
+  genToken >>= yield . headerBytes . registerSubscribeTo
 
   -- reply to all run requests
   awaitForever responseMsgs
@@ -105,56 +107,74 @@ responseMsgs :: Message -> Conduit Message (LuciProgram ServiceState) ByteString
 -- Respond only to run messages with correct input
 
 responseMsgs (MsgRun token "scenario.GetList" _ _) = do
-    conn <- _connection <$> get
+    conn <- Lens.use connection
     eresultBS <- liftIO $ listScenarios conn (fromIntegral token)
     yieldAnswer token eresultBS
 
 responseMsgs (MsgRun token "scenario.geojson.Get" pams _)
-  | Just (Success scId) <- fromJSON <$> HashMap.lookup "ScID" pams = do
-    conn <- _connection <$> get
-    eresultBS <- liftIO $ getScenario conn (fromIntegral token) scId
+  | Just (Success scID) <- fromJSON <$> HashMap.lookup "ScID" pams = do
+    conn <- Lens.use connection
+    eresultBS <- liftIO $ getScenario conn (fromIntegral token) (ScenarioId scID)
     yieldAnswer token eresultBS
 
 responseMsgs (MsgRun token "scenario.geojson.Create" pams _)
   | Just (Success scName) <- fromJSON <$> HashMap.lookup "name" pams
   , Just geom_input <- BSL.toStrict . JSON.encode <$> HashMap.lookup "geometry_input" pams = do
-    conn <- _connection <$> get
+    conn <- Lens.use connection
     eresultBS <- liftIO $ createScenario conn (fromIntegral token) (BSC.pack scName) geom_input
     yieldAnswer token eresultBS
 
 responseMsgs (MsgRun token "scenario.geojson.Update" pams _)
   | Just (Success scID) <- fromJSON <$> HashMap.lookup "ScID" pams
   , Just geom_input <- BSL.toStrict . JSON.encode <$> HashMap.lookup "geometry_input" pams = do
-    conn <- _connection <$> get
-    eresultBS <- liftIO $ updateScenario conn (fromIntegral token) scID geom_input
+    conn <- Lens.use connection
+    eresultBS <- liftIO $ updateScenario conn (fromIntegral token) (ScenarioId scID) geom_input
     yieldAnswer token eresultBS
+    -- send update to all subscribers
+    subTokens <- map fromIntegral . fromMaybe [] . HashMap.lookup scID <$> Lens.use subscribers
+    eGetMsgs <- liftIO $ getLastScUpdates conn subTokens (ScenarioId scID)
+    case eGetMsgs of
+      Left errbs -> logWarnN $ Text.decodeUtf8 errbs
+      Right rezs -> mapM_ yield rezs
 
 responseMsgs (MsgRun token "scenario.geojson.Delete" pams _)
   | Just (Success scID) <- fromJSON <$> HashMap.lookup "ScID" pams = do
-    conn <- _connection <$> get
-    eresultBS <- liftIO $ deleteScenario conn (fromIntegral token) scID
+    conn <- Lens.use connection
+    eresultBS <- liftIO $ deleteScenario conn (fromIntegral token) (ScenarioId scID)
     yieldAnswer token eresultBS
 
 responseMsgs (MsgRun token "scenario.geojson.Recover" pams _)
   | Just (Success scID) <- fromJSON <$> HashMap.lookup "ScID" pams = do
-    conn <- _connection <$> get
-    eresultBS <- liftIO $ recoverScenario conn (fromIntegral token) scID
+    conn <- Lens.use connection
+    eresultBS <- liftIO $ recoverScenario conn (fromIntegral token) (ScenarioId scID)
     yieldAnswer token eresultBS
 
-responseMsgs (MsgRun token _ _ _) = do
-    currentRunToken %= const token
-    yield . headerBytes $ MsgError token "Failed to understand scenario service request: incorrect input in the 'run' message."
+responseMsgs (MsgRun token "scenario.SubscribeTo" pams _)
+  | Just (Success scIDs) <- fromJSON <$> HashMap.lookup "ScIDs" pams = do
+    subscribers %= flip (foldr (HashMap.alter addSubscriber)) (scIDs :: [Int64])
+    yield . headerBytes $ MsgProgress token 0 Nothing []
+  where
+    addSubscriber Nothing = Just [token]
+    addSubscriber (Just xs) = Just (token:xs)
+
+responseMsgs (MsgRun token _ _ _) = yield . headerBytes $ MsgError token
+    "Failed to understand scenario service request: incorrect input in the 'run' message."
+
+responseMsgs (MsgCancel token) =
+    -- remove a subscriber with this token
+    subscribers %= HashMap.map (filter (token /=))
+
+responseMsgs (MsgError token s) = do
+    -- remove a subscriber with this token
+    subscribers %= HashMap.map (filter (token /=))
+    -- log a little
+    logWarnN $ "[Luci error message] " <> s
 
 
-responseMsgs (MsgError _ s) = logWarnN $ "[Luci error message] " <> s
 responseMsgs msg = logInfoN . ("[Ignore Luci message] " <>) . showJSON . toJSON . fst $ makeMessage msg
 
-yieldAnswer :: Token
-            -> Either ByteString ByteString
-            -> Conduit Message (LuciProgram ServiceState) ByteString
-yieldAnswer token eresultBS = yield $ case eresultBS of
-  Left errbs -> headerBytes $ MsgError token (Text.decodeUtf8 errbs)
-  Right resultBS -> resultBS
+
+
 
 ----------------------------------------------------------------------------------------------------
 
@@ -316,43 +336,51 @@ registerUpdateScenario token = MsgRun token "RemoteRegister" o []
           ]
       ]
 
-
--- -- | A message we send to register in luci
--- registerMessage :: Token -> Message
--- registerMessage token = MsgRun token "RemoteRegister" o []
---   where
---     o = HashMap.fromList
---       [ "description"        .= String "Show the distance to the closest building line"
---       , "serviceName"        .= String "DistanceToWalls"
---       , "qua-view-compliant" .= Bool True
---       , "inputs"             .= object
---           [ "ScID"   .= String "number"
---           , "mode"   .= String "string"
---           , "points" .= String "attachment"
---           ]
---       , "outputs"            .= object
---           [ "units"  .= String "string"
---           , "values" .= String "attachment"
---           ]
---       , "constraints"         .= object
---           [ "mode" .= ["points" :: Text]
---           ]
---       , "exampleCall"        .= object
---           [ "run"    .= String "DistanceToWalls"
---           , "ScId"   .= Number 1
---           , "mode"   .= String "points"
---           , "points" .= object
---             [ "format"     .= String "Float32Array"
---             ]
---           ]
---       ]
-
+-- | A message we send to register in luci
+registerSubscribeTo :: Token -> Message
+registerSubscribeTo token = MsgRun token "RemoteRegister" o []
+  where
+    o = HashMap.fromList
+      [ "description"        .= Text.unlines
+              [ "Subscribe to all changes in listed scenarios"
+              , "Note, this service never returns; instead, it send all updates in 'progress' messages"
+              ]
+      , "serviceName"        .= String "scenario.SubscribeTo"
+      , "nonBlocking"        .= Bool True
+      , "inputs"             .= object
+          [ "ScIDs" .= String "[ScID]"
+          ]
+      , "outputs"            .= object
+          [ "created" .= String "number"
+          , "lastmodified" .= String "number"
+          , "geometry_output" .= object
+            [ "format"      .= String "'GeoJSON'"
+            , "name"        .= String "string"
+            , "geometry"    .= String "{FeatureCollection}"
+            , "properties"  .= String "object"
+            ]
+          ]
+      , "exampleCall"        .= object
+          [ "run"    .= String "scenario.SubscribeTo"
+          , "ScIDs"  .= [Number 3, Number 6]
+          ]
+      ]
 
 
+
+--------------------------------------------------------------------------------
 
 headerBytes :: Message -> ByteString
 headerBytes = BSL.toStrict . JSON.encode . fst . makeMessage
 
+
+
+yieldAnswer :: Token
+            -> Either ByteString ByteString
+            -> Conduit Message (LuciProgram ServiceState) ByteString
+yieldAnswer token eresultBS = yield $ case eresultBS of
+  Left errbs -> headerBytes $ MsgError token (Text.decodeUtf8 errbs)
+  Right resultBS -> resultBS
 
 --------------------------------------------------------------------------------
 

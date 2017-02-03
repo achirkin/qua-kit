@@ -1,8 +1,7 @@
 -- Create a new scenario.
 -- Input geometry is assumed to be in metric system.
 -- Optional parameters are longitude/latitute in degrees and altitude in meters
-CREATE OR REPLACE FUNCTION create_scenario( token jsonb
-                                          , scName text
+CREATE OR REPLACE FUNCTION create_scenario( scName text
                                           , geom_input jsonb)
   RETURNS jsonb AS
 $func$
@@ -124,16 +123,11 @@ BEGIN
         WHERE ph.ts_update = curTime AND ph.scenario_id = ScID;
 
   -- finish!
-  RETURN (
-      SELECT jsonb_build_object(
-        'result', jsonb_build_object
+  RETURN jsonb_build_object
           ( 'ScID'        , ScID
           , 'name'        , scName
           , 'created'     , round(EXTRACT(epoch FROM curTime))
           , 'lastmodified', round(EXTRACT(epoch FROM curTime))
-          ),
-        'callID', token
-      )
-    );
+          );
 END;
 $func$ LANGUAGE plpgsql;

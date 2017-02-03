@@ -1,10 +1,8 @@
-CREATE OR REPLACE FUNCTION list_scenarios(token jsonb)
+CREATE OR REPLACE FUNCTION list_scenarios()
   RETURNS jsonb AS
 $func$
-DECLARE
-  scenarios jsonb;
 BEGIN
-  SELECT jsonb_build_object(
+  RETURN jsonb_build_object(
         'scenarios',
           coalesce
           ( ( SELECT jsonb_agg
@@ -20,13 +18,6 @@ BEGIN
             )
           , '[]'::jsonb
           )
-        )
-  INTO scenarios;
-  RETURN (
-    SELECT jsonb_build_object(
-      'result', scenarios,
-      'callID', token
-    )
-  );
+        );
 END;
 $func$ LANGUAGE plpgsql;
