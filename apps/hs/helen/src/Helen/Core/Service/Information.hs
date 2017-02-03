@@ -24,7 +24,7 @@ import           Data.List               ((\\))
 import qualified Data.List               as List (foldl', intersect, sort,
                                                   union)
 import           Data.Maybe              (fromMaybe, maybeToList)
-import           Data.Monoid             ((<>))
+import           Data.Monoid             (mempty, (<>))
 import qualified Data.Text               as Text
 import qualified Data.Text.Lazy          as LText
 import qualified Data.Text.Lazy.Encoding as LText
@@ -108,8 +108,8 @@ runInfoService (TargetedMessage _ myId (MsgRun token "FilterServices" pams _)) =
     findJSONMatches n (JSON.Object v) = HashMap.foldl' (\a x -> findJSONMatches (n-1) x || a) False v
     findJSONMatches _ _ = False
     nonNullary JSON.Null       = False
-    nonNullary (JSON.Array _)  = True
-    nonNullary (JSON.String _) = True
+    nonNullary (JSON.Array b)  = b /= mempty
+    nonNullary (JSON.String b) = b /= mempty
     nonNullary (JSON.Number _) = True
     nonNullary (JSON.Bool   b) = b
     nonNullary (JSON.Object b) = not $ HashMap.null b
