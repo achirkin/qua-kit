@@ -41,6 +41,16 @@ BEGIN
     scSRID := NULL;
   END IF;
 
+  -- parse all features
+  CREATE TEMP TABLE features ON COMMIT DROP AS
+  ( WITH fcs AS (SELECT jsonb_array_elements(fc -> 'features') AS data)
+    SELECT CAST(coalesce(nullif(fcs.data -> 'properties' ->> 'geomID',''),nullif(fcs.data ->> 'id','')) AS integer) as geomID
+         , ST_GeomFromGeoJSON(fcs.data ->> 'geometry') as geom
+         , (jsonb_strip_nulls(fcs.data -> 'properties') - 'geomID') AS props
+    FROM fcs
+  );
+  CREATE TEMP SEQUENCE geomID_seq;
+  SELECT setval('geomID_seq', max(geomID)) FROM features INTO geomID_max;
 
   IF scSRID IS NOT NULL
      AND EXISTS ( SELECT 1 FROM spatial_ref_sys WHERE srid = scSRID )
@@ -53,28 +63,36 @@ BEGIN
     -- user-defined srids can be in range from 910000 and below 999000
     SELECT (GREATEST(910000, (SELECT MAX(srid) FROM spatial_ref_sys))+1) INTO scSRID;
 
-    -- add a custom metric reference system with center at specified latitude and longitude
     INSERT INTO spatial_ref_sys (srid, auth_name, auth_srid, srtext, proj4text)
-         VALUES ( scSRID
+         SELECT   scSRID
                 , scName
                 , NULL
-                , 'PROJCS["' || scName || '"'
+                ,('PROJCS["' || scName || '"'
                      || ',GEOGCS["WGS 84",DATUM["WGS_1984",SPHEROID["WGS 84",6378137,298.257223563,AUTHORITY["EPSG","7030"]],AUTHORITY["EPSG","6326"]]'
                                      || ',PRIMEM["Greenwich",0,AUTHORITY["EPSG","8901"]]'
                                      || ',UNIT["degree",0.0174532925199433,AUTHORITY["EPSG","9122"]]'
                                      || ',AUTHORITY["EPSG","4326"]]'
-                            || ',PROJECTION["Lambert_Azimuthal_Equal_Area"]'
-                            || ',PARAMETER["latitude_of_center",'  || cast(coalesce(scLat, 0) as text) || ']'
-                            || ',PARAMETER["longitude_of_center",' || cast(coalesce(scLon, 0) as text) || ']'
-                            || ',PARAMETER["false_easting",0]'
-                            || ',PARAMETER["false_northing",0]'
+                            || ',PROJECTION["Transverse_Mercator"]'
+                            || ',PARAMETER["latitude_of_origin",'  || cast(coalesce(scLat, 0) as text) || ']'
+                            || ',PARAMETER["central_meridian",' || cast(coalesce(scLon, 0) as text) || ']'
+                            || ',PARAMETER["scale_factor",1]'
+                            || ',PARAMETER["false_easting",' || cast(coalesce(ST_X(center), 0) as text) || ']'
+                            || ',PARAMETER["false_northing",' || cast(coalesce(ST_Y(center), 0) as text) || ']'
                             || ',UNIT["metre",1,AUTHORITY["EPSG","9001"]]'
-                            || ']'
-                , '+proj=laea +lat_0=' || cast(coalesce(scLat, 0) as text)
-                         || ' +lon_0=' || cast(coalesce(scLon, 0) as text)
-                         || ' +ellps=WGS84 +units=m +no_defs'
-                );
+                            || ']')
+                ,('+proj=tmerc +lat_0=' || cast(coalesce(scLat, 0) as text)
+                          || ' +lon_0=' || cast(coalesce(scLon, 0) as text)
+                          || ' +y_0=' || cast(coalesce(ST_Y(center), 0) as text)
+                          || ' +x_0=' || cast(coalesce(ST_X(center), 0) as text)
+                          || ' +ellps=WGS84 +k=1 +units=m +no_defs')
+           FROM (SELECT st_centroid(st_union(geom)) AS center
+                   FROM features
+                 ) q;
   END IF;
+
+  -- transform feature geometry to be in common reference system WGS84
+  UPDATE features
+     SET geom = ST_Force3D(ST_Transform(ST_SetSRID(geom, scSRID), 4326));
 
   -- create a new scenario and keep its id in ScID variable
   INSERT INTO scenario (name, lon, lat, alt, srid) VALUES (scName, scLon, scLat, scAlt, scSRID) RETURNING scenario.id INTO ScID;
@@ -87,17 +105,6 @@ BEGIN
        SELECT ph.scenario_id, ph.name, ph.ts_update
          FROM scenario_prop_history ph
         WHERE ph.ts_update = curTime AND ph.scenario_id = ScID;
-
-  -- parse all features
-  CREATE TEMP TABLE features ON COMMIT DROP AS
-  ( WITH fcs AS (SELECT jsonb_array_elements(fc -> 'features') AS data)
-    SELECT CAST(coalesce(nullif(fcs.data -> 'properties' ->> 'geomID',''),nullif(fcs.data ->> 'id','')) AS integer) as geomID
-         , ST_Force3D(ST_Transform(ST_SetSRID(ST_GeomFromGeoJSON(fcs.data ->> 'geometry'), scSRID), 4326)) as geom
-         , (jsonb_strip_nulls(fcs.data -> 'properties') - 'geomID') AS props
-    FROM fcs
-  );
-  CREATE TEMP SEQUENCE geomID_seq;
-  SELECT setval('geomID_seq', max(geomID)) FROM features INTO geomID_max;
 
   -- fill in null geomIDs
   UPDATE features

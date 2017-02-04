@@ -46,6 +46,7 @@ BEGIN
   geometry_output := jsonb_build_object
     ( 'format'       , 'GeoJSON'
     , 'name'         , (SELECT name FROM scenario WHERE id = ScID)
+    , 'ScID'         , ScID
     , 'geometry'     , features
     , 'properties'   , ( SELECT jsonb_object_agg(ph.name, ph.value)
                            FROM scenario_prop p, scenario_prop_history ph
@@ -58,6 +59,7 @@ BEGIN
 
   RETURN jsonb_build_object
     ( 'geometry_output' , geometry_output
+    , 'ScID'            , ScID
     , 'created'         , (SELECT round(EXTRACT(epoch FROM MIN(ts_update))) FROM sc_geometry_history WHERE scenario_id = ScID)
     , 'lastmodified'    , (SELECT round(EXTRACT(epoch FROM MAX(ts_update))) FROM sc_geometry_history WHERE scenario_id = ScID)
     );
