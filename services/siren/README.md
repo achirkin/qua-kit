@@ -16,7 +16,7 @@ Currently, `postgresql` package refers to `postgresql-9.5`,
 and `libpq-dev` is a library required to build PostgreSQL client applications.
 
 
-### Setting up a database
+#### Setting up a database
 
 I download osm map from http://ftp.snt.utwente.nl/pub/misc/openstreetmap/
 
@@ -57,7 +57,7 @@ where
     <osmosis dir> is the location osmosis replication was initialized to.
 
 
-### Reference systems
+#### Reference systems
 
 Globally, all data is referenced in WGS84.
 For scenarios I want to use local reference system with center in long/lat point
@@ -77,6 +77,15 @@ In the end, all geometry is stored in WGS84, but transferred in scenario referen
 
 Look at this post for some projection explanations
 http://gis.stackexchange.com/questions/87152/how-to-reproject-wgs84-to-a-metric-coordinate-system-with-own-reference-point-in
+
+#### TODO
+
+  1. Siren does not send a list of deleted object on scenario `SubscribeTo` updates.
+  2. Need to refactor example codes (lon/lat/properties should be part of geom_input or geom_output, and not a part of FC)
+  3. Use `srid` codes in all messages optionnaly to ask for corresponding geometry transforms.
+  4. Send `srid` codes with all scenario messages to make user aware of reference systems.
+  5. Add "get only 2D projection" feature
+  6. Custom flexible geometry requests
 
 
 #### NB on using Atom
