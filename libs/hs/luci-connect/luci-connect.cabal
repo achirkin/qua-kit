@@ -118,6 +118,7 @@ executable dist-walls-service
         Lib.Scenario
         Lib.ExtraTypes
         Lib.ParseGeoJSON
+        Lib.Region
     build-depends:
         base >=4.8.2 && <5,
         aeson -any,
@@ -144,6 +145,7 @@ executable multi-parametric-service
         Lib.Scenario
         Lib.ExtraTypes
         Lib.ParseGeoJSON
+        Lib.Region
     build-depends:
         base >=4.8.2 && <5.0,
         aeson -any,

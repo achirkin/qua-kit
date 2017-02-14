@@ -35,8 +35,8 @@ import Control.Lens.Operators ((%%=), (%=))
 
 import Lib.ParseGeoJSON
 import Lib.Scenario
+import Lib.Region
 import Numeric.EasyTensor
-import Numeric.Commons
 
 ----------------------------------------------------------------------------------------------------
 
@@ -107,7 +107,7 @@ evaluatePoints scId pts = do
 
 
 -- | Try our best to get scenario by its ScID
-obtainScenario :: Int -> ConduitM Message Message (LuciProgram ServiceState) (Maybe Scenario)
+obtainScenario :: Int -> ConduitM Message Message (LuciProgram ServiceState) (Maybe (Scenario ()))
 obtainScenario scId = do
     scToken <- genToken
     yield (getScenarioMessage scToken scId)

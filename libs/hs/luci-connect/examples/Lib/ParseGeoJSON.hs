@@ -29,12 +29,12 @@ import Lib.Scenario as S
 
 
 -- | Parse Strict ByteString containg utf8-encoded JSON into a Block-Wall representation
-parseGeoJSONBS :: ByteString -> Either String Scenario
+parseGeoJSONBS :: ByteString -> Either String (Scenario ())
 parseGeoJSONBS b = S.fromList . Lens.view (geofeatures . traverse . geometry . Lens.lens parseBlocks const) <$>
     (eitherDecodeStrict' b :: Either String (GeoFeatureCollection JSON.Object))
 
 -- | Parse Aeson's Value type into a Block-Wall representation
-parseGeoJSONValue :: JSON.Value -> Either String Scenario
+parseGeoJSONValue :: JSON.Value -> Either String (Scenario ())
 parseGeoJSONValue b = fromResult
     $ Lens.view (geofeatures . traverse . geometry . Lens.lens parseBlocks const) <$>
      (fromJSON b :: Result (GeoFeatureCollection JSON.Object))
@@ -44,7 +44,7 @@ parseGeoJSONValue b = fromResult
 
 
 -- | Parse GeoJSON geometry type into a number of Blocks
-parseBlocks :: GeospatialGeometry -> [Block]
+parseBlocks :: GeospatialGeometry -> [Block ()]
 parseBlocks = mapMaybe parseBlock . getMultiPolygonPoints
   where
     -- build walls based on center location and linear ring coordinates
@@ -91,18 +91,19 @@ parseBlocks = mapMaybe parseBlock . getMultiPolygonPoints
     --   I fix their orientation, try to fix holes (only orientation checks)
     --   I do not take a proper union of polygons, just take the biggest one.
     --   TODO: for the current case study this should be enough, but in general this will not work!
-    parseBlock :: [[[Vec2f]]] -> Maybe Block
+    parseBlock :: [[[Vec2f]]] -> Maybe (Block ())
     parseBlock [] = Nothing
     parseBlock xs' = parsePoly <$> bestPoly
       where
         -- Transform a proper polygon into a building block.
         --   I assume: all rings are in proper order -- CCW outer, CW holes
         --             area of a polygon is positive, which means there are more than two walls
-        parsePoly :: [[Vec2f]] -> Block
+        parsePoly :: [[Vec2f]] -> Block ()
         parsePoly rs = Block
            { _bCenter = center + mid
            , _bWalls  = concatMap (buildWalls center) rs
            , _bBound  = bb
+           , _content = ()
            }
           where
             -- center of a building block
@@ -149,4 +150,3 @@ parseBlocks = mapMaybe parseBlock . getMultiPolygonPoints
                                 -- But I still hope for the good and try next ring.
                                 else fixPolygon rs
         fixPolygon [] = (0, [])
-

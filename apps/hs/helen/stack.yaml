@@ -1,22 +1,22 @@
-resolver: nightly-2017-01-25
+resolver: lts-8.0
 
 extra-deps:
   - validation-0.5.4
 
-flags:
-  luci-connect:
-    examples: false
-    luci-test: false
 packages:
-  - .
+  - '.'
   - location: ../../../libs/hs/luci-connect
+    extra-dep: true
+  - location:
+      git: https://github.com/achirkin/easytensor.git
+      commit: 5b42983bf223ffe9e341205f1678339c91f01fe1
     extra-dep: true
   - location:
       git: https://github.com/achirkin/hs-geojson.git
       commit: ad9e0f3d80e133d88657832988ab9aff2cb51691
     extra-dep: true
-  - location:
-      git: https://github.com/achirkin/easytensor.git
-      commit: c46c12f16941ce107934d318b92f87ba3b84238b
-    extra-dep: true
 
+flags:
+  luci-connect:
+    examples: false
+    luci-test: false

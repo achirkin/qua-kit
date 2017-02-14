@@ -1,3 +1,12 @@
+{-# LANGUAGE UndecidableInstances #-}
+{-# LANGUAGE DefaultSignatures #-}
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE DataKinds #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE TypeOperators, KindSignatures #-}
+{-# LANGUAGE GADTs #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 -----------------------------------------------------------------------------
 -- |
 -- Module      :  Lib.ExtraTypes
@@ -10,13 +19,21 @@
 
 module Lib.ExtraTypes
   ( MinMax (..), minMax, mmBound, mmDiff, mmAvg
-  , _x, _y
+  , BoundedBy (..), InBounds (..), unBound
+  , Spatial (..), ClusterId
+  , _x, _y, fill, dimN, dimM, dimK
   ) where
 
 import Control.Monad.Fix
 import Data.Semigroup
 import Numeric.EasyTensor
+import GHC.Num (Num(..))
+import Data.Proxy
+import GHC.TypeLits (natVal, KnownNat)
 
+-- | Another name for cluster ids, based on Int type.
+newtype ClusterId = ClusterId Int
+  deriving (Eq, Show, Ord, Num, Integral, Real, Enum)
 
 -- Boundary type
 
@@ -82,14 +99,89 @@ instance (Num a, Ord a) => Num (MinMax a) where
   fromInteger i = let x = fromInteger i in MinMax x x
 
 
+
+class BoundedBy b a where
+  -- | get bounds for a given data type
+  bounds :: a -> MinMax b
+
+instance BoundedBy a (MinMax a) where
+  bounds = id
+  {-# INLINE bounds #-}
+
+-- | Data type together with bounds
+data InBounds a = InBounds !(MinMax a) !a
+
+instance BoundedBy a (InBounds a) where
+  bounds (InBounds mm _) = mm
+
+-- | get InBounds value
+unBound :: InBounds a -> a
+unBound (InBounds _ a) = a
+
+instance Bounded a => Bounded (InBounds a) where
+  minBound = InBounds (MinMax minBound maxBound) minBound
+  maxBound = InBounds (MinMax minBound maxBound) maxBound
+
+
+
+
+-- | A class of volumentric objects in a metric space
+class BoundedBy (Vector t n) a => Spatial n t a where
+  -- | Test if a point is inside a spatial object
+  isInside :: Vector t n -> a -> Bool
+  -- | Closest distance from point to a spatial object
+  distL2To :: Vector t n -> a -> Scalar t
+  default distL2To :: (Floating t) => Vector t n -> a -> Scalar t
+  distL2To p = sqrt . distL2SquaredTo p
+  {-# INLINE distL2To #-}
+  -- | Closest distance from point to a spatial object (squared)
+  distL2SquaredTo   :: Vector t n -> a -> Scalar t
+
+instance BoundedBy (Vector t n) (Vector t n) where
+  bounds a = MinMax a a
+
+instance ( Floating t
+         , ElementWise (Idx '[n]) t (Vector t n)
+         , ElementWise (Idx '[]) t (Scalar t)
+         , Num (Vector t n)
+         ) => Spatial n t (Vector t n) where
+  isInside _ _ = False
+  distL2SquaredTo p q = case p - q of d -> dot d d
+
+
+
+fill :: ElementWise (Idx ds) t (Tensor t ds)
+     => Scalar t -> Tensor t ds
+fill = broadcast . unScalar
+
+dimN :: KnownNat n => p (n ': ns) -> Int
+dimN = fromInteger . natVal . f
+  where
+    f :: p (n ': ns) -> Proxy (n :: Nat)
+    f _ = Proxy
+
+dimM :: KnownNat m => p (n ': m ': ns) -> Int
+dimM = fromInteger . natVal . f
+  where
+    f :: p (n ': m ': ns) -> Proxy (m :: Nat)
+    f _ = Proxy
+
+
+dimK :: KnownNat k => p (n ': m ': k ': ns) -> Int
+dimK = fromInteger . natVal . f
+  where
+    f :: p (n ': m ': k ': ns) -> Proxy (k :: Nat)
+    f _ = Proxy
+
 -- Vec2f helpers
 
 mmBound :: MinMax Vec2f
-mmBound = let z = fill (scalar $ read "Infinity") in MinMax z (-z)
+mmBound = let z = broadcast (read "Infinity") in MinMax z (-z)
+
 
 
 _x :: Vec2f -> Scf
-_x = index 1 1
+_x = scalar . (! 1)
 
 _y :: Vec2f -> Scf
-_y = index 2 1
+_y = scalar . (! 2)

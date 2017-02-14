@@ -86,6 +86,7 @@ http://gis.stackexchange.com/questions/87152/how-to-reproject-wgs84-to-a-metric-
   4. Send `srid` codes with all scenario messages to make user aware of reference systems.
   5. Add "get only 2D projection" feature
   6. Custom flexible geometry requests
+  7. Be more permissive when importing GeoJSON: if parsing geometry failed, discard it and continue with next geometries
 
 
 #### NB on using Atom
