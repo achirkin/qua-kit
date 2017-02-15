@@ -18,6 +18,7 @@ import qualified Yesod.Core.Unsafe as Unsafe
 
 import Database.Persist.Sql (toSqlKey)
 import Data.Text.Read (decimal)
+import System.Directory (createDirectoryIfMissing)
 
 import Text.Blaze (Markup)
 import qualified Data.Map.Strict as Map
@@ -64,7 +65,9 @@ instance Yesod App where
 
     -- Store session data on the client in encrypted cookies,
     -- default session idle timeout is 120 minutes
-    makeSessionBackend _ = Just <$> defaultClientSessionBackend
+    makeSessionBackend _ = do
+      liftIO $ createDirectoryIfMissing True "config"
+      Just <$> defaultClientSessionBackend
         43200    -- timeout in minutes
         "config/client_session_key.aes"
 

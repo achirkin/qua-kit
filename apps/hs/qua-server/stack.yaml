@@ -12,6 +12,6 @@ flags: {}
 packages:
   - .
 
-resolver: lts-6.12
+resolver: lts-8.0
 require-stack-version: ">= 1.1.0"
 extra-package-dbs: []
