@@ -1,4 +1,7 @@
-module Handler.Home where
+module Handler.Home
+    ( getHomeR
+    , postHomeR
+    ) where
 
 import Import
 

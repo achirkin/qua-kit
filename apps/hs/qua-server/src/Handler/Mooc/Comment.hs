@@ -71,15 +71,21 @@ viewComments scId = do
       case mscenario of
         Nothing -> return mempty
         Just sc -> do
-          let canComment = case muserId of
+          authorName <- get (scenarioAuthorId sc) >>= \mu -> case mu of
+            Nothing -> return "anonymous"
+            Just u  -> return $ userName u
+          let scUpdateTime = scenarioLastUpdate sc
+              canComment = case muserId of
                 Nothing -> False
                 Just uId -> uId /= scenarioAuthorId sc
           criteria <- selectList [] []
-          wrapIt (scenarioDescription sc) canComment criteria . foldl' (
+          wrapIt authorName
+                 scUpdateTime
+                 (scenarioDescription sc) canComment criteria . foldl' (
             \w (Single icon, Single name, Entity _ r) -> w <> commentW icon name r
            ) mempty <$> getReviews scId
   where
-    wrapIt desc canComment criteria w = do
+    wrapIt authorName scUpdateTime desc canComment criteria w = do
       toWidgetHead [cassius|
         div.card-comment.card
           padding: 0
@@ -129,6 +135,11 @@ viewComments scId = do
           <div.card-comment.card>
             <div.card-comment.card-main>
               <div.card-comment.card-inner>
+                <p style="margin: 6px; color: #b71c1c; float: left;">
+                  #{authorName}
+                <p style="margin: 6px; color: #b71c1c; float: right;">
+                  #{show $ utctDay $ scUpdateTime}
+                <p style="margin: 8px;">&nbsp;
                 <p style="white-space: pre-line; margin: 2px;">
                   #{desc}
           $if canComment
@@ -311,6 +322,3 @@ getReviews scId = rawSql query [toPersistValue scId]
           ,"            ON scenario.task_id = t.task_id AND scenario.author_id = t.author_id)"
           ,"ORDER BY review.timestamp DESC;"
           ]
-
-
-

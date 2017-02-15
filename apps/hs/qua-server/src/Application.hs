@@ -57,6 +57,7 @@ import Handler.Mooc.CompareProposals
 import Handler.Mooc.ProposalPreview
 import Handler.Mooc.User
 import Handler.Mooc.Survey
+import Handler.Mooc.SubmissionViewer
 import Handler.LoggingWS
 
 
@@ -154,7 +155,8 @@ makeFoundation appSettings = do
 --            , CriterionIcon =. criteriaIconConnectivity
 --            ]
 --
---      _ <- upsert (Criterion "Accessibility" criteriaHtmlAccessibility criteriaImgAccessibility criteriaIconAccessibility)
+--      _ <- upsert (Criterion "Accessibility" criteriaHtmlAccessibility
+--                                     criteriaImgAccessibility criteriaIconAccessibility)
 --            [ CriterionImage =. criteriaImgAccessibility
 --            , CriterionDescription =. criteriaHtmlAccessibility
 --            , CriterionIcon =. criteriaIconAccessibility
@@ -281,6 +283,3 @@ handler h = getAppSettings >>= makeFoundation >>= flip unsafeHandler h
 -- | Run DB queries
 db :: ReaderT SqlBackend (HandlerT App IO) a -> IO a
 db = handler . runDB
-
-
-

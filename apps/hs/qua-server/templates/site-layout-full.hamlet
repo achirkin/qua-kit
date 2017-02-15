@@ -2,6 +2,10 @@ $newline never
 $doctype 5
 <html>
   <head>
+    <meta name="theme-color" content="#f44336" />
+    <meta name="msapplication-TileColor" content="#f44336"/>
+    <meta name="msapplication-TileImage" content="@{StaticR img_bgimgSq_png}"/>
+    <meta name="msapplication-wide310x150logo" content="@{StaticR img_bgimg_png}">
     <meta content="IE=edge" http-equiv="X-UA-Compatible">
     <meta content="initial-scale=1.0, maximum-scale=1.0, user-scalable=no, width=device-width" name="viewport">
     <meta http-equiv='Content-Type' content='text/html; charset=utf-8'>

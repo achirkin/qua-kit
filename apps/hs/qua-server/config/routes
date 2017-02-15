@@ -31,6 +31,8 @@
 /mooc/criteria/img/#CriterionId     CriteriaImgR GET
 /mooc/survey                        SurveyR GET POST
 
+/view/#ScenarioProblemId/#UserId    SubmissionViewerR GET POST
+
 /renameme                           RenameMeR GET
 /setupAcc/#UserId                   SetupLocalAccount POST
 

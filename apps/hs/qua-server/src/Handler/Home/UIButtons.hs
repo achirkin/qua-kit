@@ -38,6 +38,16 @@ uiButtons = do
   let popupSubmit = do
         toWidgetBody
               [hamlet|
+                <script>
+                  (function() {
+                  if (document.getElementById("facebook-jssdk")) return;
+                  var fbdiv = document.createElement("div");
+                  fbdiv.id = "fb-root";
+                  document.body.insertBefore(fbdiv, document.body.firstChild);
+                  var js = document.createElement("script");
+                  js.id = "facebook-jssdk";
+                  js.src = "//connect.facebook.net/en_US/sdk.js#xfbml=1&version=v2.8&appId=1837721753181850";
+                  document.body.insertBefore(js, document.body.firstChild);}());
                 <div style="display: none;" aria-hidden="true" class="modal modal-va-middle fade" ##{popupSubmitId} role="dialog" tabindex="-1">
                   <div class="modal-dialog modal-xs">
                     <div class="modal-content">
@@ -245,6 +255,9 @@ uiButtons = do
                   <span class="fbtn-ori icon">apps
                   <span class="fbtn-sub icon">close
                 <div class="fbtn-dropup">
+                  <a class="fbtn fbtn-brand waves-attach waves-circle waves-effect" onclick="FB.ui({method: 'share',mobile_iframe: true, href: 'https://developers.facebook.com/docs/'}, function(response){});">
+                    <span class="fbtn-text fbtn-text-left">Share on Facebook
+                    <span class="icon icon-lg" #fullscreenbicon>share
                   <a class="fbtn waves-attach waves-circle waves-effect fbtn-brand-accent" #resetposbutton>
                     <span class="fbtn-text fbtn-text-left">Reset camera position
                     <span class="icon icon-lg" style="font-size: 2em;margin-left:-8px;vertical-align:-32%;margin-top:-3px;">fullscreen

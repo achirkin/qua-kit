@@ -45,6 +45,12 @@ getMoocHomeR  = toTypedContent <$> do
 
     fullLayout Nothing "Welcome to QUA-KIT!" $ do
         setTitle "qua-kit"
+        toWidgetHead
+          [hamlet|
+            <meta property="og:url"         content="@{MoocHomeR}" />
+            <meta property="og:type"        content="website" />
+            <meta property="og:title"       content="Quick Urban Analysis kit" />
+            <meta property="og:description" content="Qua-kit is an urban design, education, sharing, and analysis platform." />
+            <meta property="og:image"       content="@{StaticR img_bgimg_png}" />
+          |]
         $(widgetFile "mooc/home")
-
-
