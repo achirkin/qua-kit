@@ -24,8 +24,8 @@ import Text.Julius
 --     * #toolboxbutton
 --     * #clearbutton
 --     * #evaluatebutton
-uiButtons :: Handler (Widget, Widget)
-uiButtons = do
+uiButtons :: Maybe (ScenarioProblemId, UserId) -> Handler (Widget, Widget)
+uiButtons mscpuid = do
 
   popupSubmitId <- newIdent
   sfGeometry <- newIdent
@@ -255,9 +255,12 @@ uiButtons = do
                   <span class="fbtn-ori icon">apps
                   <span class="fbtn-sub icon">close
                 <div class="fbtn-dropup">
-                  <a class="fbtn fbtn-brand waves-attach waves-circle waves-effect" onclick="FB.ui({method: 'share',mobile_iframe: true, href: 'https://developers.facebook.com/docs/'}, function(response){});">
-                    <span class="fbtn-text fbtn-text-left">Share on Facebook
-                    <span class="icon icon-lg" #fullscreenbicon>share
+                  $case mscpuid
+                    $of Just (pId, uId)
+                      <a class="fbtn fbtn-brand waves-attach waves-circle waves-effect" onclick="FB.ui({method: 'share',mobile_iframe: true, href: '@{SubmissionViewerR pId uId}'}, function(response){});">
+                        <span class="fbtn-text fbtn-text-left">Share on Facebook
+                        <span class="icon icon-lg" #fullscreenbicon>share
+                    $of Nothing
                   <a class="fbtn waves-attach waves-circle waves-effect fbtn-brand-accent" #resetposbutton>
                     <span class="fbtn-text fbtn-text-left">Reset camera position
                     <span class="icon icon-lg" style="font-size: 2em;margin-left:-8px;vertical-align:-32%;margin-top:-3px;">fullscreen

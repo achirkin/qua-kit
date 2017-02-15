@@ -58,7 +58,7 @@ renderQuaView scpId authorId = do
   -- connecting form + conteiners for optional content
   (lcConnectedClass, lcDisconnectedClass, luciConnectForm) <- luciConnectPane
   (popupScenarioList, luciScenariosPane) <- luciScenarios
-  (uiButtonsGUI, uiButtonsSubmitPopup) <- uiButtons
+  (uiButtonsGUI, uiButtonsSubmitPopup) <- uiButtons $ Just (scpId, authorId)
   minimalLayout $ do
 
     -- add qua-view dependencies and OpenGraph info about submission.

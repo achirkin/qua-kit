@@ -37,6 +37,13 @@ renderQuaView = do
         lift (setSession "qua_view_mode" "edit")
     _ -> return ()
 
+  mscLink <- case mscId of
+    Nothing -> return Nothing
+    Just scId -> runDB $ do
+      scenario <- get scId
+      return $ (,) <$> fmap scenarioTaskId scenario
+                   <*> fmap scenarioAuthorId scenario
+
   qua_view_mode <- fromMaybe "full" <$> lookupSession "qua_view_mode"
   let showFull = qua_view_mode == "full"
 
@@ -59,7 +66,7 @@ renderQuaView = do
   -- connecting form + conteiners for optional content
   (lcConnectedClass, lcDisconnectedClass, luciConnectForm) <- luciConnectPane
   (popupScenarioList, luciScenariosPane) <- luciScenarios
-  (uiButtonsGUI, uiButtonsSubmitPopup) <- uiButtons
+  (uiButtonsGUI, uiButtonsSubmitPopup) <- uiButtons mscLink
   minimalLayout $ do
 
     -- add qua-view dependencies
