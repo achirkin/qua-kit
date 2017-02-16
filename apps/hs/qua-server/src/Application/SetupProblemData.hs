@@ -73,7 +73,7 @@ importProblemRun1 pool = do
     flip runSqlPool pool $ do
       -- Id of the firt problem (Sep-Nov 2016)
       let pId = toSqlKey 1
-      repsert pId (ScenarioProblem sctaskpreview sctaskfile "Empower Shack scenario 2" 0.001)
+      repsert pId (ScenarioProblem sctaskpreview sctaskfile "Empower Shack scenario 2" 40000)
       cIdCentrality    <- upsertCriterion cCentrality
       cIdConnectivity  <- upsertCriterion cConnectivity
       cIdAccessibility <- upsertCriterion cAccessibility
