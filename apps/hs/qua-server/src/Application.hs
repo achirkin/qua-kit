@@ -67,7 +67,7 @@ import Handler.Mooc.Tests
 
 import Model.Rating
 import Application.Grading
-
+import Application.SetupProblemData
 
 -- This line actually creates our YesodDispatch instance. It is the second half
 -- of the call to mkYesodData which occurs in Foundation.hs. Please see the
@@ -107,64 +107,8 @@ makeFoundation appSettings = do
     -- Perform database migration using our application's logging settings.
     runLoggingT (runSqlPool (runMigration migrateAll) pool) logFunc
 
---    sctaskfile <- BS.readFile "static/data/mooctask.geojson"
---    sctaskpreview <- BS.readFile "static/data/mooctask.png"
---
---    criteriaHtmlCentrality     <- Text.readFile "static/data/centrality.html"
---    criteriaImgCentrality      <- BS.readFile "static/data/centrality.png"
---    criteriaIconCentrality     <- decodeUtf8 <$> BS.readFile "static/data/centrality.svg"
---
---
---    criteriaHtmlConnectivity   <- Text.readFile "static/data/connectivity.html"
---    criteriaImgConnectivity    <- BS.readFile "static/data/connectivity.png"
---    criteriaIconConnectivity   <- decodeUtf8 <$> BS.readFile "static/data/connectivity.svg"
---
---
---    criteriaHtmlAccessibility  <- Text.readFile "static/data/accessibility.html"
---    criteriaImgAccessibility   <- BS.readFile "static/data/accessibility.png"
---    criteriaIconAccessibility  <- decodeUtf8 <$> BS.readFile "static/data/accessibility.svg"
---
---
---    criteriaHtmlVisibility     <- Text.readFile "static/data/visibility.html"
---    criteriaImgVisibility      <- BS.readFile "static/data/visibility.png"
---    criteriaIconVisibility     <- decodeUtf8 <$> BS.readFile "static/data/visibility.svg"
---
---    flip runSqlPool pool $ do
---      -- add dev sample problem
---      repsert (toSqlKey 0) (ScenarioProblem sctaskpreview sctaskfile "Empower Shack scenario" 0.001)
---      -- make me the first admin
---      mme <- getBy $ ETHUserName (Just "achirkin")
---      case mme of
---        Nothing -> insert_ $ User "Artem Chirkin" UR_ADMIN (Just "achirkin") Nothing
---        Just (Entity key _) -> update key [UserRole =. UR_ADMIN]
---
---      _ <- upsert (Criterion "Visibility" criteriaHtmlVisibility criteriaImgVisibility criteriaIconVisibility)
---            [ CriterionImage =. criteriaImgVisibility
---            , CriterionDescription =. criteriaHtmlVisibility
---            , CriterionIcon =. criteriaIconVisibility
---            ]
---
---      _ <- upsert (Criterion "Centrality" criteriaHtmlCentrality criteriaImgCentrality criteriaIconCentrality)
---            [ CriterionImage =. criteriaImgCentrality
---            , CriterionDescription =. criteriaHtmlCentrality
---            , CriterionIcon =. criteriaIconCentrality
---            ]
---
---      _ <- upsert (Criterion "Connectivity" criteriaHtmlConnectivity criteriaImgConnectivity criteriaIconConnectivity)
---            [ CriterionImage =. criteriaImgConnectivity
---            , CriterionDescription =. criteriaHtmlConnectivity
---            , CriterionIcon =. criteriaIconConnectivity
---            ]
---
---      _ <- upsert (Criterion "Accessibility" criteriaHtmlAccessibility
---                                     criteriaImgAccessibility criteriaIconAccessibility)
---            [ CriterionImage =. criteriaImgAccessibility
---            , CriterionDescription =. criteriaHtmlAccessibility
---            , CriterionIcon =. criteriaIconAccessibility
---            ]
---
---      return ()
---
+    -- Fill database with some problem-specific important data.
+    importProblemData pool
 --    -- | Update ratings once in an hour
 --    flip runSqlPool pool $ scheduleUpdateRatings 3600 reviewRating compareRating combR
 --    flip runSqlPool pool $ scheduleGradeVotes 3600

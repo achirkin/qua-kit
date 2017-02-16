@@ -150,12 +150,13 @@ getLastSubmissions page = getVals <$> rawSql query [toPersistValue pageSize, toP
           ,"             ORDER BY score DESC, x DESC"
           ,"             LIMIT ? OFFSET ?) t"
           ,"        ON t.task_id = scenario.task_id AND t.author_id = scenario.author_id AND t.x = scenario.last_update"
-          ,"CROSS JOIN criterion"
+          ,"INNER JOIN problem_criterion ON scenario.task_id = problem_criterion.problem_id"
+          ,"INNER JOIN criterion ON criterion.id = problem_criterion.criterion_id"
           ,""
           ,"LEFT OUTER JOIN rating"
           ,"        ON scenario.task_id = rating.problem_id AND scenario.author_id = rating.author_id AND criterion.id = rating.criterion_id"
           ,""
-          ,"ORDER BY t.score DESC, scenario.id DESC, criterion.id ASC;"
+          ,"ORDER BY scenario.task_id DESC, t.score DESC, scenario.id DESC, criterion.id ASC;"
           ]
 
 countUniqueSubmissions :: ReaderT SqlBackend Handler Int

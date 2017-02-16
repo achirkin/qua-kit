@@ -73,6 +73,10 @@ Criterion
     icon         Text
     CriterionDef name
 
+ProblemCriterion
+    problemId ScenarioProblemId
+    criterionId CriterionId
+
 Vote
     voterId       UserId
     criterionId   CriterionId
