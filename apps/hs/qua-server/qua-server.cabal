@@ -54,6 +54,7 @@ library
     exposed-modules:
         Application
         Application.Grading
+        Application.SetupProblemData
         Foundation
         Handler.About
         Handler.Common
