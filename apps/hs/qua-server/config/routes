@@ -13,6 +13,7 @@
 /qua-view-settings QuaViewSettingsR GET
 
 /about                              AboutR GET
+/faq                                FAQR GET
 /feedback                           FeedbackR GET
 /feedback/post                      SubmitFeedbackR POST
 /admin                              AdminR GET

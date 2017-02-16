@@ -12,6 +12,8 @@
             Understand criteria
           <a class="waves-attach waves-effect" href="@{CompareProposalsR}">
             Compare designs
+          <a class="waves-attach waves-effect" href="@{FAQR}">
+            Frequently Asked Questions
           <a class="waves-attach waves-effect" href="@{AboutR}">
             About
           <a class="waves-attach waves-effect" href="@{FeedbackR}">

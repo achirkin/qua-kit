@@ -58,6 +58,7 @@ import Handler.Mooc.ProposalPreview
 import Handler.Mooc.User
 import Handler.Mooc.Survey
 import Handler.Mooc.SubmissionViewer
+import Handler.Mooc.FAQ
 import Handler.LoggingWS
 
 
