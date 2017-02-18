@@ -147,7 +147,7 @@ getLastSubmissions page = getVals <$> rawSql query [toPersistValue pageSize, toP
           ,"             LEFT OUTER JOIN rating"
           ,"                          ON rating.author_id = scenario.author_id"
           ,"             GROUP BY scenario.author_id, scenario.task_id"
-          ,"             ORDER BY score DESC, x DESC"
+          ,"             ORDER BY scenario.task_id DESC, score DESC, x DESC"
           ,"             LIMIT ? OFFSET ?) t"
           ,"        ON t.task_id = scenario.task_id AND t.author_id = scenario.author_id AND t.x = scenario.last_update"
           ,"INNER JOIN problem_criterion ON scenario.task_id = problem_criterion.problem_id"

@@ -28,6 +28,7 @@ uiButtons :: Maybe (ScenarioProblemId, UserId) -> Handler (Widget, Widget)
 uiButtons mscpuid = do
 
   popupSubmitId <- newIdent
+  popupShareId <- newIdent
   sfGeometry <- newIdent
   sfPreview <- newIdent
   submitForm <- newIdent
@@ -48,6 +49,7 @@ uiButtons mscpuid = do
                   js.id = "facebook-jssdk";
                   js.src = "//connect.facebook.net/en_US/sdk.js#xfbml=1&version=v2.8&appId=1837721753181850";
                   document.body.insertBefore(js, document.body.firstChild);}());
+
                 <div style="display: none;" aria-hidden="true" class="modal modal-va-middle fade" ##{popupSubmitId} role="dialog" tabindex="-1">
                   <div class="modal-dialog modal-xs">
                     <div class="modal-content">
@@ -68,6 +70,37 @@ uiButtons mscpuid = do
                             Cancel
                           <a.btn.btn-flat.btn-brand-accent.waves-attach.waves-effect data-dismiss="modal" onclick="$('##{submitForm}').submit();">
                             Save
+
+
+                $case mscpuid
+                  $of Nothing
+                  $of Just (pId, uId)
+                    <div style="display: none;" aria-hidden="true" class="modal modal-va-middle fade" ##{popupShareId} role="dialog" tabindex="-1">
+                      <div class="modal-dialog modal-xs">
+                        <div class="modal-content">
+                          <div class="modal-heading">
+                            <p class="modal-title">
+                              Share your design with others
+                          <div class="modal-inner">
+                            <p class="text">
+                              You can share the following link that refers to the last saved version of your design:
+                            <code>
+                              @{SubmissionViewerR pId uId}
+                            <p class="text">
+                              Alternatively, use your favourite button:
+                            <div style="text-align:center">
+                              <a.shareButton onclick="FB.ui({method: 'share',mobile_iframe: true, href: '@{SubmissionViewerR pId uId}'}, function(response){});">
+                                <img src="@{StaticR img_fbIcon_png}" style="width:40px;height:40px;" title="Share on Facebook" alt="Share on Facebook">
+                              <a.shareButton href="http://vk.com/share.php?url=@{SubmissionViewerR pId uId}" onclick="javascript:window.open(this.href, '', 'menubar=no,toolbar=no,resizable=yes,scrollbars=yes,height=600,width=600');return false;">
+                                <img src="@{StaticR img_vkIcon_png}" style="width:40px;height:40px;" title="Share on Vkontakte" alt="Share on Vkontakte">
+                              <a.shareButton onclick="window.open('https://twitter.com/intent/tweet?url=' + encodeURIComponent('@{SubmissionViewerR pId uId}') + '&text=' + encodeURIComponent('Check out this design on #quakit!') + '&hashtags=mooc,edx,ethz,chairia,urbandesign', 'popUpWindow','height=400,width=600,left=10,top=10,,scrollbars=yes,menubar=no')">
+                                <img src="@{StaticR img_twitterIcon_png}" style="width:40px;height:40px;" title="Tweet the link" alt="Tweet the link">
+                              <a.shareButton href="https://plus.google.com/share?url=@{SubmissionViewerR pId uId}" onclick="javascript:window.open(this.href, '', 'menubar=no,toolbar=no,resizable=yes,scrollbars=yes,height=600,width=600');return false;">
+                                <img src="@{StaticR img_gIcon_png}" style="width:40px;height:40px;" title="Share on Google" alt="Share on Google">
+                          <div class="modal-footer">
+                            <p class="text-right">
+                              <a.btn.btn-flat.btn-brand-accent.waves-attach.waves-effect data-dismiss="modal">
+                                Close
               |]
       uiButtonsG = do
         uiButton <- newIdent
@@ -133,6 +166,17 @@ uiButtons mscpuid = do
 
             .#{idleplaceholder}
                 left: -64px
+
+            .shareButton
+                display: inline-block
+                width: 40px
+                height: 40px
+                cursor: pointer
+                cursor: hand
+                -webkit-filter: drop-shadow(0px 1px 3px rgba(0,0,0,.3))
+                filter: drop-shadow(0px 1px 3px rgba(0,0,0,.3))
+                -ms-filter: "progid:DXImageTransform.Microsoft.Dropshadow(OffX=0, OffY=1, Color='#444')"
+                filter: "progid:DXImageTransform.Microsoft.Dropshadow(OffX=0, OffY=1, Color='#444')"
           |]
 --            sfGeometry <- newIdent
 --  sfPreview <- newIdent
@@ -256,10 +300,10 @@ uiButtons mscpuid = do
                   <span class="fbtn-sub icon">close
                 <div class="fbtn-dropup">
                   $case mscpuid
-                    $of Just (pId, uId)
-                      <a class="fbtn fbtn-brand waves-attach waves-circle waves-effect" onclick="FB.ui({method: 'share',mobile_iframe: true, href: '@{SubmissionViewerR pId uId}'}, function(response){});">
-                        <span class="fbtn-text fbtn-text-left">Share on Facebook
-                        <span class="icon icon-lg" #fullscreenbicon>share
+                    $of Just (_, _)
+                      <a class="fbtn fbtn-brand waves-attach waves-circle waves-effect" onclick="$('##{popupShareId}').modal('show');">
+                        <span class="fbtn-text fbtn-text-left">Share
+                        <span class="icon icon-lg">share
                     $of Nothing
                   <a class="fbtn waves-attach waves-circle waves-effect fbtn-brand-accent" #resetposbutton>
                     <span class="fbtn-text fbtn-text-left">Reset camera position
