@@ -80,10 +80,10 @@ uiButtons mscpuid = do
                         <div class="modal-content">
                           <div class="modal-heading">
                             <p class="modal-title">
-                              Share your design with others
+                              Share this design with others
                           <div class="modal-inner">
                             <p class="text">
-                              You can share the following link that refers to the last saved version of your design:
+                              You can share the following link that refers to the last saved version of this design:
                             <code>
                               @{SubmissionViewerR pId uId}
                             <p class="text">
@@ -91,11 +91,11 @@ uiButtons mscpuid = do
                             <div style="text-align:center">
                               <a.shareButton onclick="FB.ui({method: 'share',mobile_iframe: true, href: '@{SubmissionViewerR pId uId}'}, function(response){});">
                                 <img src="@{StaticR img_fbIcon_png}" style="width:40px;height:40px;" title="Share on Facebook" alt="Share on Facebook">
-                              <a.shareButton href="http://vk.com/share.php?url=@{SubmissionViewerR pId uId}" onclick="javascript:window.open(this.href, '', 'menubar=no,toolbar=no,resizable=yes,scrollbars=yes,height=600,width=600');return false;">
+                              <a.shareButton href="http://vk.com/share.php?url=@{SubmissionViewerR pId uId}" onclick="javascript:window.open(this.href, 'popUpWindow', 'menubar=no,toolbar=no,resizable=yes,scrollbars=yes,height=700,width=500,left=20,top=10');return false;">
                                 <img src="@{StaticR img_vkIcon_png}" style="width:40px;height:40px;" title="Share on Vkontakte" alt="Share on Vkontakte">
-                              <a.shareButton onclick="window.open('https://twitter.com/intent/tweet?url=' + encodeURIComponent('@{SubmissionViewerR pId uId}') + '&text=' + encodeURIComponent('Check out this design on #quakit!') + '&hashtags=mooc,edx,ethz,chairia,urbandesign', 'popUpWindow','height=400,width=600,left=10,top=10,,scrollbars=yes,menubar=no')">
+                              <a.shareButton onclick="window.open('https://twitter.com/intent/tweet?url=' + encodeURIComponent('@{SubmissionViewerR pId uId}') + '&text=' + encodeURIComponent('Check out this design on #quakit!') + '&hashtags=mooc,edx,ethz,chairia,urbandesign', 'popUpWindow', 'menubar=no,toolbar=no,resizable=yes,scrollbars=yes,height=700,width=500,left=20,top=10');return false;">
                                 <img src="@{StaticR img_twitterIcon_png}" style="width:40px;height:40px;" title="Tweet the link" alt="Tweet the link">
-                              <a.shareButton href="https://plus.google.com/share?url=@{SubmissionViewerR pId uId}" onclick="javascript:window.open(this.href, '', 'menubar=no,toolbar=no,resizable=yes,scrollbars=yes,height=600,width=600');return false;">
+                              <a.shareButton href="https://plus.google.com/share?url=@{SubmissionViewerR pId uId}" onclick="javascript:window.open(this.href, 'popUpWindow', 'menubar=no,toolbar=no,resizable=yes,scrollbars=yes,height=700,width=500,left=20,top=10');return false;">
                                 <img src="@{StaticR img_gIcon_png}" style="width:40px;height:40px;" title="Share on Google" alt="Share on Google">
                           <div class="modal-footer">
                             <p class="text-right">
