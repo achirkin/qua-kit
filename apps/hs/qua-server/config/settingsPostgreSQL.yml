@@ -1,9 +1,8 @@
 database:
-  user:     "_env:PGUSER:qua-kit_LOWER"
+  user:     "_env:PGUSER:qua-kit"
   password: "_env:PGPASS:qua-kit"
   host:     "_env:PGHOST:localhost"
   port:     "_env:PGPORT:5432"
   # See config/test-settings.yml for an override during tests
-  database: "_env:PGDATABASE:qua-kit_LOWER"
+  database: "_env:PGDATABASE:qua-kit"
   poolsize: "_env:PGPOOLSIZE:10"
-
