@@ -11,7 +11,8 @@
 -----------------------------------------------------------------------------
 
 module Lib.ParseGeoJSON
-  ( parseBlocks, parseGeoJSONBS, parseGeoJSONValue
+  ( parseBlocks, parseGeoJSONBS, parseGeoJSONValue, toGeoJSONValue
+  , GeoJSONProps
   ) where
 
 import Data.Aeson as JSON
@@ -27,21 +28,31 @@ import Numeric.EasyTensor
 import Lib.ExtraTypes
 import Lib.Scenario as S
 
+type GeoJSONProps = (GeospatialGeometry, JSON.Object)
 
 -- | Parse Strict ByteString containg utf8-encoded JSON into a Block-Wall representation
-parseGeoJSONBS :: ByteString -> Either String (Scenario ())
-parseGeoJSONBS b = S.fromList . Lens.view (geofeatures . traverse . geometry . Lens.lens parseBlocks const) <$>
+parseGeoJSONBS :: ByteString -> Either String (Scenario (GeospatialGeometry, JSON.Object))
+parseGeoJSONBS b = S.fromList . Lens.view (geofeatures . traverse . Lens.lens parseFeature const) <$>
     (eitherDecodeStrict' b :: Either String (GeoFeatureCollection JSON.Object))
+ where
+   parseFeature f = let blocks = parseBlocks $ Lens.view geometry f
+                    in map ((Lens.view geometry f, Lens.view properties f) <$) blocks
 
 -- | Parse Aeson's Value type into a Block-Wall representation
-parseGeoJSONValue :: JSON.Value -> Either String (Scenario ())
+parseGeoJSONValue :: JSON.Value -> Either String (Scenario (GeospatialGeometry, JSON.Object))
 parseGeoJSONValue b = fromResult
-    $ Lens.view (geofeatures . traverse . geometry . Lens.lens parseBlocks const) <$>
+    $ Lens.view (geofeatures . traverse . Lens.lens parseFeature const) <$>
      (fromJSON b :: Result (GeoFeatureCollection JSON.Object))
   where
     fromResult (Error s) = Left s
     fromResult (Success a) = Right $ S.fromList a
+    parseFeature f = let blocks = parseBlocks $ Lens.view geometry f
+                     in map ((Lens.view geometry f, Lens.view properties f) <$) blocks
 
+toGeoJSONValue :: Scenario (GeospatialGeometry, JSON.Object) -> JSON.Value
+toGeoJSONValue sc = toJSON . GeoFeatureCollection Nothing $ mkFeature . Lens.view content <$> S.toList sc
+  where
+    mkFeature (geom, props) = GeoFeature Nothing geom props Nothing
 
 -- | Parse GeoJSON geometry type into a number of Blocks
 parseBlocks :: GeospatialGeometry -> [Block ()]

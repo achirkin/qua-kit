@@ -96,8 +96,9 @@ panelInfo = do
          *  return :: IO ()
          */
         function showScenarioServiceResultString(str) {
-          document.getElementById('#{rawJS scResultPane}').innerHtml = "Scenario service result: "
-                        + "<br/>" + str;
+          document.getElementById('#{rawJS scResultPane}').innerHTML = "Scenario service result text: "
+                        + "<br/>" + str + "<br/><br/>";
+          $('[href="#itabInfo"]').tab('show');
         }
         /** Show service result as a .png service .
          *  buf :: ArrayBuffer -- image content
@@ -109,13 +110,16 @@ panelInfo = do
           var imageUrl = urlCreator.createObjectURL( blob );
           var img = document.createElement('img');
           img.src = imageUrl;
+          img.style.width = "99%";
           var infopane = document.getElementById('#{rawJS scResultPane}');
-          infopane.innerHtml = "";
+          infopane.innerHTML = "Scenario service result image: <br/>";
           infopane.appendChild(img);
+          infopane.innerHTML += "<br/><br/>";
+          $('[href="#itabInfo"]').tab('show');
         }
       |]
     toWidgetBody
       [hamlet|
-         <div ##{scResultPane}>
          <div ##{infoPane}>
+         <div ##{scResultPane}>
       |]

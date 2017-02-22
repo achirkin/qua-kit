@@ -294,7 +294,7 @@ uiButtons mscpuid = do
           [hamlet|
             <div .#{idleplaceholder} ##{guiplaceholder}>
               <div class="fbtn-inner open">
-                <a aria-expanded="true" class="fbtn fbtn-lg fbtn-red waves-attach waves-circle waves-light waves-effect" data-toggle="dropdown">
+                <a aria-expanded="true" class="fbtn fbtn-lg fbtn-red waves-attach waves-circle waves-light waves-effect" onclick="$(this).parent().toggleClass('open');">
                   <span class="fbtn-text fbtn-text-left">Tools
                   <span class="fbtn-ori icon">apps
                   <span class="fbtn-sub icon">close

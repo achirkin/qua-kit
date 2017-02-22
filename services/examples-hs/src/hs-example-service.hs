@@ -23,9 +23,11 @@ import Control.Monad (void)
 import Data.Aeson as JSON
 import Data.Semigroup
 import Data.Text (Text)
+import           Data.FileEmbed
 import qualified Data.Text as Text
 import Data.Conduit
-import qualified Data.Vector as Vector
+import Data.Word
+-- import qualified Data.Vector as Vector
 import Data.ByteString (ByteString)
 import qualified Data.ByteString.Internal as BSI
 import qualified Data.HashMap.Strict as HashMap
@@ -71,10 +73,22 @@ processMessages = do
 -- | Respond to one message at a time
 responseMsgs :: Message -> Conduit Message (LuciProgram ServiceState) Message
 -- Respond only to run messages with correct input
-responseMsgs (MsgRun token "Test multi-parameter" pams [pts])
+responseMsgs (MsgRun token "hs-example-service" pams atts)
   | Just (Success scId) <- fromJSON <$> HashMap.lookup "ScID" pams = do
     currentRunToken %= const token
-    liftIO (deserializePoints pts) >>= evaluatePoints scId
+    case fromJSON <$> HashMap.lookup "mode" pams of
+      Nothing -> yield $ MsgError token "Cannot find execution mode field."
+      Just (Error s) -> yield $ MsgError token ("Cannot parse execution mode field: " <> Text.pack s)
+      Just (Success "points") -> case atts of
+                                   [pts] -> liftIO (deserializePoints pts) >>= evaluatePoints scId
+                                   _ -> yield $ MsgError token "Incorrect number of attachments"
+      Just (Success "scenario") -> evaluateScenario (fromJSON <$> HashMap.lookup "scenarioResultType" pams)
+                                                    (fromJSON <$> HashMap.lookup "message" pams)
+      Just (Success "objects") -> case atts of
+                                   [gs] -> liftIO (deserializeGeomIds gs) >>= evaluateObjects scId
+                                   _ -> yield $ MsgError token "Incorrect number of attachments"
+      Just (Success m) -> yield $ MsgError token ("Execution mode " <> m <> " is not supported.")
+
 responseMsgs (MsgRun token _ _ _) = do
     currentRunToken %= const token
     yield $ MsgError token "Incorrect input in the 'run' message."
@@ -83,9 +97,32 @@ responseMsgs (MsgError _ s) = logWarnN $ "[Luci error message] " <> s
 responseMsgs msg = logInfoN . ("[Ignore Luci message] " <>) . showJSON . toJSON . fst $ makeMessage msg
 
 
+evaluateScenario :: Maybe (Result Text) -> Maybe (Result Text) -> Conduit Message (LuciProgram ServiceState) Message
+evaluateScenario rezType mmsg = do
+  token <- Lens.use currentRunToken
+  case rezType of
+    Nothing -> yield $ MsgError token "Cannot find scenarioResultType parameter"
+    Just (Error e) -> yield $ MsgError token ("Cannot parse scenarioResultType field: " <> Text.pack e)
+    Just (Success "text") -> case mmsg of
+        Just (Success msg) -> yield $ MsgResult token (ServiceResult $ HashMap.fromList
+                                        [ "answer"  .= String ("Your message was: " <> msg)
+                                        ]) []
+        _ -> yield $ MsgResult token (ServiceResult $ HashMap.fromList
+                                        [ "answer"  .= String "Hi there, I am hs-example-service in echo mode."
+                                        ]) []
+    Just (Success "image") -> let img = $(embedFile "res/resultImg.png")
+                              in yield $ MsgResult token (ServiceResult $ HashMap.fromList
+                                    [ "image"  .= makeAReference img "image/png" 1 Nothing
+                                    ]) [img]
+
+    Just (Success s) -> yield $ MsgError token ("scenarioResultType '" <> s <> "' is not supported.")
+
+
+
+
 evaluatePoints :: Int -> [Vec2f] -> Conduit Message (LuciProgram ServiceState) Message
 evaluatePoints scId pts = do
-  curToken <- _currentRunToken <$> get
+  curToken <- Lens.use currentRunToken
   logInfoN "***Received a task***"
   logDebugN $ Text.pack (show pts)
   logDebugN $ "***Asking for scenario " <> Text.pack (show scId) <> " ***"
@@ -106,8 +143,31 @@ evaluatePoints scId pts = do
       logInfoN "***Sent results back****"
 
 
+evaluateObjects :: Int -> [Int] -> Conduit Message (LuciProgram ServiceState) Message
+evaluateObjects scId geomIds = do
+  curToken <- Lens.use currentRunToken
+  logInfoN "***Received a task***"
+  logDebugN $ Text.pack (show geomIds)
+  logDebugN $ "***Asking for scenario " <> Text.pack (show scId) <> " ***"
+  mscenario <- obtainScenario scId
+  case mscenario of
+    Nothing -> yield . MsgError curToken $ "Could not get scenario from luci (" <> Text.pack (show scId) <> ")"
+    Just buildings -> do
+      logDebugN "***Got scenario***"
+      logDebugN $ Text.pack (show buildings)
+      let result = (\p -> unScalar . normL2 $ Lens.view rCenter buildings - p) . _bCenter <$> toList buildings :: [Float]
+      logDebugN "***Result computed:***"
+      logDebugN $ Text.pack (show result)
+      resultBytes <- liftIO $ serializeValules result
+      yield $ resultMessagePoints curToken resultBytes
+      logInfoN "***Sent results back****"
+
+
+
+
+
 -- | Try our best to get scenario by its ScID
-obtainScenario :: Int -> ConduitM Message Message (LuciProgram ServiceState) (Maybe (Scenario ()))
+obtainScenario :: Int -> ConduitM Message Message (LuciProgram ServiceState) (Maybe (Scenario GeoJSONProps))
 obtainScenario scId = do
     scToken <- genToken
     yield (getScenarioMessage scToken scId)
@@ -145,6 +205,11 @@ obtainScenario scId = do
 deserializePoints :: ByteString -> IO [Vec2f]
 deserializePoints (BSI.PS fptr off len) = withForeignPtr fptr $ \ptr -> mapM (fmap unStore . peekByteOff ptr) [off,off+12..off+len-12]
 
+deserializeGeomIds :: ByteString -> IO [Int]
+deserializeGeomIds (BSI.PS fptr off len) = withForeignPtr fptr
+  $ \ptr -> mapM (fmap (fromIntegral :: Word32 -> Int) . peekByteOff ptr) [off,off+4..off+len-4]
+
+
 -- | convert a list of floating points to a bytestring
 serializeValules :: [Float] -> IO ByteString
 serializeValules xs = BSI.create (length xs * 4) $ \ptr -> mapM_ (uncurry $ pokeByteOff ptr) $ zip [0,4..] xs
@@ -168,6 +233,8 @@ registerMessage token = MsgRun token "RemoteRegister" o []
           , "OPT geomIDs" .= String "attachment" -- Optional, because required only for mode "objects"
           -- Further go several service parameters
           , "OPT message" .= String "string"
+          -- Further go several service parameters
+          , "OPT scenarioResultType" .= String "string"
           ]
       , "outputs"            .= object
           [ "OPT units"   .= String "string"     -- Optional, because returned only for modes "points" and "objects"
@@ -179,7 +246,8 @@ registerMessage token = MsgRun token "RemoteRegister" o []
           , "OPT timestamp_modified" .= String "number" -- Mode "new"
           ]
       , "constraints"         .= object
-          [ "mode" .= ["points", "objects", "scenario", "new" :: Text]
+          [ "mode" .= ["points", "objects", "scenario" :: Text] -- , "new"
+          , "scenarioResultType" .= ["text", "image" :: Text]
           ]
       , "exampleCall"        .= object
           [ "run"    .= String "hs-example-service"
