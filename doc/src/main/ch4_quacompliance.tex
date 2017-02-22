@@ -159,8 +159,8 @@ A user also can click on a building and see exact numeric value received from a 
 A service in this mode has two obligatory inputs:
 \begin{enumerate}
 \item \texttt{ScID} -- id of a current scenario;
-\item \texttt{objIds} -- an attachment reference to a binary blob of size $8n$, where $n$ is the number of objects to process by a service;
-                         the blob consists of unsigned 8-byte integers in Little Endian format (\texttt{ulong64}) -- \texttt{geomID} of each object.
+\item \texttt{objIds} -- an attachment reference to a binary blob of size $4n$, where $n$ is the number of objects to process by a service;
+                         the blob consists of unsigned 4-byte integers in Little Endian format (\texttt{uint32}) -- \texttt{geomID} of each object.
 \end{enumerate}
 \begin{lstlisting}[caption={A qua-compliant service run request for mode \texttt{objects}}, label={lst:quacompliantinput:objects}]
 {
@@ -169,9 +169,9 @@ A service in this mode has two obligatory inputs:
   ScID : 123,
   mode : "objects",
   geomIDs : {
-    format : "ulong64 array",
+    format : "uint32 array",
     attachment {
-      length : 2048,
+      length : 1024,
       position : 1,
       checksum : "50752c7cb358a5fffd913d9aa3605433"
     }
@@ -217,7 +217,7 @@ The only obligatory field in this mode is a scenario id \texttt{ScID}.
 }
 \end{lstlisting}
 One possible result of a scenario-mode-service is a text string.
-\begin{lstlisting}[caption={A qua-compliant service output for mode \texttt{scenario} (string output)}, label={lst:quacompliantresult:scenario}]
+\begin{lstlisting}[caption={A qua-compliant service output for mode \texttt{scenario} (string output)}, label={lst:quacompliantresult1:scenario}]
 {
   callID : 213,
   result : {
@@ -229,7 +229,7 @@ One possible result of a scenario-mode-service is a text string.
 Another possible result type is a \texttt{.png} image attached to a message.
 Recommended size of an image is 512x512px.
 An image may contain a graph or an arbitrary figure.
-\begin{lstlisting}[caption={A qua-compliant service output for mode \texttt{scenario} (image output)}, label={lst:quacompliantresult:scenario}]
+\begin{lstlisting}[caption={A qua-compliant service output for mode \texttt{scenario} (image output)}, label={lst:quacompliantresult2:scenario}]
 {
   callID : 213,
   result : {
