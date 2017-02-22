@@ -20,6 +20,7 @@ import Text.Julius
 panelInfo :: Widget
 panelInfo = do
     infoPane <- newIdent
+    scResultPane <- newIdent
     infoRow <- newIdent
     infoRowOdd <- newIdent
     infoCellLeft <- newIdent
@@ -90,8 +91,31 @@ panelInfo = do
                     }
                   }, "");
         }
+        /** Show service result as a simple string.
+         *  str :: String -- just a text  result
+         *  return :: IO ()
+         */
+        function showScenarioServiceResultString(str) {
+          document.getElementById('#{rawJS scResultPane}').innerHtml = "Scenario service result: "
+                        + "<br/>" + str;
+        }
+        /** Show service result as a .png service .
+         *  buf :: ArrayBuffer -- image content
+         *  return :: IO ()
+         */
+        function showScenarioServiceResultPng(buf) {
+          var blob = new Blob( [ new Uint8Array(buf) ], { type: "image/png" } );
+          var urlCreator = window.URL || window.webkitURL;
+          var imageUrl = urlCreator.createObjectURL( blob );
+          var img = document.createElement('img');
+          img.src = imageUrl;
+          var infopane = document.getElementById('#{rawJS scResultPane}');
+          infopane.innerHtml = "";
+          infopane.appendChild(img);
+        }
       |]
     toWidgetBody
       [hamlet|
+         <div ##{scResultPane}>
          <div ##{infoPane}>
       |]

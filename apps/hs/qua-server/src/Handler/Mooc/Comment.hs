@@ -78,7 +78,7 @@ viewComments scId = do
               canComment = case muserId of
                 Nothing -> False
                 Just uId -> uId /= scenarioAuthorId sc
-          criteria <- selectList [] []
+          criteria <- currentCriteria $ scenarioTaskId sc
           wrapIt authorName
                  scUpdateTime
                  (scenarioDescription sc) canComment criteria . foldl' (
@@ -322,3 +322,12 @@ getReviews scId = rawSql query [toPersistValue scId]
           ,"            ON scenario.task_id = t.task_id AND scenario.author_id = t.author_id)"
           ,"ORDER BY review.timestamp DESC;"
           ]
+
+currentCriteria :: ScenarioProblemId -> ReaderT SqlBackend Handler [Entity Criterion]
+currentCriteria scp_id = rawSql query [toPersistValue scp_id]
+  where
+    query = unlines
+        ["SELECT ?? FROM criterion,problem_criterion"
+        ,"         WHERE problem_criterion.problem_id = ?"
+        ,"           AND problem_criterion.criterion_id = criterion.id;"
+        ]
