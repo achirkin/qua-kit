@@ -49,6 +49,23 @@ call config\win-retry-build.bat stack build --install-ghc --stack-yaml services\
 IF %ERRORLEVEL% NEQ 0 goto :FAILURE
 copy "%CD%\services\examples-hs\%TMP_DIST_DIR%\build\hs-example-service\hs-example-service.exe" "%CD%\release\windows\hs-example-service.exe"
 
+echo Copy configuration files...
+copy "%CD%\config\setup-sirendb-windows.bat" "%CD%\release\windows\setup-sirendb.bat"
+copy "%CD%\config\README-windows.md" "%CD%\release\windows\README.txt"
+copy "%CD%\config\runLuci.bat" "%CD%\release\windows\runLuci.bat"
+
+(
+  echo @echo off
+  echo timeout /t 5 ^>nul
+  echo siren.exe
+) > "%CD%\release\windows\sirenDelayed.bat"
+
+(
+  echo @echo off
+  echo timeout /t 5 ^>nul
+  echo hs-example-service.exe
+) > "%CD%\release\windows\sExampleDelayed.bat"
+ 
 
 echo Finished successfully!
 popd
