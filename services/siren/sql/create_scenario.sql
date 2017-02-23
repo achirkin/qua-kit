@@ -44,13 +44,14 @@ BEGIN
   -- parse all features
   CREATE TEMP TABLE features ON COMMIT DROP AS
   ( WITH fcs AS (SELECT jsonb_array_elements(fc -> 'features') AS data)
-    SELECT CAST(coalesce(nullif(fcs.data -> 'properties' ->> 'geomID',''),nullif(fcs.data ->> 'id','')) AS integer) as geomID
-         , ST_GeomFromGeoJSON(fcs.data ->> 'geometry') as geom
+    SELECT coalesce(asInteger(fcs.data -> 'properties' ->> 'geomID'), asInteger(fcs.data ->> 'id')) as geomID
+         , fromJSONtoGeom(fcs.data ->> 'geometry') as geom
          , (jsonb_strip_nulls(fcs.data -> 'properties') - 'geomID') AS props
     FROM fcs
   );
+  DELETE FROM features WHERE features.geom IS NULL;
   CREATE TEMP SEQUENCE geomID_seq;
-  SELECT setval('geomID_seq', max(geomID)) FROM features INTO geomID_max;
+  SELECT setval('geomID_seq', coalesce(max(geomID), 1)) FROM features INTO geomID_max;
 
   IF scSRID IS NOT NULL
      AND EXISTS ( SELECT 1 FROM spatial_ref_sys WHERE srid = scSRID )
@@ -85,7 +86,7 @@ BEGIN
                           || ' +y_0=' || cast(coalesce(ST_Y(center), 0) as text)
                           || ' +x_0=' || cast(coalesce(ST_X(center), 0) as text)
                           || ' +ellps=WGS84 +k=1 +units=m +no_defs')
-           FROM (SELECT st_centroid(st_union(geom)) AS center
+           FROM (SELECT ST_Centroid(ST_Union(geom)) AS center
                    FROM features
                  ) q;
   END IF;
@@ -138,3 +139,35 @@ BEGIN
           );
 END;
 $func$ LANGUAGE plpgsql;
+
+-- Helper function convert to integer or return null
+CREATE OR REPLACE FUNCTION asInteger(text) RETURNS integer AS $$
+DECLARE x integer;
+BEGIN
+    x = cast($1 as integer);
+    RETURN x;
+EXCEPTION WHEN others THEN
+    RETURN NULL;
+END;
+$$
+STRICT
+LANGUAGE plpgsql IMMUTABLE;
+
+-- Helper function convert to geometry or return null
+CREATE OR REPLACE FUNCTION fromJSONtoGeom(text) RETURNS geometry AS $$
+DECLARE x geometry;
+BEGIN
+    x = ST_MakeValid(ST_GeomFromGeoJSON($1));
+    IF ST_IsEmpty(x)
+    THEN RETURN NULL;
+    ELSE IF ST_GeometryType(x) IN ('ST_MultiPolygon', 'ST_Polygon', 'ST_LineString', 'ST_MultiLineString')
+         THEN RETURN x;
+         ELSE RETURN NULL;
+         END IF;
+    END IF;
+EXCEPTION WHEN others THEN
+    RETURN NULL;
+END;
+$$
+STRICT
+LANGUAGE plpgsql IMMUTABLE;
