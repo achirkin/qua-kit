@@ -155,7 +155,14 @@ evaluateObjects scId geomIds = do
     Just buildings -> do
       logDebugN "***Got scenario***"
       logDebugN $ Text.pack (show buildings)
-      let result = (\p -> unScalar . normL2 $ Lens.view rCenter buildings - p) . _bCenter <$> toList buildings :: [Float]
+      let pc = Lens.view rCenter buildings
+          f p = unScalar $ normL2 (pc - p)
+          parseI Nothing = 0
+          parseI (Just val) = case fromJSON val of
+              Error _ -> 0
+              Success i -> i
+          bmap = HashMap.fromList . map (\b -> ( parseI .  HashMap.lookup "geomID" . snd $ _content b , _bCenter b)) $ toList buildings
+          result = (\gId -> maybe 0 f $ HashMap.lookup gId bmap) <$> geomIds :: [Float]
       logDebugN "***Result computed:***"
       logDebugN $ Text.pack (show result)
       resultBytes <- liftIO $ serializeValules result
