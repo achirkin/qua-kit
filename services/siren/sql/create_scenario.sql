@@ -86,7 +86,7 @@ BEGIN
                           || ' +y_0=' || cast(coalesce(ST_Y(center), 0) as text)
                           || ' +x_0=' || cast(coalesce(ST_X(center), 0) as text)
                           || ' +ellps=WGS84 +k=1 +units=m +no_defs')
-           FROM (SELECT ST_Centroid(ST_Union(geom)) AS center
+           FROM (SELECT ST_Centroid(ST_Extent(geom)) AS center
                    FROM features
                  ) q;
   END IF;
@@ -157,8 +157,8 @@ LANGUAGE plpgsql IMMUTABLE;
 CREATE OR REPLACE FUNCTION fromJSONtoGeom(text) RETURNS geometry AS $$
 DECLARE x geometry;
 BEGIN
-    x = ST_MakeValid(ST_GeomFromGeoJSON($1));
-    IF ST_IsEmpty(x)
+    x = ST_GeomFromGeoJSON($1);
+    IF ST_IsEmpty(x) OR ST_NPoints(x) < 2
     THEN RETURN NULL;
     ELSE IF ST_GeometryType(x) IN ('ST_MultiPolygon', 'ST_Polygon', 'ST_LineString', 'ST_MultiLineString')
          THEN RETURN x;
