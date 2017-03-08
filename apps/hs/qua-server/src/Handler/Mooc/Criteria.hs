@@ -22,11 +22,7 @@ import Data.Text.Read (decimal)
 
 getCriteriaListR :: Handler Html
 getCriteriaListR = do
-    mtscp_id <- lookupSession "custom_exercise_id"
-    max_scp_id <- runDB lastScenarioProblemId
-    let scp_id = case decimal <$> mtscp_id of
-          Just (Right (i, _)) -> toSqlKey i
-          _ -> max_scp_id
+    scp_id <- getCurrentScenarioProblem
 
     criteria <- runDB $ currentCriteria scp_id
     oldCriteria <- runDB $ otherCriteria scp_id
@@ -83,14 +79,6 @@ getCriteriaImgR ident = do
     sendResponse (("image/png" :: ByteString), toContent $ criterionImage criterion)
 
 
-lastScenarioProblemId :: ReaderT SqlBackend Handler ScenarioProblemId
-lastScenarioProblemId = getVal <$> rawSql query []
-  where
-    getVal (Single c:_)  = c
-    getVal [] = toSqlKey 0
-    query = unlines
-          ["SELECT max(id) FROM scenario_problem;"
-          ]
 
 currentCriteria :: ScenarioProblemId -> ReaderT SqlBackend Handler [Entity Criterion]
 currentCriteria scp_id = rawSql query [toPersistValue scp_id]

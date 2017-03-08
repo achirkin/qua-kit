@@ -96,7 +96,8 @@ getCompareProposalsR :: Handler Html
 getCompareProposalsR = do
   setUltDest MoocHomeR
   userId <- requireAuthId
-  runDB (getLeastPopularCriterion userId) >>= \mcID -> case mcID of
+  scpId <- getCurrentScenarioProblem
+  runDB (getLeastPopularCriterion scpId userId) >>= \mcID -> case mcID of
      Nothing  -> notFound
      Just cid -> getCompareByCriterionR userId cid
 
@@ -106,11 +107,12 @@ getCompareByCriterionR :: UserId -> CriterionId -> Handler Html
 getCompareByCriterionR uId cId = do
   custom_exercise_count   <- fromMaybe 0 . (>>= parseInt) <$> lookupSession "custom_exercise_count"
   compare_counter   <- fromMaybe 0 . (>>= parseInt) <$> lookupSession "compare_counter"
+  scpId <- getCurrentScenarioProblem
   let showPopup = custom_exercise_count > 0 && compare_counter == 0
   when showPopup $ void getMessages
   (criterion,msubs) <- runDB $ do
       cr <- get404 cId
-      ms <- getLeastPopularSubmissions uId cId
+      ms <- getLeastPopularSubmissions scpId uId cId
       return (cr,ms)
   case msubs of
     Nothing -> do
@@ -248,8 +250,8 @@ prepareDescription sc = if n > 3
 
 
 -- | Select a criterion that was used least among others
-getLeastPopularCriterion :: UserId -> ReaderT SqlBackend Handler (Maybe CriterionId)
-getLeastPopularCriterion uId = getValue <$> rawSql query [toPersistValue uId]
+getLeastPopularCriterion :: ScenarioProblemId -> UserId -> ReaderT SqlBackend Handler (Maybe CriterionId)
+getLeastPopularCriterion scpId uId = getValue <$> rawSql query [toPersistValue scpId, toPersistValue uId]
   where
     getValue :: [(Single CriterionId)] -> Maybe CriterionId
     getValue ((Single n):_) = Just n
@@ -257,8 +259,10 @@ getLeastPopularCriterion uId = getValue <$> rawSql query [toPersistValue uId]
     query = Text.unlines
           ["SELECT criterion.id as id"
           ,"FROM criterion"
+          ,"INNER JOIN problem_criterion ON criterion.id = problem_criterion.criterion_id AND problem_criterion.problem_id = ?"
           ,"LEFT OUTER JOIN"
-          ,"    (SELECT  vote.criterion_id as cid,COALESCE(sum(CASE WHEN vote.voter_id = ? THEN 1 ELSE 0 END),0) as m, COALESCE(count(*),0) as n FROM vote GROUP BY  vote.criterion_id"
+          ,"    (SELECT vote.criterion_id as cid,COALESCE(sum(CASE WHEN vote.voter_id = ? THEN 1 ELSE 0 END),0) as m, COALESCE(count(*),0) as n"
+          ,"       FROM vote GROUP BY vote.criterion_id"
           ,"     UNION ALL"
           ,"     SELECT  review.criterion_id as cid,0 as m, COALESCE(count(*),0) as n FROM review GROUP BY  review.criterion_id) r"
           ,"    ON criterion.id = r.cid"
@@ -267,9 +271,9 @@ getLeastPopularCriterion uId = getValue <$> rawSql query [toPersistValue uId]
           ,"LIMIT 1;"
           ]
 
-getLeastPopularSubmissions :: UserId -> CriterionId -> ReaderT SqlBackend Handler (Maybe (Entity Scenario, Entity Scenario))
-getLeastPopularSubmissions uId cId = do
-    r <- rawSql query ( [uid, uid, uid, uid, cid])
+getLeastPopularSubmissions :: ScenarioProblemId -> UserId -> CriterionId -> ReaderT SqlBackend Handler (Maybe (Entity Scenario, Entity Scenario))
+getLeastPopularSubmissions scpId uId cId = do
+    r <- rawSql query ( [uid, uid, uid, toPersistValue scpId, uid, cid])
     case r of
       ((Single i1,Single i2):_) -> do
         ms1 <- get i1
@@ -292,7 +296,7 @@ getLeastPopularSubmissions uId cId = do
           ,"                   SELECT  vote.worse_id as sid, COALESCE(sum(CASE WHEN vote.voter_id = ? THEN 1 ELSE 0 END),0)  as m, count(*) as n FROM vote GROUP BY  vote.worse_id"
           ,"                 ) v"
           ,"                          ON scenario.id = v.sid"
-          ,"             WHERE scenario.author_id != ?"
+          ,"             WHERE scenario.author_id != ? AND scenario.task_id = ?"
           ,"             GROUP BY scenario.author_id, scenario.task_id"
           ,"             ORDER BY mm ASC, nn ASC"
           ,"           ) t"
@@ -327,13 +331,3 @@ getLastExercise uId = getVal <$> rawSql query [toPersistValue uId]
           ,"ORDER BY timestamp DESC"
           ,"LIMIT 1;"
           ]
-
-
-
-
-
-
-
-
-
-

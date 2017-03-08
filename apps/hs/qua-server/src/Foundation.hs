@@ -5,7 +5,7 @@ import Control.Concurrent.STM.TChan
 import qualified Data.Text as Text
 import Yesod.Auth.LdapNative
 import Import.NoFoundation
-import Database.Persist.Sql (ConnectionPool, runSqlPool)
+import Database.Persist.Sql (ConnectionPool, runSqlPool, toSqlKey, Single (..), rawSql)
 import Text.Hamlet          (hamletFile)
 import Text.Jasmine         (minifym)
 --import Yesod.Auth.OpenId    (authOpenId, IdentifierType (Claimed))
@@ -16,7 +16,6 @@ import qualified Yesod.Core.Unsafe as Unsafe
 --import qualified Data.CaseInsensitive as CI
 --import qualified Data.Text.Encoding as TE
 
-import Database.Persist.Sql (toSqlKey)
 import Data.Text.Read (decimal)
 import System.Directory (createDirectoryIfMissing)
 
@@ -82,7 +81,7 @@ instance Yesod App where
     defaultLayout widget = do
 --        master <- getYesod
         mmsg <- getMessage
-        muser <- (fmap entityVal) <$> maybeAuth
+        muser <- fmap entityVal <$> maybeAuth
         siteMenu <- pageBody <$> widgetToPageContent $(widgetFile "site-menu")
 
         -- We break up the default layout into two components:
@@ -149,7 +148,7 @@ instance Yesod App where
 fullLayout :: Maybe Markup -> Text -> Widget -> Handler Html
 fullLayout mmsgIcon defaultMsg widget = do
     mmsg <- getMessage
-    muser <- (fmap entityVal) <$> maybeAuth
+    muser <- fmap entityVal <$> maybeAuth
     siteMenu <- pageBody <$> widgetToPageContent $(widgetFile "site-menu")
     pc <- widgetToPageContent widget
     withUrlRenderer $(hamletFile "templates/site-layout-full.hamlet")
@@ -158,7 +157,7 @@ fullLayout mmsgIcon defaultMsg widget = do
 
 minimalLayout :: Widget -> Handler Html
 minimalLayout widget = do
-    muser <- (fmap entityVal) <$> maybeAuth
+    muser <- fmap entityVal <$> maybeAuth
     siteMenu <- pageBody <$> widgetToPageContent $(widgetFile "site-menu")
     pc <- widgetToPageContent widget
     withUrlRenderer $(hamletFile "templates/site-layout-minimal.hamlet")
@@ -308,12 +307,10 @@ setupEdxParams params = do
     exercise_type = Map.lookup "custom_exercise_type" pm
     mresource_link_id = Map.lookup "resource_link_id" pm
     mcontext_id       = Map.lookup "context_id" pm
-    lookupAndSave t = case Map.lookup t pm of
-        Nothing -> return ()
-        Just v  -> setSession t v
+    lookupAndSave t = forM_ (Map.lookup t pm) (setSession t)
     pm = Map.fromList params
-    saveCustomParams ek = mapM_ (\(k,v) -> void $ upsert (EdxResourceParam ek k v) []) $
-                           map (first (drop 7)) $ filter (isPrefixOf "custom_". fst ) params
+    saveCustomParams ek = mapM_ ((\(k,v) -> void $ upsert (EdxResourceParam ek k v) []) . first (drop 7))
+                                $ filter (isPrefixOf "custom_". fst ) params
 
 
 
@@ -336,3 +333,20 @@ parseSqlKey t = case decimal t of
 
 
 
+getCurrentScenarioProblem :: Handler ScenarioProblemId
+getCurrentScenarioProblem = do
+    mtscp_id <- lookupSession "custom_exercise_id"
+    max_scp_id <- runDB lastScenarioProblemId
+    return $ case decimal <$> mtscp_id of
+          Just (Right (i, _)) -> toSqlKey i
+          _ -> max_scp_id
+
+
+lastScenarioProblemId :: ReaderT SqlBackend Handler ScenarioProblemId
+lastScenarioProblemId = getVal <$> rawSql query []
+  where
+    getVal (Single c:_)  = c
+    getVal [] = toSqlKey 0
+    query = unlines
+          ["SELECT max(id) FROM scenario_problem;"
+          ]
