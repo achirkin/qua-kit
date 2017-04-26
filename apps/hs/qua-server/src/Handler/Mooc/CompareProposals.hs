@@ -31,12 +31,15 @@ postVoteForProposalR :: CriterionId -> ScenarioId -> ScenarioId -> Handler Html
 postVoteForProposalR cId better worse = do
   userId <- requireAuthId
   useSVars <- (\mt -> if mt == Just "compare" then id else const Nothing) <$> lookupSession "custom_exercise_type"
+  mcontext_id             <- useSVars <$> lookupSession "context_id"
   resource_link_id        <- useSVars <$> lookupSession "resource_link_id"
   lis_outcome_service_url' <- useSVars <$> lookupSession "lis_outcome_service_url"
   lis_result_sourcedid'    <- useSVars <$> lookupSession "lis_result_sourcedid"
-  mresId' <- case resource_link_id of
+  mresId' <- case (,) <$> resource_link_id <*> mcontext_id of
        Nothing -> return Nothing
-       Just rlid -> runDB $ fmap entityKey <$> getBy (EdxResLinkId rlid)
+       Just (rlid, cid) -> runDB $ do
+          Entity edxCourseId _ <- upsert (EdxCourse cid Nothing) []
+          fmap entityKey <$> getBy (EdxResLinkId rlid edxCourseId)
   (mresId, lis_outcome_service_url, lis_result_sourcedid) <- case (,,) <$> mresId' <*> lis_outcome_service_url' <*> lis_result_sourcedid' of
       Just _  -> return (mresId', lis_outcome_service_url', lis_result_sourcedid')
       Nothing -> runDB (getLastExercise userId) >>= \mr -> case mr of

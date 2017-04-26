@@ -5,5 +5,5 @@ module Model
   , module Model.CustomTypes
   ) where
 
-import Model.Generated
-import Model.CustomTypes
+import           Model.CustomTypes
+import           Model.Generated

@@ -21,7 +21,7 @@ EdxResource
     linkId       Text
     courseId     EdxCourseId
     friendlyName Text Maybe
-    EdxResLinkId linkId
+    EdxResLinkId linkId courseId
     deriving Show
 
 -- | custom parameters set for an exercise

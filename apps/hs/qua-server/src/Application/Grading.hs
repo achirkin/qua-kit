@@ -142,6 +142,7 @@ allRatingGrades = fmap getVal <$> rawSql query []
         ,"              ON scenario.task_id = rating.problem_id AND scenario.author_id = rating.author_id"
         ,"      WHERE scenario.edx_outcome_url IS NOT NULL"
         ,"      AND scenario.edx_result_id IS NOT NULL"
+        ,"      AND scenario.task_id = 1" -- TODO: make a proper logic to update ongoing grades only.
         ,"      GROUP BY rating.problem_id"
         ,"             , rating.author_id"
         ,"             , scenario.edx_outcome_url"

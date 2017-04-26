@@ -296,11 +296,11 @@ setupEdxParams params = do
     case (,) <$> mresource_link_id <*> mcontext_id of
       Nothing  -> return ()
       Just (resource_link_id, context_id) -> do
-        mEdxRes <- getBy (EdxResLinkId resource_link_id)
+        Entity edxCourseId _ <- upsert (EdxCourse context_id Nothing) []
+        mEdxRes <- getBy (EdxResLinkId resource_link_id edxCourseId)
         case mEdxRes of
           Just (Entity ek _) -> saveCustomParams ek
           Nothing -> do
-            Entity edxCourseId _ <- upsert (EdxCourse context_id Nothing) []
             ek <- insert $ EdxResource resource_link_id edxCourseId (Map.lookup "custom_component_display_name" pm)
             saveCustomParams ek
   where

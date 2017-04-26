@@ -14,15 +14,15 @@ module Handler.Mooc.SubmitProposal
   ( postSubmitProposalR
   ) where
 
-import Import
-import Database.Persist.Sql (toSqlKey)
-import Data.Text.Read (decimal)
-import Control.Monad.Trans.Maybe
-import qualified Data.Text as Text (unpack)
+import           Control.Monad.Trans.Maybe
+import qualified Data.Text                 as Text (unpack)
+import           Data.Text.Read            (decimal)
+import           Database.Persist.Sql      (toSqlKey)
+import           Import
 --import Text.Blaze
-import Web.LTI
+import           Web.LTI
 
-import qualified Data.ByteString.Base64 as BSB (decodeLenient)
+import qualified Data.ByteString.Base64    as BSB (decodeLenient)
 
 
 -- | Submit a design proposal
@@ -84,7 +84,7 @@ postSubmitProposalR = do
   where
     tryMaybies m1 m2 = m1 >>= \mv1 -> case mv1 of
                           Nothing -> m2
-                          Just _ -> return mv1
+                          Just _  -> return mv1
 
 
 resolveBySesScenarioId :: Handler (Maybe Scenario)
@@ -93,7 +93,7 @@ resolveBySesScenarioId = runMaybeT $ do
   deleteSession "scenario_id"
   case mescenario_id of
     Right (i,_) -> MaybeT . runDB . get $ toSqlKey i
-    _ -> MaybeT $ return Nothing
+    _           -> MaybeT $ return Nothing
 
 resolveBySesExerciseId :: Handler (Maybe Scenario)
 resolveBySesExerciseId = runMaybeT $ do
@@ -115,14 +115,16 @@ completelyNewOne img geometry desc = runMaybeT $ do
   scp_id            <- MaybeT $ lookupSession "custom_exercise_id"
   scpId <- case decimal scp_id of
             Right (i,_) -> return $ toSqlKey i
-            _ -> MaybeT $ return Nothing
+            _           -> MaybeT $ return Nothing
   resource_link_id  <- MaybeT $ lookupSession "resource_link_id"
   lis_outcome_service_url <- lift $ lookupSession "lis_outcome_service_url"
   lis_result_sourcedid    <- lift $ lookupSession "lis_result_sourcedid"
+  context_id    <- MaybeT $ lookupSession "context_id"
   MaybeT . runDB . runMaybeT $ do
+    Entity edxCourseId _ <- MaybeT $ getBy (EdxContextId context_id)
     (scproblem, edxres) <- MaybeT $ (\mx my -> (,) <$> mx <*> my)
                                  <$> get scpId
-                                 <*> getBy (EdxResLinkId resource_link_id)
+                                 <*> getBy (EdxResLinkId resource_link_id edxCourseId)
     t <- liftIO getCurrentTime
     lift . insert $ Scenario userId scpId
                      img
@@ -133,4 +135,3 @@ completelyNewOne img geometry desc = runMaybeT $ do
                      lis_outcome_service_url
                      lis_result_sourcedid
                      t
-
