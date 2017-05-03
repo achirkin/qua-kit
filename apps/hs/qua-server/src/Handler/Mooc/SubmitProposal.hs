@@ -15,7 +15,7 @@ module Handler.Mooc.SubmitProposal
   ) where
 
 import           Control.Monad.Trans.Maybe
-import qualified Data.Text                 as Text (unpack)
+import qualified Data.Text                 as Text (unpack, pack)
 import           Data.Text.Read            (decimal)
 import           Database.Persist.Sql      (toSqlKey)
 import           Import
@@ -80,7 +80,11 @@ postSubmitProposalR = do
               _ <- httpNoBody req
               return ()
           redirectUltDest MoocHomeR
-        Nothing -> invalidArgsI ["Some error occurred. Consult the developer team." :: Text]
+        Nothing -> do
+          ses <- getSession
+          $(logError) $ "A student failed to submit a proposal. Here is their session: "
+                     <> Text.pack (show ses)
+          invalidArgsI ["Some error occurred. Consult the developer team." :: Text]
   where
     tryMaybies m1 m2 = m1 >>= \mv1 -> case mv1 of
                           Nothing -> m2

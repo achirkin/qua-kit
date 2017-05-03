@@ -287,6 +287,7 @@ setupEdxParams params = do
   lookupAndSave "lis_outcome_service_url"
   lookupAndSave "lis_result_sourcedid"
   lookupAndSave "resource_link_id"
+  lookupAndSave "context_id"
   case exercise_type of
     Just "design" -> setUltDest EditProposalR
     Just "compare" -> setUltDest CompareProposalsR
