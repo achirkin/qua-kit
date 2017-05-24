@@ -1,4 +1,12 @@
 ## qua-kit
+
+## Let's continue coding qua-kit after ZuriHac 2017!
+
+We are looking for someone to work with us on this project.
+See [ETH page for more information](https://apply.refline.ch/845721/5333/pub/1/index.html).
+
+The position is in Zurich, intended for couple months of full time work.
+
 # Quick Urban Analysis Kit
 =================================================
 
