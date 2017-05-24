@@ -8,7 +8,7 @@ See [ETH page for more information](https://apply.refline.ch/845721/5333/pub/1/i
 The position is in Zurich, intended for couple months of full time work.
 
 # Quick Urban Analysis Kit
-=================================================
+
 
 Qua-Kit is a client-server system that aims at assisting urban designers in their design process.
 Try it on our web server at [qua-kit.ethz.ch](http://qua-kit.ethz.ch).
