@@ -1,4 +1,11 @@
-## qua-kit
+## Attention ZuriHac 2017 haskellers!
+
+I have prepared a set of [things](https://github.com/achirkin/qua-kit/issues) I want to do for the project. You are welcome to:
+ * choose any issue you like
+ * discuss with me its implementation
+ * solve it during the event
+ * ask any questions
+ * propose new tasks
 
 ## Let's continue coding qua-kit after ZuriHac 2017!
 
