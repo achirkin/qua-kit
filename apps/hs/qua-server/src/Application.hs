@@ -110,8 +110,8 @@ makeFoundation appSettings = do
     -- Fill database with some problem-specific important data.
     importProblemData pool
     -- | Update ratings once in an hour
-    flip runSqlPool pool $ scheduleUpdateRatings 3600 reviewRating compareRating combR
-    flip runSqlPool pool $ scheduleGradeVotes 3600
+    -- flip runSqlPool pool $ scheduleUpdateRatings 3600 reviewRating compareRating combR
+    -- flip runSqlPool pool $ scheduleGradeVotes 3600
 
 
     let app = mkFoundation pool
@@ -119,7 +119,7 @@ makeFoundation appSettings = do
     -- send grades once every day
 #if DEVELOPMENT
 #else
-    scheduleUpdateGrades (3600*24) app pool
+    -- scheduleUpdateGrades (3600*24) app pool
 #endif
 
     -- Return the foundation
