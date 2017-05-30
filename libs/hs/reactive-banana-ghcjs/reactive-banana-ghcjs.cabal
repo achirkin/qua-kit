@@ -35,7 +35,7 @@ library
     hs-source-dirs: src
     other-modules:
         Reactive.Banana.JsHs.PointerKeeper
-    ghc-options: -Wall -ferror-spans -cpp  -pgmPcpphs  -optP--cpp
+    ghc-options: -Wall -ferror-spans
 
 executable test
     main-is: test.hs
@@ -55,5 +55,5 @@ executable test
         Reactive.Banana.JsHs.Types
         Reactive.Banana.JsHs.PointerKeeper
     build-depends:
-    ghc-options: -Wall -ferror-spans -cpp  -pgmPcpphs  -optP--cpp
+    ghc-options: -Wall -ferror-spans
 

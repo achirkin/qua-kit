@@ -1,6 +1,7 @@
 {-# LANGUAGE CPP, TypeSynonymInstances #-}
 {-# LANGUAGE DataKinds, PolyKinds #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# OPTIONS_GHC -pgmP cpphs -optP-traditional -optP--cpp #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 {-# LANGUAGE MagicHash, UnboxedTuples, FlexibleInstances #-}
 -----------------------------------------------------------------------------

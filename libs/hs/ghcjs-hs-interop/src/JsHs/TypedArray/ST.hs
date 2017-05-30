@@ -1,5 +1,6 @@
 {-# LANGUAGE FlexibleContexts, FlexibleInstances, FunctionalDependencies  #-}
 {-# LANGUAGE CPP #-}
+{-# OPTIONS_GHC -pgmP cpphs -optP-traditional -optP--cpp #-}
 {-# LANGUAGE DataKinds, PolyKinds #-}
 {-# LANGUAGE MagicHash, UnboxedTuples #-}
 -----------------------------------------------------------------------------

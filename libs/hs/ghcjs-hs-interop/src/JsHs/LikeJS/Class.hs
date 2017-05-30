@@ -1,5 +1,6 @@
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE CPP #-}
+{-# OPTIONS_GHC -pgmP cpphs -optP-traditional -optP--cpp #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE KindSignatures, DataKinds #-}
 {-# LANGUAGE MultiParamTypeClasses #-}

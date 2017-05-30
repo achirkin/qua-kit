@@ -1,4 +1,5 @@
 {-# LANGUAGE DeriveDataTypeable,GeneralizedNewtypeDeriving, CPP #-}
+{-# OPTIONS_GHC -pgmP cpphs -optP-traditional -optP--cpp #-}
 {-# LANGUAGE DataKinds, PolyKinds #-}
 {-# LANGUAGE FlexibleInstances, MultiParamTypeClasses #-}
 -----------------------------------------------------------------------------

@@ -39,6 +39,7 @@ library
         JsHs.TypedArray
         JsHs.TypedArray.IO
         JsHs.TypedArray.ST
+    build-tools: cpphs
     build-depends:
         base -any,
         ghc-prim -any,
@@ -56,7 +57,7 @@ library
         JsHs.Internal.Types
         JsHs.TypedArray.Types
         JsHs.TypedArray.Internal
-    ghc-options: -Wall -ferror-spans -O2 -cpp  -pgmPcpphs  -optP--cpp
+    ghc-options: -Wall -ferror-spans -O2
 
 test-suite AllTests
     type: exitcode-stdio-1.0
@@ -82,4 +83,4 @@ test-suite AllTests
         JsHs.LikeJS.Test.TestTypedArrays
         JsHs.LikeJS.Test.TH
         JsHs.Nullable
-    ghc-options: -Wall -ferror-spans -O2 -cpp  -pgmPcpphs  -optP--cpp
+    ghc-options: -Wall -ferror-spans -O2
