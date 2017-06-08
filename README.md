@@ -7,12 +7,25 @@ I have prepared a set of [things](https://github.com/achirkin/qua-kit/issues) I 
  * ask any questions
  * propose new tasks
 
-## Let's continue coding qua-kit after ZuriHac 2017!
+### "I want to code, not to spend too much time trying to undestand qua-kit internals!"
 
-We are looking for someone to work with us on this project.
-See [ETH page for more information](https://apply.refline.ch/845721/5333/pub/1/index.html).
+Ok! I have a nice option to write standalone programs that can be easily integrated into qua-kit. I call them "computational services". Computational service is a small console program that consumes urban geometry and produces some analysis results.
+We support the following execution modes:
+ * `points`: Take a grid of points and a geometry, return grid of results (qua-kit visualizes it using heatmap).
+ * `object`: Compute a single value for each geometry object (floating-point value is added into object properties).
+ * `scenario`: Do whatever you want with geometry and return a single line of text or an image (e.g. some plot).
+ * `new`: Create new geometry (or modify existing).
 
-The position is in Zurich, intended for couple months of full time work.
+Example of such a service is available in `services/examples-hs/` - it computes distance to a closest object for each point on a grid. You can see how it works on our live page:
+ 1. Go to https://qua-kit.ethz.ch/viewer
+ 2. Open control panel (Red "Tools" button -> gear button)
+ 3. Press button "CONNECT" (connect to luci)
+ 4. Press "SCENARIOS" and select "Empower Shack" on the bottom of the list
+ 5. Go to "SERVICES" tab
+ 6. There will be one service available "hs-example-service". Make sure "points" mode is selected.
+ 7. Press green button "Play" to run service
+ 8. You will see heatmap-like visualization for mode "points"
+
 
 # Quick Urban Analysis Kit
 
