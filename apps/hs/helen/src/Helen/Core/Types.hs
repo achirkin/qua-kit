@@ -1,14 +1,15 @@
 -----------------------------------------------------------------------------
---
+-- |
 -- Module      :  Helen.Core.Types
 -- Copyright   :  (c) Artem Chirkin
 -- License     :  MIT
 --
 -- Maintainer  :  Artem Chirkin <chirkin@arch.ethz.ch>
 -- Stability   :  experimental
--- Portability :
 --
--- |
+-- Core `helen` types:
+--     messages, clients, services, service pools,
+--     and monads to make it all run.
 --
 -----------------------------------------------------------------------------
 {-# LANGUAGE FlexibleContexts           #-}
@@ -97,14 +98,15 @@ data Helen = Helen
     --   Returns own cliendId and an unregister callback
   , subscribeUnregister :: !(ClientId -> (ClientId -> HelenWorld ()) -> HelenWorld ())
     -- ^ Anyone can subscribe for event "client unregistered".
-    -- This will be called when a client with a given id cannot receive message anymore
+    --   This is called when a client with a given id cannot receive messages anymore.
+    --   The second argument is an arbitrary action to do given an unregistered `ClientId`.
   , _serviceManager      :: !ServiceManager
     -- ^ Keeps track of all services
   }
 
 -- | Put a message into Helen processing channel.
 --   Use this function when implementing embedded services:
---   the messages will appear in a normal pipeplan for processing.
+--   the messages appear in the common queue (channel) for processing.
 sendMessage :: Helen -> SourcedMessage -> HelenWorld ()
 sendMessage h = liftIO . STM.atomically . STM.writeTChan (_msgChannel h)
 
@@ -138,7 +140,8 @@ data ServicePool = ServicePool
   }
 
 -- | Can this service handle multiple run requests concurrently?
---   If so then helen will never remove it from idle instances pool.
+--   If yes then helen never removes it from the idle instances pool.
+--   When the the service invoked, Helen puts the service into the end of the pool instead.
 isNonBlocking :: ServicePool -> Bool
 isNonBlocking = nonBlocking . _serviceInfo
 
@@ -244,6 +247,10 @@ runHelenProgram s ll (HelenWorld p) = do
     h <- STM.atomically $ STM.readTVar hvar
     return (r,h)
 
+-- | Fork an execution into a new thread
+forkHelen :: HelenWorld () -> HelenWorld ()
+forkHelen x = liftBaseWith $ \run -> void . forkIO . void $ run x
+
 -- | Run pure evaluation in HelenRoom
 runHelenRoom :: Helen -> LogLevel -> HelenRoom r -> (r, Helen, Seq.Seq Text)
 runHelenRoom oldHelen loglvl hr = (r, newHelen, logs')
@@ -251,13 +258,6 @@ runHelenRoom oldHelen loglvl hr = (r, newHelen, logs')
      (r, newHelen, logs) = runIdentity $ RWS.runRWST (unRoom hr) () oldHelen
      logs' = toText <$> Seq.filter (\(_,_,l,_) -> l >= loglvl) logs
      toText (a,b,c,d) = Text.decodeUtf8 . FastLogger.fromLogStr $ defaultLogStr a b c d
-
-
-
--- | Fork an execution into a new thread
-forkHelen :: HelenWorld () -> HelenWorld ()
-forkHelen x = liftBaseWith $ \run -> void . forkIO . void $ run x
-
 
 ----------------------------------------------------------------------------------------------------
 -- * Lenses
