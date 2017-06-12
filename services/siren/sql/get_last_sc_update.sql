@@ -50,6 +50,10 @@ BEGIN
     ( 'format'       , 'GeoJSON'
     , 'name'         , (SELECT name FROM scenario WHERE id = ScID)
     , 'ScID'         , ScID
+    , 'srid'         , (SELECT srid FROM scenario WHERE id = ScID)
+    , 'lon'          , (SELECT lon  FROM scenario WHERE id = ScID)
+    , 'lat'          , (SELECT lat  FROM scenario WHERE id = ScID)
+    , 'alt'          , (SELECT alt  FROM scenario WHERE id = ScID)
     , 'geometry'     , features
     , 'properties'   , ( SELECT jsonb_object_agg(ph.name, ph.value)
                            FROM scenario_prop_history ph
