@@ -29,7 +29,7 @@ module Helen.Core.Types
   , BelongsToSession (..)
     -- * Monad support
   , HelenWorld, HelenRoom, HelenMonad (..)
-  , runHelenProgram, forkHelen
+  , runHelenProgram, forkHelen, runHelenRoom
     -- * Lenses
   , msgChannel, serviceManager
   , incomingMsgs, idleInstances, busyInstances
@@ -45,20 +45,24 @@ import           Control.Concurrent           (forkIO)
 import qualified Control.Concurrent.STM.TChan as STM
 import qualified Control.Concurrent.STM.TVar  as STM
 import           Control.Lens
+import           Control.Monad                (void)
+import           Control.Monad.IO.Class       (MonadIO (..))
 import           Control.Monad.Base           (MonadBase)
 import           Control.Monad.Logger
-import           Control.Monad.State.Lazy
+import           Control.Monad.RWS.Lazy       (MonadState(..), RWST(..))
+import qualified Control.Monad.RWS.Lazy       as RWS
 import qualified Control.Monad.STM            as STM
--- import           Control.Monad.Trans.Class
+import           Control.Monad.Trans.Class    (lift)
 import           Control.Monad.Trans.Control
 import           Control.Monad.Trans.Reader
--- import qualified Control.Monad.Trans.State
 import           Crypto.Random                (MonadRandom (..))
 import qualified Data.Aeson                   as JSON
 import           Data.ByteString              (ByteString)
 import qualified Data.HashMap.Strict          as HashMap
 import qualified Data.Sequence                as Seq
--- import           Luci.Connect
+import           Data.Text                    (Text)
+import qualified Data.Text.Encoding           as Text
+import qualified System.Log.FastLogger        as FastLogger
 import           Luci.Messages
 
 -- | Represent a connected client
@@ -184,8 +188,12 @@ class MonadState Helen m => HelenMonad m where
   liftHelen :: HelenRoom a -> m a
 
 -- | Variant of Helen state monad without `IO` to do pure evaluation.
-newtype HelenRoom t = HelenRoom { unRoom :: StateT Helen Identity t }
+newtype HelenRoom t = HelenRoom { unRoom :: RWST () (Seq.Seq (Loc,LogSource,LogLevel,LogStr)) Helen Identity t }
   deriving (Functor, Applicative, Monad, MonadBase Identity)
+
+
+instance MonadLogger HelenRoom where
+  monadLoggerLog a b c d = HelenRoom . RWS.tell $ Seq.singleton (a,b,c,toLogStr d)
 
 instance MonadState Helen HelenRoom where
   get = HelenRoom get
@@ -195,7 +203,7 @@ instance MonadState Helen HelenRoom where
 instance HelenMonad HelenRoom where
   liftHelen = id
 
--- | IO-full variant of Helen state with multithread-preserved state and logging.
+-- | IO-full variant of Helen state with multithread-preserved state.
 newtype HelenWorld t = HelenWorld { unWorld :: ReaderT (STM.TVar Helen) (LoggingT IO) t}
   deriving (Functor, Applicative, Monad, MonadIO, MonadBase IO)
 
@@ -219,7 +227,13 @@ instance MonadState Helen HelenWorld where
       return r
 
 instance HelenMonad HelenWorld where
-  liftHelen hr = state (runIdentity . runStateT (unRoom hr))
+  liftHelen hr = do
+      (r, logs) <- state (f . runIdentity . RWS.runRWST (unRoom hr) ())
+      mapM_ putLog logs
+      return r
+    where
+      f (r, h, logs) = ((r,logs), h)
+      putLog (a,b,c,d) = monadLoggerLog a b c d
 
 
 -- | Run a program in IO monad.
@@ -229,6 +243,16 @@ runHelenProgram s ll (HelenWorld p) = do
     r <- runStdoutLoggingT . filterLogger (\_ l -> l >= ll) $ runReaderT p hvar
     h <- STM.atomically $ STM.readTVar hvar
     return (r,h)
+
+-- | Run pure evaluation in HelenRoom
+runHelenRoom :: Helen -> LogLevel -> HelenRoom r -> (r, Helen, Seq.Seq Text)
+runHelenRoom oldHelen loglvl hr = (r, newHelen, logs')
+  where
+     (r, newHelen, logs) = runIdentity $ RWS.runRWST (unRoom hr) () oldHelen
+     logs' = toText <$> Seq.filter (\(_,_,l,_) -> l >= loglvl) logs
+     toText (a,b,c,d) = Text.decodeUtf8 . FastLogger.fromLogStr $ defaultLogStr a b c d
+
+
 
 -- | Fork an execution into a new thread
 forkHelen :: HelenWorld () -> HelenWorld ()
