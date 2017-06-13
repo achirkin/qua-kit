@@ -86,7 +86,7 @@ program port = do
   -- register pre-defined services
   registrationService
   infoService
-  -- Run all connections in a separate thread. Warning! Helen state is not shared!
+  -- Run all TCP server in a separate thread
   forkHelen $ helenChannels port
   -- Now process message queue
   ch <- _msgChannel <$> get
@@ -105,7 +105,16 @@ helenChannels port = Network.runGeneralTCPServer connSettings helenChannels'
     connSettings = Network.serverSettings port "*4"
 
 
--- | Use existing connection to run a message-processing conduit
+-- | Use existing connection to run a message-processing conduit.
+--   This function is executed in a separate thread spawned by `Data.Conduit.Network`
+--   for each new client connection.
+--   Additionally, another thread is spawned to send messages independently from receiving.
+--   This gives two threads per connection in total.
+--
+--   I create an STM channel with outbound messages for each client (`sendQueue`)
+--    and a weak pointer with "send message" callback, so that it is alive
+--    as long as the channel alive only.
+--   `sendQueue` is alive as long as TCP connection with the client is alive.
 helenChannels' :: Network.AppData
                -> HelenWorld ()
 helenChannels' appData = do
@@ -136,9 +145,9 @@ helenChannels' appData = do
         sink = do
           rawproc <- await
           case rawproc of
-            -- do some finalization actions, e.g. notify Helen that client is disconnected
-            Nothing ->
-              liftIO . STM.atomically $ STM.unGetTChan sendQueue Nothing
+            -- Do some finalization actions, e.g. notify Helen that client is disconnected.
+            -- Message `Nothing` in sendQueue terminates `source` conduit.
+            Nothing -> liftIO . STM.atomically $ STM.unGetTChan sendQueue Nothing
             -- do actual message processing
             Just (Processing m@(h,_)) -> do
               case parseMessage m of

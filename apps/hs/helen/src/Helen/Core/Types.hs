@@ -94,8 +94,9 @@ data Helen = Helen
   , sendDirectMessage   :: !(TargetedMessage -> HelenWorld ())
     -- ^ Send a message to a given client (by client id)
   , registerClient      :: !(Client -> HelenWorld (ClientId, HelenWorld ()))
-    -- ^ Register a send-message callback;
-    --   Returns own cliendId and an unregister callback
+    -- ^ Register a send-message callback.
+    --   Returns own cliendId and an unregister callback.
+    --   This is used only in Core module (`helenChannels'`).
   , subscribeUnregister :: !(ClientId -> (ClientId -> HelenWorld ()) -> HelenWorld ())
     -- ^ Anyone can subscribe for event "client unregistered".
     --   This is called when a client with a given id cannot receive messages anymore.
@@ -230,6 +231,12 @@ instance MonadState Helen HelenWorld where
       return r
 
 instance HelenMonad HelenWorld where
+  -- | Lift HelenMonad computation into the real world.
+  -- Note, when lifting a pure computation into HelenWorld monad,
+  -- helen state is locked in STM monad.
+  -- Hence, all other threads are blocked if they try to access the state
+  --  at the same time.
+  -- Therefore, running long-running computations in HelenRoom is highly troublesome!
   liftHelen hr = do
       (r, logs) <- state (f . runIdentity . RWS.runRWST (unRoom hr) ())
       mapM_ putLog logs
@@ -251,7 +258,7 @@ runHelenProgram s ll (HelenWorld p) = do
 forkHelen :: HelenWorld () -> HelenWorld ()
 forkHelen x = liftBaseWith $ \run -> void . forkIO . void $ run x
 
--- | Run pure evaluation in HelenRoom
+-- | Run pure evaluation in HelenRoom.
 runHelenRoom :: Helen -> LogLevel -> HelenRoom r -> (r, Helen, Seq.Seq Text)
 runHelenRoom oldHelen loglvl hr = (r, newHelen, logs')
   where
