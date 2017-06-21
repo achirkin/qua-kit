@@ -6,9 +6,12 @@ import qualified Data.Text as Text
 import Yesod.Auth.LdapNative
 import Import.NoFoundation
 import Database.Persist.Sql (ConnectionPool, runSqlPool, toSqlKey, Single (..), rawSql)
+import qualified Network.Mail.Mime as Mail
 import Text.Hamlet          (hamletFile)
 import Text.Jasmine         (minifym)
+import Text.Shakespeare.Text (stext)
 --import Yesod.Auth.OpenId    (authOpenId, IdentifierType (Claimed))
+import Yesod.Auth.Email
 import Yesod.Auth.Message   (AuthMessage (..))
 import Yesod.Default.Util   (addStaticContentExternal)
 import Yesod.Core.Types     (Logger)
@@ -193,6 +196,9 @@ instance YesodAuth App where
                 , userRole = UR_LOCAL
                 , userEthUserName = Just $ credsIdent creds
                 , userEdxUserId = Nothing
+                , userEmail = Nothing
+                , userPassword = Nothing
+                , userVerified = True
                 }
     authenticate creds@Creds{credsPlugin = "lti"} = do
       setupEdxParams (credsExtra creds)
@@ -205,38 +211,26 @@ instance YesodAuth App where
               , userRole = UR_STUDENT
               , userEthUserName = Nothing
               , userEdxUserId = Just $ credsIdent creds
+              , userEmail = Nothing
+              , userPassword = Nothing
+              , userVerified = True
               }
-    authenticate _ = return $ UserError AuthError
+    authenticate creds
+      | "email" `isPrefixOf` credsPlugin creds = runDB $ do
+          x <- getBy . UserEmailId . Just $ credsIdent creds
+          return $ case x of
+            Just (Entity uid _) -> Authenticated uid
+            Nothing             -> UserError AuthError
+
+    authenticate _ = do
+      return $ UserError AuthError
 
     -- You can add other plugins like Google Email, email or OAuth here
-    authPlugins ye = [ authLdapWithForm ldapConf $ \loginR -> $(widgetFile "login-ethz")
+    authPlugins ye = [ authLdapWithForm ldapConf $ \ldapLoginR -> $(widgetFile "login-ethz")
                      , authLtiPlugin (appLTICredentials $ appSettings ye)
-                     , AuthPlugin "local" localDispatch $ \tp -> let loginR = tp (PluginR "local" ["login"]) in $(widgetFile "login-local")]
+                     , authEmail]
 
     authHttpManager = getHttpManager
-
-localDispatch :: Text -> [Text] -> HandlerT Auth Handler TypedContent
-localDispatch "POST" ["login"] = do
-    tp <- getRouteToParent
-    let goBack = lift $ redirect $ tp LoginR
-    (username, password) <- lift $ runInputPost $ (,)
-      <$> ireq textField "username"
-      <*> ireq textField "password"
-    lift . runDB $ do
-      muid <- fmap (userPropUserId . entityVal) . headMay <$> selectList [UserPropKey ==. "username", UserPropValue ==. username] []
-      case muid of
-        Nothing -> setMessage "Sign in failure: incorrect username or password." >> goBack
-        Just uid -> do
-          mp <- fmap (fmap (userPropValue . entityVal)) . getBy $ UserProperty uid "password"
-          if mp /= Just password
-          then setMessage "Sign in failure: incorrect username or password." >> goBack
-          else do
-           user <- get uid
-           case (user >>= userEdxUserId, user >>= userEthUserName) of
-             (_, Just ethn) -> lift . setCredsRedirect $ Creds "ldap" ethn []
-             (Just edxi, _) -> lift . setCredsRedirect $ Creds "lti" edxi []
-             (Nothing, Nothing) -> setMessage "Sign in failure: incorrect username or password." >> goBack
-localDispatch _ _ = notFound
 
 ldapConf :: LdapAuthConf
 ldapConf = setHost (Insecure "auth.arch.ethz.ch") $ setPort 636
@@ -245,6 +239,142 @@ ldapConf = setHost (Insecure "auth.arch.ethz.ch") $ setPort 636
 
 
 instance YesodAuthPersist App
+
+instance YesodAuthEmail App where
+  type AuthEmailId App = UserId
+
+  afterPasswordRoute _ = HomeR
+
+  addUnverified email verkey =
+    runDB $ do
+      uid <- insert User
+              { userName = takeWhile (/= '@') email
+              , userRole = UR_NOBODY
+              , userEthUserName = Nothing
+              , userEdxUserId = Nothing
+              , userEmail = Just email
+              , userPassword = Nothing
+              , userVerified = False
+              }
+      _ <- insert $ UserProp uid "verkey" verkey
+      return uid
+
+
+  sendVerifyEmail email _ verurl = do
+    -- Print out to the console the verification email, for easier
+    -- debugging.
+    liftIO $ putStrLn $ "Copy/ Paste this URL in your browser: " <> verurl
+
+    -- Send email.
+    liftIO $ Mail.renderSendMail $ Mail.simpleMail'
+        (Mail.Address Nothing email) -- To address
+        (Mail.Address (Just "ETH qua-kit") "noreply@qua-kit.ethz.ch") -- From address
+        "Please validate your email address" -- Subject
+        [stext|
+            Please confirm your email address by clicking on the link below.
+
+            #{verurl}
+
+            Thank you
+        |]
+  getVerifyKey uid = runDB $ do
+    mup <- getBy $ UserProperty uid "verkey"
+    return $ case mup of
+      (Just (Entity _ u)) -> Just $ userPropValue u
+      _                   -> Nothing
+  setVerifyKey uid key = runDB $ do
+    _ <- upsertBy (UserProperty uid "verkey") (UserProp uid "verkey" key)
+                  [UserPropValue =. key]
+    return ()
+  verifyAccount uid = runDB $ do
+    mu <- get uid
+    case mu of
+      Nothing -> return Nothing
+      Just _ -> do
+        update uid [UserVerified =. True]
+        -- set verkey to empty string to prevent reuse
+        _ <- upsertBy (UserProperty uid "verkey") (UserProp uid "verkey" "")
+               [UserPropValue =. ""]
+        return $ Just uid
+  getPassword = runDB . fmap (join . fmap userPassword) . get
+  setPassword uid pass = runDB $ update uid [UserPassword =. Just pass]
+  getEmailCreds email = runDB $ do
+    mu <- getBy $ UserEmailId (Just email)
+    case mu of
+      Nothing             -> return Nothing
+      Just (Entity uid u) -> do
+        mup <- getBy $ UserProperty uid "verkey"
+        return $ Just $ EmailCreds
+          { emailCredsId     = uid
+          , emailCredsAuthId = Just uid
+          , emailCredsStatus = isJust $ userPassword u
+          , emailCredsVerkey = fmap (userPropValue . entityVal) mup
+          , emailCredsEmail  = email
+          }
+  getEmail = runDB . fmap (join . fmap userEmail) . get
+  emailLoginHandler toParent = $(widgetFile "login-local")
+  registerHandler = do
+    toParRt <- getRouteToParent
+    (widget, _) <- lift $ generateFormPost (registrationForm toParRt)
+    lift $ authLayout widget
+    where
+      registrationForm toParentRoute extra = do
+        let emailSettings = FieldSettings {
+              fsLabel = SomeMessage ("Email"::Text),
+              fsTooltip = Nothing,
+              fsId = Just "email",
+              fsName = Just "email",
+              fsAttrs = [("autofocus", ""), ("class", "form-control")]
+            }
+
+        (emailRes, emailView) <- mreq emailField emailSettings Nothing
+        let widget  = $(widgetFile "register-local")
+        return (emailRes, widget)
+  setPasswordHandler needOldPw = do
+    messageRender <- lift getMessageRender
+    toParent <- getRouteToParent
+    selectRep $ do
+      provideJsonMessage $ messageRender ("Set password"::Text)
+      provideRep $ lift $ authLayout $ do
+        (widget, _) <- liftWidgetT $ generateFormPost (setPasswordForm toParent needOldPw)
+        widget
+    where
+      setPasswordForm toParent needOld extra = do
+        (currentPasswordRes, currentPasswordView) <- mreq passwordField currentPasswordSettings Nothing
+        (newPasswordRes, newPasswordView)         <- mreq passwordField newPasswordSettings     Nothing
+        (confirmPasswordRes, confirmPasswordView) <- mreq passwordField confirmPasswordSettings Nothing
+
+        let passwordFormRes = PasswordForm <$> currentPasswordRes <*> newPasswordRes <*> confirmPasswordRes
+        let widget = $(widgetFile "set-password-local")
+        return (passwordFormRes, widget)
+      currentPasswordSettings =
+        FieldSettings {
+          fsLabel = SomeMessage ("Current password"::Text),
+          fsTooltip = Nothing,
+          fsId = Just "currentPassword",
+          fsName = Just "current",
+          fsAttrs = [("autofocus", ""), ("class", "form-control")]
+        }
+      newPasswordSettings =
+        FieldSettings {
+          fsLabel = SomeMessage ("New password"::Text),
+          fsTooltip = Nothing,
+          fsId = Just "newPassword",
+          fsName = Just "new",
+          fsAttrs = [ ("autofocus", "")
+                    , (":not", ""), ("needOld:autofocus", "")
+                    , ("class", "form-control")
+                    ]
+        }
+      confirmPasswordSettings =
+        FieldSettings {
+          fsLabel = SomeMessage ("Confirm password"::Text),
+          fsTooltip = Nothing,
+          fsId = Just "confirmPassword",
+          fsName = Just "confirm",
+          fsAttrs = [("autofocus", ""), ("class", "form-control")]
+        }
+data PasswordForm = PasswordForm { _passwordCurrent :: Text, _passwordNew :: Text, _passwordConfirm :: Text }
 
 -- This instance is required to use forms. You can modify renderMessage to
 -- achieve customized and internationalized form validation messages.

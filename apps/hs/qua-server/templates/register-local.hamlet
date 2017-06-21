@@ -1,0 +1,26 @@
+<div class="row">
+  <div class="col-lg-4 col-lg-push-4 col-sm-6 col-sm-push-3">
+    <section class="content-inner margin-top-no">
+      <div class="card">
+        <div class="card-main">
+          <div class="card-header">
+            <div class="card-inner">
+              <h1 class="card-heading">Register local qua-kit account
+
+          <div class="card-inner">
+              <form class="form" action="@{toParentRoute registerR}" method="post">
+                <div class="form-group form-group-label">
+                  <div class="row">
+                    <div class="col-md-10 col-md-push-1">
+                      <p>
+                        Enter your e-mail address below, and a confirmation e-mail will be sent to you.
+                  <div class="row">
+                    <div class="col-md-10 col-md-push-1">
+                      #{extra}
+                      <label for="^{fvId emailView}">^{fvLabel emailView}
+                      ^{fvInput emailView}
+                <div class="form-group">
+                  <div class="row">
+                    <div class="col-md-10 col-md-push-1">
+                      <button class="btn btn-block btn-red waves-attach waves-light waves-effect" type="submit">
+                        Register

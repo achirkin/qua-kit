@@ -8,12 +8,12 @@
               <h1 class="card-heading">Login using local qua-kit account
           <div class="card-inner">
             <p class="text-center">
-              <form class="form" action="@{loginR}" method="post">
+              <form class="form" action="@{toParent loginR}" method="post">
                 <div class="form-group form-group-label">
                   <div class="row">
                     <div class="col-md-10 col-md-push-1">
-                      <label class="floating-label" for="username">Username
-                      <input class="form-control" id="username" name="username" type="text" required>
+                      <label class="floating-label" for="email">Email
+                      <input class="form-control" id="email" name="email" type="email" required>
                 <div class="form-group form-group-label">
                   <div class="row">
                     <div class="col-md-10 col-md-push-1">
@@ -23,3 +23,8 @@
                   <div class="row">
                     <div class="col-md-10 col-md-push-1">
                       <button class="btn btn-block btn-red waves-attach waves-light waves-effect" type="submit">Sign In
+                  <div class="row">
+                    <div class="col-md-10 col-md-push-1">
+                      <br>
+                      <a href="@{toParent registerR}" .btn .btn-default>
+                        Register
