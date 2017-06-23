@@ -263,7 +263,8 @@ instance YesodAuthEmail App where
   sendVerifyEmail email _ verurl = do
     -- Print out to the console the verification email, for easier
     -- debugging.
-    liftIO $ putStrLn $ "Copy/ Paste this URL in your browser: " <> verurl
+    
+    $(logDebug) $ "Copy/ Paste this URL in your browser: " <> verurl
 
     -- Send email.
     liftIO $ Mail.renderSendMail $ Mail.simpleMail'
