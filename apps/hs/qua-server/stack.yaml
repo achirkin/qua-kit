@@ -1,7 +1,5 @@
 extra-deps:
   - yesod-auth-oauth-1.4.1.1
-    # authenticate-oauth patched package, remains here until comes to stackage
-  - authenticate-oauth-1.6
     # ETH login via LDAP
   - yesod-auth-ldap-native-0.2.0.0
   - ldap-client-0.1.0
@@ -12,6 +10,6 @@ flags: {}
 packages:
   - .
 
-resolver: lts-8.0
+resolver: lts-8.19
 require-stack-version: ">= 1.1.0"
 extra-package-dbs: []

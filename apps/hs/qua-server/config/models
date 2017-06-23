@@ -4,8 +4,12 @@ User
     role UserRole default=0
     ethUserName Text Maybe
     edxUserId Text Maybe
+    email Text Maybe
+    password Text Maybe -- Password may not be set yet
+    verified Bool
     ETHUserName ethUserName !force
     EdxUserId edxUserId !force
+    UserEmailId email !force
     deriving Show
 
 -- | Additional user properties

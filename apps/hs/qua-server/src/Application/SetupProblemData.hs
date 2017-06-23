@@ -25,7 +25,8 @@ registerAdmins pool = flip runSqlPool pool $ do
     -- make me the first admin
     mme <- getBy $ ETHUserName (Just "achirkin")
     case mme of
-     Nothing -> insert_ $ User "Artem Chirkin" UR_ADMIN (Just "achirkin") Nothing
+     Nothing -> insert_ $ User
+       "Artem Chirkin" UR_ADMIN (Just "achirkin") Nothing Nothing Nothing True
      Just (Entity key _) -> update key [UserRole =. UR_ADMIN]
 
 

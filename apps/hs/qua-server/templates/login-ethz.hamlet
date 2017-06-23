@@ -8,7 +8,7 @@
               <h1 class="card-heading">Login using ETH Zurich account
           <div class="card-inner">
             <p class="text-center">
-              <form class="form" action="@{loginR}" method="post">
+              <form class="form" action="@{ldapLoginR}" method="post">
                 <div class="form-group form-group-label">
                   <div class="row">
                     <div class="col-md-10 col-md-push-1">
