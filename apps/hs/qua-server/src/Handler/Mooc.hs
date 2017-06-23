@@ -36,8 +36,8 @@ getMoocHomeR  = toTypedContent <$> do
     createAccW <- case muserId of
       Nothing -> return mempty
       Just userId -> do
-        unn <- runDB $ getBy $ UserProperty userId "username"
-        return $ if isNothing unn
+        (Just u) <- runDB $ get userId
+        return $ if isNothing $ userEmail u
                  then setupLocalAccountW userId
                  else mempty
 
