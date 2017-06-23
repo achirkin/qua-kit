@@ -243,7 +243,7 @@ instance YesodAuthPersist App
 instance YesodAuthEmail App where
   type AuthEmailId App = UserId
 
-  afterPasswordRoute _ = HomeR
+  afterPasswordRoute _ = MoocHomeR
 
   addUnverified email verkey =
     runDB $ do
@@ -263,7 +263,7 @@ instance YesodAuthEmail App where
   sendVerifyEmail email _ verurl = do
     -- Print out to the console the verification email, for easier
     -- debugging.
-    
+
     $(logDebug) $ "Copy/ Paste this URL in your browser: " <> verurl
 
     -- Send email.
