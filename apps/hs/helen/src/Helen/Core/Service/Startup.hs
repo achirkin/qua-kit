@@ -13,6 +13,7 @@ import Data.Yaml as Yaml
 
 import Control.Applicative
 import Control.Exception
+import Control.Monad
 import Control.Monad.IO.Class
 import Control.Monad.Logger
 
@@ -26,7 +27,6 @@ import Helen.Core.Types
 
 startupServices :: HelenWorld ()
 startupServices = do
-    liftIO $ putStrLn "Starting services."
     bcf <- liftIO $ resolveFile' "binaries-config.yaml"
     errOrBc <- readBinConfigs bcf
     case errOrBc of
@@ -34,9 +34,10 @@ startupServices = do
         Right bc -> do
             cd <- liftIO getCurrentDir
             errOrBcss <- mapM readBinConfig $ map (cd </>) $ binConfigsFiles bc
-            case sequence errOrBcss of
-                Left err -> logErrorNS "Service Startup" (T.pack err)
-                Right bcs -> mapM_ startBinary bcs
+            forM_ errOrBcss $ \errOrBcs ->
+                case errOrBcs of
+                    Left err -> logErrorNS "Service Startup" (T.pack err)
+                    Right bcs -> void $ startBinary bcs
 
 readBinConfigs :: MonadIO m => Path Abs File -> m (Either String BinConfigs)
 readBinConfigs = readYamlSafe
