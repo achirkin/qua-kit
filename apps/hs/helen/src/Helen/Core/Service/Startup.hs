@@ -11,6 +11,7 @@ import qualified Data.Text as T
 import qualified Data.Text.IO as T
 import Data.Yaml as Yaml
 
+import Control.Applicative
 import Control.Exception
 import Control.Monad.IO.Class
 import Control.Monad.Logger
@@ -59,7 +60,8 @@ data BinConfig = BinConfig
 instance FromJSON BinConfig where
     parseJSON =
         withObject "BinConfig" $ \o ->
-            BinConfig <$> o .: "name" <*> o .: "executable" <*> o .: "args"
+            BinConfig <$> o .: "name" <*> o .: "executable" <*>
+            ((o .: "args") <|> (words <$> o .: "args"))
 
 readYamlSafe :: (MonadIO m, FromJSON a) => Path Abs File -> m (Either String a)
 readYamlSafe path = do
