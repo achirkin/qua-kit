@@ -40,6 +40,7 @@ import           Helen.Core.Service              (defServiceManager,
                                                   processMessage)
 import           Helen.Core.Service.Information  (infoService)
 import           Helen.Core.Service.Registration (registrationService)
+import           Helen.Core.Service.Startup      (startupServices)
 import           Helen.Core.Types
 
 
@@ -83,6 +84,7 @@ initHelen = do
 program :: Int -- ^ Port
         -> HelenWorld ()
 program port = do
+  startupServices
   -- register pre-defined services
   registrationService
   infoService
