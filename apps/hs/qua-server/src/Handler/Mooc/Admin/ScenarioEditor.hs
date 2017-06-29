@@ -4,6 +4,7 @@ module Handler.Mooc.Admin.ScenarioEditor
     , postAdminCreateScenarioR
     , getScenarioProblemImgR
     , getScenarioProblemGeometryR
+    , getScenarioProblemEditR
     ) where
 
 import Import hiding ((==.), on)
@@ -12,6 +13,7 @@ import qualified Data.ByteString.Lazy as LB
 import qualified Data.Conduit.Binary as CB
 import qualified Data.Function as Function (on)
 import qualified Data.List as List (groupBy, head)
+import qualified Data.Text as T
 
 import Database.Esqueleto
 import qualified Database.Persist as P
@@ -80,8 +82,8 @@ getScenarioCards = do
              on
                  (problemCriterion ?. ProblemCriterionProblemId ==.
                   just (scenarioProblem ^. ScenarioProblemId))
-             return (scenarioProblem, criterion)) :: Handler [( Entity ScenarioProblem
-                                                              , Maybe (Entity Criterion))]
+             pure (scenarioProblem, criterion)) :: Handler [( Entity ScenarioProblem
+                                                            , Maybe (Entity Criterion))]
     pure $ map (uncurry scenarioWidget) $ map (second catMaybes) $ groupsOf tups
 
 groupsOf :: Ord a => [(a, b)] -> [(a, [b])]
@@ -107,3 +109,29 @@ getScenarioProblemGeometryR scenarioProblemId = do
     sendResponse
         ( ("text/plain" :: ByteString)
         , toContent $ scenarioProblemImage scenario)
+
+getScenarioProblemEditR :: ScenarioProblemId -> Handler Html
+getScenarioProblemEditR scenarioProblemId = do
+    ScenarioProblem {..} <- runDB $ get404 scenarioProblemId
+    cs <-
+            runDB $
+              select $
+              from $ \(InnerJoin problemCriterion criterion) -> do
+                  on
+                      (problemCriterion ^. ProblemCriterionCriterionId ==.
+                       criterion ^.
+                       CriterionId)
+                  where_
+                      (problemCriterion ^. ProblemCriterionProblemId ==.
+                       val scenarioProblemId)
+                  pure criterion
+    fullLayout
+        Nothing
+        (T.pack $
+         unwords
+             [ "Welcome to the editor for scenario"
+             , show (fromSqlKey scenarioProblemId) ++ ":"
+             , T.unpack scenarioProblemDescription
+             ]) $ do
+        setTitle "qua-kit - scenario"
+        $(widgetFile "mooc/admin/scenario-edit")

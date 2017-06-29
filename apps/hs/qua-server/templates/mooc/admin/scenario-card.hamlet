@@ -4,9 +4,13 @@
     <div .card-block>
       <div .card-inner>
         <p .card-text>
-          #{scenarioProblemDescription}
+          #{show $ fromSqlKey scenarioProblemId}: #{scenarioProblemDescription}
         <a .btn href=@{ScenarioProblemGeometryR scenarioProblemId}>
           Download Geometry
+        <br>
+        <br>
+        <a .btn href=@{ScenarioProblemEditR scenarioProblemId}>
+          Edit Scenario Problem
     <ul .list-group>
       $forall (Entity criterionId Criterion{..}) <- cs
         <li .list-group-item>

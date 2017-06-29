@@ -27,6 +27,7 @@
 /mooc/scproblem/#ScenarioProblemId  ScenarioProblemR GET
 /mooc/scproblem/#ScenarioProblemId/img ScenarioProblemImgR GET
 /mooc/scproblem/#ScenarioProblemId/geometry ScenarioProblemGeometryR GET
+/mooc/scproblem/#ScenarioProblemId/edit ScenarioProblemEditR GET
 /mooc/proposals/browse/#Int         BrowseProposalsR GET
 /mooc/proposals/preview/#ScenarioId ProposalPreviewR GET
 /mooc/proposals/edit                EditProposalR GET
