@@ -18,6 +18,9 @@
 /feedback/post                      SubmitFeedbackR POST
 /admin                              AdminR GET
 
+/admin/scenario-editor              AdminScenarioEditor GET
+/admin/scenario-editor/scenario     AdminCreateScenario POST
+
 /                                   MoocHomeR GET POST
 /mooc/submit                        SubmitProposalR POST
 /mooc/proposal/#ScenarioId          ScenarioR GET

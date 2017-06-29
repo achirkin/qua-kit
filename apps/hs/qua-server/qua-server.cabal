@@ -72,6 +72,7 @@ library
         Handler.LuciProxy
         Handler.Mooc
         Handler.Mooc.Admin
+        Handler.Mooc.Admin.ScenarioEditor
         Handler.Mooc.BrowseProposals
         Handler.Mooc.Comment
         Handler.Mooc.CompareProposals

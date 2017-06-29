@@ -9,25 +9,14 @@
 --
 --
 -----------------------------------------------------------------------------
-
 module Handler.Mooc.Admin
-  ( getAdminR
-  ) where
+    ( getAdminR
+    ) where
 
-
-
---import qualified Data.Map as Map
 import Import
 
-
-
 getAdminR :: Handler Html
-getAdminR = do
-  mmsg <- getMessage
-  muser <- fmap entityVal <$> maybeAuth
---  ses <- map (\(k,v) -> k <> " - " <> decodeUtf8 v) . Map.toList <$> getSession
-
-  defaultLayout $ do
-    setTitle "qua-kit - admin page"
-    -- render all html
-    $(widgetFile "mooc/admin")
+getAdminR =
+    fullLayout Nothing "Welcome to the admin page" $ do
+        setTitle "qua-kit - admin page"
+        $(widgetFile "mooc/admin")
