@@ -18,3 +18,7 @@
             About
           <a class="waves-attach waves-effect" href="@{FeedbackR}">
             Feedback
+          $if fmap userRole muser == Just UR_ADMIN
+            <a class="waves-attach waves-effect" href="@{AdminR}">
+              Admin
+      
