@@ -16,6 +16,8 @@ import Control.Exception
 import Control.Monad
 import Control.Monad.IO.Class
 import Control.Monad.Logger
+import Control.Monad.Trans.Except
+import Control.Monad.Trans.Maybe
 
 import System.IO.Error
 import System.Process
@@ -33,7 +35,7 @@ startupServices = do
         Left err -> logErrorNS "Service Startup" (T.pack err)
         Right bc -> do
             cd <- liftIO getCurrentDir
-            errOrBcss <- mapM readBinConfig $ map (cd </>) $ binConfigsFiles bc
+            errOrBcss <- mapM (readBinConfig . (cd </>)) $ binConfigsFiles bc
             forM_ errOrBcss $ \errOrBcs ->
                 case errOrBcs of
                     Left err -> logErrorNS "Service Startup" (T.pack err)
@@ -65,23 +67,15 @@ instance FromJSON BinConfig where
             ((o .: "args") <|> (words <$> o .: "args"))
 
 readYamlSafe :: (MonadIO m, FromJSON a) => Path Abs File -> m (Either String a)
-readYamlSafe path = do
-    mbc <- liftIO $ forgivingAbsence $ SB.readFile (toFilePath path)
-    case mbc of
-        Nothing ->
-            pure $ Left $ unwords ["No yaml file found:", toFilePath path]
-        Just contents ->
-            case Yaml.decodeEither contents of
-                Left err ->
-                    pure $
-                    Left $
-                    unwords
-                        [ "Unable to parse YAML in file"
-                        , toFilePath path
-                        , "with error:"
-                        , err
-                        ]
-                Right r -> pure $ Right r
+readYamlSafe path = runExceptT $ do
+    contents <- maybeToExceptT (unwords ["No yaml file found:", toFilePath path])
+             . MaybeT . liftIO . forgivingAbsence $ SB.readFile (toFilePath path)
+    withExceptT (\err -> unwords
+                  [ "Unable to parse YAML in file", toFilePath path
+                  , "with error:", err
+                  ]
+                 ) . ExceptT . pure $ Yaml.decodeEither contents
+
 
 data BinState = BinState
     { binStateConfig :: BinConfig
