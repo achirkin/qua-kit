@@ -1,0 +1,14 @@
+<div .col-md-7 .col-md-8 .col-sm-9>
+  <div .card>
+    <img .card-img-top src=@{ScenarioProblemImgR scenarioProblemId} width="200px" height="200px" alt="Scenario Image">
+    <div .card-block>
+      <div .card-inner>
+        <p .card-text>
+          #{scenarioProblemDescription}
+        <a .btn href=@{ScenarioProblemGeometryR scenarioProblemId}>
+          Download Geometry
+    <ul .list-group>
+      $forall (Entity criterionId Criterion{..}) <- cs
+        <li .list-group-item>
+          <p>
+            #{criterionName}

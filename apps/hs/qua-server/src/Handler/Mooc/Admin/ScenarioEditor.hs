@@ -1,21 +1,28 @@
 {-# RecordWildCards #-}
 module Handler.Mooc.Admin.ScenarioEditor
-    ( getAdminScenarioEditor
-    , postAdminCreateScenario
+    ( getAdminScenarioEditorR
+    , postAdminCreateScenarioR
+    , getScenarioProblemImgR
+    , getScenarioProblemGeometryR
     ) where
 
-import Import
+import Import hiding ((==.), on)
 
 import qualified Data.ByteString.Lazy as LB
 import qualified Data.Conduit.Binary as CB
+import qualified Data.Function as Function (on)
+import qualified Data.List as List (groupBy, head)
+
+import Database.Esqueleto
+import qualified Database.Persist as P
 
 import Yesod.Form.Bootstrap3
 
-getAdminScenarioEditor :: Handler Html
-getAdminScenarioEditor = postAdminCreateScenario
+getAdminScenarioEditorR :: Handler Html
+getAdminScenarioEditorR = postAdminCreateScenarioR
 
-postAdminCreateScenario :: Handler Html
-postAdminCreateScenario = do
+postAdminCreateScenarioR :: Handler Html
+postAdminCreateScenarioR = do
     ((res, widget), enctype) <-
         runFormPost $ renderBootstrap3 BootstrapBasicForm newScenarioForm
     case res of
@@ -40,7 +47,8 @@ postAdminCreateScenario = do
   where
     showFormWidget = showForm Nothing []
     showFormError = showForm Nothing
-    showForm mr msgs widget enctype =
+    showForm mr msgs widget enctype = do
+        scenarioWidgets <- getScenarioCards
         fullLayout Nothing "Welcome to the scenario editor" $ do
             setTitle "qua-kit - scenario editor"
             $(widgetFile "mooc/admin/scenario-editor")
@@ -59,3 +67,43 @@ newScenarioForm =
 
 labeledField :: Text -> FieldSettings App
 labeledField t = bfs t
+
+getScenarioCards :: Handler [Widget]
+getScenarioCards = do
+    tups <-
+        (runDB $
+         select $
+         from $ \(LeftOuterJoin (LeftOuterJoin scenarioProblem problemCriterion) criterion) -> do
+             on
+                 (problemCriterion ?. ProblemCriterionCriterionId ==. criterion ?.
+                  CriterionId)
+             on
+                 (problemCriterion ?. ProblemCriterionProblemId ==.
+                  just (scenarioProblem ^. ScenarioProblemId))
+             return (scenarioProblem, criterion)) :: Handler [( Entity ScenarioProblem
+                                                              , Maybe (Entity Criterion))]
+    pure $ map (uncurry scenarioWidget) $ map (second catMaybes) $ groupsOf tups
+
+groupsOf :: Ord a => [(a, b)] -> [(a, [b])]
+groupsOf =
+    map (\ls -> (fst $ List.head ls, map snd ls)) .
+    List.groupBy ((==) `Function.on` fst) . sortOn fst
+
+scenarioWidget :: Entity ScenarioProblem -> [Entity Criterion] -> Widget
+scenarioWidget (Entity scenarioProblemId ScenarioProblem {..}) cs =
+    $(widgetFile "mooc/admin/scenario-card")
+
+getScenarioProblemImgR :: ScenarioProblemId -> Handler TypedContent
+getScenarioProblemImgR scenarioProblemId = do
+    scenario <- runDB $ get404 scenarioProblemId
+    addHeader "Content-Disposition" "inline"
+    sendResponse
+        (("image/png" :: ByteString), toContent $ scenarioProblemImage scenario)
+
+getScenarioProblemGeometryR :: ScenarioProblemId -> Handler TypedContent
+getScenarioProblemGeometryR scenarioProblemId = do
+    scenario <- runDB $ get404 scenarioProblemId
+    addHeader "Content-Disposition" "inline"
+    sendResponse
+        ( ("text/plain" :: ByteString)
+        , toContent $ scenarioProblemImage scenario)

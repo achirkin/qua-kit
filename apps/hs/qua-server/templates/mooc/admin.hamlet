@@ -7,7 +7,7 @@
             Scenario editor
           <div class="card-action">
             <div class="card-action-btn pull-left">
-              <a class="btn btn-flat waves-attach waves-light waves-effect" href="@{AdminScenarioEditor}">
+              <a class="btn btn-flat waves-attach waves-light waves-effect" href="@{AdminScenarioEditorR}">
                 <span class="icon">check
                 &nbsp;Open Scenario Editor
     

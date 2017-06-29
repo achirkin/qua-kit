@@ -21,7 +21,10 @@
         <div.card-inner>
           <h4.card-title>
             New Scenario Problem
-          <form role=form method=post enctype=#{enctype} action=@{AdminCreateScenario}>
+          <form role=form method=post enctype=#{enctype} action=@{AdminCreateScenarioR}>
             ^{widget}
             <button type="submit" .btn .btn-default>
               Submit
+
+  $forall w <- scenarioWidgets
+    ^{w}
