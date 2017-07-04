@@ -18,10 +18,16 @@
 /feedback/post                      SubmitFeedbackR POST
 /admin                              AdminR GET
 
+/admin/scenario-editor              AdminScenarioEditorR GET
+/admin/scenario-editor/scenario     AdminCreateScenarioR POST
+
 /                                   MoocHomeR GET POST
 /mooc/submit                        SubmitProposalR POST
 /mooc/proposal/#ScenarioId          ScenarioR GET
 /mooc/scproblem/#ScenarioProblemId  ScenarioProblemR GET
+/mooc/scproblem/#ScenarioProblemId/img ScenarioProblemImgR GET
+/mooc/scproblem/#ScenarioProblemId/geometry ScenarioProblemGeometryR GET
+/mooc/scproblem/#ScenarioProblemId/edit ScenarioProblemEditR GET
 /mooc/proposals/browse/#Int         BrowseProposalsR GET
 /mooc/proposals/preview/#ScenarioId ProposalPreviewR GET
 /mooc/proposals/edit                EditProposalR GET

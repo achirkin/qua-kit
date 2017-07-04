@@ -48,6 +48,9 @@ ScenarioProblem
     geometry    ByteString
     description Text
     scale       Double
+    deriving Show
+    deriving Eq
+    deriving Ord
 
 Scenario
     authorId      UserId

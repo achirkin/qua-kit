@@ -72,6 +72,7 @@ library
         Handler.LuciProxy
         Handler.Mooc
         Handler.Mooc.Admin
+        Handler.Mooc.Admin.ScenarioEditor
         Handler.Mooc.BrowseProposals
         Handler.Mooc.Comment
         Handler.Mooc.CompareProposals
@@ -145,7 +146,8 @@ library
         wai -any,
         stm -any,
         random -any,
-        ltiv1p1 -any
+        ltiv1p1 -any,
+        esqueleto -any
     default-language: Haskell2010
     default-extensions: TemplateHaskell QuasiQuotes OverloadedStrings
                         NoImplicitPrelude MultiParamTypeClasses TypeFamilies GADTs
