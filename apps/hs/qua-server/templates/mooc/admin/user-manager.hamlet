@@ -1,5 +1,5 @@
 <div .row>
-  <div .col-lg-7 .col-md-8 .col-sm-9>
+  <div .col-lg-12 .col-md-12 .col-sm-12>
     <table .table>
       <thead>
         <tr>
@@ -7,6 +7,7 @@
           <th> Name
           <th> Role
           <th> Verified
+          <th> Change role
       <tbody>
         $forall Entity userId User{..} <- users
           <tr>
@@ -14,3 +15,14 @@
             <td> #{userName}
             <td> #{show userRole}
             <td> #{userVerified}
+            <td> 
+              <form method=post action=@{SetUserRoleR userId}>
+                <div .form-group>
+                  <label .sr-only for="selectRole#{show $ fromSqlKey userId}">
+                    Select Role
+                  <select .form-control id="selectRole#{show $ fromSqlKey userId}" name=role>
+                    $forall role <- roles
+                      <option>
+                        #{show role}
+                <button .btn type="submit">
+                    Change Role
