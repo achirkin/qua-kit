@@ -1,13 +1,24 @@
 <div class="ui-card-wrap">
   <div class="row">
+
     <div class="col-lg-4 col-sm-6">
       <div class="card">
         <div class="card-main">
           <div class="card-inner">
-            Scenario editor
+            User Manager
           <div class="card-action">
             <div class="card-action-btn pull-left">
               <a class="btn btn-flat waves-attach waves-light waves-effect" href="@{AdminScenarioEditorR}">
                 <span class="icon">check
                 &nbsp;Open Scenario Editor
-    
+
+    <div class="col-lg-4 col-sm-6">
+      <div class="card">
+        <div class="card-main">
+          <div class="card-inner">
+            User Manager
+          <div class="card-action">
+            <div class="card-action-btn pull-left">
+              <a class="btn btn-flat waves-attach waves-light waves-effect" href="@{AdminUserManagerR}">
+                <span class="icon">check
+                &nbsp;Open User Manager

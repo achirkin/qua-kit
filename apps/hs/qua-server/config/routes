@@ -20,6 +20,7 @@
 
 /admin/scenario-editor              AdminScenarioEditorR GET
 /admin/scenario-editor/scenario     AdminCreateScenarioR POST
+/admin/user-manager                 AdminUserManagerR GET
 
 /                                   MoocHomeR GET POST
 /mooc/submit                        SubmitProposalR POST
