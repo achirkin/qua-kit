@@ -17,6 +17,7 @@ import Handler.Home.PanelInfo
 import Handler.Home.PopupEdxGuide
 import Handler.Home.LuciConnect
 import Handler.Mooc.Comment
+import Handler.Mooc.ExpertReview
 
 getSubmissionViewerR ::  ScenarioProblemId -> UserId -> Handler Html
 getSubmissionViewerR = renderQuaView
@@ -54,6 +55,14 @@ renderQuaView scpId authorId = do
       showHelp = False
   setSession "qua_view_mode" qua_view_mode
   commentsW <- viewComments scId
+
+  writeExpertReviewW <- case muser of
+    (Just (Entity userId user))
+      | userRole user == UR_EXPERT -> writeExpertReview userId scId
+      | otherwise -> return mempty
+    _ -> return mempty
+
+  viewExpertReviewsW <- viewExpertReviews scId
 
   -- connecting form + conteiners for optional content
   (lcConnectedClass, lcDisconnectedClass, luciConnectForm) <- luciConnectPane

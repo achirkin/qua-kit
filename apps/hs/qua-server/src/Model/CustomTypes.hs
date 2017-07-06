@@ -24,7 +24,8 @@ data UserRole
   | UR_STUDENT
   | UR_LOCAL
   | UR_ADMIN
-  deriving (Eq, Ord, Enum, Bounded, Show, Read)
+  | UR_EXPERT
+  deriving (Eq, Enum, Bounded, Show, Read)
 
 instance PersistField UserRole where
   toPersistValue = toPersistValue . fromEnum

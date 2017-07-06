@@ -81,6 +81,7 @@ library
         Handler.Mooc.Criteria
         Handler.Mooc.EditProposal
         Handler.Mooc.EdxLogin
+        Handler.Mooc.ExpertReview
         Handler.Mooc.ProposalPreview
         Handler.Mooc.RenameMe
         Handler.Mooc.Scenario
@@ -94,6 +95,7 @@ library
         Handler.QuaViewSettings
         Import
         Import.NoFoundation
+        Import.Util
         Model
         Model.CustomTypes
         Model.Generated
