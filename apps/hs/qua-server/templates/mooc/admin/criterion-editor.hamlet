@@ -16,7 +16,7 @@
               <li .list-group-item>
                 Image: #{fileName $ newCriterionDataImage dat}
               <li .list-group-item>
-                Geometry: #{newCriterionDataIcon dat}
+                Icon: #{fileName $ newCriterionDataIcon dat}
     $nothing
     <div .card>
       <div.card-main>

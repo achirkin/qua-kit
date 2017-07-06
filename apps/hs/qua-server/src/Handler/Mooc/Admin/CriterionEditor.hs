@@ -12,6 +12,7 @@ import qualified Data.Conduit.Binary as CB
 import qualified Data.Function as Function (on)
 import qualified Data.List as List (groupBy, head)
 import qualified Data.Text as T
+import qualified Data.Text.Encoding as TE
 
 import Database.Persist
 
@@ -31,13 +32,16 @@ postAdminCreateCriterionR = do
             imageBs <-
                 fmap LB.toStrict $
                 runResourceT $ fileSource newCriterionDataImage $$ CB.sinkLbs
+            iconText <-
+                fmap (TE.decodeUtf8 .LB.toStrict)$
+                runResourceT $ fileSource newCriterionDataIcon $$ CB.sinkLbs
             runDB $
                 insert_
                     Criterion
                     { criterionName = newCriterionDataName
                     , criterionDescription = newCriterionDataDescription
                     , criterionImage = imageBs
-                    , criterionIcon = newCriterionDataIcon
+                    , criterionIcon = iconText
                     }
             showForm (Just dat) Nothing widget enctype
   where
@@ -53,7 +57,7 @@ data NewCriterionData = NewCriterionData
     { newCriterionDataName :: Text
     , newCriterionDataDescription :: Text
     , newCriterionDataImage :: FileInfo
-    , newCriterionDataIcon :: Text
+    , newCriterionDataIcon :: FileInfo
     }
 
 newCriterionForm :: AForm Handler NewCriterionData
@@ -61,7 +65,7 @@ newCriterionForm =
     NewCriterionData <$> areq textField (labeledField "name") Nothing <*>
     areq textField (labeledField "description") Nothing <*>
     areq fileField (labeledField "image") Nothing <*>
-    areq textField (labeledField "icon") Nothing
+    areq fileField (labeledField "icon") Nothing
 
 labeledField :: Text -> FieldSettings App
 labeledField t = bfs t
