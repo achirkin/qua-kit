@@ -21,7 +21,7 @@ import Yesod.Form.Bootstrap3
 getAdminUserManagerR :: Handler Html
 getAdminUserManagerR = do
     users <- runDB $ selectList [] [Asc UserId]
-    let roles = [minBound .. maxBound] :: [UserRole]
+    let roles = filter (/= UR_NOBODY) [minBound .. maxBound]
     fullLayout Nothing "Welcome to the user manager" $ do
         setTitle "qua-kit - user manager"
         $(widgetFile "mooc/admin/user-manager")

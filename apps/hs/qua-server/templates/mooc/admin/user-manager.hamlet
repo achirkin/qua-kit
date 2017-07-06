@@ -6,6 +6,7 @@
           <th> #
           <th> Name
           <th> Role
+          <th> Identity
           <th> Verified
           <th> Change role
       <tbody>
@@ -13,6 +14,17 @@
           <tr>
             <td> #{show $ fromSqlKey userId}
             <td> #{userName}
+            <td> 
+              $maybe un <- userEthUserName
+                ETH Username: #{un}
+              $nothing
+                $maybe uid <- userEdxUserId
+                  EDK User Id: #{uid}
+                $nothing
+                  $maybe email <- userEmail
+                    Email: #{email}
+                  $nothing
+                    No identity
             <td> #{show userRole}
             <td> #{userVerified}
             <td> 
@@ -20,9 +32,13 @@
                 <div .form-group>
                   <label .sr-only for="selectRole#{show $ fromSqlKey userId}">
                     Select Role
-                  <select .form-control id="selectRole#{show $ fromSqlKey userId}" name=role>
+                  <select .form-control id="selectRole#{show $ fromSqlKey userId}" name=role autocomplete="off">
                     $forall role <- roles
-                      <option>
-                        #{show role}
+                      $if role == userRole
+                        <option selected="selected" value=#{show role}>
+                          #{show role}
+                      $else
+                        <option value=#{show role}>
+                          #{show role}
                 <button .btn type="submit">
                     Change Role
