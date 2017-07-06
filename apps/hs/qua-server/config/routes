@@ -22,6 +22,9 @@
 /admin/scenario-editor/scenario     AdminCreateScenarioR POST
 /admin/user-manager                 AdminUserManagerR GET
 /admin/user-manageruser/create-user AdminCreateUserR POST
+/admin/criterion-editor             AdminCriterionEditorR GET
+/admin/criterion-editor/criterion   AdminCreateCriterionR POST
+
 
 /                                   MoocHomeR GET POST
 /mooc/submit                        SubmitProposalR POST

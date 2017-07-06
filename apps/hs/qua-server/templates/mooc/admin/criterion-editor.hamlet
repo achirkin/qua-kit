@@ -1,0 +1,32 @@
+<div .row>
+  <div .col-lg-7 .col-md-8 .col-sm-9>
+    $forall msg <- msgs
+      <div #{msg}>
+    $maybe dat <- mr
+      <div .card>
+        <div.card-main>
+          <div.card-inner>
+            <h4.card-title>
+              Succesfully uploaded new Criterion
+            <ul .list-group list-group-flush>
+              <li .list-group-item>
+                Name: #{newCriterionDataName dat}
+              <li .list-group-item>
+                Description: #{newCriterionDataDescription dat}
+              <li .list-group-item>
+                Image: #{fileName $ newCriterionDataImage dat}
+              <li .list-group-item>
+                Geometry: #{newCriterionDataIcon dat}
+    $nothing
+    <div .card>
+      <div.card-main>
+        <div.card-inner>
+          <h4.card-title>
+            New Criterion
+          <form role=form method=post enctype=#{enctype} action=@{AdminCreateCriterionR}>
+            ^{widget}
+            <button type="submit" .btn .btn-default>
+              Submit
+
+  $forall w <- criterionWidgets
+    ^{w}
