@@ -74,6 +74,7 @@ library
         Handler.Mooc
         Handler.Mooc.Admin
         Handler.Mooc.Admin.ScenarioEditor
+        Handler.Mooc.Admin.UserManager
         Handler.Mooc.BrowseProposals
         Handler.Mooc.Comment
         Handler.Mooc.CompareProposals

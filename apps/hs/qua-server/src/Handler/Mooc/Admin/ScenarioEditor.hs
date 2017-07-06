@@ -20,11 +20,14 @@ import qualified Database.Persist as P
 
 import Yesod.Form.Bootstrap3
 
+import Handler.Mooc.Admin
+
 getAdminScenarioEditorR :: Handler Html
 getAdminScenarioEditorR = postAdminCreateScenarioR
 
 postAdminCreateScenarioR :: Handler Html
 postAdminCreateScenarioR = do
+    requireAdmin
     ((res, widget), enctype) <-
         runFormPost $ renderBootstrap3 BootstrapBasicForm newScenarioForm
     case res of
@@ -112,6 +115,7 @@ getScenarioProblemGeometryR scenarioProblemId = do
 
 getScenarioProblemEditR :: ScenarioProblemId -> Handler Html
 getScenarioProblemEditR scenarioProblemId = do
+    requireAdmin
     ScenarioProblem {..} <- runDB $ get404 scenarioProblemId
     cs <-
             runDB $
