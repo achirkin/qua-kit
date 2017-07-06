@@ -13,6 +13,7 @@ import qualified Data.Function as Function (on)
 import qualified Data.List as List (groupBy, head)
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as TE
+import qualified Text.Blaze as Blaze
 
 import Database.Persist
 
@@ -33,7 +34,7 @@ postAdminCreateCriterionR = do
                 fmap LB.toStrict $
                 runResourceT $ fileSource newCriterionDataImage $$ CB.sinkLbs
             iconText <-
-                fmap (TE.decodeUtf8 .LB.toStrict)$
+                fmap (TE.decodeUtf8 . LB.toStrict) $
                 runResourceT $ fileSource newCriterionDataIcon $$ CB.sinkLbs
             runDB $
                 insert_
@@ -76,8 +77,8 @@ getCriterionCards = do
     pure $ map criterionWidget criterion
 
 criterionWidget :: Entity Criterion -> Widget
-criterionWidget (Entity criterionId Criterion {..}) = mempty
-    -- $(widgetFile "mooc/admin/criterion-card")
+criterionWidget (Entity criterionId Criterion {..}) =
+    $(widgetFile "mooc/admin/criterion-card")
 
 getCriterionProblemEditR :: CriterionId -> Handler Html
 getCriterionProblemEditR criterionId = pure mempty
