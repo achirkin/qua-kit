@@ -108,7 +108,7 @@ getScenarioProblemGeometryR scenarioProblemId = do
     addHeader "Content-Disposition" "inline"
     sendResponse
         ( ("text/plain" :: ByteString)
-        , toContent $ scenarioProblemImage scenario)
+        , toContent $ scenarioProblemGeometry scenario)
 
 getScenarioProblemEditR :: ScenarioProblemId -> Handler Html
 getScenarioProblemEditR scenarioProblemId = do
