@@ -21,8 +21,11 @@ import Yesod.Auth.Email
 import Yesod.Core.Handler
 import Yesod.Form.Input
 
+import Handler.Mooc.Admin
+
 getAdminUserManagerR :: Handler Html
 getAdminUserManagerR = do
+    requireAdmin
     users <- runDB $ selectList [] [Asc UserId]
     let roles = filter (/= UR_NOBODY) [minBound .. maxBound]
     fullLayout Nothing "Welcome to the user manager" $ do
@@ -34,6 +37,7 @@ roleFormInput = (readMaybe . T.unpack) <$> ireq textField "role"
 
 postSetUserRoleR :: UserId -> Handler Html
 postSetUserRoleR userId = do
+    requireAdmin
     mrole <- runInputPost roleFormInput
     case mrole of
         Nothing -> sendResponseStatus status400 ("invalid role" :: Text)
@@ -52,6 +56,7 @@ userFormInput =
 
 postAdminCreateUserR :: Handler Html
 postAdminCreateUserR = do
+    requireAdmin
     CreateUserData {..} <- runInputPost userFormInput
     case readMaybe $ T.unpack createUserDataRoleStr of
         Nothing -> sendResponseStatus status400 ("invalid role" :: Text)
