@@ -1,44 +1,63 @@
 <div .row>
   <div .col-lg-12 .col-md-12 .col-sm-12>
-    <table .table>
-      <thead>
-        <tr>
-          <th> #
-          <th> Name
-          <th> Role
-          <th> Identity
-          <th> Verified
-          <th> Change role
-      <tbody>
-        $forall Entity userId User{..} <- users
+    <div .card>
+      <div .card-main>
+        <div .card-block>
+          <div .card-inner>
+            <form .form-inline method=post action=@{AdminCreateUserR}>
+              <div .form-group>
+                <input .form-control type="email" name="email" placeholder="Email">
+
+              <div .form-group>
+                <label .sr-only for="selectRole">
+                  Select Role
+                <select .form-control id="selectRole" name=role>
+                  $forall role <- roles
+                    <option value=#{show role}>
+                      #{show role}
+                
+              <button .btn type="submit">
+                Register user
+    <div .card>
+      <table .table>
+        <thead>
           <tr>
-            <td> #{show $ fromSqlKey userId}
-            <td> #{userName}
-            <td> 
-              $maybe un <- userEthUserName
-                ETH Username: #{un}
-              $nothing
-                $maybe uid <- userEdxUserId
-                  EDK User Id: #{uid}
+            <th> #
+            <th> Name
+            <th> Role
+            <th> Identity
+            <th> Verified
+            <th> Change role
+        <tbody>
+          $forall Entity userId User{..} <- users
+            <tr>
+              <td> #{show $ fromSqlKey userId}
+              <td> #{userName}
+              <td> 
+                $maybe un <- userEthUserName
+                  ETH Username: #{un}
                 $nothing
-                  $maybe email <- userEmail
-                    Email: #{email}
+                  $maybe uid <- userEdxUserId
+                    EDK User Id: #{uid}
                   $nothing
-                    No identity
-            <td> #{show userRole}
-            <td> #{userVerified}
-            <td> 
-              <form method=post action=@{SetUserRoleR userId}>
-                <div .form-group>
-                  <label .sr-only for="selectRole#{show $ fromSqlKey userId}">
-                    Select Role
-                  <select .form-control id="selectRole#{show $ fromSqlKey userId}" name=role autocomplete="off">
-                    $forall role <- roles
-                      $if role == userRole
-                        <option selected="selected" value=#{show role}>
-                          #{show role}
-                      $else
-                        <option value=#{show role}>
-                          #{show role}
-                <button .btn type="submit">
-                    Change Role
+                    $maybe email <- userEmail
+                      Email: #{email}
+                    $nothing
+                      No identity
+              <td> #{show userRole}
+              <td> #{userVerified}
+              <td> 
+                <form method=post action=@{SetUserRoleR userId}>
+                  <div .form-group>
+                    <label .sr-only for="selectRole#{show $ fromSqlKey userId}">
+                      Select Role
+                    <select .form-control id="selectRole#{show $ fromSqlKey userId}" name=role autocomplete="off">
+                      $forall role <- roles
+                        $if role == userRole
+                          <option selected="selected" value=#{show role}>
+                            #{show role}
+                        $else
+                          <option value=#{show role}>
+                            #{show role}
+                  <button .btn type="submit">
+                      Change Role
