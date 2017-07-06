@@ -1,0 +1,16 @@
+<div .row>
+  <div .col-lg-7 .col-md-8 .col-sm-9>
+    <table .table>
+      <thead>
+        <tr>
+          <th> #
+          <th> Name
+          <th> Role
+          <th> Verified
+      <tbody>
+        $forall Entity userId User{..} <- users
+          <tr>
+            <td> #{show $ fromSqlKey userId}
+            <td> #{userName}
+            <td> #{show userRole}
+            <td> #{userVerified}

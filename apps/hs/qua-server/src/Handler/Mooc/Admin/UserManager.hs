@@ -11,10 +11,14 @@ import qualified Data.Function as Function (on)
 import qualified Data.List as List (groupBy, head)
 import qualified Data.Text as T
 
-import Database.Esqueleto
-import qualified Database.Persist as P
+import Database.Persist
+import Database.Persist.Sql
 
 import Yesod.Form.Bootstrap3
 
 getAdminUserManagerR :: Handler Html
-getAdminUserManagerR = pure mempty
+getAdminUserManagerR = do
+    users <- runDB $ selectList [] [Asc UserId]
+    fullLayout Nothing "Welcome to the user manager" $ do
+        setTitle "qua-kit - user manager"
+        $(widgetFile "mooc/admin/user-manager")
