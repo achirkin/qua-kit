@@ -12,6 +12,6 @@
       <div class="card-inner" style="margin: 10px 12px;">
         #{Blaze.preEscapedText criterionDescription}
       <div class="card-inner" style="margin: 10px 12px;">
-        <a .btn>
+        <a .btn href=@{AdminEditCriterionR criterionId}>
           Edit criterion
 

@@ -2,7 +2,8 @@
 module Handler.Mooc.Admin.CriterionEditor
     ( getAdminCriterionEditorR
     , postAdminCreateCriterionR
-    , getCriterionProblemEditR
+    , getAdminEditCriterionR
+    , postAdminEditCriterionR
     ) where
 
 import Import hiding ((==.), on)
@@ -80,28 +81,70 @@ criterionWidget :: Entity Criterion -> Widget
 criterionWidget (Entity criterionId Criterion {..}) =
     $(widgetFile "mooc/admin/criterion-card")
 
-getCriterionProblemEditR :: CriterionId -> Handler Html
-getCriterionProblemEditR criterionId = pure mempty
-   --  requireAdmin
-   --  CriterionProblem {..} <- runDB $ get404 scenarioProblemId
-   --  cs <-
-   --      runDB $
-   --      select $
-   --      from $ \(InnerJoin problemCriterion criterion) -> do
-   --          on
-   --              (problemCriterion ^. ProblemCriterionCriterionId ==. criterion ^.
-   --               CriterionId)
-   --          where_
-   --              (problemCriterion ^. ProblemCriterionProblemId ==.
-   --               val scenarioProblemId)
-   --          pure criterion
-   --  fullLayout
-   --      Nothing
-   --      (T.pack $
-   --       unwords
-   --           [ "Welcome to the editor for scenario"
-   --           , show (fromSqlKey scenarioProblemId) ++ ":"
-   --           , T.unpack scenarioProblemDescription
-   --           ]) $ do
-   --      setTitle "qua-kit - scenario"
-   --      $(widgetFile "mooc/admin/scenario-edit")
+data EditCriterionData = EditCriterionData
+    { editCriterionName :: Maybe Text
+    , editCriterionDescription :: Maybe Textarea
+    , editCriterionImage :: Maybe FileInfo
+    , editCriterionIcon :: Maybe FileInfo
+    }
+
+editCriterionForm :: Criterion -> AForm Handler EditCriterionData
+editCriterionForm Criterion {..} =
+    EditCriterionData <$>
+    aopt textField (labeledField "name") (Just $ Just criterionName) <*>
+    aopt
+        textareaField
+        (labeledField "description")
+        (Just $ Just $ Textarea criterionDescription) <*>
+    aopt fileField (labeledField "image") Nothing <*>
+    aopt fileField (labeledField "icon") Nothing
+
+getAdminEditCriterionR :: CriterionId -> Handler Html
+getAdminEditCriterionR = postAdminEditCriterionR
+
+postAdminEditCriterionR :: CriterionId -> Handler Html
+postAdminEditCriterionR criterionId = do
+    criterion <- runDB $ get404 criterionId
+    ((res, widget), enctype) <-
+        runFormPost $
+        renderBootstrap3 BootstrapBasicForm $ editCriterionForm criterion
+    case res of
+        FormFailure msgs -> showFormError msgs widget enctype
+        FormMissing -> showFormWidget widget enctype
+        FormSuccess dat@EditCriterionData {..} -> do
+            let updaterFrom mdat func field =
+                    case mdat of
+                        Nothing -> pure Nothing
+                        Just n -> do
+                            r <- func n
+                            pure $ Just $ field =. r
+            updaters <-
+                catMaybes <$>
+                sequence
+                    [ updaterFrom editCriterionName pure CriterionName
+                    , updaterFrom
+                          editCriterionDescription
+                          (pure . unTextarea)
+                          CriterionDescription
+                    , updaterFrom
+                          editCriterionImage
+                          (\n ->
+                               fmap LB.toStrict $
+                               runResourceT $ fileSource n $$ CB.sinkLbs)
+                          CriterionImage
+                    , updaterFrom
+                          editCriterionIcon
+                          (\n ->
+                               fmap (TE.decodeUtf8 . LB.toStrict) $
+                               runResourceT $ fileSource n $$ CB.sinkLbs)
+                          CriterionIcon
+                    ]
+            runDB $ update criterionId updaters
+            showForm (Just dat) [] widget enctype
+  where
+    showFormWidget = showForm Nothing []
+    showFormError = showForm Nothing
+    showForm mr msgs widget enctype = do
+        fullLayout Nothing "Welcome to the single criterion" $ do
+            setTitle "qua-kit - single criterion editor"
+            $(widgetFile "mooc/admin/criterion-edit")

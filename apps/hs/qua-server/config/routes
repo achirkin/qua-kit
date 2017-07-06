@@ -24,6 +24,7 @@
 /admin/user-manageruser/create-user AdminCreateUserR POST
 /admin/criterion-editor             AdminCriterionEditorR GET
 /admin/criterion-editor/criterion   AdminCreateCriterionR POST
+/admin/criterion-editor/edit-criterion/#CriterionId AdminEditCriterionR GET POST
 
 
 /                                   MoocHomeR GET POST
