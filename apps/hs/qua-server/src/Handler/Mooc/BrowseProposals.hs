@@ -15,6 +15,7 @@ module Handler.Mooc.BrowseProposals
   ) where
 
 import Import
+import Import.BootstrapUtil
 import qualified Data.Text as Text
 import qualified Text.Blaze as Blaze
 import Database.Persist.Sql (rawSql, Single (..))
@@ -27,7 +28,8 @@ getBrowseProposalsR :: Int -> Handler Html
 getBrowseProposalsR page = do
     role <- muserRole <$> maybeAuth
     let isExpert = role == UR_EXPERT
-    usersscenarios <- runDB $ getLastSubmissions page
+    ((res, widget), _) <- runFormGet proposalsForm
+    usersscenarios <- runDB $ getLastSubmissions page res
     pages <- negate . (`div` pageSize) . negate <$> runDB countUniqueSubmissions
     let is = [1..pages]
     fullLayout Nothing "Qua-kit student designs" $ do
@@ -50,11 +52,17 @@ getBrowseProposalsR page = do
             display: inline-block
             color: #ff6f00
             text-align: center
+          .form-inline
+            .form-group
+              display: inline-block
+              margin-left: 15px
+            .btn
+              margin-left: 15px
         |]
-      toWidgetBody $
-        [hamlet|
+      [whamlet|
           <div class="ui-card-wrap">
             <div class="row">
+              ^{widget}
               $forall ((scId, scpId, uId), lu, desc, uname, (mexpertgrade, hasToBeGraded), crits) <- usersscenarios
                 <div class="col-lg-4 col-md-6 col-sm-9 col-xs-9 story_cards">
                   <div.card>
@@ -109,7 +117,7 @@ getBrowseProposalsR page = do
                       <p style="margin:2px;padding:0;display:inline">#{i}
                     $else
                       <a style="margin:2px;padding:0;display:inline" href="@{BrowseProposalsR i}">#{i}
-        |]
+      |]
  where
    cOpacity i = 0.5 + fromIntegral i / 198 :: Double
 
@@ -120,6 +128,36 @@ shortLength = 140
 
 maxLines :: Int
 maxLines = 3
+
+data ProposalParams = ProposalParams {
+      onlyGraded     :: Maybe Bool
+    , onlyByAuthorId :: Maybe UserId
+    }
+
+proposalsForm :: Html -> MForm Handler (FormResult ProposalParams, Widget)
+proposalsForm extra = do
+  maybeMe <- lift maybeAuthId
+  (onlyGradedRes, onlyGradedView) <- mreq (bootstrapSelectFieldList [
+                      ("Graded and Ungraded"::Text, Nothing)
+                    , ("Only graded",   Just True)
+                    , ("Only ungraded", Just False)
+                    ]) "" Nothing
+  (onlyByAuthorIdRes, onlyByAuthorView) <- mreq (bootstrapSelectFieldList [
+                      ("All incl. mine"::Text, Nothing)
+                    , ("Only mine", maybeMe)
+                    ]) "" Nothing
+  let proposalParams = ProposalParams <$> onlyGradedRes
+                                      <*> onlyByAuthorIdRes
+  let widget = do
+        [whamlet|
+          <form .form-inline>
+            #{extra}
+            ^{fvInput onlyGradedView}
+            ^{fvInput onlyByAuthorView}
+            <input type=submit value="Filter" class="btn btn-default">
+        |]
+  return (proposalParams, widget)
+
 
 shortComment :: Text -> Text
 shortComment t = dropInitSpace . remNewLines $
@@ -138,9 +176,9 @@ shortComment t = dropInitSpace . remNewLines $
         dropInitSpace = Text.dropWhile (\c -> c == ' ' || c == '\n' || c == '\r' || c == '\t')
 
 -- | get user name, scenario, and ratings
-getLastSubmissions :: Int -> ReaderT SqlBackend Handler
+getLastSubmissions :: Int -> FormResult ProposalParams -> ReaderT SqlBackend Handler
   [((ScenarioId, ScenarioProblemId, UserId), UTCTime, Text, Text, (Maybe Double, Bool), [(Blaze.Markup, Text, Int)])]
-getLastSubmissions page = getVals <$> rawSql query [toPersistValue pageSize, toPersistValue $ (max 0 (page-1))*pageSize]
+getLastSubmissions page _ = getVals <$> rawSql query [toPersistValue pageSize, toPersistValue $ (max 0 (page-1))*pageSize]
   where
     getVal' scId' xxs@(((Single scId, Single _, Single _), Single _, Single _, Single _, Single icon, Single cname, Single rating, (Single _expertgrade, Single _hasToBeGraded)):xs)
         | scId == scId' = first ((Blaze.preEscapedToMarkup (icon :: Text), cname, min 99 $ round (100*rating::Double)) :) $ getVal' scId xs

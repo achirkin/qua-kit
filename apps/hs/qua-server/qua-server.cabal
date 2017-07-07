@@ -97,6 +97,7 @@ library
         Import
         Import.NoFoundation
         Import.Util
+        Import.BootstrapUtil
         Model
         Model.CustomTypes
         Model.Generated
