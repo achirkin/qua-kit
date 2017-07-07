@@ -83,6 +83,7 @@ Criterion
 ProblemCriterion
     problemId ScenarioProblemId
     criterionId CriterionId
+    ProblemCriterionUnique problemId criterionId 
 
 Vote
     voterId       UserId

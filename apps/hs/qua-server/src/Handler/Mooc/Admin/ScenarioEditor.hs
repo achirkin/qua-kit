@@ -5,14 +5,16 @@ module Handler.Mooc.Admin.ScenarioEditor
     , getScenarioProblemImgR
     , getScenarioProblemGeometryR
     , getScenarioProblemEditR
+    , postScenarioProblemAttachCriterionR
+    , postScenarioProblemDetachCriterionR
     ) where
 
-import Import hiding ((==.), on)
+import Import hiding ((/=.), (==.), on)
 
 import qualified Data.ByteString.Lazy as LB
 import qualified Data.Conduit.Binary as CB
 import qualified Data.Function as Function (on)
-import qualified Data.List as List (groupBy, head)
+import qualified Data.List as List (groupBy, head, nubBy)
 import qualified Data.Text as T
 
 import Database.Esqueleto
@@ -117,18 +119,18 @@ getScenarioProblemEditR :: ScenarioProblemId -> Handler Html
 getScenarioProblemEditR scenarioProblemId = do
     requireAdmin
     ScenarioProblem {..} <- runDB $ get404 scenarioProblemId
-    cs <-
-            runDB $
-              select $
-              from $ \(InnerJoin problemCriterion criterion) -> do
-                  on
-                      (problemCriterion ^. ProblemCriterionCriterionId ==.
-                       criterion ^.
-                       CriterionId)
-                  where_
-                      (problemCriterion ^. ProblemCriterionProblemId ==.
-                       val scenarioProblemId)
-                  pure criterion
+    cs' <-
+        runDB $
+        select $
+        from $ \(LeftOuterJoin criterion problemCriterion) -> do
+            on
+                (problemCriterion ?. ProblemCriterionCriterionId ==.
+                 just (criterion ^. CriterionId))
+            let b =
+                    problemCriterion ?. ProblemCriterionProblemId ==.
+                    just (val scenarioProblemId)
+            pure (criterion ^. CriterionId, criterion ^. CriterionName, b)
+    let cs = List.nubBy ((==) `Function.on` (\(a, _, _) -> a)) cs' -- Evil hack
     fullLayout
         Nothing
         (T.pack $
@@ -139,3 +141,34 @@ getScenarioProblemEditR scenarioProblemId = do
              ]) $ do
         setTitle "qua-kit - scenario"
         $(widgetFile "mooc/admin/scenario-edit")
+
+postScenarioProblemAttachCriterionR ::
+       ScenarioProblemId -> CriterionId -> Handler ()
+postScenarioProblemAttachCriterionR s c = do
+    void $
+        runDB $ do
+            mr <-
+                selectFirst
+                    [ ProblemCriterionProblemId P.==. s
+                    , ProblemCriterionCriterionId P.==. c
+                    ]
+                    []
+            case mr of
+                Nothing ->
+                    insert_
+                        ProblemCriterion
+                        { problemCriterionProblemId = s
+                        , problemCriterionCriterionId = c
+                        }
+                Just _ -> pure ()
+    redirect $ ScenarioProblemEditR s
+
+postScenarioProblemDetachCriterionR ::
+       ScenarioProblemId -> CriterionId -> Handler ()
+postScenarioProblemDetachCriterionR s c = do
+    runDB $
+        P.deleteWhere
+            [ ProblemCriterionProblemId P.==. s
+            , ProblemCriterionCriterionId P.==. c
+            ]
+    redirect $ ScenarioProblemEditR s

@@ -34,6 +34,8 @@
 /mooc/scproblem/#ScenarioProblemId/img ScenarioProblemImgR GET
 /mooc/scproblem/#ScenarioProblemId/geometry ScenarioProblemGeometryR GET
 /mooc/scproblem/#ScenarioProblemId/edit ScenarioProblemEditR GET
+/mooc/scproblem/#ScenarioProblemId/attach-criterion/#CriterionId ScenarioProblemAttachCriterionR POST
+/mooc/scproblem/#ScenarioProblemId/detach-criterion/#CriterionId ScenarioProblemDetachCriterionR POST
 /mooc/user/#UserId/role             SetUserRoleR POST
 /mooc/proposals/browse/#Int         BrowseProposalsR GET
 /mooc/proposals/preview/#ScenarioId ProposalPreviewR GET

@@ -2,20 +2,35 @@
   <div .card>
     <div .card-main>
       <img .card-img .pull-top .center-block src=@{ScenarioProblemImgR scenarioProblemId} height="350px" alt="Scenario Image">
+
   <div .card>
     <div .card-inner>
       <p .card-text>
         #{show $ fromSqlKey scenarioProblemId}: #{scenarioProblemDescription}
-  <div .card>
-    <div .card-inner>
-      <a .btn href=@{ScenarioProblemGeometryR scenarioProblemId}>
-        Download Geometry
-  $forall (Entity criterionId Criterion{..}) <- cs
-    <div .card>
-      <div .card-inner>
-        <p>
-          #{criterionName}
-      <div .card-comment .card-action>
-        #{preEscapedToMarkup criterionDescription}
-      
+
+  <table .table>
+    <thead>
+      <tr>
+        <th> Attached
+        <th> Criterion Name
+    <tbody>
+      $forall (Value criterionId , Value criterionName , Value attached) <- cs
+        <tr>
+          $if attached
+            <td>
+              <span .icon .icon-lg>
+                done
+          $else
+            <td>
+          <td>
+            #{criterionName}
+          <td>
+            $if attached
+              <form action=@{ScenarioProblemDetachCriterionR scenarioProblemId criterionId} method=post>
+                <button .btn type="submit">
+                  Detach Criterion
+            $else
+              <form action=@{ScenarioProblemAttachCriterionR scenarioProblemId criterionId} method=post>
+                <button .btn type="submit">
+                  Attach Criterion
 
