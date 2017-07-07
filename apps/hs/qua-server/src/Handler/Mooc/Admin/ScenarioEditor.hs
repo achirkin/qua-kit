@@ -9,7 +9,7 @@ module Handler.Mooc.Admin.ScenarioEditor
     , postScenarioProblemDetachCriterionR
     ) where
 
-import Import hiding ((/=.), (==.), on)
+import Import hiding ((/=.), (==.), isNothing, on)
 
 import qualified Data.ByteString.Lazy as LB
 import qualified Data.Conduit.Binary as CB
@@ -119,18 +119,19 @@ getScenarioProblemEditR :: ScenarioProblemId -> Handler Html
 getScenarioProblemEditR scenarioProblemId = do
     requireAdmin
     ScenarioProblem {..} <- runDB $ get404 scenarioProblemId
-    cs' <-
+    cs <-
         runDB $
         select $
         from $ \(LeftOuterJoin criterion problemCriterion) -> do
             on
-                (problemCriterion ?. ProblemCriterionCriterionId ==.
-                 just (criterion ^. CriterionId))
-            let b =
-                    problemCriterion ?. ProblemCriterionProblemId ==.
-                    just (val scenarioProblemId)
-            pure (criterion ^. CriterionId, criterion ^. CriterionName, b)
-    let cs = List.nubBy ((==) `Function.on` (\(a, _, _) -> a)) cs' -- Evil hack
+                ((problemCriterion ?. ProblemCriterionCriterionId ==.
+                  just (criterion ^. CriterionId)) &&.
+                 (problemCriterion ?. ProblemCriterionProblemId ==.
+                  just (val scenarioProblemId)))
+            pure
+                ( criterion ^. CriterionId
+                , criterion ^. CriterionName
+                , not_ $ isNothing $ problemCriterion ?. ProblemCriterionId)
     fullLayout
         Nothing
         (T.pack $
