@@ -20,11 +20,14 @@ import Database.Persist
 
 import Yesod.Form.Bootstrap3
 
+import Handler.Mooc.Admin
+
 getAdminCriterionEditorR :: Handler Html
 getAdminCriterionEditorR = postAdminCreateCriterionR
 
 postAdminCreateCriterionR :: Handler Html
 postAdminCreateCriterionR = do
+    requireAdmin
     ((res, widget), enctype) <-
         runFormPost $ renderBootstrap3 BootstrapBasicForm newCriterionForm
     case res of
