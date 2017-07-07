@@ -67,8 +67,8 @@ postVoteForProposalR cId better worse = do
           -- Finish exercise!
           EQ -> do
             setMessage "You are done with this exercise, thank you! You can continue exploring the site or go back to edX."
-            deleteSession "custom_exercise_count"
-            deleteSession "compare_counter"
+            deleteSafeSession userSessionCustomExerciseCount
+            deleteSafeSession userSessionCompareCounter
 
             -- send the base grade back to edX
             case (,) <$> lis_result_sourcedid <*> lis_outcome_service_url of

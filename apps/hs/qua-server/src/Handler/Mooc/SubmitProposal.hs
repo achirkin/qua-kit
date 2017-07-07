@@ -95,7 +95,7 @@ postSubmitProposalR = do
 resolveBySesScenarioId :: Handler (Maybe Scenario)
 resolveBySesScenarioId = do
   mescenario_id <- getsSafeSession userSessionScenarioId
-  deleteSession "scenario_id"
+  deleteSafeSession userSessionScenarioId
   case mescenario_id of
       Just i -> runDB (get i)
       Nothing -> return Nothing
