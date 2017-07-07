@@ -36,7 +36,7 @@ renderQuaView = do
     Just (UR_STUDENT, Entity userId _, scId) -> runDB $ do
       scenario <- get scId
       when (fmap scenarioAuthorId scenario == Just userId) $
-        lift (setSession "qua_view_mode" "edit")
+        lift (setSafeSession userSessionQuaViewMode "edit")
     _ -> return ()
 
   mscLink <- case mscId of

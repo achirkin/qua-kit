@@ -60,7 +60,7 @@ postVoteForProposalR cId better worse = do
        case custom_exercise_count `compare` (compare_counter+1) of
           -- continue exercise
           GT -> do
-            setSession "compare_counter" (pack . show $ compare_counter + 1)
+            setSafeSession userSessionCompareCounter $ compare_counter + 1
             getCompareByCriterionR userId cId
           -- something strange happend, go to standard pipeline
           LT -> redirect CompareProposalsR

@@ -7,6 +7,7 @@ import Import
 
 import qualified Data.Conduit.List as CL
 import Database.Persist.Sql (fromSqlKey)
+import Model.Session
 
 import Handler.Home.LoadingSplash
 import Handler.Home.PopupHelp
@@ -41,7 +42,7 @@ renderQuaView scpId authorId = do
       setMessage "Design submission your are looking for does not exist."
       redirect MoocHomeR
 
-  setSession "scenario_id" (pack . show $ fromSqlKey scId)
+  setSafeSession userSessionScenarioId scId
 
   let goEdit = case muser of
         (Just (Entity userId _)) -> authorId == userId
@@ -52,7 +53,7 @@ renderQuaView scpId authorId = do
       qua_view_mode = "view" :: Text
       showFull = False
       showHelp = False
-  setSession "qua_view_mode" qua_view_mode
+  setSafeSession userSessionQuaViewMode qua_view_mode
   commentsW <- viewComments scId
 
   -- connecting form + conteiners for optional content
