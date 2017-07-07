@@ -1,39 +1,59 @@
 module Model.Session
-    ( UserSession(..)
+    ( SessionLens
     , getsSafeSession
+    , deleteSafeSession
+    , userSessionContextId
+    , userSessionResourceLink
+    , userSessionOutcomeServiceUrl
+    , userSessionResultSourceId
+    , userSessionCustomExerciseId
+    , userSessionCustomExerciseCount
+    , userSessionCustomExerciseType
+    , userSessionCompareCounter
+    , userSessionQuaViewMode
+    , userSessionScenarioId
     ) where
 
 import Import
 
-data UserSession = UserSession
-    { userSessionRole :: UserRole
-    , userSessionContextId :: Maybe Text
-    , userSessionResourceLink :: Maybe Text
-    , userSessionOutcomeServiceUrl :: Maybe Text
-    , userSessionResultSourceId :: Maybe Text
-    , userSessionCustomExerciseId :: Maybe ScenarioProblemId
-    , userSessionCustomExerciseCount :: Maybe Int
-    , userSessionCustomExerciseType :: Maybe Text
-    , userSessionCompareCounter :: Maybe Int
-    , userSessionQuaViewMode :: Maybe Text
-    , userSessionScenarioId :: Maybe ScenarioId
-    } deriving (Show, Eq)
+data SessionLens a = SessionLens
+    { convFunc :: Maybe Text -> a
+    , convKey :: Text
+    }
 
-getSafeSession :: Handler UserSession
-getSafeSession =
-    UserSession <$> (muserRole <$> maybeAuth) <*> lookupSession "context_id" <*>
-    lookupSession "resource_link_id" <*>
-    lookupSession "lis_outcome_service_url" <*>
-    lookupSession "lis_result_sourcedid" <*>
-    readSqlKey "custom_exercise_id" <*>
-    readSession "custom_exercise_count" <*>
-    readSession "custom_exercise_type" <*>
-    readSession "compare_counter" <*>
-    lookupSession "qua_view_mode" <*>
-    readSqlKey "scenario_id"
-  where
-    readSession key = ((>>= readMay) <$> lookupSession key)
-    readSqlKey key = (>>= parseSqlKey) <$> lookupSession key
+userSessionContextId :: SessionLens (Maybe Text)
+userSessionContextId = SessionLens id "context_id"
 
-getsSafeSession :: (UserSession -> b) -> Handler b
-getsSafeSession func = fmap func getSafeSession
+userSessionResourceLink :: SessionLens (Maybe Text)
+userSessionResourceLink = SessionLens id "resource_link_id"
+
+userSessionOutcomeServiceUrl :: SessionLens (Maybe Text)
+userSessionOutcomeServiceUrl = SessionLens id "lis_outcome_service_url"
+
+userSessionResultSourceId :: SessionLens (Maybe Text)
+userSessionResultSourceId = SessionLens id "lis_result_sourcedid"
+
+userSessionCustomExerciseId :: SessionLens (Maybe ScenarioProblemId)
+userSessionCustomExerciseId = SessionLens (>>= parseSqlKey) "custom_exercise_id"
+
+userSessionCustomExerciseCount :: SessionLens (Maybe Int)
+userSessionCustomExerciseCount =
+    SessionLens (>>= readMay) "custom_exercise_count"
+
+userSessionCustomExerciseType :: SessionLens (Maybe Text)
+userSessionCustomExerciseType = SessionLens (>>= readMay) "custom_exercise_type"
+
+userSessionCompareCounter :: SessionLens (Maybe Int)
+userSessionCompareCounter = SessionLens (>>= readMay) "compare_counter"
+
+userSessionQuaViewMode :: SessionLens (Maybe Text)
+userSessionQuaViewMode = SessionLens id "qua_view_mode"
+
+userSessionScenarioId :: SessionLens (Maybe ScenarioId)
+userSessionScenarioId = SessionLens (>>= parseSqlKey) "scenario_id"
+
+getsSafeSession :: SessionLens b -> Handler b
+getsSafeSession SessionLens {..} = fmap convFunc $ lookupSession convKey
+
+deleteSafeSession :: SessionLens b -> Handler ()
+deleteSafeSession = deleteSession . convKey
