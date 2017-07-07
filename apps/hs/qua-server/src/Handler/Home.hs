@@ -5,6 +5,8 @@ module Handler.Home
 
 import Import
 
+import Model.Session
+
 import Handler.Home.LoadingSplash
 import Handler.Home.PopupHelp
 import Handler.Home.UIButtons
@@ -27,7 +29,7 @@ renderQuaView = do
 
   muser <- maybeAuth
   let urole = muserRole muser
-  mscId <- (>>= parseSqlKey) <$> lookupSession "scenario_id"
+  mscId <- getsSafeSession userSessionScenarioId
 
   -- if the user is an owner of scenario, let him edit it!
   case (,,) urole <$> muser <*> mscId of
@@ -44,7 +46,7 @@ renderQuaView = do
       return $ (,) <$> fmap scenarioTaskId scenario
                    <*> fmap scenarioAuthorId scenario
 
-  qua_view_mode <- fromMaybe "full" <$> lookupSession "qua_view_mode"
+  qua_view_mode <- fromMaybe "full" <$> getsSafeSession userSessionQuaViewMode
   let showFull = qua_view_mode == "full"
 
   commentsW <- case mscId of

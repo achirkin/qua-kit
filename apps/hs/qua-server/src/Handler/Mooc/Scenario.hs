@@ -21,6 +21,7 @@ import Import
 import Database.Persist.Sql (toSqlKey)
 import Data.Text.Read (decimal)
 import Control.Monad.Trans.Maybe
+import Model.Session
 
 getScenarioId :: ScenarioProblemId -> Handler (Maybe ScenarioId)
 getScenarioId scpId = runMaybeT $ do
@@ -36,18 +37,14 @@ getScenarioId scpId = runMaybeT $ do
 
 getScenarioLink :: Handler (Maybe (Route App, Double))
 getScenarioLink = runMaybeT $ do
-  msc_id <- lift $ lookupSession "scenario_id" >>= \x -> case decimal <$> x of
-                        Just (Right (i,_)) -> return . Just $ toSqlKey i
-                        _ -> return Nothing
+  msc_id <- lift $ getsSafeSession userSessionScenarioId
   case msc_id of
     Just sc_id -> do
       scale <- fmap scenarioScale . MaybeT . runDB $ get sc_id
       return (ScenarioR sc_id, scale)
     Nothing -> do
       userId <- MaybeT maybeAuthId
-      mscp_id <- lift $ lookupSession "custom_exercise_id" >>= \x -> case decimal <$> x of
-                            Just (Right (i,_)) -> return . Just $ toSqlKey i
-                            _ -> return Nothing
+      mscp_id <- lift $ getsSafeSession userSessionCustomExerciseId
       mScenarioId <- fmap (fmap entityKey) . lift . runDB $ selectSource
                         (case mscp_id of
                            Just i  -> [ ScenarioAuthorId ==. userId
