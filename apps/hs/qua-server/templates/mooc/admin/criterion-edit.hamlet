@@ -1,0 +1,19 @@
+<div .row>
+  <div .col-lg-7 .col-md-8 .col-sm-9 .col-xs-12 .story_cards>
+    <div .card>
+      <div .card-inner>
+        <a href=@{AdminCriterionEditorR}>
+          Back to the criterion editor
+    $forall msg <- msgs
+      <div #{msg}>
+    $maybe dat <- mr
+      <div .card>
+        <div .card-inner>
+          Updated criterion
+    $nothing 
+    <div .card>
+      <div .card-inner>
+        <form role=form method=post enctype=#{enctype} action=@{AdminEditCriterionR criterionId}>
+          ^{widget}
+          <button type="submit" .btn .btn-default>
+            Submit
