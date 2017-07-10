@@ -51,6 +51,7 @@ import Handler.Mooc.Admin.CriterionEditor
 import Handler.Mooc.Admin.ScenarioEditor
 import Handler.Mooc.Admin.UserManager
 import Handler.Mooc.Comment
+import Handler.Mooc.ExpertReview
 import Handler.Mooc.Scenario
 import Handler.Mooc.BrowseProposals
 import Handler.Mooc.EditProposal

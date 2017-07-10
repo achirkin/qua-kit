@@ -53,6 +53,9 @@ renderQuaView = do
     Just scId -> viewComments scId
     Nothing -> return mempty
 
+  let writeExpertReviewW = mempty::Widget
+  let viewExpertReviewsW  = mempty::Widget
+
   showHelp <- if qua_view_mode == "view"
               then return False
               else case muser of
