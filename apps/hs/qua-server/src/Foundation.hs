@@ -1,4 +1,7 @@
-module Foundation where
+module Foundation
+    ( module Foundation
+    , parseSqlKey
+    ) where
 
 import Control.Concurrent.STM.TChan
 
@@ -25,6 +28,7 @@ import System.Directory (createDirectoryIfMissing)
 import Text.Blaze (Markup)
 import qualified Data.Map.Strict as Map
 import Handler.Mooc.EdxLogin
+import Model.Session
 
 
 -- | The foundation datatype for your application. This can be a good place to
@@ -261,7 +265,7 @@ instance YesodAuthEmail App where
 
 
   sendVerifyEmail email _ verurl = do
-    lookupPostParam "scenario-problem" >>= maybeEnroll email
+    maybeEnroll email
     -- Print out to the console the verification email, for easier
     -- debugging.
     $(logDebug) $ "Copy/ Paste this URL in your browser: " <> verurl
@@ -319,7 +323,7 @@ instance YesodAuthEmail App where
             mr <- lookupGetParam key
             pure $ (,) key <$> mr
     scenarioProblemParam <- extraParam "scenario-problem"
-                                                  
+
     toParRt <- getRouteToParent
     (widget, _) <- lift $ generateFormPost (registrationForm (catMaybes [scenarioProblemParam]) toParRt)
     lift $ authLayout widget
@@ -462,14 +466,6 @@ requirePostParam pam errstr = lookupPostParam pam >>= \mv -> case mv of
     Nothing -> invalidArgsI [errstr]
     Just v  -> return v
 
-
-parseSqlKey :: (ToBackendKey SqlBackend a) => Text -> Maybe (Key a)
-parseSqlKey t = case decimal t of
-    Right (i,_) -> Just $ toSqlKey i
-    _ -> Nothing
-
-
-
 getCurrentScenarioProblem :: Handler ScenarioProblemId
 getCurrentScenarioProblem = do
     mtscp_id <- lookupSession "custom_exercise_id"
@@ -489,11 +485,12 @@ lastScenarioProblemId = getVal <$> rawSql query []
           ]
 
 
-maybeEnroll :: Email -> Maybe Text -> Handler ()
-maybeEnroll email msId =
+maybeEnroll :: Email -> Handler ()
+maybeEnroll email = do
+    msId <- (>>= parseSqlKey) <$> lookupPostParam "scenario-problem"
     case msId of
         Nothing -> pure ()
         Just i -> do
-             $(logDebug) $ "Enrolling new user with email " <> email <> " in scenario problem " <> i
-             runDB $ pure () -- TODO what here?
-            
+             $(logDebug) $ "Enrolling new user with email " <> email <> " in scenario problem " <> Text.pack (show i)
+             setSafeSession userSessionCustomExerciseId i
+             setSafeSession userSessionCustomExerciseType "edit"
