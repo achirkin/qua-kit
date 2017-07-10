@@ -7,39 +7,45 @@ $# WebGL canvas
 $# main panel GUI
 <div .idleguipanel #guipanel>
 
-  $#  main control panel
-  <div style="margin: 0; padding: 0; height: 56px;">
-  $if showFull
-    <nav class="tab-nav tab-nav-red margin-top-no">
-      <ul class="nav nav-justified">
-        <li class="active">
-          <a aria-expanded="true" class="waves-attach waves-effect" data-toggle="tab" href="#itabGeometry">
-            Geometry
-        <li class="">
-          <a aria-expanded="false" class="waves-attach waves-effect" data-toggle="tab" href="#itabInfo">
-            Info
-        <li class="">
-          <a aria-expanded="false" class="waves-attach waves-effect" data-toggle="tab" href="#itabServices">
-            Services
-      <div style="left: 0px; right: 412px;" class="tab-nav-indicator">
-    <div class="tab-content" style="padding-left: 20px;">
-      <div class="tab-pane fade active in" id="itabGeometry">
-        ^{fileUploadGeometry}
-        <div .#{lcDisconnectedClass}>
-          <div>
-            Luci scenarios are not available.
-        <div .#{lcConnectedClass}>
-            ^{luciScenariosPane}
-      <div class="tab-pane fade" id="itabInfo">
+  <div style="overflow-y: auto; overflow-x: hidden; height: 100%;">
+    $#  main control panel
+    <div style="margin: 0; padding: 0; height: 56px;">
+    $if showFull
+      <nav class="tab-nav tab-nav-red margin-top-no">
+        <ul class="nav nav-justified">
+          <li class="active">
+            <a aria-expanded="true" class="waves-attach waves-effect" data-toggle="tab" href="#itabGeometry">
+              Geometry
+          <li class="">
+            <a aria-expanded="false" class="waves-attach waves-effect" data-toggle="tab" href="#itabInfo">
+              Info
+          <li class="">
+            <a aria-expanded="false" class="waves-attach waves-effect" data-toggle="tab" href="#itabServices">
+              Services
+        <div style="left: 0px; right: 412px;" class="tab-nav-indicator">
+      <div class="tab-content" style="padding-left: 20px;">
+        <div class="tab-pane fade active in" id="itabGeometry">
+          ^{fileUploadGeometry}
+          <div .#{lcDisconnectedClass}>
+            <div>
+              Luci scenarios are not available.
+          <div .#{lcConnectedClass}>
+              ^{luciScenariosPane}
+        <div class="tab-pane fade" id="itabInfo">
+          ^{panelInfo}
+        <div class="tab-pane fade" id="itabServices">
+          ^{panelServices}
+      ^{luciConnectForm}
+    $else
+      <div>
+        ^{writeExpertReviewW}
+      <div style="max-height: 100%">
         ^{panelInfo}
-      <div class="tab-pane fade" id="itabServices">
-        ^{panelServices}
-    ^{luciConnectForm}
-  $else
-    <div style="max-height: 100%">
-      ^{panelInfo}
-    <div>
-      ^{commentsW}
+      <div>
+        ^{commentsW}
+      <div>
+        ^{viewExpertReviewsW}
+    <div style="height: 50px;">
 
 
   $#  console

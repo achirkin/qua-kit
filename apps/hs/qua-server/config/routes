@@ -22,6 +22,10 @@
 /admin/scenario-editor/scenario     AdminCreateScenarioR POST
 /admin/user-manager                 AdminUserManagerR GET
 /admin/user-manageruser/create-user AdminCreateUserR POST
+/admin/criterion-editor             AdminCriterionEditorR GET
+/admin/criterion-editor/criterion   AdminCreateCriterionR POST
+/admin/criterion-editor/edit-criterion/#CriterionId AdminEditCriterionR GET POST
+
 
 /                                   MoocHomeR GET POST
 /mooc/submit                        SubmitProposalR POST
@@ -30,6 +34,8 @@
 /mooc/scproblem/#ScenarioProblemId/img ScenarioProblemImgR GET
 /mooc/scproblem/#ScenarioProblemId/geometry ScenarioProblemGeometryR GET
 /mooc/scproblem/#ScenarioProblemId/edit ScenarioProblemEditR GET
+/mooc/scproblem/#ScenarioProblemId/attach-criterion/#CriterionId ScenarioProblemAttachCriterionR POST
+/mooc/scproblem/#ScenarioProblemId/detach-criterion/#CriterionId ScenarioProblemDetachCriterionR POST
 /mooc/user/#UserId/role             SetUserRoleR POST
 /mooc/proposals/browse/#Int         BrowseProposalsR GET
 /mooc/proposals/preview/#ScenarioId ProposalPreviewR GET
@@ -37,6 +43,7 @@
 /mooc/proposals/view/#ScenarioId    ViewProposalR GET
 /mooc/proposals/compare             CompareProposalsR GET
 /mooc/proposals/review/#ScenarioId  WriteReviewR POST
+/mooc/proposals/expertreview/#ScenarioId  WriteExpertReviewR POST
 /mooc/criteria/browse               CriteriaListR GET
 /mooc/criteria/img/#CriterionId     CriteriaImgR GET
 /mooc/survey                        SurveyR GET POST

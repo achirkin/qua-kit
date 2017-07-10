@@ -47,9 +47,11 @@ import Handler.Mooc
 import Handler.Mooc.Criteria
 import Handler.Mooc.RenameMe
 import Handler.Mooc.Admin
+import Handler.Mooc.Admin.CriterionEditor
 import Handler.Mooc.Admin.ScenarioEditor
 import Handler.Mooc.Admin.UserManager
 import Handler.Mooc.Comment
+import Handler.Mooc.ExpertReview
 import Handler.Mooc.Scenario
 import Handler.Mooc.BrowseProposals
 import Handler.Mooc.EditProposal

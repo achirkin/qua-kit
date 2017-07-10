@@ -19,6 +19,7 @@ import qualified Data.Text                 as Text (unpack, pack)
 import           Data.Text.Read            (decimal)
 import           Database.Persist.Sql      (toSqlKey)
 import           Import
+import           Model.Session
 --import Text.Blaze
 import           Web.LTI
 
@@ -92,22 +93,22 @@ postSubmitProposalR = do
 
 
 resolveBySesScenarioId :: Handler (Maybe Scenario)
-resolveBySesScenarioId = runMaybeT $ do
-  mescenario_id   <- fmap decimal . MaybeT $ lookupSession "scenario_id"
-  deleteSession "scenario_id"
+resolveBySesScenarioId = do
+  mescenario_id <- getsSafeSession userSessionScenarioId
+  deleteSafeSession userSessionScenarioId
   case mescenario_id of
-    Right (i,_) -> MaybeT . runDB . get $ toSqlKey i
-    _           -> MaybeT $ return Nothing
+      Just i -> runDB (get i)
+      Nothing -> return Nothing
 
 resolveBySesExerciseId :: Handler (Maybe Scenario)
 resolveBySesExerciseId = runMaybeT $ do
   userId <- MaybeT maybeAuthId
-  mscp_id   <- lift $ lookupSession "custom_exercise_id"
+  mscp_id <- lift $ getsSafeSession userSessionCustomExerciseId
   fmap entityVal . MaybeT . runDB $ selectSource
-                        (case decimal <$> mscp_id of
-                           Just (Right (i,_))   -> [ ScenarioAuthorId ==. userId
-                                                   , ScenarioTaskId   ==. toSqlKey  i
-                                                   ]
+                        (case mscp_id of
+                           Just i  -> [ ScenarioAuthorId ==. userId
+                                      , ScenarioTaskId   ==. i
+                                      ]
                            _ -> [ScenarioAuthorId ==. userId]
                         )
                         [ Desc ScenarioLastUpdate
@@ -116,14 +117,11 @@ resolveBySesExerciseId = runMaybeT $ do
 completelyNewOne :: ByteString -> ByteString -> Text -> Handler (Maybe ScenarioId)
 completelyNewOne img geometry desc = runMaybeT $ do
   userId <- MaybeT maybeAuthId
-  scp_id            <- MaybeT $ lookupSession "custom_exercise_id"
-  scpId <- case decimal scp_id of
-            Right (i,_) -> return $ toSqlKey i
-            _           -> MaybeT $ return Nothing
-  resource_link_id  <- MaybeT $ lookupSession "resource_link_id"
-  lis_outcome_service_url <- lift $ lookupSession "lis_outcome_service_url"
-  lis_result_sourcedid    <- lift $ lookupSession "lis_result_sourcedid"
-  context_id    <- MaybeT $ lookupSession "context_id"
+  scpId <- MaybeT $ getsSafeSession userSessionCustomExerciseId
+  resource_link_id  <- MaybeT $ getsSafeSession userSessionResourceLink
+  lis_outcome_service_url <- lift $ getsSafeSession userSessionOutcomeServiceUrl
+  lis_result_sourcedid    <- lift $ getsSafeSession userSessionResultSourceId
+  context_id    <- MaybeT $ getsSafeSession userSessionContextId
   MaybeT . runDB . runMaybeT $ do
     Entity edxCourseId _ <- MaybeT $ getBy (EdxContextId context_id)
     (scproblem, edxres) <- MaybeT $ (\mx my -> (,) <$> mx <*> my)

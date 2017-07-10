@@ -18,20 +18,21 @@ import Import
 import Database.Persist.Sql (fromSqlKey,toSqlKey)
 import Data.Text.Read (decimal)
 import qualified Handler.Mooc.Scenario as S
+import Model.Session
 
 getEditProposalR :: Handler Html
 getEditProposalR = do
   setUltDest MoocHomeR
   role <- muserRole <$> maybeAuth
   case role of
-    UR_STUDENT -> setSession "qua_view_mode" "edit"
-    _          -> setSession "qua_view_mode" "full"
-  mtscp_id <- lookupSession "custom_exercise_id"
-  case decimal <$> mtscp_id of
-    Just (Right (i, _)) -> do
-      mscId <- S.getScenarioId $ toSqlKey i
+    UR_STUDENT -> setSafeSession userSessionQuaViewMode "edit"
+    _          -> setSafeSession userSessionQuaViewMode "full"
+  mtscp_id <- getsSafeSession userSessionCustomExerciseId
+  case mtscp_id of
+    Just i -> do
+      mscId <- S.getScenarioId i
       case mscId of
-        Nothing -> deleteSession "scenario_id"
-        Just scId -> setSession "scenario_id" (pack . show $ fromSqlKey scId)
-    _ -> deleteSession "scenario_id"
+        Nothing -> deleteSafeSession userSessionScenarioId
+        Just scId -> setSafeSession userSessionScenarioId scId
+    _ -> deleteSafeSession userSessionScenarioId
   redirect HomeR

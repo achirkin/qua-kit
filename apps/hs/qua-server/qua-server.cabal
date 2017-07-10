@@ -31,7 +31,7 @@ flag library-only
     default: False
 
 flag postgresql
-    default: True
+    default: False
     description:
         Use PostgreSQL database. Otherwise use sqlite.
 
@@ -73,6 +73,7 @@ library
         Handler.LuciProxy
         Handler.Mooc
         Handler.Mooc.Admin
+        Handler.Mooc.Admin.CriterionEditor
         Handler.Mooc.Admin.ScenarioEditor
         Handler.Mooc.Admin.UserManager
         Handler.Mooc.BrowseProposals
@@ -81,6 +82,7 @@ library
         Handler.Mooc.Criteria
         Handler.Mooc.EditProposal
         Handler.Mooc.EdxLogin
+        Handler.Mooc.ExpertReview
         Handler.Mooc.ProposalPreview
         Handler.Mooc.RenameMe
         Handler.Mooc.Scenario
@@ -94,10 +96,12 @@ library
         Handler.QuaViewSettings
         Import
         Import.NoFoundation
+        Import.Util
         Model
         Model.CustomTypes
         Model.Generated
         Model.Rating
+        Model.Session
         Settings
         Settings.StaticFiles
     build-depends:

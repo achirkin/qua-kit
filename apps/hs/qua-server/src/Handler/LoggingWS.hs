@@ -26,6 +26,7 @@ import Data.Text.Read (decimal)
 import Data.Aeson (decodeStrict')
 import Data.Aeson.Types (typeMismatch)
 import qualified Data.HashMap.Strict as HashMap
+import Model.Session
 
 
 loggingApp :: Maybe UserId -> Maybe ScenarioProblemId -> WebSocketsT Handler ()
@@ -94,11 +95,6 @@ instance FromJSON WSInfo where
 getQVLoggingR :: Handler Html
 getQVLoggingR = do
     mUId <- maybeAuthId
-    mcustom_exercise_id <- toKey <$> lookupSession "custom_exercise_id"
+    mcustom_exercise_id <- getsSafeSession userSessionCustomExerciseId
     webSockets $ loggingApp mUId mcustom_exercise_id
     notFound
-  where
-    toKey Nothing = Nothing
-    toKey (Just x) = case decimal x of
-      Right (i,_) -> Just $ toSqlKey i
-      _ -> Nothing

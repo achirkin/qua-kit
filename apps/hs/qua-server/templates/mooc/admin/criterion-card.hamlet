@@ -1,0 +1,17 @@
+<div class="col-lg-12 col-md-12 col-sm-12 col-xs-12">
+  <div class="card">
+    <aside class="card-side card-side-img pull-left card-side-moocimg">
+      <img src="@{CriteriaImgR criterionId}">
+    <div class="card-main">
+      <div.card-header>
+        <div.card-inner>
+          <h5.h5.margin-top-no.text-brand-accent style="display: inline-block; vertical-align: middle; margin-bottom: -4px;">
+            #{Blaze.preEscapedToMarkup criterionIcon}
+          <h5.h5.margin-bottom-no.margin-top-no.text-brand-accent style="display: inline; vertical-align: middle">
+            #{criterionName}
+      <div class="card-inner" style="margin: 10px 12px;">
+        #{Blaze.preEscapedText criterionDescription}
+      <div class="card-inner" style="margin: 10px 12px;">
+        <a .btn href=@{AdminEditCriterionR criterionId}>
+          Edit criterion
+

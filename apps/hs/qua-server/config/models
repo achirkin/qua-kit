@@ -73,6 +73,14 @@ Review
     timestamp   UTCTime default=CURRENT_TIMESTAMP
     ReviewOf reviewerId scenarioId criterionId
 
+ExpertReview
+    reviewerId  UserId
+    scenarioId  ScenarioId
+    comment     Text
+    grade       Int
+    timestamp   UTCTime default=CURRENT_TIMESTAMP
+    ExpertReviewOf reviewerId scenarioId
+
 Criterion
     name         Text
     description  Text
@@ -83,6 +91,7 @@ Criterion
 ProblemCriterion
     problemId ScenarioProblemId
     criterionId CriterionId
+    ProblemCriterionUnique problemId criterionId 
 
 Vote
     voterId       UserId
