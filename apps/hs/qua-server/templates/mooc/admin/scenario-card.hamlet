@@ -16,3 +16,9 @@
         <li .list-group-item>
           <p>
             #{criterionName}
+    <div .card-block>
+      <div .card-inner>
+        <p>
+          Enter the following into "Custom Paramaters" field in the exercise settings at edX:
+        <span style="font-family:monospace;">
+          ["exercise_type=design", "exercise_id=#{show $ fromSqlKey scenarioProblemId}"]
