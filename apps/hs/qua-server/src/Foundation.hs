@@ -261,9 +261,9 @@ instance YesodAuthEmail App where
 
 
   sendVerifyEmail email _ verurl = do
+    lookupPostParam "scenario-problem" >>= maybeEnroll email
     -- Print out to the console the verification email, for easier
     -- debugging.
-
     $(logDebug) $ "Copy/ Paste this URL in your browser: " <> verurl
 
     -- Send email.
@@ -315,11 +315,16 @@ instance YesodAuthEmail App where
   getEmail = runDB . fmap (join . fmap userEmail) . get
   emailLoginHandler toParent = $(widgetFile "login-local")
   registerHandler = do
+    let extraParam key = do
+            mr <- lookupGetParam key
+            pure $ (,) key <$> mr
+    scenarioProblemParam <- extraParam "scenario-problem"
+                                                  
     toParRt <- getRouteToParent
-    (widget, _) <- lift $ generateFormPost (registrationForm toParRt)
+    (widget, _) <- lift $ generateFormPost (registrationForm (catMaybes [scenarioProblemParam]) toParRt)
     lift $ authLayout widget
     where
-      registrationForm toParentRoute extra = do
+      registrationForm extraFields toParentRoute extra = do
         let emailSettings = FieldSettings {
               fsLabel = SomeMessage ("Email"::Text),
               fsTooltip = Nothing,
@@ -482,3 +487,13 @@ lastScenarioProblemId = getVal <$> rawSql query []
     query = unlines
           ["SELECT max(id) FROM scenario_problem;"
           ]
+
+
+maybeEnroll :: Email -> Maybe Text -> Handler ()
+maybeEnroll email msId =
+    case msId of
+        Nothing -> pure ()
+        Just i -> do
+             $(logDebug) $ "Enrolling new user with email " <> email <> " in scenario problem " <> i
+             runDB $ pure () -- TODO what here?
+            

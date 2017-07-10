@@ -19,6 +19,8 @@
                       #{extra}
                       <label for="^{fvId emailView}">^{fvLabel emailView}
                       ^{fvInput emailView}
+                $forall (key, val) <- extraFields
+                  <input type=hidden name=#{key} value=#{val}>
                 <div class="form-group">
                   <div class="row">
                     <div class="col-md-10 col-md-push-1">
