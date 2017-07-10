@@ -16,3 +16,9 @@
         <li .list-group-item>
           <p>
             #{criterionName}
+    <div .card-block>
+      <div .card-inner>
+        <p>
+          Invite link:
+        <span style="font-family:monospace;">
+          #{inviteLink}

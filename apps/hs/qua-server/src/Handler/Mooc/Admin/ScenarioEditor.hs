@@ -19,6 +19,7 @@ import Database.Esqueleto
 import qualified Database.Persist as P
 
 import Yesod.Form.Bootstrap3
+import Yesod.Auth.Email
 
 import Handler.Mooc.Admin
 
@@ -87,16 +88,22 @@ getScenarioCards = do
                   just (scenarioProblem ^. ScenarioProblemId))
              pure (scenarioProblem, criterion)) :: Handler [( Entity ScenarioProblem
                                                             , Maybe (Entity Criterion))]
-    pure $ map (uncurry scenarioWidget) $ map (second catMaybes) $ groupsOf tups
+    mapM (uncurry scenarioWidget) $ map (second catMaybes) $ groupsOf tups
 
 groupsOf :: Ord a => [(a, b)] -> [(a, [b])]
 groupsOf =
     map (\ls -> (fst $ List.head ls, map snd ls)) .
     List.groupBy ((==) `Function.on` fst) . sortOn fst
 
-scenarioWidget :: Entity ScenarioProblem -> [Entity Criterion] -> Widget
-scenarioWidget (Entity scenarioProblemId ScenarioProblem {..}) cs =
-    $(widgetFile "mooc/admin/scenario-card")
+scenarioWidget :: Entity ScenarioProblem -> [Entity Criterion] -> Handler (Widget)
+scenarioWidget (Entity scenarioProblemId ScenarioProblem {..}) cs = do
+    inviteLink <- getInviteLink scenarioProblemId
+    pure $(widgetFile "mooc/admin/scenario-card")
+
+getInviteLink :: ScenarioProblemId -> Handler Text
+getInviteLink scenarioProblemId = do
+    urlRender <- getUrlRenderParams
+    pure $ urlRender (AuthR registerR) [("scenario-problem", T.pack $ show $ fromSqlKey scenarioProblemId)]
 
 getScenarioProblemImgR :: ScenarioProblemId -> Handler TypedContent
 getScenarioProblemImgR scenarioProblemId = do
