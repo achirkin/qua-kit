@@ -15,6 +15,7 @@ module Handler.QuaViewSettings
 
 
 import Import
+import Model.Session
 import qualified Handler.Mooc.Scenario as S
 
 
@@ -23,7 +24,7 @@ import qualified Handler.Mooc.Scenario as S
 --   * scenario_id=i -- if set up then load this scenario from database
 getQuaViewSettingsR :: Handler TypedContent
 getQuaViewSettingsR = do
-    qua_view_mode <- fromMaybe "full" <$> lookupSession "qua_view_mode"
+    qua_view_mode <- fromMaybe "full" <$> getsSafeSession userSessionQuaViewMode
 
     scenarioLinkScale <- S.getScenarioLink
 

@@ -17,9 +17,10 @@ module Handler.Mooc.ViewProposal
 
 import Import
 import Database.Persist.Sql (fromSqlKey)
+import Model.Session
 
 getViewProposalR :: ScenarioId -> Handler Html
 getViewProposalR scId = do
-  setSession "qua_view_mode" "view"
-  setSession "scenario_id" (pack . show $ fromSqlKey scId)
+  setSafeSession userSessionQuaViewMode "view"
+  setSafeSession userSessionScenarioId scId
   redirect HomeR

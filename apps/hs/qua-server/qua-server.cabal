@@ -98,6 +98,7 @@ library
         Model.CustomTypes
         Model.Generated
         Model.Rating
+        Model.Session
         Settings
         Settings.StaticFiles
     build-depends:

@@ -23,18 +23,18 @@ import Import
 import Text.Blaze
 import Database.Persist.Sql (rawSql, Single(..), toSqlKey)
 import qualified Data.Text as Text
-import qualified Data.Text.Read as Text
 import Web.LTI
+import Model.Session
 
 
 postVoteForProposalR :: CriterionId -> ScenarioId -> ScenarioId -> Handler Html
 postVoteForProposalR cId better worse = do
   userId <- requireAuthId
-  useSVars <- (\mt -> if mt == Just "compare" then id else const Nothing) <$> lookupSession "custom_exercise_type"
-  mcontext_id             <- useSVars <$> lookupSession "context_id"
-  resource_link_id        <- useSVars <$> lookupSession "resource_link_id"
-  lis_outcome_service_url' <- useSVars <$> lookupSession "lis_outcome_service_url"
-  lis_result_sourcedid'    <- useSVars <$> lookupSession "lis_result_sourcedid"
+  useSVars <- (\mt -> if mt == Just "compare" then id else const Nothing) <$> getsSafeSession userSessionCustomExerciseType
+  mcontext_id             <- useSVars <$> getsSafeSession userSessionContextId
+  resource_link_id        <- useSVars <$> getsSafeSession userSessionResourceLink
+  lis_outcome_service_url' <- useSVars <$> getsSafeSession userSessionOutcomeServiceUrl
+  lis_result_sourcedid'    <- useSVars <$> getsSafeSession userSessionResultSourceId
   mresId' <- case (,) <$> resource_link_id <*> mcontext_id of
        Nothing -> return Nothing
        Just (rlid, cid) -> runDB $ do
@@ -52,23 +52,23 @@ postVoteForProposalR cId better worse = do
                        lis_outcome_service_url lis_result_sourcedid t
     return ()
 
-  mcustom_exercise_count   <- (>>= parseInt) <$> lookupSession "custom_exercise_count"
+  mcustom_exercise_count <- getsSafeSession userSessionCustomExerciseCount
   case mcustom_exercise_count of
     Nothing -> redirect CompareProposalsR
     Just custom_exercise_count -> do
-       compare_counter <- fromMaybe 0 . (>>= parseInt) <$> lookupSession "compare_counter"
+       compare_counter <- fromMaybe 0 <$> getsSafeSession userSessionCompareCounter
        case custom_exercise_count `compare` (compare_counter+1) of
           -- continue exercise
           GT -> do
-            setSession "compare_counter" (pack . show $ compare_counter + 1)
+            setSafeSession userSessionCompareCounter $ compare_counter + 1
             getCompareByCriterionR userId cId
           -- something strange happend, go to standard pipeline
           LT -> redirect CompareProposalsR
           -- Finish exercise!
           EQ -> do
             setMessage "You are done with this exercise, thank you! You can continue exploring the site or go back to edX."
-            deleteSession "custom_exercise_count"
-            deleteSession "compare_counter"
+            deleteSafeSession userSessionCustomExerciseCount
+            deleteSafeSession userSessionCompareCounter
 
             -- send the base grade back to edX
             case (,) <$> lis_result_sourcedid <*> lis_outcome_service_url of
@@ -90,11 +90,6 @@ postVoteForProposalR cId better worse = do
 --incrementTextValue :: Maybe Text -> Maybe Text
 --incrementTextValue t = (pack . show . (+1)) <$> (t >>= parseInt)
 
-parseInt :: Text -> Maybe Int
-parseInt t = case Text.decimal t of
-  Right (i,_) -> Just i
-  _ -> Nothing
-
 getCompareProposalsR :: Handler Html
 getCompareProposalsR = do
   setUltDest MoocHomeR
@@ -108,8 +103,8 @@ getCompareProposalsR = do
 
 getCompareByCriterionR :: UserId -> CriterionId -> Handler Html
 getCompareByCriterionR uId cId = do
-  custom_exercise_count   <- fromMaybe 0 . (>>= parseInt) <$> lookupSession "custom_exercise_count"
-  compare_counter   <- fromMaybe 0 . (>>= parseInt) <$> lookupSession "compare_counter"
+  custom_exercise_count   <- fromMaybe 0 <$> getsSafeSession userSessionCustomExerciseCount
+  compare_counter   <- fromMaybe 0 <$> getsSafeSession userSessionCompareCounter
   scpId <- getCurrentScenarioProblem
   let showPopup = custom_exercise_count > 0 && compare_counter == 0
   when showPopup $ void getMessages
