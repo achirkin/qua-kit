@@ -19,9 +19,10 @@ import qualified Data.Text as T
 
 import Database.Esqueleto
 import qualified Database.Persist as P
+import System.Random
 
-import Yesod.Form.Bootstrap3
 import Yesod.Auth.Email
+import Yesod.Form.Bootstrap3
 
 import Handler.Mooc.Admin
 
@@ -43,6 +44,7 @@ postAdminCreateScenarioR = do
             geometryBs <-
                 fmap LB.toStrict $
                 runResourceT $ fileSource newScenarioDataGeometry $$ CB.sinkLbs
+            invitationSecret <- liftIO generateInvitationSecret
             runDB $
                 insert_
                     ScenarioProblem
@@ -50,6 +52,7 @@ postAdminCreateScenarioR = do
                     , scenarioProblemImage = imageBs
                     , scenarioProblemGeometry = geometryBs
                     , scenarioProblemScale = 1
+                    , scenarioProblemInvitationSecret = invitationSecret
                     }
             showForm (Just dat) Nothing widget enctype
   where
@@ -60,6 +63,9 @@ postAdminCreateScenarioR = do
         fullLayout Nothing "Welcome to the scenario editor" $ do
             setTitle "qua-kit - scenario editor"
             $(widgetFile "mooc/admin/scenario-editor")
+
+generateInvitationSecret :: IO Text
+generateInvitationSecret = T.pack <$> replicateM 16 (randomRIO ('a', 'z'))
 
 data NewScenarioData = NewScenarioData
     { newScenarioDataDescription :: Text
@@ -97,7 +103,8 @@ groupsOf =
     map (\ls -> (fst $ List.head ls, map snd ls)) .
     List.groupBy ((==) `Function.on` fst) . sortOn fst
 
-scenarioWidget :: Entity ScenarioProblem -> [Entity Criterion] -> Handler (Widget)
+scenarioWidget ::
+       Entity ScenarioProblem -> [Entity Criterion] -> Handler (Widget)
 scenarioWidget (Entity scenarioProblemId ScenarioProblem {..}) cs = do
     inviteLink <- getInviteLink scenarioProblemId
     pure $(widgetFile "mooc/admin/scenario-card")
@@ -105,7 +112,8 @@ scenarioWidget (Entity scenarioProblemId ScenarioProblem {..}) cs = do
 getInviteLink :: ScenarioProblemId -> Handler Text
 getInviteLink scenarioProblemId = do
     urlRender <- getUrlRenderParams
-    pure $ urlRender (AuthR registerR) [("scenario-problem", T.pack $ show $ fromSqlKey scenarioProblemId)]
+    params <- invitationParams scenarioProblemId
+    pure $ urlRender (AuthR registerR) params
 
 getScenarioProblemImgR :: ScenarioProblemId -> Handler TypedContent
 getScenarioProblemImgR scenarioProblemId = do

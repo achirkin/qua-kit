@@ -44,10 +44,11 @@ EdxCourse
     deriving Show
 
 ScenarioProblem
-    image       ByteString
-    geometry    ByteString
-    description Text
-    scale       Double
+    image            ByteString
+    geometry         ByteString
+    description      Text
+    scale            Double
+    invitationSecret Text
     deriving Show
     deriving Eq
     deriving Ord

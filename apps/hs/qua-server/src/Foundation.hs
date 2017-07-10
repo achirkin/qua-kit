@@ -8,7 +8,7 @@ import Control.Concurrent.STM.TChan
 import qualified Data.Text as Text
 import Yesod.Auth.LdapNative
 import Import.NoFoundation
-import Database.Persist.Sql (ConnectionPool, runSqlPool, toSqlKey, Single (..), rawSql)
+import Database.Persist.Sql (ConnectionPool, runSqlPool, toSqlKey, fromSqlKey, Single (..), rawSql)
 import qualified Network.Mail.Mime as Mail
 import Text.Hamlet          (hamletFile)
 import Text.Jasmine         (minifym)
@@ -322,10 +322,10 @@ instance YesodAuthEmail App where
     let extraParam key = do
             mr <- lookupGetParam key
             pure $ (,) key <$> mr
-    scenarioProblemParam <- extraParam "scenario-problem"
+    extraParams <- mapM extraParam ["scenario-problem", "invitation-secret"]
 
     toParRt <- getRouteToParent
-    (widget, _) <- lift $ generateFormPost (registrationForm (catMaybes [scenarioProblemParam]) toParRt)
+    (widget, _) <- lift $ generateFormPost (registrationForm (catMaybes extraParams) toParRt)
     lift $ authLayout widget
     where
       registrationForm extraFields toParentRoute extra = do
@@ -487,10 +487,27 @@ lastScenarioProblemId = getVal <$> rawSql query []
 
 maybeEnroll :: Email -> Handler ()
 maybeEnroll email = do
-    msId <- (>>= parseSqlKey) <$> lookupPostParam "scenario-problem"
+    msId <- checkInvitationParams
     case msId of
         Nothing -> pure ()
         Just i -> do
-             $(logDebug) $ "Enrolling new user with email " <> email <> " in scenario problem " <> Text.pack (show i)
+             $(logDebug) $ "Enrolling new user with email " <> email <> " in scenario problem " <> Text.pack (show $ fromSqlKey i)
              setSafeSession userSessionCustomExerciseId i
              setSafeSession userSessionCustomExerciseType "edit"
+
+invitationParams :: ScenarioProblemId -> Handler [(Text, Text)]
+invitationParams spId = do
+    sp <- runDB $ get404 spId
+    pure [("scenario-problem", Text.pack $ show $ fromSqlKey spId), ("invitation-secret", scenarioProblemInvitationSecret sp)]
+
+checkInvitationParams :: Handler (Maybe ScenarioProblemId)
+checkInvitationParams = do
+    mid <- (>>= parseSqlKey) <$> lookupPostParam "scenario-problem"
+    case mid of
+       Nothing -> pure Nothing
+       Just spId -> do
+          sp <- runDB $ get404 spId
+          is <- lookupPostParam "invitation-secret"
+          pure $ if Just (scenarioProblemInvitationSecret sp) == is
+              then Just spId
+              else Nothing
