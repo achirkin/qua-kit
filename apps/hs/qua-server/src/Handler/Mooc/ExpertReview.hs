@@ -20,6 +20,8 @@ postWriteExpertReviewR scId = runJSONExceptT $ do
       scenario <- maybeE "Cannot find a corresponding scenario." $ get scId
       when (userId == scenarioAuthorId scenario) $
         throwE "You cannot review yourself!"
+      when (length comment < 80) $
+        throwE "Comment needs to be at least 80 characters."
       lift $ upsert (ExpertReview userId scId comment grade t)
                    [ ExpertReviewGrade     =. grade
                    , ExpertReviewComment   =. comment
@@ -55,9 +57,9 @@ viewExpertReviews scId = do
             <div.card-comment.card>
               <div.card-comment.card-main>
                 <div.card-comment.card-inner>
-                  <div >
+                  <div>
                     ^{ stars review }
-                    #{ formatTime defaultTimeLocale "%Y.%m.%d - %H:%M" $ expertReviewTimestamp review }
+                    #{ formatTime defaultTimeLocale "%Y.%m.%d - %H:%M " $ expertReviewTimestamp review }
                     $maybe reviewer <- mReviewer
                       - #{userName reviewer}
                   #{expertReviewComment review}
@@ -79,10 +81,14 @@ writeExpertReview userId scId = do
               <div.card-comment.form-group.form-group-label>
                 <label.floating-label for="commentER">Comments...
                 <textarea.form-control.textarea-autosize #commentER rows="1" name="comment">
-              <div>
+              <div .expertReviewStars>
                 $forall i <- starNrs
                   <span.icon.icon-lg.reviewStar data-starid="#{ i }">star_border</span>
               <a.btn.btn-flat #submitExpertReview>Grade</a>
+    |]
+    toWidgetHead [cassius|
+      .expertReviewStars .icon
+        cursor: pointer;
     |]
     toWidgetHead [julius|
       $(function(){
@@ -101,7 +107,7 @@ writeExpertReview userId scId = do
           });
         });
         $('#submitExpertReview').click(function(e){
-          if (grade) {
+          if (grade && commentField.value.length > 80) {
             $.post(
               { url: '@{WriteExpertReviewR scId}'
               , data: { grade:   grade
@@ -117,7 +123,7 @@ writeExpertReview userId scId = do
                 }
               });
           } else {
-            alert('Please rate this design by clicking a star before submitting.');
+            alert('Please rate this design by clicking a star and add at least 80 characters of text before submitting.');
           }
         });
       });
