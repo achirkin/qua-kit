@@ -159,7 +159,7 @@ getLastScUpdates conn tokens scID = do
       ( mconcat
         [ "SELECT wrap_progress_many(ARRAY"
         , BSC.pack (show tokens)
-        , ",50.0,get_last_sc_update($1));"
+        , "::bigint[],50.0,get_last_sc_update($1));"
         ]
       )
     [ mkBigInt scID ]

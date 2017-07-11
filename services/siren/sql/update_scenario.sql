@@ -36,7 +36,7 @@ BEGIN
        SELECT ScID, sprops.key, curTime, ph.ts_update
             , jsonb_typeof(sprops.value) <> 'null'
             , CASE WHEN jsonb_typeof(sprops.value) = 'null' THEN ph.value
-                   ELSE sprops.value #>> '{}'
+                   ELSE sprops.value #> '{}'
               END
          FROM jsonb_each(geom_input -> 'properties') sprops
     LEFT JOIN latest_props ph
@@ -110,7 +110,7 @@ BEGIN
        SELECT ScID, fprops.geomID, fprops.key, curTime, ph.ts_update
             , jsonb_typeof(fprops.value) <> 'null'
             , CASE WHEN jsonb_typeof(fprops.value) = 'null' THEN ph.value
-                   ELSE fprops.value #>> '{}'
+                   ELSE fprops.value #> '{}'
               END
          FROM (SELECT f.geomID, ps.key, ps.value FROM features f, jsonb_each(f.props) ps) fprops
     LEFT JOIN latest_props ph
