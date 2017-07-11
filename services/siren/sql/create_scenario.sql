@@ -101,7 +101,7 @@ BEGIN
   -- insert all scenario properties
   INSERT INTO scenario_prop_history (scenario_id, name, ts_update, value)
        SELECT ScID, sprops.key, curTime, sprops.value
-         FROM jsonb_each_text(jsonb_strip_nulls(geom_input -> 'properties') ) sprops;
+         FROM jsonb_each(jsonb_strip_nulls(geom_input -> 'properties') ) sprops;
   INSERT INTO scenario_prop (scenario_id, name, last_update)
        SELECT ph.scenario_id, ph.name, ph.ts_update
          FROM scenario_prop_history ph
@@ -124,7 +124,7 @@ BEGIN
          FROM features;
   INSERT INTO sc_geometry_prop_history (scenario_id, geometry_id, name, ts_update, value)
        SELECT ScID, f.geomID, fprops.key, curTime, fprops.value
-         FROM features f, jsonb_each_text(f.props) fprops;
+         FROM features f, jsonb_each(f.props) fprops;
   INSERT INTO sc_geometry_prop (scenario_id, geometry_id, name, last_update)
        SELECT ph.scenario_id, ph.geometry_id, ph.name, ph.ts_update
          FROM sc_geometry_prop_history ph
