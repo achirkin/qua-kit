@@ -25,6 +25,8 @@ pageSize = 80
 
 getBrowseProposalsR :: Int -> Handler Html
 getBrowseProposalsR page = do
+    role <- muserRole <$> maybeAuth
+    let isExpert = role == UR_EXPERT
     usersscenarios <- runDB $ getLastSubmissions page
     pages <- negate . (`div` pageSize) . negate <$> runDB countUniqueSubmissions
     let is = [1..pages]
@@ -53,7 +55,7 @@ getBrowseProposalsR page = do
         [hamlet|
           <div class="ui-card-wrap">
             <div class="row">
-              $forall ((scId, scpId, uId), lu, desc, uname, crits) <- usersscenarios
+              $forall ((scId, scpId, uId), lu, desc, uname, (mexpertgrade, hasToBeGraded), crits) <- usersscenarios
                 <div class="col-lg-4 col-md-6 col-sm-9 col-xs-9 story_cards">
                   <div.card>
                     <aside.card-side.card-side-img.pull-left.card-side-moocimg>
@@ -77,10 +79,23 @@ getBrowseProposalsR page = do
                           <span.card-comment.card-criterion style="opacity: 0.3" title="Not enough votes to show rating">
                             #{svg}
                             \ - #
+                        $maybe grade <- mexpertgrade
+                          <span.card-comment.card-criterion  title="Expert Grade">
+                            <span class="icon icon-lg" style="width:24px; height:24px;">star</span>
+                              <p style="display: inline; margin: 0; padding:0; color: #b71c1c;)">
+                                #{grade}
                         <div.card-action-btn.pull-right>
-                          <a.btn.btn-flat.btn-brand-accent.waves-attach.waves-effect href="@{SubmissionViewerR scpId uId}" target="_blank">
-                            <span.icon>visibility
-                            View
+                          $if isExpert && hasToBeGraded
+                            <a.btn.btn-flat.btn-brand-accent.waves-attach.waves-effect
+                                style="background: red; color: white !important;"
+                                href="@{SubmissionViewerR scpId uId}" target="_blank">
+                              <span.icon>visibility
+                              Review
+                          $else
+                            <a.btn.btn-flat.btn-brand-accent.waves-attach.waves-effect
+                                href="@{SubmissionViewerR scpId uId}" target="_blank">
+                              <span.icon>visibility
+                              View
 
           <!-- footer with page numbers -->
           $if pages > 1
@@ -124,22 +139,23 @@ shortComment t = dropInitSpace . remNewLines $
 
 -- | get user name, scenario, and ratings
 getLastSubmissions :: Int -> ReaderT SqlBackend Handler
-  [((ScenarioId, ScenarioProblemId, UserId), UTCTime, Text, Text, [(Blaze.Markup, Text, Int)])]
+  [((ScenarioId, ScenarioProblemId, UserId), UTCTime, Text, Text, (Maybe Double, Bool), [(Blaze.Markup, Text, Int)])]
 getLastSubmissions page = getVals <$> rawSql query [toPersistValue pageSize, toPersistValue $ (max 0 (page-1))*pageSize]
   where
-    getVal' scId' xxs@(((Single scId, Single _, Single _), Single _, Single _, Single _, Single icon, Single cname, Single rating):xs)
+    getVal' scId' xxs@(((Single scId, Single _, Single _), Single _, Single _, Single _, Single icon, Single cname, Single rating, (Single _expertgrade, Single _hasToBeGraded)):xs)
         | scId == scId' = first ((Blaze.preEscapedToMarkup (icon :: Text), cname, min 99 $ round (100*rating::Double)) :) $ getVal' scId xs
         | otherwise = ([],xxs)
     getVal' _ [] = ([],[])
     getVals xxs@(( (Single scId, Single scpId, Single uid)
-                 , Single lu, Single desc, Single uname, Single _icon, Single _name, Single _rating):_)
+                 , Single lu, Single desc, Single uname, Single _icon, Single _name, Single _rating, (Single expertgrade, Single hasToBeGraded)):_)
                                       = let (g,rest) = getVal' scId xxs
-                                        in ((scId, scpId, uid), lu, desc, uname,g) : getVals rest
+                                        in ((scId, scpId, uid), lu, desc, uname, (expertgrade, hasToBeGraded), g) : getVals rest
     getVals [] = []
     query = Text.unlines
           ["SELECT scenario.id, scenario.task_id, scenario.author_id"
           ,"     , scenario.last_update, scenario.description,\"user\".name"
-          ,"     , criterion.icon, criterion.name,COALESCE(rating.value, 0)"
+          ,"     , criterion.icon, criterion.name, COALESCE(rating.value, 0)"
+          ,"     , g.expertgrade, (rating.value IS NULL AND COALESCE(g.nrofexpertgrades, 0) = 0) as has_to_be_graded"
           ,"FROM scenario"
           ,"INNER JOIN \"user\" ON \"user\".id = scenario.author_id"
           ,"INNER JOIN ( SELECT scenario.author_id, scenario.task_id, MAX(scenario.last_update) as x, AVG(COALESCE(rating.value, 0)) as score"
@@ -155,6 +171,11 @@ getLastSubmissions page = getVals <$> rawSql query [toPersistValue pageSize, toP
           ,""
           ,"LEFT OUTER JOIN rating"
           ,"        ON scenario.task_id = rating.problem_id AND scenario.author_id = rating.author_id AND criterion.id = rating.criterion_id"
+          ,"LEFT OUTER JOIN ( SELECT scenario_id, AVG(grade) as expertgrade, COUNT(grade) as nrofexpertgrades"
+          ,"             FROM expert_review"
+          ,"             GROUP BY scenario_id "
+          ,"           ) g"
+          ,"        ON scenario.id = g.scenario_id "
           ,""
           ,"ORDER BY scenario.task_id DESC, t.score DESC, scenario.id DESC, criterion.id ASC;"
           ]
