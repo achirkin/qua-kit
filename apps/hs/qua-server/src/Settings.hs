@@ -12,11 +12,13 @@ import Data.Aeson                  (Result (..), fromJSON, withObject, (.!=),
                                     (.:?))
 import Data.FileEmbed              (embedFile)
 import Data.Yaml                   (decodeEither')
+import Data.Pool                   (Pool)
 import qualified Data.Text.Encoding as Text
+import Database.Persist.Sql        (IsSqlBackend)
 #if POSTGRESQL
-import Database.Persist.Postgresql (PostgresConf)
+import Database.Persist.Postgresql (PostgresConf (..), createPostgresqlPool)
 #else
-import Database.Persist.Sqlite     (SqliteConf)
+import Database.Persist.Sqlite     (SqliteConf (..), createSqlitePool, createSqlitePoolFromInfo)
 #endif
 import Language.Haskell.TH.Syntax  (Exp, Name, Q)
 --import Network.Wai.Handler.Warp    (HostPreference)
@@ -33,6 +35,16 @@ import Web.LTI
 type PersistConf = PostgresConf
 #else
 type PersistConf = SqliteConf
+#endif
+
+
+createAppSqlPool :: (MonadIO m, MonadBaseControl IO m, MonadLogger m, IsSqlBackend backend)
+                 => PersistConf -> m (Pool backend)
+#if POSTGRESQL
+createAppSqlPool c = createPostgresqlPool (pgConnStr c) (pgPoolSize c)
+#else
+createAppSqlPool (SqliteConf db ps) = createSqlitePool db ps
+createAppSqlPool (SqliteConfInfo ci ps) = createSqlitePoolFromInfo ci ps
 #endif
 
 -- | Runtime settings to configure this application. These settings can be
