@@ -86,18 +86,20 @@ getsSafeSession ::
        , YesodPersist app
        , YesodAuthPersist app
        , AuthId app ~ UserId
-       , AuthEntity app ~ User
        , BaseBackend (YesodPersistBackend app) ~ SqlBackend
-       , PersistUniqueWrite (YesodPersistBackend app) ) => SessionLens b -> HandlerT app IO (Maybe b)
+       , PersistUniqueWrite (YesodPersistBackend app)
+       )
+    => SessionLens b
+    -> HandlerT app IO (Maybe b)
 getsSafeSession sl@SessionLens {..} = do
     mval <- convFunc <$> lookupSession convKey
     case mval of
         Just val -> pure $ Just val
         Nothing -> do
-            mauth <- maybeAuth
+            mauth <- maybeAuthId
             case mauth of
                 Nothing -> pure Nothing
-                Just (Entity uid _) -> do
+                Just uid -> do
                     mprop <- runDB $ getBy $ UserProperty uid $ sessionVar sl
                     pure $ convFunc ((userPropValue . entityVal) <$> mprop)
 
@@ -106,15 +108,16 @@ deleteSafeSession ::
        , YesodPersist app
        , YesodAuthPersist app
        , AuthId app ~ UserId
-       , AuthEntity app ~ User
        , BaseBackend (YesodPersistBackend app) ~ SqlBackend
        , PersistUniqueWrite (YesodPersistBackend app)
-       ) => SessionLens b -> HandlerT app IO ()
+       )
+    => SessionLens b
+    -> HandlerT app IO ()
 deleteSafeSession sl = do
-    mauth <- maybeAuth
+    mauth <- maybeAuthId
     case mauth of
         Nothing -> pure ()
-        Just (Entity uid _) ->
+        Just uid ->
             runDB $ deleteBy $ UserProperty uid $ sessionVar sl
     deleteSession $ convKey sl
 
@@ -123,7 +126,6 @@ setSafeSession ::
        , YesodPersist app
        , YesodAuthPersist app
        , AuthId app ~ UserId
-       , AuthEntity app ~ User
        , BaseBackend (YesodPersistBackend app) ~ SqlBackend
        , PersistUniqueWrite (YesodPersistBackend app)
        )
@@ -132,10 +134,10 @@ setSafeSession ::
     -> HandlerT app IO ()
 setSafeSession sl@SessionLens {..} val = do
     setSession convKey $ convInvFunc val
-    mauth <- maybeAuth
+    mauth <- maybeAuthId
     case mauth of
         Nothing -> pure ()
-        Just (Entity uid _) ->
+        Just uid ->
             void $
             runDB $
             upsertBy
