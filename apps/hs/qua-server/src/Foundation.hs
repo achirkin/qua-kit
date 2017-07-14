@@ -1,11 +1,14 @@
-module Foundation where
+module Foundation
+    ( module Foundation
+    , parseSqlKey
+    ) where
 
 import Control.Concurrent.STM.TChan
 
 import qualified Data.Text as Text
 import Yesod.Auth.LdapNative
 import Import.NoFoundation
-import Database.Persist.Sql (ConnectionPool, runSqlPool, toSqlKey, Single (..), rawSql)
+import Database.Persist.Sql (ConnectionPool, runSqlPool, toSqlKey, fromSqlKey, Single (..), rawSql)
 import qualified Network.Mail.Mime as Mail
 import Text.Hamlet          (hamletFile)
 import Text.Jasmine         (minifym)
@@ -25,6 +28,7 @@ import System.Directory (createDirectoryIfMissing)
 import Text.Blaze (Markup)
 import qualified Data.Map.Strict as Map
 import Handler.Mooc.EdxLogin
+import Model.Session
 
 
 -- | The foundation datatype for your application. This can be a good place to
@@ -261,9 +265,9 @@ instance YesodAuthEmail App where
 
 
   sendVerifyEmail email _ verurl = do
+    maybeEnroll email
     -- Print out to the console the verification email, for easier
     -- debugging.
-
     $(logDebug) $ "Copy/ Paste this URL in your browser: " <> verurl
 
     -- Send email.
@@ -315,11 +319,16 @@ instance YesodAuthEmail App where
   getEmail = runDB . fmap (join . fmap userEmail) . get
   emailLoginHandler toParent = $(widgetFile "login-local")
   registerHandler = do
+    let extraParam key = do
+            mr <- lookupGetParam key
+            pure $ (,) key <$> mr
+    extraParams <- mapM extraParam ["scenario-problem", "invitation-secret"]
+
     toParRt <- getRouteToParent
-    (widget, _) <- lift $ generateFormPost (registrationForm toParRt)
+    (widget, _) <- lift $ generateFormPost (registrationForm (catMaybes extraParams) toParRt)
     lift $ authLayout widget
     where
-      registrationForm toParentRoute extra = do
+      registrationForm extraFields toParentRoute extra = do
         let emailSettings = FieldSettings {
               fsLabel = SomeMessage ("Email"::Text),
               fsTooltip = Nothing,
@@ -457,14 +466,6 @@ requirePostParam pam errstr = lookupPostParam pam >>= \mv -> case mv of
     Nothing -> invalidArgsI [errstr]
     Just v  -> return v
 
-
-parseSqlKey :: (ToBackendKey SqlBackend a) => Text -> Maybe (Key a)
-parseSqlKey t = case decimal t of
-    Right (i,_) -> Just $ toSqlKey i
-    _ -> Nothing
-
-
-
 getCurrentScenarioProblem :: Handler ScenarioProblemId
 getCurrentScenarioProblem = do
     mtscp_id <- lookupSession "custom_exercise_id"
@@ -482,3 +483,31 @@ lastScenarioProblemId = getVal <$> rawSql query []
     query = unlines
           ["SELECT max(id) FROM scenario_problem;"
           ]
+
+
+maybeEnroll :: Email -> Handler ()
+maybeEnroll email = do
+    msId <- checkInvitationParams
+    case msId of
+        Nothing -> pure ()
+        Just i -> do
+             $(logDebug) $ "Enrolling new user with email " <> email <> " in scenario problem " <> Text.pack (show $ fromSqlKey i)
+             setSafeSession userSessionCustomExerciseId i
+             setSafeSession userSessionCustomExerciseType "edit"
+
+invitationParams :: ScenarioProblemId -> Handler [(Text, Text)]
+invitationParams spId = do
+    sp <- runDB $ get404 spId
+    pure [("scenario-problem", Text.pack $ show $ fromSqlKey spId), ("invitation-secret", scenarioProblemInvitationSecret sp)]
+
+checkInvitationParams :: Handler (Maybe ScenarioProblemId)
+checkInvitationParams = do
+    mid <- (>>= parseSqlKey) <$> lookupPostParam "scenario-problem"
+    case mid of
+       Nothing -> pure Nothing
+       Just spId -> do
+          sp <- runDB $ get404 spId
+          is <- lookupPostParam "invitation-secret"
+          pure $ if Just (scenarioProblemInvitationSecret sp) == is
+              then Just spId
+              else Nothing

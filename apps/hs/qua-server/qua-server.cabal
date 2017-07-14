@@ -31,7 +31,7 @@ flag library-only
     default: False
 
 flag postgresql
-    default: True
+    default: False
     description:
         Use PostgreSQL database. Otherwise use sqlite.
 

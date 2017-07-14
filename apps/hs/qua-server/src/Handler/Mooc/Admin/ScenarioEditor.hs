@@ -19,7 +19,9 @@ import qualified Data.Text as T
 
 import Database.Esqueleto
 import qualified Database.Persist as P
+import System.Random
 
+import Yesod.Auth.Email
 import Yesod.Form.Bootstrap3
 
 import Handler.Mooc.Admin
@@ -42,6 +44,7 @@ postAdminCreateScenarioR = do
             geometryBs <-
                 fmap LB.toStrict $
                 runResourceT $ fileSource newScenarioDataGeometry $$ CB.sinkLbs
+            invitationSecret <- liftIO generateInvitationSecret
             runDB $
                 insert_
                     ScenarioProblem
@@ -49,6 +52,7 @@ postAdminCreateScenarioR = do
                     , scenarioProblemImage = imageBs
                     , scenarioProblemGeometry = geometryBs
                     , scenarioProblemScale = 1
+                    , scenarioProblemInvitationSecret = invitationSecret
                     }
             showForm (Just dat) Nothing widget enctype
   where
@@ -59,6 +63,9 @@ postAdminCreateScenarioR = do
         fullLayout Nothing "Welcome to the scenario editor" $ do
             setTitle "qua-kit - scenario editor"
             $(widgetFile "mooc/admin/scenario-editor")
+
+generateInvitationSecret :: IO Text
+generateInvitationSecret = T.pack <$> replicateM 16 (randomRIO ('a', 'z'))
 
 data NewScenarioData = NewScenarioData
     { newScenarioDataDescription :: Text
@@ -89,16 +96,24 @@ getScenarioCards = do
                   just (scenarioProblem ^. ScenarioProblemId))
              pure (scenarioProblem, criterion)) :: Handler [( Entity ScenarioProblem
                                                             , Maybe (Entity Criterion))]
-    pure $ map (uncurry scenarioWidget) $ map (second catMaybes) $ groupsOf tups
+    mapM (uncurry scenarioWidget) $ map (second catMaybes) $ groupsOf tups
 
 groupsOf :: Ord a => [(a, b)] -> [(a, [b])]
 groupsOf =
     map (\ls -> (fst $ List.head ls, map snd ls)) .
     List.groupBy ((==) `Function.on` fst) . sortOn fst
 
-scenarioWidget :: Entity ScenarioProblem -> [Entity Criterion] -> Widget
-scenarioWidget (Entity scenarioProblemId ScenarioProblem {..}) cs =
-    $(widgetFile "mooc/admin/scenario-card")
+scenarioWidget ::
+       Entity ScenarioProblem -> [Entity Criterion] -> Handler (Widget)
+scenarioWidget (Entity scenarioProblemId ScenarioProblem {..}) cs = do
+    inviteLink <- getInviteLink scenarioProblemId
+    pure $(widgetFile "mooc/admin/scenario-card")
+
+getInviteLink :: ScenarioProblemId -> Handler Text
+getInviteLink scenarioProblemId = do
+    urlRender <- getUrlRenderParams
+    params <- invitationParams scenarioProblemId
+    pure $ urlRender (AuthR registerR) params
 
 getScenarioProblemImgR :: ScenarioProblemId -> Handler TypedContent
 getScenarioProblemImgR scenarioProblemId = do
