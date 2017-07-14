@@ -67,12 +67,12 @@ postAdminCreateUserR = do
             lid <- addUnverified createUserDataEmail verKey
             render <- getUrlRender
             let verUrl = render $ AuthR $ verifyR (toPathPiece lid) verKey
-            sendVerifyEmail createUserDataEmail verKey verUrl
+            runDB $ update lid [UserRole =. role]
             $(logDebug) $
                 T.unlines
                     [ "Sending verification url from admin panel."
                     , "Copy/ Paste this URL in your browser: " <> verUrl
                     ]
-            runDB $ update lid [UserRole =. role]
+            sendVerifyEmail createUserDataEmail verKey verUrl
             setMessage "User added successfully"
             redirect AdminUserManagerR
