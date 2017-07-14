@@ -110,9 +110,10 @@ makeFoundation appSettings = do
 
     -- Perform database migration using our application's logging settings.
     runLoggingT (runSqlPool (runMigration migrateAll) pool) logFunc
-
+#if DEVELOPMENT
     -- Fill database with some problem-specific important data.
     importProblemData pool
+#endif
     -- | Update ratings once in an hour
     -- flip runSqlPool pool $ scheduleUpdateRatings 3600 reviewRating compareRating combR
     -- flip runSqlPool pool $ scheduleGradeVotes 3600
