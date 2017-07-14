@@ -82,9 +82,13 @@ sessionVar :: SessionLens a -> Text
 sessionVar = ("session_" <>) . convKey
 
 getsSafeSession ::
-       (MonadBaseControl IO m, MonadThrow m, MonadIO m)
-    => SessionLens b
-    -> HandlerT app m (Maybe b)
+       ( YesodAuth app
+       , YesodPersist app
+       , YesodAuthPersist app
+       , AuthId app ~ UserId
+       , AuthEntity app ~ User
+       , BaseBackend (YesodPersistBackend app) ~ SqlBackend
+       , PersistUniqueWrite (YesodPersistBackend app) ) => SessionLens b -> HandlerT app IO (Maybe b)
 getsSafeSession sl@SessionLens {..} = do
     mval <- convFunc <$> lookupSession convKey
     case mval of
@@ -98,9 +102,14 @@ getsSafeSession sl@SessionLens {..} = do
                     pure $ convFunc ((userPropValue . entityVal) <$> mprop)
 
 deleteSafeSession ::
-       (MonadBaseControl IO m, MonadThrow m, MonadIO m)
-    => SessionLens b
-    -> HandlerT app m ()
+       ( YesodAuth app
+       , YesodPersist app
+       , YesodAuthPersist app
+       , AuthId app ~ UserId
+       , AuthEntity app ~ User
+       , BaseBackend (YesodPersistBackend app) ~ SqlBackend
+       , PersistUniqueWrite (YesodPersistBackend app)
+       ) => SessionLens b -> HandlerT app IO ()
 deleteSafeSession sl = do
     mauth <- maybeAuth
     case mauth of
@@ -110,10 +119,17 @@ deleteSafeSession sl = do
     deleteSession $ convKey sl
 
 setSafeSession ::
-       (MonadBaseControl IO m, MonadThrow m, MonadIO m)
+       ( YesodAuth app
+       , YesodPersist app
+       , YesodAuthPersist app
+       , AuthId app ~ UserId
+       , AuthEntity app ~ User
+       , BaseBackend (YesodPersistBackend app) ~ SqlBackend
+       , PersistUniqueWrite (YesodPersistBackend app)
+       )
     => SessionLens b
     -> b
-    -> HandlerT app m ()
+    -> HandlerT app IO ()
 setSafeSession sl@SessionLens {..} val = do
     setSession convKey $ convInvFunc val
     mauth <- maybeAuth
