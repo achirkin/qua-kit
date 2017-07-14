@@ -1,4 +1,5 @@
-{-# RecordWildCards #-}
+{-# LANGUAGE RecordWildCards #-}
+
 module Handler.Mooc.Admin.ScenarioEditor
     ( getAdminScenarioEditorR
     , postAdminCreateScenarioR
@@ -14,7 +15,7 @@ import Import hiding ((/=.), (==.), isNothing, on)
 import qualified Data.ByteString.Lazy as LB
 import qualified Data.Conduit.Binary as CB
 import qualified Data.Function as Function (on)
-import qualified Data.List as List (groupBy, head, nubBy)
+import qualified Data.List as List (groupBy, head)
 import qualified Data.Text as T
 
 import Database.Esqueleto
@@ -54,10 +55,16 @@ postAdminCreateScenarioR = do
                     , scenarioProblemScale = 1
                     , scenarioProblemInvitationSecret = invitationSecret
                     }
-            showForm (Just dat) Nothing widget enctype
+            showForm (Just dat) [] widget enctype
   where
     showFormWidget = showForm Nothing []
     showFormError = showForm Nothing
+    showForm ::
+           Maybe NewScenarioData
+        -> [Text]
+        -> WidgetT App IO ()
+        -> Enctype
+        -> HandlerT App IO Html
     showForm mr msgs widget enctype = do
         scenarioWidgets <- getScenarioCards
         fullLayout Nothing "Welcome to the scenario editor" $ do

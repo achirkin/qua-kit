@@ -16,8 +16,6 @@ module Handler.Mooc.SubmitProposal
 
 import           Control.Monad.Trans.Maybe
 import qualified Data.Text                 as Text (unpack, pack)
-import           Data.Text.Read            (decimal)
-import           Database.Persist.Sql      (toSqlKey)
 import           Import
 import           Model.Session
 --import Text.Blaze

@@ -18,7 +18,6 @@ module Handler.Mooc.Criteria
 import Import
 import Text.Blaze as Blaze
 import Database.Persist.Sql
-import Data.Text.Read (decimal)
 
 getCriteriaListR :: Handler Html
 getCriteriaListR = do

@@ -29,8 +29,8 @@ registerAdmins pool = flip runSqlPool pool $ do
        "Artem Chirkin" UR_ADMIN (Just "achirkin") Nothing Nothing Nothing True
      Just (Entity key _) -> update key [UserRole =. UR_ADMIN]
     let un = Just "admin@qua-kit.hs"
-    mme <- getBy $ UserEmailId un
-    case mme of
+    mme' <- getBy $ UserEmailId un
+    case mme' of
      Nothing ->
        let pw = Just "sha256|16|AK5Dd0IF3Hdkgywn506B5Q==|MxrRScUOlKp7dXOEGMpEYiiMvN/Us7S9XRKVXJnAQlg="
        in insert_ $ User

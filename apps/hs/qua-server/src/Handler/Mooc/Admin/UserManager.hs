@@ -1,4 +1,3 @@
-{-# RecordWildCards #-}
 module Handler.Mooc.Admin.UserManager
     ( getAdminUserManagerR
     , postSetUserRoleR
@@ -7,19 +6,12 @@ module Handler.Mooc.Admin.UserManager
 
 import Import hiding ((==.), on)
 
-import qualified Data.ByteString.Lazy as LB
-import qualified Data.Conduit.Binary as CB
-import qualified Data.Function as Function (on)
-import qualified Data.List as List (groupBy, head)
 import qualified Data.Text as T
 import Text.Read
 
-import Database.Persist
 import Database.Persist.Sql
 
 import Yesod.Auth.Email
-import Yesod.Core.Handler
-import Yesod.Form.Input
 
 import Handler.Mooc.Admin
 
@@ -62,7 +54,6 @@ postAdminCreateUserR = do
         Nothing -> sendResponseStatus status400 ("invalid role" :: Text)
         Just role -> do
             app <- getYesod :: Handler App
-            let auth = getAuth app
             verKey <- liftIO $ randomKey app
             lid <- addUnverified createUserDataEmail verKey
             render <- getUrlRender

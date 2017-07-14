@@ -15,8 +15,6 @@ module Handler.Mooc.EditProposal
   ) where
 
 import Import
-import Database.Persist.Sql (fromSqlKey,toSqlKey)
-import Data.Text.Read (decimal)
 import qualified Handler.Mooc.Scenario as S
 import Model.Session
 

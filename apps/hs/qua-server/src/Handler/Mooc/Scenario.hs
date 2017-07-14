@@ -18,8 +18,6 @@ module Handler.Mooc.Scenario
   ) where
 
 import Import
-import Database.Persist.Sql (toSqlKey)
-import Data.Text.Read (decimal)
 import Control.Monad.Trans.Maybe
 import Model.Session
 

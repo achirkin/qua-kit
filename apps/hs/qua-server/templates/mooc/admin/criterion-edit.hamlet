@@ -5,8 +5,9 @@
         <a href=@{AdminCriterionEditorR}>
           Back to the criterion editor
     $forall msg <- msgs
-      <div #{msg}>
-    $maybe dat <- mr
+      <div>
+        #{msg}
+    $maybe _ <- mr
       <div .card>
         <div .card-inner>
           Updated criterion
