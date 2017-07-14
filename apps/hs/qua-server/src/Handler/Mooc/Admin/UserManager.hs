@@ -28,7 +28,7 @@ getAdminUserManagerR = do
     requireAdmin
     users <- runDB $ selectList [] [Asc UserId]
     let roles = filter (/= UR_NOBODY) [minBound .. maxBound]
-    fullLayout Nothing "Welcome to the user manager" $ do
+    adminLayout "Welcome to the user manager" $ do
         setTitle "qua-kit - user manager"
         $(widgetFile "mooc/admin/user-manager")
 

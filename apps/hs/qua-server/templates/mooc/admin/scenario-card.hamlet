@@ -1,4 +1,4 @@
-<div .col-md-7 .col-md-8 .col-sm-9>
+<div .col-md-12 .col-md-12 .col-sm-12 .col-xs-12>
   <div .card>
     <img .card-img-top src=@{ScenarioProblemImgR scenarioProblemId} width="200px" height="200px" alt="Scenario Image">
     <div .card-block>

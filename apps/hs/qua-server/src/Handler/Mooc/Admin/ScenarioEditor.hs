@@ -56,7 +56,7 @@ postAdminCreateScenarioR = do
     showFormError = showForm Nothing
     showForm mr msgs widget enctype = do
         scenarioWidgets <- getScenarioCards
-        fullLayout Nothing "Welcome to the scenario editor" $ do
+        adminLayout "Welcome to the scenario editor" $ do
             setTitle "qua-kit - scenario editor"
             $(widgetFile "mooc/admin/scenario-editor")
 
@@ -132,8 +132,7 @@ getScenarioProblemEditR scenarioProblemId = do
                 ( criterion ^. CriterionId
                 , criterion ^. CriterionName
                 , not_ $ isNothing $ problemCriterion ?. ProblemCriterionId)
-    fullLayout
-        Nothing
+    adminLayout
         (T.pack $
          unwords
              [ "Welcome to the editor for scenario"
