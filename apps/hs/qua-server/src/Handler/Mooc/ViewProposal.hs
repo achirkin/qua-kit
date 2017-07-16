@@ -16,7 +16,6 @@ module Handler.Mooc.ViewProposal
 
 
 import Import
-import Database.Persist.Sql (fromSqlKey)
 import Model.Session
 
 getViewProposalR :: ScenarioId -> Handler Html

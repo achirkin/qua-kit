@@ -31,8 +31,6 @@ import Network.Wai.Middleware.RequestLogger (Destination (Logger),
 import System.Log.FastLogger                (defaultBufSize, newStdoutLoggerSet,
                                              toLogStr)
 
-import qualified Data.ByteString as BS (readFile)
-import qualified Data.Text.IO as Text (readFile)
 --import qualified Data.ByteString.Base64 as BSB (encode)
 
 -- Import all relevant handler modules here.
@@ -64,14 +62,6 @@ import Handler.Mooc.Survey
 import Handler.Mooc.SubmissionViewer
 import Handler.Mooc.FAQ
 import Handler.LoggingWS
-
-
-import Handler.Mooc.Tests
-
-
-import Model.Rating
-import Application.Grading
-import Application.SetupProblemData
 
 -- This line actually creates our YesodDispatch instance. It is the second half
 -- of the call to mkYesodData which occurs in Foundation.hs. Please see the

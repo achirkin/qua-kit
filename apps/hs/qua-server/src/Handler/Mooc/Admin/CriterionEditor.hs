@@ -1,4 +1,5 @@
-{-# RecordWildCards #-}
+{-# LANGUAGE RecordWildCards #-}
+
 module Handler.Mooc.Admin.CriterionEditor
     ( getAdminCriterionEditorR
     , postAdminCreateCriterionR
@@ -10,13 +11,8 @@ import Import hiding ((==.), on)
 
 import qualified Data.ByteString.Lazy as LB
 import qualified Data.Conduit.Binary as CB
-import qualified Data.Function as Function (on)
-import qualified Data.List as List (groupBy, head)
-import qualified Data.Text as T
 import qualified Data.Text.Encoding as TE
 import qualified Text.Blaze as Blaze
-
-import Database.Persist
 
 import Yesod.Form.Bootstrap3
 
@@ -48,10 +44,16 @@ postAdminCreateCriterionR = do
                     , criterionImage = imageBs
                     , criterionIcon = iconText
                     }
-            showForm (Just dat) Nothing widget enctype
+            showForm (Just dat) [] widget enctype
   where
     showFormWidget = showForm Nothing []
     showFormError = showForm Nothing
+    showForm ::
+           Maybe NewCriterionData
+        -> [Text]
+        -> WidgetT App IO ()
+        -> Enctype
+        -> HandlerT App IO Html
     showForm mr msgs widget enctype = do
         criterionWidgets <- getCriterionCards
         fullLayout Nothing "Welcome to the criterion editor" $ do
@@ -147,6 +149,12 @@ postAdminEditCriterionR criterionId = do
   where
     showFormWidget = showForm Nothing []
     showFormError = showForm Nothing
+    showForm ::
+           Maybe EditCriterionData
+        -> [Text]
+        -> WidgetT App IO ()
+        -> Enctype
+        -> HandlerT App IO Html
     showForm mr msgs widget enctype = do
         fullLayout Nothing "Welcome to the single criterion" $ do
             setTitle "qua-kit - single criterion editor"

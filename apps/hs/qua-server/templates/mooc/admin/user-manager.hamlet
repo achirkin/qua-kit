@@ -29,23 +29,23 @@
             <th> Verified
             <th> Change role
         <tbody>
-          $forall Entity userId User{..} <- users
+          $forall Entity userId u <- users
             <tr>
               <td> #{show $ fromSqlKey userId}
-              <td> #{userName}
+              <td> #{userName u}
               <td> 
-                $maybe un <- userEthUserName
+                $maybe un <- userEthUserName u
                   ETH Username: #{un}
                 $nothing
-                  $maybe uid <- userEdxUserId
+                  $maybe uid <- userEdxUserId u
                     EDK User Id: #{uid}
                   $nothing
-                    $maybe email <- userEmail
+                    $maybe email <- userEmail u
                       Email: #{email}
                     $nothing
                       No identity
-              <td> #{show userRole}
-              <td> #{userVerified}
+              <td> #{show $ userRole u}
+              <td> #{userVerified u}
               <td> 
                 <form method=post action=@{SetUserRoleR userId}>
                   <div .form-group>
@@ -53,7 +53,7 @@
                       Select Role
                     <select .form-control id="selectRole#{show $ fromSqlKey userId}" name=role autocomplete="off">
                       $forall role <- roles
-                        $if role == userRole
+                        $if role == userRole u
                           <option selected="selected" value=#{show role}>
                             #{show role}
                         $else

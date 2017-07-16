@@ -16,20 +16,11 @@ module Model.Session
     , userSessionScenarioId
     ) where
 
-import ClassyPrelude.Yesod as Import hiding (Handler, race_)
+import Import.NoFoundation
+
 import qualified Data.Text as T
 import Data.Text.Read (decimal)
-import Database.Persist
 import Database.Persist.Sql
-import Model
-import Model as Import
-import Settings as Import
-import Settings.StaticFiles as Import
-import Yesod
-import Yesod.Auth as Import
-import Yesod.Core.Types as Import (loggerSet)
-import Yesod.Default.Config2
-import Yesod.Default.Config2 as Import
 
 data SessionLens a = SessionLens
     { convFunc :: Maybe Text -> Maybe a
@@ -117,8 +108,7 @@ deleteSafeSession sl = do
     mauth <- maybeAuthId
     case mauth of
         Nothing -> pure ()
-        Just uid ->
-            runDB $ deleteBy $ UserProperty uid $ sessionVar sl
+        Just uid -> runDB $ deleteBy $ UserProperty uid $ sessionVar sl
     deleteSession $ convKey sl
 
 setSafeSession ::

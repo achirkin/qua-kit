@@ -6,7 +6,6 @@ module Handler.Mooc.SubmissionViewer
 import Import
 
 import qualified Data.Conduit.List as CL
-import Database.Persist.Sql (fromSqlKey)
 import Model.Session
 
 import Handler.Home.LoadingSplash
