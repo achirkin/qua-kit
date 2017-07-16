@@ -31,6 +31,11 @@ import Network.Wai.Middleware.RequestLogger (Destination (Logger),
 import System.Log.FastLogger                (defaultBufSize, newStdoutLoggerSet,
                                              toLogStr)
 
+
+#if DEVELOPMENT
+import Application.SetupProblemData
+#endif
+
 --import qualified Data.ByteString.Base64 as BSB (encode)
 
 -- Import all relevant handler modules here.
