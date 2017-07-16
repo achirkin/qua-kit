@@ -18,8 +18,7 @@
                 
               <button .btn type="submit">
                 Register user
-    <div .card>
-      <table .table>
+    <table .table>
         <thead>
           <tr>
             <th> #

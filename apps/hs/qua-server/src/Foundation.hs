@@ -161,6 +161,14 @@ fullLayout mmsgIcon defaultMsg widget = do
     withUrlRenderer $(hamletFile "templates/site-layout-full.hamlet")
 
 
+adminLayout :: Text -> Widget -> Handler Html
+adminLayout defaultMsg widget = do
+    mmsg <- getMessage
+    muser <- fmap entityVal <$> maybeAuth
+    siteMenu <- pageBody <$> widgetToPageContent $(widgetFile "site-menu")
+    pc <- widgetToPageContent widget
+    withUrlRenderer $(hamletFile "templates/site-layout-admin.hamlet")
+
 
 minimalLayout :: Widget -> Handler Html
 minimalLayout widget = do

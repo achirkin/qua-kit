@@ -56,7 +56,7 @@ postAdminCreateCriterionR = do
         -> HandlerT App IO Html
     showForm mr msgs widget enctype = do
         criterionWidgets <- getCriterionCards
-        fullLayout Nothing "Welcome to the criterion editor" $ do
+        adminLayout "Welcome to the criterion editor" $ do
             setTitle "qua-kit - criterion editor"
             $(widgetFile "mooc/admin/criterion-editor")
 
@@ -156,6 +156,6 @@ postAdminEditCriterionR criterionId = do
         -> Enctype
         -> HandlerT App IO Html
     showForm mr msgs widget enctype = do
-        fullLayout Nothing "Welcome to the single criterion" $ do
+        adminLayout "Welcome to the single criterion" $ do
             setTitle "qua-kit - single criterion editor"
             $(widgetFile "mooc/admin/criterion-edit")

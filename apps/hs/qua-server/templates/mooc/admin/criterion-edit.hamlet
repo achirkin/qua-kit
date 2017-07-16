@@ -1,9 +1,5 @@
 <div .row>
-  <div .col-lg-7 .col-md-8 .col-sm-9 .col-xs-12 .story_cards>
-    <div .card>
-      <div .card-inner>
-        <a href=@{AdminCriterionEditorR}>
-          Back to the criterion editor
+  <div .col-lg-12 .col-md-12 .col-sm-12 .col-xs-12 .story_cards>
     $forall msg <- msgs
       <div>
         #{msg}

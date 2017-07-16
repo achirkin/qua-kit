@@ -1,9 +1,4 @@
-<div .col-lg-7 .col-md-8 .col-sm-9 .col-xs-12 .story_cards>
-  <div .card>
-      <div .card-inner>
-        <a href=@{AdminScenarioEditorR}>
-          Back to the scenario editor
-
+<div .story_cards>
   <div .card>
     <div .card-main>
       <img .card-img .pull-top .center-block src=@{ScenarioProblemImgR scenarioProblemId} height="350px" alt="Scenario Image">
