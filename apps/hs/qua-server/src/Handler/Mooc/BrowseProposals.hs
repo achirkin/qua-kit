@@ -29,8 +29,11 @@ getBrowseProposalsR page = do
     role <- muserRole <$> maybeAuth
     let isExpert = role == UR_EXPERT
     ((res, widget), _) <- runFormGet proposalsForm
-    usersscenarios <- runDB $ getLastSubmissions page res
-    pages <- negate . (`div` pageSize) . negate <$> runDB countUniqueSubmissions
+    let params = case res of
+                   (FormSuccess ps) -> ps
+                   _ -> noProposalParams
+    usersscenarios <- runDB $ getLastSubmissions page params
+    pages <- negate . (`div` pageSize) . negate <$> runDB (countUniqueSubmissions params)
     let is = [1..pages]
     fullLayout Nothing "Qua-kit student designs" $ do
       setTitle "Qua-kit student designs"
@@ -58,11 +61,25 @@ getBrowseProposalsR page = do
               margin-left: 15px
             .btn
               margin-left: 15px
+          .pageSelector
+            display:inline
+            background: none !important
+            color: inherit
+            border: none
+            margin: 2px
+            padding: 0 !important
+            font: inherit
+            cursor: pointer
+            color: #ff6f00
+            &:hover
+              color: #b71c1c
         |]
       [whamlet|
+        <form .form-inline>
           <div class="ui-card-wrap">
-            <div class="row">
+            <div class=row>
               ^{widget}
+            <div class=row>
               $forall ((scId, scpId, uId), lu, desc, uname, (mexpertgrade, hasToBeGraded), crits) <- usersscenarios
                 <div class="col-lg-4 col-md-6 col-sm-9 col-xs-9 story_cards">
                   <div.card>
@@ -106,7 +123,9 @@ getBrowseProposalsR page = do
                               View
 
           <!-- footer with page numbers -->
-          $if pages > 1
+          $if pages == 0
+            <p>No submissions found with the selected criteria.
+          $else
            <div class="row">
             <div class="col-lg-9 col-md-9 col-sm-9">
               <div class="card margin-bottom-no">
@@ -116,7 +135,11 @@ getBrowseProposalsR page = do
                     $if i == page
                       <p style="margin:2px;padding:0;display:inline">#{i}
                     $else
-                      <a style="margin:2px;padding:0;display:inline" href="@{BrowseProposalsR i}">#{i}
+                      <input
+                        type=submit
+                        class=pageSelector
+                        value=#{i}
+                        formaction=@{BrowseProposalsR i}>
       |]
  where
    cOpacity i = 0.5 + fromIntegral i / 198 :: Double
@@ -156,11 +179,10 @@ proposalsForm extra = do
                                       <*> onlyByAuthorIdRes
   let widget = do
         [whamlet|
-          <form .form-inline>
-            #{extra}
-            ^{fvInput onlyNeedsReviewView}
-            ^{fvInput onlyByAuthorView}
-            <input type=submit value="Filter" class="btn btn-default">
+          #{extra}
+          ^{fvInput onlyNeedsReviewView}
+          ^{fvInput onlyByAuthorView}
+          <input type=submit value=Filter class="btn btn-default">
         |]
   return (proposalParams, widget)
 
@@ -181,13 +203,30 @@ shortComment t = dropInitSpace . remNewLines $
                     . Text.lines
         dropInitSpace = Text.dropWhile (\c -> c == ' ' || c == '\n' || c == '\r' || c == '\t')
 
--- | get user name, scenario, and ratings
-getLastSubmissions :: Int -> FormResult ProposalParams -> ReaderT SqlBackend Handler
-  [((ScenarioId, ScenarioProblemId, UserId), UTCTime, Text, Text, (Maybe Double, Bool), [(Blaze.Markup, Text, Int)])]
-getLastSubmissions page resultParams = getVals <$> rawSql query preparedParams
-  where
-    preparedParams = whereParams ++ map toPersistValue [pageSize, (max 0 $ page-1)*pageSize]
-    (whereParams, whereClause) =
+generateJoins :: Text
+generateJoins = Text.unlines [
+   " INNER JOIN \"user\" ON \"user\".id = scenario.author_id"
+  ," INNER JOIN ( SELECT scenario.author_id, scenario.task_id, MAX(scenario.last_update) as x, AVG(COALESCE(rating.value, 0)) as score"
+  ,"              FROM scenario"
+  ,"              LEFT OUTER JOIN rating"
+  ,"                           ON rating.author_id = scenario.author_id"
+  ,"              GROUP BY scenario.author_id, scenario.task_id"
+  ,"              ORDER BY scenario.task_id DESC, score DESC, x DESC"
+  ,"            ) t"
+  ,"         ON t.task_id = scenario.task_id AND t.author_id = scenario.author_id AND t.x = scenario.last_update"
+  ," INNER JOIN problem_criterion ON scenario.task_id = problem_criterion.problem_id"
+  ," INNER JOIN criterion ON criterion.id = problem_criterion.criterion_id"
+  ," LEFT OUTER JOIN rating"
+  ,"         ON scenario.task_id = rating.problem_id AND scenario.author_id = rating.author_id AND criterion.id = rating.criterion_id"
+  ," LEFT OUTER JOIN ( SELECT scenario_id, AVG(grade) as expertgrade, COUNT(grade) as nrofexpertgrades"
+  ,"              FROM expert_review"
+  ,"              GROUP BY scenario_id "
+  ,"            ) g"
+  ,"         ON scenario.id = g.scenario_id "
+  ]
+
+generateWhereClause :: ProposalParams -> ([PersistValue], Text)
+generateWhereClause ps =
       if null wheres
       then ([], "")
       else (map fst wheres, "WHERE " ++ intercalate " AND " (map snd wheres))
@@ -195,13 +234,17 @@ getLastSubmissions page resultParams = getVals <$> rawSql query preparedParams
         wheres = catMaybes [
                    needsReview
                  , byAuthorId
-                 ] :: [(PersistValue, Text)]
+                 ]
         needsReview = onlyNeedsReview ps >>= \_ -> Just (toPersistValue (0::Int), "(rating.value IS NULL AND COALESCE(g.nrofexpertgrades, 0) = ?)")
         byAuthorId  = onlyByAuthorId  ps >>= \a -> Just (toPersistValue a, "scenario.author_id = ?")
-        ps = case resultParams of
-               (FormSuccess params) -> params
-               _ -> noProposalParams
 
+-- | get user name, scenario, and ratings
+getLastSubmissions :: Int -> ProposalParams -> ReaderT SqlBackend Handler
+  [((ScenarioId, ScenarioProblemId, UserId), UTCTime, Text, Text, (Maybe Double, Bool), [(Blaze.Markup, Text, Int)])]
+getLastSubmissions page params = getVals <$> rawSql query preparedParams
+  where
+    preparedParams = whereParams ++ map toPersistValue [pageSize, (max 0 $ page-1)*pageSize]
+    (whereParams, whereClause) = generateWhereClause params
     getVal' scId' xxs@(((Single scId, Single _, Single _), Single _, Single _, Single _, Single icon, Single cname, Single rating, (Single _expertgrade, Single _hasToBeGraded)):xs)
         | scId == scId' = first ((Blaze.preEscapedToMarkup (icon :: Text), cname, min 99 $ round (100*rating::Double)) :) $ getVal' scId xs
         | otherwise = ([],xxs)
@@ -217,36 +260,23 @@ getLastSubmissions page resultParams = getVals <$> rawSql query preparedParams
           ,"     , criterion.icon, criterion.name, COALESCE(rating.value, 0)"
           ,"     , g.expertgrade, (rating.value IS NULL AND COALESCE(g.nrofexpertgrades, 0) = 0)"
           ,"FROM scenario"
-          ,"INNER JOIN \"user\" ON \"user\".id = scenario.author_id"
-          ,"INNER JOIN ( SELECT scenario.author_id, scenario.task_id, MAX(scenario.last_update) as x, AVG(COALESCE(rating.value, 0)) as score"
-          ,"             FROM scenario"
-          ,"             LEFT OUTER JOIN rating"
-          ,"                          ON rating.author_id = scenario.author_id"
-          ,"             GROUP BY scenario.author_id, scenario.task_id"
-          ,"             ORDER BY scenario.task_id DESC, score DESC, x DESC"
-          ,"           ) t"
-          ,"        ON t.task_id = scenario.task_id AND t.author_id = scenario.author_id AND t.x = scenario.last_update"
-          ,"INNER JOIN problem_criterion ON scenario.task_id = problem_criterion.problem_id"
-          ,"INNER JOIN criterion ON criterion.id = problem_criterion.criterion_id"
-          ,""
-          ,"LEFT OUTER JOIN rating"
-          ,"        ON scenario.task_id = rating.problem_id AND scenario.author_id = rating.author_id AND criterion.id = rating.criterion_id"
-          ,"LEFT OUTER JOIN ( SELECT scenario_id, AVG(grade) as expertgrade, COUNT(grade) as nrofexpertgrades"
-          ,"             FROM expert_review"
-          ,"             GROUP BY scenario_id "
-          ,"           ) g"
-          ,"        ON scenario.id = g.scenario_id "
+          , generateJoins
           , whereClause
           ,"ORDER BY scenario.task_id DESC, t.score DESC, scenario.id DESC, criterion.id ASC"
           ,"LIMIT ? OFFSET ?"
           ,";"
           ]
 
-countUniqueSubmissions :: ReaderT SqlBackend Handler Int
-countUniqueSubmissions= getVal <$> rawSql query []
+countUniqueSubmissions :: ProposalParams -> ReaderT SqlBackend Handler Int
+countUniqueSubmissions params = getVal <$> rawSql query whereParams
   where
+    (whereParams, whereClause) = generateWhereClause params
     getVal (Single c:_)  = c
     getVal [] = 0
     query = Text.unlines
-          ["SELECT count(DISTINCT scenario.author_id) FROM scenario;"
+          [ "SELECT count(DISTINCT scenario.author_id)"
+          , "FROM scenario"
+          , generateJoins
+          , whereClause
+          , ";"
           ]
