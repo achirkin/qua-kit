@@ -130,29 +130,35 @@ maxLines :: Int
 maxLines = 3
 
 data ProposalParams = ProposalParams {
-      onlyGraded     :: Maybe Bool
-    , onlyByAuthorId :: Maybe UserId
+      onlyNeedsReview :: Maybe ()
+    , onlyByAuthorId  :: Maybe UserId
+    -- , onlyByExerciseId  :: Maybe ScenarioProblemId
+    }
+
+noProposalParams :: ProposalParams
+noProposalParams = ProposalParams {
+      onlyNeedsReview = Nothing
+    , onlyByAuthorId  = Nothing
     }
 
 proposalsForm :: Html -> MForm Handler (FormResult ProposalParams, Widget)
 proposalsForm extra = do
   maybeMe <- lift maybeAuthId
-  (onlyGradedRes, onlyGradedView) <- mreq (bootstrapSelectFieldList [
-                      ("Graded and Ungraded"::Text, Nothing)
-                    , ("Only graded",   Just True)
-                    , ("Only ungraded", Just False)
+  (onlyNeedsReviewRes, onlyNeedsReviewView) <- mreq (bootstrapSelectFieldList [
+                      ("All"::Text,    Nothing)
+                    , ("Needs review", Just ())
                     ]) "" Nothing
   (onlyByAuthorIdRes, onlyByAuthorView) <- mreq (bootstrapSelectFieldList [
-                      ("All incl. mine"::Text, Nothing)
+                      ("All"::Text, Nothing)
                     , ("Only mine", maybeMe)
                     ]) "" Nothing
-  let proposalParams = ProposalParams <$> onlyGradedRes
+  let proposalParams = ProposalParams <$> onlyNeedsReviewRes
                                       <*> onlyByAuthorIdRes
   let widget = do
         [whamlet|
           <form .form-inline>
             #{extra}
-            ^{fvInput onlyGradedView}
+            ^{fvInput onlyNeedsReviewView}
             ^{fvInput onlyByAuthorView}
             <input type=submit value="Filter" class="btn btn-default">
         |]
@@ -178,8 +184,24 @@ shortComment t = dropInitSpace . remNewLines $
 -- | get user name, scenario, and ratings
 getLastSubmissions :: Int -> FormResult ProposalParams -> ReaderT SqlBackend Handler
   [((ScenarioId, ScenarioProblemId, UserId), UTCTime, Text, Text, (Maybe Double, Bool), [(Blaze.Markup, Text, Int)])]
-getLastSubmissions page _ = getVals <$> rawSql query [toPersistValue pageSize, toPersistValue $ (max 0 (page-1))*pageSize]
+getLastSubmissions page resultParams = getVals <$> rawSql query preparedParams
   where
+    preparedParams = whereParams ++ map toPersistValue [pageSize, (max 0 $ page-1)*pageSize]
+    (whereParams, whereClause) =
+      if null wheres
+      then ([], "")
+      else (map fst wheres, "WHERE " ++ intercalate " AND " (map snd wheres))
+      where
+        wheres = catMaybes [
+                   needsReview
+                 , byAuthorId
+                 ] :: [(PersistValue, Text)]
+        needsReview = onlyNeedsReview ps >>= \_ -> Just (toPersistValue (0::Int), "(rating.value IS NULL AND COALESCE(g.nrofexpertgrades, 0) = ?)")
+        byAuthorId  = onlyByAuthorId  ps >>= \a -> Just (toPersistValue a, "scenario.author_id = ?")
+        ps = case resultParams of
+               (FormSuccess params) -> params
+               _ -> noProposalParams
+
     getVal' scId' xxs@(((Single scId, Single _, Single _), Single _, Single _, Single _, Single icon, Single cname, Single rating, (Single _expertgrade, Single _hasToBeGraded)):xs)
         | scId == scId' = first ((Blaze.preEscapedToMarkup (icon :: Text), cname, min 99 $ round (100*rating::Double)) :) $ getVal' scId xs
         | otherwise = ([],xxs)
@@ -193,7 +215,7 @@ getLastSubmissions page _ = getVals <$> rawSql query [toPersistValue pageSize, t
           ["SELECT scenario.id, scenario.task_id, scenario.author_id"
           ,"     , scenario.last_update, scenario.description,\"user\".name"
           ,"     , criterion.icon, criterion.name, COALESCE(rating.value, 0)"
-          ,"     , g.expertgrade, (rating.value IS NULL AND COALESCE(g.nrofexpertgrades, 0) = 0) as has_to_be_graded"
+          ,"     , g.expertgrade, (rating.value IS NULL AND COALESCE(g.nrofexpertgrades, 0) = 0)"
           ,"FROM scenario"
           ,"INNER JOIN \"user\" ON \"user\".id = scenario.author_id"
           ,"INNER JOIN ( SELECT scenario.author_id, scenario.task_id, MAX(scenario.last_update) as x, AVG(COALESCE(rating.value, 0)) as score"
@@ -202,7 +224,7 @@ getLastSubmissions page _ = getVals <$> rawSql query [toPersistValue pageSize, t
           ,"                          ON rating.author_id = scenario.author_id"
           ,"             GROUP BY scenario.author_id, scenario.task_id"
           ,"             ORDER BY scenario.task_id DESC, score DESC, x DESC"
-          ,"             LIMIT ? OFFSET ?) t"
+          ,"           ) t"
           ,"        ON t.task_id = scenario.task_id AND t.author_id = scenario.author_id AND t.x = scenario.last_update"
           ,"INNER JOIN problem_criterion ON scenario.task_id = problem_criterion.problem_id"
           ,"INNER JOIN criterion ON criterion.id = problem_criterion.criterion_id"
@@ -214,8 +236,10 @@ getLastSubmissions page _ = getVals <$> rawSql query [toPersistValue pageSize, t
           ,"             GROUP BY scenario_id "
           ,"           ) g"
           ,"        ON scenario.id = g.scenario_id "
-          ,""
-          ,"ORDER BY scenario.task_id DESC, t.score DESC, scenario.id DESC, criterion.id ASC;"
+          , whereClause
+          ,"ORDER BY scenario.task_id DESC, t.score DESC, scenario.id DESC, criterion.id ASC"
+          ,"LIMIT ? OFFSET ?"
+          ,";"
           ]
 
 countUniqueSubmissions :: ReaderT SqlBackend Handler Int
