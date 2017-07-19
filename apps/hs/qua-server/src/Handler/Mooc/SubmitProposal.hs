@@ -126,12 +126,25 @@ completelyNewOne img geometry desc = runMaybeT $ do
                                  <$> get scpId
                                  <*> getBy (EdxResLinkId resource_link_id edxCourseId)
     t <- liftIO getCurrentTime
-    lift . insert $ Scenario userId scpId
-                     img
-                     geometry
-                     desc
-                     (scenarioProblemScale scproblem)
-                     (entityKey edxres)
-                     lis_outcome_service_url
-                     lis_result_sourcedid
-                     t
+    let sc = Scenario
+               userId
+               scpId
+               img
+               geometry
+               desc
+               (scenarioProblemScale scproblem)
+               (entityKey edxres)
+               lis_outcome_service_url
+               lis_result_sourcedid
+               t
+    scId <- lift $ insert sc
+    _ <- lift $ insert $ CurrentScenario scId
+                           (scenarioAuthorId      sc)
+                           (scenarioTaskId        sc)
+                           (scenarioDescription   sc)
+                           (scenarioEdxResource   sc)
+                           (scenarioEdxOutcomeUrl sc)
+                           (scenarioEdxResultId   sc)
+                           Nothing
+                           (scenarioLastUpdate    sc)
+    return scId

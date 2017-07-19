@@ -65,6 +65,18 @@ Scenario
     edxResultId   Text Maybe
     lastUpdate    UTCTime default=CURRENT_TIMESTAMP
 
+CurrentScenario
+    historyScenarioId ScenarioId
+    authorId      UserId
+    taskId        ScenarioProblemId
+    description   Text
+    edxResource   EdxResourceId
+    edxOutcomeUrl Text Maybe
+    edxResultId   Text Maybe
+    grade         Double Maybe
+    lastUpdate    UTCTime default=CURRENT_TIMESTAMP
+    SubmissionOf authorId taskId
+
 Review
     reviewerId  UserId
     scenarioId  ScenarioId
@@ -92,7 +104,7 @@ Criterion
 ProblemCriterion
     problemId ScenarioProblemId
     criterionId CriterionId
-    ProblemCriterionUnique problemId criterionId 
+    ProblemCriterionUnique problemId criterionId
 
 Vote
     voterId       UserId
