@@ -2,6 +2,7 @@
 -- Input geometry is assumed to be in metric system.
 -- Optional parameters are longitude/latitute in degrees and altitude in meters
 CREATE OR REPLACE FUNCTION create_scenario( scName text
+                                          , userId bigint
                                           , geom_input jsonb)
   RETURNS jsonb AS
 $func$
@@ -96,7 +97,7 @@ BEGIN
      SET geom = ST_Force3D(ST_Transform(ST_SetSRID(geom, scSRID), 4326));
 
   -- create a new scenario and keep its id in ScID variable
-  INSERT INTO scenario (name, lon, lat, alt, srid) VALUES (scName, scLon, scLat, scAlt, scSRID) RETURNING scenario.id INTO ScID;
+  INSERT INTO scenario (name, user, lon, lat, alt, srid) VALUES (scName, userId, scLon, scLat, scAlt, scSRID) RETURNING scenario.id INTO ScID;
 
   -- insert all scenario properties
   INSERT INTO scenario_prop_history (scenario_id, name, ts_update, value)

@@ -82,18 +82,20 @@ oidTEXT = Oid 25
 mkBigInt :: ScenarioId -> Maybe (Oid, ByteString, Format)
 mkBigInt (ScenarioId i) = Just (oidBIGINT, BSC.pack (show i), Text)
 
-mkToken :: Int64 -> Maybe (Oid, ByteString, Format)
-mkToken i = Just (oidBIGINT, BSC.pack (show i), Text)
+mkInt64 :: Int64 -> Maybe (Oid, ByteString, Format)
+mkInt64 i = Just (oidBIGINT, BSC.pack (show i), Text)
 
 createScenario :: Connection
                -> Int64 -- ^ token (callID)
                -> BS.ByteString -- ^ scenario name
+               -> Maybe Int64 -- ^ User identifier
                -> BS.ByteString -- ^ GeoJSON Feature Collection
                -> IO (Either BS.ByteString BS.ByteString) -- ^ Either error or json result
-createScenario conn token scName scenario = do
-  mrez <- execParams conn "SELECT wrap_result($1,create_scenario($2,$3));"
-    [ mkToken token
+createScenario conn token scName mUser scenario = do
+  mrez <- execParams conn "SELECT wrap_result($1,create_scenario($2,$3,$4));"
+    [ mkInt64 token
     , Just (oidTEXT, BSC.filter (\c -> isAlphaNum c || c == ' ') scName, Text)
+    , mUser >>= mkInt64
     , Just (oidJSONB, scenario, Text)
     ]
     Text
@@ -106,7 +108,7 @@ deleteScenario :: Connection
                -> ScenarioId -- ^ ScID (scenario id)
                -> IO (Either BS.ByteString BS.ByteString) -- ^ Either error or json result
 deleteScenario conn token scID = do
-  mrez <- execParams conn "SELECT wrap_result($1,delete_scenario($2));" [mkToken token, mkBigInt scID] Text
+  mrez <- execParams conn "SELECT wrap_result($1,delete_scenario($2));" [mkInt64 token, mkBigInt scID] Text
   justResult mrez $ flip checkResult id
 
 
@@ -115,7 +117,7 @@ recoverScenario :: Connection
                 -> ScenarioId -- ^ ScID (scenario id)
                 -> IO (Either BS.ByteString BS.ByteString) -- ^ Either error or json result
 recoverScenario conn token scID = do
-  mrez <- execParams conn "SELECT wrap_result($1,recover_scenario($2));" [mkToken token, mkBigInt scID] Text
+  mrez <- execParams conn "SELECT wrap_result($1,recover_scenario($2));" [mkInt64 token, mkBigInt scID] Text
   justResult mrez $ flip checkResult id
 
 
@@ -126,7 +128,7 @@ updateScenario :: Connection
                -> IO (Either BS.ByteString BS.ByteString) -- ^ Either error or json result
 updateScenario conn token scID scenario = do
   mrez <- execParams conn "SELECT wrap_result($1,update_scenario($2,$3));"
-    [ mkToken token
+    [ mkInt64 token
     , mkBigInt scID
     , Just (oidJSONB, scenario, Text)
     ]
@@ -138,7 +140,7 @@ listScenarios :: Connection
               -> Int64 -- ^ token (callID)
               -> IO (Either BS.ByteString BS.ByteString) -- ^ Either error or json result
 listScenarios conn token = do
-  mrez <- execParams conn "SELECT wrap_result($1,list_scenarios());" [mkToken token] Text
+  mrez <- execParams conn "SELECT wrap_result($1,list_scenarios());" [mkInt64 token] Text
   justResult mrez $ \rez -> checkResult rez id
 
 getScenario :: Connection
@@ -146,7 +148,7 @@ getScenario :: Connection
             -> ScenarioId -- ^ ScID (scenario id)
             -> IO (Either BS.ByteString BS.ByteString) -- ^ Either error or json result
 getScenario conn token scID = do
-  mrez <- execParams conn "SELECT wrap_result($1,get_scenario($2));" [mkToken token, mkBigInt scID] Text
+  mrez <- execParams conn "SELECT wrap_result($1,get_scenario($2));" [mkInt64 token, mkBigInt scID] Text
   justResult mrez $ \rez -> checkResult rez id
 
 

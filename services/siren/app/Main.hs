@@ -120,8 +120,11 @@ responseMsgs (MsgRun token "scenario.geojson.Get" pams _)
 responseMsgs (MsgRun token "scenario.geojson.Create" pams _)
   | Just (Success scName) <- fromJSON <$> HashMap.lookup "name" pams
   , Just geom_input <- BSL.toStrict . JSON.encode <$> HashMap.lookup "geometry_input" pams = do
+    let resultToMaybe (Error _) = Nothing
+        resultToMaybe (Success a) = Just a
+    let mUserId = HashMap.lookup "user" pams >>= (resultToMaybe . fromJSON)
     conn <- Lens.use connection
-    eresultBS <- liftIO $ createScenario conn (fromIntegral token) (BSC.pack scName) geom_input
+    eresultBS <- liftIO $ createScenario conn (fromIntegral token) (BSC.pack scName) mUserId geom_input
     yieldAnswer token eresultBS
 
 responseMsgs (MsgRun token "scenario.geojson.Update" pams _)
