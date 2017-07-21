@@ -91,13 +91,17 @@ createScenario :: Connection
                -> BS.ByteString -- ^ scenario name
                -> Maybe Int64 -- ^ User identifier
                -> BS.ByteString -- ^ GeoJSON Feature Collection
+               -> Maybe Int64 -- ^ Owner Id
+               -> Maybe AuthRole
                -> IO (Either BS.ByteString BS.ByteString) -- ^ Either error or json result
-createScenario conn token scName mUser scenario = do
+createScenario conn token scName mUser scenario userId authRole = do
   mrez <- execParams conn "SELECT wrap_result($1,create_scenario($2,$3,$4));"
     [ mkInt64 token
     , Just (oidTEXT, BSC.filter (\c -> isAlphaNum c || c == ' ') scName, Text)
     , mUser >>= mkInt64
     , Just (oidJSONB, scenario, Text)
+    , userId >>= mkInt64
+    , mkAuthRole authRole
     ]
     Text
   justResult mrez $ flip checkResult id

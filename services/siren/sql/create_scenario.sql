@@ -3,10 +3,13 @@
 -- Optional parameters are longitude/latitute in degrees and altitude in meters
 CREATE OR REPLACE FUNCTION create_scenario( scName text
                                           , scOwner bigint
-                                          , geom_input jsonb)
+                                          , geom_input jsonb
+                                          , UserId bigint
+                                          , AuthRole text)
   RETURNS jsonb AS
 $func$
 DECLARE
+  allowed boolean
   ScID bigint;
   curTime TIMESTAMP;
   geomID_max bigint;
@@ -16,6 +19,20 @@ DECLARE
   scLat decimal;
   scAlt decimal;
 BEGIN
+
+  allowed :=
+    (CASE AuthRole
+          WHEN 'AuthRoleStudent'   THEN scOwner = UserId
+          WHEN 'AuthRoleLocal'     THEN scOwner = UserId
+          WHEN 'AuthRoleSuperUser' THEN TRUE
+          WHEN NULL                THEN TRUE
+          ELSE                          FALSE
+     END);
+
+  IF (NOT allowed) THEN
+      RETURN NULL;
+  END IF;
+
   -- get time of insertion
   curTime := CURRENT_TIMESTAMP;
   -- FeatureCollection is in 'geometry' property of 'geometry_input' json
