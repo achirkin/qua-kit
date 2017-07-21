@@ -9,7 +9,7 @@ CREATE OR REPLACE FUNCTION create_scenario( scName text
   RETURNS jsonb AS
 $func$
 DECLARE
-  allowed boolean
+  allowed boolean;
   ScID bigint;
   curTime TIMESTAMP;
   geomID_max bigint;
@@ -119,7 +119,11 @@ BEGIN
   -- insert all scenario properties
   INSERT INTO scenario_prop_history (scenario_id, name, ts_update, value)
        SELECT ScID, sprops.key, curTime, sprops.value
-         FROM jsonb_each(jsonb_strip_nulls(geom_input -> 'properties') ) sprops;
+         FROM jsonb_each(jsonb_strip_nulls(
+            CASE (geom_input -> 'properties')
+              WHEN ('null' :: jsonb) THEN ('{}' :: jsonb)
+              ELSE (geom_input -> 'properties')
+            END )) sprops;
   INSERT INTO scenario_prop (scenario_id, name, last_update)
        SELECT ph.scenario_id, ph.name, ph.ts_update
          FROM scenario_prop_history ph
