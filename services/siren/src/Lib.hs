@@ -142,12 +142,16 @@ updateScenario :: Connection
                -> Int64 -- ^ token (callID)
                -> ScenarioId -- ^ ScID (scenario id)
                -> BS.ByteString -- ^ GeoJSON Feature Collection
+               -> Maybe Int64 -- ^ User Id
+               -> Maybe AuthRole
                -> IO (Either BS.ByteString BS.ByteString) -- ^ Either error or json result
-updateScenario conn token scID scenario = do
-  mrez <- execParams conn "SELECT wrap_result($1,update_scenario($2,$3));"
+updateScenario conn token scID scenario userId authRole = do
+  mrez <- execParams conn "SELECT wrap_result($1,update_scenario($2,$3,$4,$5));"
     [ mkInt64 token
     , mkBigInt scID
     , Just (oidJSONB, scenario, Text)
+    , userId >>= mkInt64
+    , mkAuthRole authRole
     ]
     Text
   justResult mrez $ flip checkResult id
