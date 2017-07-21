@@ -106,6 +106,23 @@ createScenario conn token scName mUser scenario userId authRole = do
     Text
   justResult mrez $ flip checkResult id
 
+copyScenario :: Connection
+             -> Int64 -- ^ token
+             -> Int64 -- ^ Scenario Id
+             -> Maybe Int64 -- ^ Owner Id
+             -> Maybe AuthRole
+             -> IO (Either BS.ByteString BS.ByteString) -- ^ Either error or json result
+copyScenario conn token scId mUser authRole = do
+  mrez <- execParams conn "SELECT wrap_result($1,copy_scenario($2,$3,$4));"
+    [ mkInt64 token
+    , mkInt64 scId 
+    , mUser >>= mkInt64
+    , mkAuthRole authRole
+    ]
+    Text
+  justResult mrez $ flip checkResult id
+  
+
 data AuthRole
   = AuthRoleSuperUser
   | AuthRoleStudent
@@ -251,6 +268,7 @@ returnError rez rstatus = do
 sqlFunDefs :: [BS.ByteString]
 sqlFunDefs =
   [ createScenarioF
+  , copyScenarioF
   , deleteScenarioF
   , listScenariosF
   , getScenarioF
@@ -264,6 +282,9 @@ sqlFunDefs =
 
 createScenarioF :: BS.ByteString
 createScenarioF = $(embedFile "sql/create_scenario.sql")
+
+copyScenarioF :: BS.ByteString
+copyScenarioF = $(embedFile "sql/copy_scenario.sql")
 
 deleteScenarioF :: BS.ByteString
 deleteScenarioF = $(embedFile "sql/delete_scenario.sql")
