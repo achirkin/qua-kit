@@ -18,6 +18,7 @@ library
   hs-source-dirs:      src
   exposed-modules:     Lib
   build-depends:       base >= 4.9 && < 5,
+                       aeson -any,
                        bytestring >=0.10.6.0,
                        postgresql-libpq -any,
                        file-embed -any

@@ -11,6 +11,7 @@ module Lib
     , getLastScUpdates
     ) where
 
+import qualified Data.Aeson                as JSON
 import           Data.ByteString           (ByteString)
 import           Data.ByteString           as BS
 import qualified Data.ByteString.Char8     as BSC
@@ -101,14 +102,30 @@ createScenario conn token scName mUser scenario = do
     Text
   justResult mrez $ flip checkResult id
 
+data AuthRole
+  = AuthRoleSuperUser
+  | AuthRoleStudent
+  | AuthRoleLocal
+  deriving (Show, Read, Eq)
 
+instance JSON.FromJSON AuthRole where
+  parseJSON = JSON.withText "AuthRole" $ \s -> case s of
+    "super-user" -> pure AuthRoleSuperUser
+    "student" -> pure AuthRoleStudent
+    "local" -> pure AuthRoleLocal
+    _ -> fail "unknown auth role"
+
+mkAuthRole :: Maybe AuthRole -> Maybe (Oid, ByteString, Format)
+mkAuthRole mauth = (\ar -> (oidTEXT, BSC.pack $ show ar, Text)) <$> mauth
 
 deleteScenario :: Connection
                -> Int64 -- ^ token (callID)
                -> ScenarioId -- ^ ScID (scenario id)
+               -> Maybe Int64 -- ^ User Id
+               -> Maybe AuthRole
                -> IO (Either BS.ByteString BS.ByteString) -- ^ Either error or json result
-deleteScenario conn token scID = do
-  mrez <- execParams conn "SELECT wrap_result($1,delete_scenario($2));" [mkInt64 token, mkBigInt scID] Text
+deleteScenario conn token scID userId authRole = do
+  mrez <- execParams conn "SELECT wrap_result($1,delete_scenario($2,$3,$4));" [mkInt64 token, mkBigInt scID, userId >>= mkInt64, mkAuthRole authRole] Text
   justResult mrez $ flip checkResult id
 
 
