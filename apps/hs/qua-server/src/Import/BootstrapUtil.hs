@@ -18,3 +18,23 @@ bootstrapSelectFieldList opts =
           <div .form-group>
             ^{select}
         |]
+
+-- based on https://www.stackage.org/haddock/lts-8.23/yesod-form-1.4.12/src/Yesod.Form.Fields.html#dayField
+bootstrapDayField :: Monad m => RenderMessage (HandlerSite m) FormMessage
+                             => Field m Day
+bootstrapDayField = Field
+    { fieldParse = parseHelper $ parseDate . unpack
+    , fieldView = \theId name attrs val isReq -> toWidget [hamlet|
+        <div .form-group>
+          <input .form-control
+            id="#{theId}"
+            name="#{name}"
+            *{attrs}
+            type="date"
+            :isReq:required=""
+            value="#{showVal val}"
+            >
+      |]
+    , fieldEnctype = UrlEncoded
+    }
+  where showVal = either id (pack . show)
