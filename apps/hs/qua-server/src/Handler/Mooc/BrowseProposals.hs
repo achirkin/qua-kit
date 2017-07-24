@@ -28,7 +28,8 @@ getBrowseProposalsR :: Int -> Handler Html
 getBrowseProposalsR page = do
     role <- muserRole <$> maybeAuth
     let isExpert = role == UR_EXPERT
-    ((res, widget), _) <- runFormGet proposalsForm
+    exercises <- runDB $ selectList [] []
+    ((res, widget), _) <- runFormGet $ proposalsForm exercises
     let params = case res of
                    (FormSuccess ps) -> ps
                    _ -> noProposalParams
@@ -155,33 +156,41 @@ maxLines = 3
 data ProposalParams = ProposalParams {
       onlyNeedsReview   :: Maybe ()
     , onlyByAuthorId    :: Maybe UserId
-    -- , onlyByExerciseId  :: Maybe ScenarioProblemId
+    , onlyByExerciseId  :: Maybe ScenarioProblemId
     }
 
 noProposalParams :: ProposalParams
 noProposalParams = ProposalParams {
       onlyNeedsReview   = Nothing
     , onlyByAuthorId    = Nothing
+    , onlyByExerciseId  = Nothing
     }
 
-proposalsForm :: Html -> MForm Handler (FormResult ProposalParams, Widget)
-proposalsForm extra = do
+proposalsForm :: [Entity ScenarioProblem] -> Html -> MForm Handler (FormResult ProposalParams, Widget)
+proposalsForm exercises extra = do
   maybeMe <- lift maybeAuthId
+  let exerciseList = map (\(Entity spId sp) -> (scenarioProblemDescription sp, Just spId)) exercises
   (onlyNeedsReviewRes, onlyNeedsReviewView) <- mreq (bootstrapSelectFieldList [
                       ("All"::Text,    Nothing)
                     , ("Needs review", Just ())
                     ]) "" Nothing
   (onlyByAuthorIdRes, onlyByAuthorView) <- mreq (bootstrapSelectFieldList [
-                      ("All"::Text, Nothing)
-                    , ("Only mine", maybeMe)
+                      ("All users"::Text, Nothing)
+                    , ("Only my submissions", maybeMe)
                     ]) "" Nothing
+  (onlyByExerciseIdRes, onlyByExerciseIdView) <- mreq (bootstrapSelectFieldList $
+                      ("All exercises"::Text, Nothing) : exerciseList
+                    ) "" Nothing
+
   let proposalParams = ProposalParams <$> onlyNeedsReviewRes
                                       <*> onlyByAuthorIdRes
+                                      <*> onlyByExerciseIdRes
   let widget = do
         [whamlet|
           #{extra}
           ^{fvInput onlyNeedsReviewView}
           ^{fvInput onlyByAuthorView}
+          ^{fvInput onlyByExerciseIdView}
           <input type=submit
                  value=Filter
                  class="btn btn-default"
@@ -249,8 +258,9 @@ generateJoins ps mLimitOffset = (whereParams ++ limitParams, joinStr, orderStr)
       else (map fst wheres, "WHERE " ++ intercalate " AND " (map snd wheres))
       where
         wheres = catMaybes [
-                  onlyByAuthorId  ps >>= \a -> Just (toPersistValue a, "s.author_id = ?")
-                , onlyNeedsReview ps >>= \_ -> Just (toPersistValue (0::Int), "s.grade IS NULL AND 0 = ?")
+                  onlyByAuthorId   ps >>= \a -> Just (toPersistValue a, "s.author_id = ?")
+                , onlyNeedsReview  ps >>= \_ -> Just (toPersistValue (0::Int), "s.grade IS NULL AND 0 = ?")
+                , onlyByExerciseId ps >>= \e -> Just (toPersistValue e, "s.task_id = ?")
                  ]
 
 -- | get user name, scenario, and ratings
