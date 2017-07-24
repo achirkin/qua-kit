@@ -153,10 +153,17 @@ shortLength = 140
 maxLines :: Int
 maxLines = 3
 
+data ProposalSortParam = Default
+                       | Newest
+                       | GradeDesc
+                       | GradeAsc
+                       deriving (Eq, Show)
+
 data ProposalParams = ProposalParams {
       onlyNeedsReview   :: Maybe ()
     , onlyByAuthorId    :: Maybe UserId
     , onlyByExerciseId  :: Maybe ScenarioProblemId
+    , sortOrder         :: ProposalSortParam
     }
 
 noProposalParams :: ProposalParams
@@ -164,6 +171,7 @@ noProposalParams = ProposalParams {
       onlyNeedsReview   = Nothing
     , onlyByAuthorId    = Nothing
     , onlyByExerciseId  = Nothing
+    , sortOrder         = Default
     }
 
 proposalsForm :: [Entity ScenarioProblem] -> Html -> MForm Handler (FormResult ProposalParams, Widget)
@@ -181,16 +189,24 @@ proposalsForm exercises extra = do
   (onlyByExerciseIdRes, onlyByExerciseIdView) <- mreq (bootstrapSelectFieldList $
                       ("All exercises"::Text, Nothing) : exerciseList
                     ) "" Nothing
+  (sortOrderRes, sortOrderView) <- mreq (bootstrapSelectFieldList [
+                      ("Default order"::Text, Default)
+                    , ("Newest first", Newest)
+                    , ("Best grade first", GradeDesc)
+                    , ("Best grade last", GradeAsc)
+                    ]) "" Nothing
 
   let proposalParams = ProposalParams <$> onlyNeedsReviewRes
                                       <*> onlyByAuthorIdRes
                                       <*> onlyByExerciseIdRes
+                                      <*> sortOrderRes
   let widget = do
         [whamlet|
           #{extra}
           ^{fvInput onlyNeedsReviewView}
           ^{fvInput onlyByAuthorView}
           ^{fvInput onlyByExerciseIdView}
+          ^{fvInput sortOrderView}
           <input type=submit
                  value=Filter
                  class="btn btn-default"
@@ -219,7 +235,6 @@ shortComment t = dropInitSpace . remNewLines $
 generateJoins :: ProposalParams -> Maybe (Int, Int) -> ([PersistValue], Text, Text)
 generateJoins ps mLimitOffset = (whereParams ++ limitParams, joinStr, orderStr)
   where
-    primaryOrder = "s.task_id DESC, COALESCE(s.grade, 0) DESC"
     joinStr = Text.unlines [
         " FROM ("
       , "   SELECT s.*, \"user\".name as username"
@@ -248,6 +263,11 @@ generateJoins ps mLimitOffset = (whereParams ++ limitParams, joinStr, orderStr)
     orderStr = Text.unlines [
         "ORDER BY ", primaryOrder, ", s.id DESC, criterion.id ASC"
       ]
+    primaryOrder = case sortOrder ps of
+                     Default   -> "s.task_id DESC, COALESCE(s.grade, 0) DESC"
+                     Newest    -> "s.last_update DESC"
+                     GradeDesc -> "COALESCE(s.grade, 0) DESC"
+                     GradeAsc  -> "COALESCE(s.grade, 0) ASC"
     (limitParams, limitClause) =
       case mLimitOffset of
         Just (l, o) -> (map toPersistValue [l, o], "LIMIT ? OFFSET ?")
