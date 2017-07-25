@@ -1,23 +1,16 @@
-CREATE OR REPLACE FUNCTION delete_scenario(ScID bigint, UserId bigint, AuthRole text)
+CREATE OR REPLACE FUNCTION delete_scenario(ScID bigint, userId bigint, authRole text)
   RETURNS jsonb AS
 $func$
-DECLARE
-  allowed boolean;
 BEGIN
-  allowed :=
-    (CASE AuthRole
-          WHEN 'AuthRoleStudent'   THEN FALSE
-          WHEN 'AuthRoleLocal'     THEN (UserId = CAST((SELECT scenario.owner
-                                                         FROM scenario
-                                                         WHERE scenario.id = ScId)
-                                                      AS bigint))
-          WHEN 'AuthRoleSuperUser' THEN TRUE
-          WHEN NULL                THEN TRUE
-          ELSE                          FALSE
-     END);
-
-  IF (NOT allowed) THEN
-      RETURN NULL;
+  IF (CASE authRole
+          WHEN 'Student' THEN TRUE
+          WHEN 'Local'   THEN (SELECT scenario.owner != userId FROM scenario WHERE scenario.id = ScID)
+          WHEN 'Admin'   THEN FALSE
+          ELSE                TRUE
+      END)
+  THEN
+    RAISE EXCEPTION 'You do not have rights to delete scenario %', ScID
+          USING HINT = 'You must have authRole = "Admin" or own the scenario.';
   END IF;
 
   IF (SELECT count(*) < 1 FROM scenario WHERE scenario.id = ScID) THEN

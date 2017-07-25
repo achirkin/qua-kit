@@ -1,15 +1,13 @@
 -- Create a new scenario.
 -- Input geometry is assumed to be in metric system.
 -- Optional parameters are longitude/latitute in degrees and altitude in meters
-CREATE OR REPLACE FUNCTION create_scenario( scName text
-                                          , scOwner bigint
-                                          , geom_input jsonb
-                                          , UserId bigint
-                                          , AuthRole text)
+CREATE OR REPLACE FUNCTION create_scenario( userId bigint
+                                          , authRole text
+                                          , scName text
+                                          , geom_input jsonb)
   RETURNS jsonb AS
 $func$
 DECLARE
-  allowed boolean;
   ScID bigint;
   curTime TIMESTAMP;
   geomID_max bigint;
@@ -20,17 +18,15 @@ DECLARE
   scAlt decimal;
 BEGIN
 
-  allowed :=
-    (CASE AuthRole
-          WHEN 'AuthRoleStudent'   THEN scOwner = UserId
-          WHEN 'AuthRoleLocal'     THEN scOwner = UserId
-          WHEN 'AuthRoleSuperUser' THEN TRUE
-          WHEN NULL                THEN TRUE
-          ELSE                          FALSE
-     END);
-
-  IF (NOT allowed) THEN
-      RETURN NULL;
+  IF (CASE authRole
+          WHEN 'Student' THEN TRUE
+          WHEN 'Local'   THEN FALSE
+          WHEN 'Admin'   THEN FALSE
+          ELSE                TRUE
+      END)
+  THEN
+    RAISE EXCEPTION 'You do not have rights to create new scenarios.'
+          USING HINT = 'You must have authRole = "Admin" or "Local"';
   END IF;
 
   -- get time of insertion
@@ -114,16 +110,12 @@ BEGIN
      SET geom = ST_Force3D(ST_Transform(ST_SetSRID(geom, scSRID), 4326));
 
   -- create a new scenario and keep its id in ScID variable
-  INSERT INTO scenario (name, owner, lon, lat, alt, srid) VALUES (scName, scOwner, scLon, scLat, scAlt, scSRID) RETURNING scenario.id INTO ScID;
+  INSERT INTO scenario (name, owner, lon, lat, alt, srid) VALUES (scName, userId, scLon, scLat, scAlt, scSRID) RETURNING scenario.id INTO ScID;
 
   -- insert all scenario properties
   INSERT INTO scenario_prop_history (scenario_id, name, ts_update, value)
        SELECT ScID, sprops.key, curTime, sprops.value
-         FROM jsonb_each(jsonb_strip_nulls(
-            CASE (geom_input -> 'properties')
-              WHEN ('null' :: jsonb) THEN ('{}' :: jsonb)
-              ELSE (geom_input -> 'properties')
-            END )) sprops;
+         FROM jsonb_maybe_each(jsonb_strip_nulls(geom_input -> 'properties')) sprops;
   INSERT INTO scenario_prop (scenario_id, name, last_update)
        SELECT ph.scenario_id, ph.name, ph.ts_update
          FROM scenario_prop_history ph
@@ -146,7 +138,7 @@ BEGIN
          FROM features;
   INSERT INTO sc_geometry_prop_history (scenario_id, geometry_id, name, ts_update, value)
        SELECT ScID, f.geomID, fprops.key, curTime, fprops.value
-         FROM features f, jsonb_each(f.props) fprops;
+         FROM features f, jsonb_maybe_each(jsonb_strip_nulls(f.props)) fprops;
   INSERT INTO sc_geometry_prop (scenario_id, geometry_id, name, last_update)
        SELECT ph.scenario_id, ph.geometry_id, ph.name, ph.ts_update
          FROM sc_geometry_prop_history ph
@@ -189,6 +181,18 @@ BEGIN
     END IF;
 EXCEPTION WHEN others THEN
     RETURN NULL;
+END;
+$$
+STRICT
+LANGUAGE plpgsql IMMUTABLE;
+
+-- Wrapper on jsonb_each to make sure it does not throw an error.
+CREATE OR REPLACE FUNCTION jsonb_maybe_each(props jsonb, key OUT text, value OUT jsonb) RETURNS SETOF RECORD AS $$
+BEGIN
+    IF jsonb_typeof(props) = 'object'
+    THEN RETURN QUERY SELECT t.key, t.value FROM jsonb_each(props) t;
+    ELSE RETURN QUERY SELECT ('' :: text), ('null' :: jsonb) WHERE FALSE;
+    END IF;
 END;
 $$
 STRICT

@@ -1,12 +1,10 @@
-CREATE OR REPLACE FUNCTION update_scenario( ScID bigint
-                                          , geom_input jsonb
-                                          , UserId bigint
-                                          , AuthRole text)
+CREATE OR REPLACE FUNCTION update_scenario( userId bigint
+                                          , authRole text
+                                          , ScID bigint
+                                          , geom_input jsonb)
   RETURNS jsonb AS
 $func$
 DECLARE
-  allowed boolean;
-  owner bigint;
   curTime TIMESTAMP;
   geomID_max bigint;
   scSRID integer;
@@ -25,24 +23,20 @@ BEGIN
           USING HINT = 'Use "create_scenario" function instead';
   END IF;
 
-  SELECT
-    CAST((SELECT scenario.owner
-      FROM scenario
-      WHERE scenario.id = ScId)
-    AS bigint)
-  INTO Owner;
-  allowed :=
-    (CASE AuthRole
-          WHEN 'AuthRoleStudent'   THEN UserID IS NOT NULL OR UserId = Owner
-          WHEN 'AuthRoleLocal'     THEN Owner IS NULL OR UserId = Owner
-
-          WHEN 'AuthRoleSuperUser' THEN TRUE
-          WHEN NULL                THEN TRUE
-          ELSE                          FALSE
-     END);
-
-  IF (NOT allowed) THEN
-      RETURN NULL;
+  -- authorise
+  IF (CASE authRole
+          WHEN 'Student' THEN (SELECT scenario.owner != userId FROM scenario WHERE scenario.id = ScID)
+          WHEN 'Local'   THEN (SELECT CASE WHEN scenario.owner IS NULL THEN FALSE
+                                           ELSE scenario.owner != userId
+                                      END
+                                 FROM scenario
+                                WHERE scenario.id = ScID)
+          WHEN 'Admin'   THEN FALSE
+          ELSE                TRUE
+      END)
+  THEN
+    RAISE EXCEPTION 'You do not have rights to update scenario %', ScID
+          USING HINT = 'You must have authRole = "Admin" or own the scenario.';
   END IF;
 
   -- FeatureCollection is in 'geometry' property of 'geometry_input' json
@@ -62,7 +56,7 @@ BEGIN
             , CASE WHEN jsonb_typeof(sprops.value) = 'null' THEN ph.value
                    ELSE sprops.value #> '{}'
               END
-         FROM jsonb_each(geom_input -> 'properties') sprops
+         FROM jsonb_maybe_each(geom_input -> 'properties') sprops
     LEFT JOIN latest_props ph
            ON sprops.key = ph.name AND ScID = ph.scenario_id;
   -- update latest property references
@@ -136,7 +130,7 @@ BEGIN
             , CASE WHEN jsonb_typeof(fprops.value) = 'null' THEN ph.value
                    ELSE fprops.value #> '{}'
               END
-         FROM (SELECT f.geomID, ps.key, ps.value FROM features f, jsonb_each(f.props) ps) fprops
+         FROM (SELECT f.geomID, ps.key, ps.value FROM features f, jsonb_maybe_each(f.props) ps) fprops
     LEFT JOIN latest_props ph
            ON fprops.key = ph.name AND ScID = ph.scenario_id AND fprops.geomID = ph.geometry_id;
   -- update latest property references
