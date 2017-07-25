@@ -155,6 +155,7 @@ maxLines = 3
 
 data ProposalSortParam = Default
                        | Newest
+                       | Oldest
                        | GradeDesc
                        | GradeAsc
                        deriving (Eq, Show)
@@ -192,6 +193,7 @@ proposalsForm exercises extra = do
   (sortOrderRes, sortOrderView) <- mreq (bootstrapSelectFieldList [
                       ("Default order"::Text, Default)
                     , ("Newest first", Newest)
+                    , ("Oldest first", Oldest)
                     , ("Best grade first", GradeDesc)
                     , ("Best grade last", GradeAsc)
                     ]) "" Nothing
@@ -266,6 +268,7 @@ generateJoins ps mLimitOffset = (whereParams ++ limitParams, joinStr, orderStr)
     primaryOrder = case sortOrder ps of
                      Default   -> "s.task_id DESC, COALESCE(s.grade, 0) DESC"
                      Newest    -> "s.last_update DESC"
+                     Oldest    -> "s.last_update ASC"
                      GradeDesc -> "COALESCE(s.grade, 0) DESC"
                      GradeAsc  -> "COALESCE(s.grade, 0) ASC"
     (limitParams, limitClause) =
