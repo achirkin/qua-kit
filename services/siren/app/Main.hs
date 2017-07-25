@@ -119,16 +119,21 @@ responseMsgs (MsgRun token "scenario.geojson.Get" pams _)
 
 responseMsgs (MsgRun token "scenario.geojson.Create" pams _)
   | Just (Success scName) <- fromJSON <$> HashMap.lookup "name" pams
-  , Just geom_input <- BSL.toStrict . JSON.encode <$> HashMap.lookup "geometry_input" pams = do
+  , Just geom_input <- BSL.toStrict . JSON.encode <$> HashMap.lookup "geometry_input" pams
+  , muserId <- (resultToMaybe . fromJSON) =<< HashMap.lookup "user-id" pams
+  , mauthRole <- (resultToMaybe . fromJSON) =<< HashMap.lookup "user-role" pams = do
+    let mUserId = HashMap.lookup "user" pams >>= (resultToMaybe . fromJSON)
     conn <- Lens.use connection
-    eresultBS <- liftIO $ createScenario conn (fromIntegral token) (BSC.pack scName) geom_input
+    eresultBS <- liftIO $ createScenario conn (fromIntegral token) (BSC.pack scName) mUserId geom_input muserId mauthRole
     yieldAnswer token eresultBS
 
 responseMsgs (MsgRun token "scenario.geojson.Update" pams _)
   | Just (Success scID) <- fromJSON <$> HashMap.lookup "ScID" pams
-  , Just geom_input <- BSL.toStrict . JSON.encode <$> HashMap.lookup "geometry_input" pams = do
+  , Just geom_input <- BSL.toStrict . JSON.encode <$> HashMap.lookup "geometry_input" pams
+  , muserId <- (resultToMaybe . fromJSON) =<< HashMap.lookup "user-id" pams
+  , mauthRole <- (resultToMaybe . fromJSON) =<< HashMap.lookup "user-role" pams = do
     conn <- Lens.use connection
-    eresultBS <- liftIO $ updateScenario conn (fromIntegral token) (ScenarioId scID) geom_input
+    eresultBS <- liftIO $ updateScenario conn (fromIntegral token) (ScenarioId scID) geom_input muserId mauthRole
     yieldAnswer token eresultBS
     -- send update to all subscribers
     subTokens <- map fromIntegral . fromMaybe [] . HashMap.lookup scID <$> Lens.use subscribers
@@ -138,10 +143,12 @@ responseMsgs (MsgRun token "scenario.geojson.Update" pams _)
       Right rezs -> mapM_ yield rezs
 
 responseMsgs (MsgRun token "scenario.geojson.Delete" pams _)
-  | Just (Success scID) <- fromJSON <$> HashMap.lookup "ScID" pams = do
-    conn <- Lens.use connection
-    eresultBS <- liftIO $ deleteScenario conn (fromIntegral token) (ScenarioId scID)
-    yieldAnswer token eresultBS
+  | Just (Success scID) <- fromJSON <$> HashMap.lookup "ScID" pams
+  , muserId <- (resultToMaybe . fromJSON) =<< HashMap.lookup "user-id" pams
+  , mauthRole <- (resultToMaybe . fromJSON) =<< HashMap.lookup "user-role" pams = do
+      conn <-  Lens.use connection
+      eresultBS <- liftIO $ deleteScenario conn (fromIntegral token) (ScenarioId scID) muserId mauthRole
+      yieldAnswer token eresultBS
 
 responseMsgs (MsgRun token "scenario.geojson.Recover" pams _)
   | Just (Success scID) <- fromJSON <$> HashMap.lookup "ScID" pams = do
@@ -170,10 +177,11 @@ responseMsgs (MsgError token s) = do
     -- log a little
     logWarnN $ "[Luci error message] " <> s
 
-
 responseMsgs msg = logInfoN . ("[Ignore Luci message] " <>) . showJSON . toJSON . fst $ makeMessage msg
 
-
+resultToMaybe :: Result a -> Maybe a
+resultToMaybe (Success a) = Just a
+resultToMaybe (Error _) = Nothing
 
 
 ----------------------------------------------------------------------------------------------------
