@@ -8,7 +8,7 @@ stanzas:
 
     # Name of your executable. You are unlikely to need to change this.
     # Note that all file paths are relative to the keter.yml file.
-    exec: ../dist/build/qua-server/qua-server
+    exec: ../dist/bin/qua-server
 
     # Command line options passed to your application.
     args: [/opt/keter/etc/quakitsettings.yml]
