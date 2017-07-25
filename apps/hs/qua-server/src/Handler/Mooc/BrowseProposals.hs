@@ -45,6 +45,9 @@ getBrowseProposalsR page = do
             $('div.card-comment.card-action').each(function(){
                 $(this).css('margin-top', Math.max(210 - $(this).position().top - $(this).height(), 0) + 'px');
               })
+            $('#proposalsForm').change( function() {
+              this.submit();
+            })
           });
         |]
       toWidgetHead $
@@ -76,7 +79,7 @@ getBrowseProposalsR page = do
               color: #b71c1c
         |]
       [whamlet|
-        <form .form-inline>
+        <form .form-inline #proposalsForm>
           <div class="ui-card-wrap">
             <div class=row>
               ^{widget}
