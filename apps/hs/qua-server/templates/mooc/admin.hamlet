@@ -11,7 +11,7 @@
               <a class="btn btn-flat waves-attach waves-light waves-effect" href="@{AdminScenarioEditorR}">
                 <span class="icon">check
                 &nbsp;Open Scenario Editor
-    
+
     <div class="col-lg-4 col-sm-6">
       <div class="card">
         <div class="card-main">
@@ -33,3 +33,12 @@
               <a class="btn btn-flat waves-attach waves-light waves-effect" href="@{AdminUserManagerR}">
                 <span class="icon">check
                 &nbsp;Open User Manager
+
+    <div class="col-lg-4 col-sm-6">
+      <div class="card">
+        <div class="card-main">
+          <div class="card-inner">
+            <p>Ask an expert to review scenarios in need of grading
+               which were submitted before a certain date:
+            <form .form-inline method=post action=@{SendReviewRequestR}>
+              ^{sendReviewRequestFormWidget}
