@@ -1,16 +1,4 @@
------------------------------------------------------------------------------
---
--- Module      :  Handler.Mooc.Comment
--- Copyright   :  (c) Artem Chirkin
--- License     :  MIT
---
--- Maintainer  :  Artem Chirkin <chirkin@arch.ethz.ch>
--- Stability   :  experimental
--- Portability :
---
--- |
---
------------------------------------------------------------------------------
+{-# OPTIONS_HADDOCK hide, prune #-}
 {-# LANGUAGE RecordWildCards #-}
 module Handler.Mooc.Comment
   ( postWriteReviewR

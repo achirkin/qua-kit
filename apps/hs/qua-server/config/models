@@ -118,22 +118,23 @@ Vote
     edxResultId   Text Maybe
     timestamp     UTCTime default=CURRENT_TIMESTAMP
 
-VoteGrade
+VoteRating
+    problemId     ScenarioProblemId
     studentId     UserId
-    edxResource   EdxResourceId
-    edxOutcomeUrl Text
-    edxResultId   Text
-    grade         Double
-    GradeFor studentId edxResource edxOutcomeUrl edxResultId
+    evidenceW     Double default=0
+    value         Double default=0
+    VoteRatingOf  studentId problemId
     deriving Eq
     deriving Ord
     deriving Show
 
 Rating
-    problemId   ScenarioProblemId
-    criterionId CriterionId
-    authorId    UserId
-    value       Double
+    problemId        ScenarioProblemId
+    criterionId      CriterionId
+    authorId         UserId
+    value            Double default=0
+    currentVotesN    Int    default=0
+    currentEvidenceW Double default=1
     RatingOf authorId problemId criterionId
     deriving Eq
     deriving Ord

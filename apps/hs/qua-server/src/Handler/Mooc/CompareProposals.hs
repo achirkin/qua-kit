@@ -1,16 +1,4 @@
------------------------------------------------------------------------------
---
--- Module      :  Handler.Mooc.CompareProposals
--- Copyright   :  (c) Artem Chirkin
--- License     :  MIT
---
--- Maintainer  :  Artem Chirkin <chirkin@arch.ethz.ch>
--- Stability   :  experimental
--- Portability :
---
--- |
---
------------------------------------------------------------------------------
+{-# OPTIONS_HADDOCK hide, prune #-}
 {-# Language CPP #-}
 module Handler.Mooc.CompareProposals
   ( getCompareProposalsR

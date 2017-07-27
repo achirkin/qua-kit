@@ -1,14 +1,4 @@
------------------------------------------------------------------------------
--- |
--- Module      :  Handler.LoggingWS
--- Copyright   :  (c) Artem Chirkin
--- License     :  MIT
---
--- Maintainer  :  Artem Chirkin <chirkin@arch.ethz.ch>
--- Stability   :  experimental
---
---
------------------------------------------------------------------------------
+{-# OPTIONS_HADDOCK hide, prune #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 module Handler.LoggingWS
   ( getQVLoggingR

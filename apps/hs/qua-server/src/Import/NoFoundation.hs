@@ -1,3 +1,4 @@
+{-# OPTIONS_HADDOCK hide, prune #-}
 module Import.NoFoundation
     ( module Import
     ) where

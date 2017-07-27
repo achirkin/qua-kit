@@ -1,14 +1,4 @@
------------------------------------------------------------------------------
--- |
--- Module      :  Handler.Mooc.Survey
--- Copyright   :  (c) Artem Chirkin
--- License     :  MIT
---
--- Maintainer  :  Artem Chirkin <chirkin@arch.ethz.ch>
---
---
------------------------------------------------------------------------------
-
+{-# OPTIONS_HADDOCK hide, prune #-}
 module Handler.Mooc.Survey
   ( getSurveyR, postSurveyR
   ) where

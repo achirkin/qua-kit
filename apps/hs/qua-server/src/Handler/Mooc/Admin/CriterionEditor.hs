@@ -1,5 +1,5 @@
+{-# OPTIONS_HADDOCK hide, prune #-}
 {-# LANGUAGE RecordWildCards #-}
-
 module Handler.Mooc.Admin.CriterionEditor
     ( getAdminCriterionEditorR
     , postAdminCreateCriterionR

@@ -1,3 +1,4 @@
+{-# OPTIONS_HADDOCK hide, prune #-}
 module Handler.Mooc.FAQ
   ( getFAQR
   ) where

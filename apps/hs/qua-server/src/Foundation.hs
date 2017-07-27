@@ -1,3 +1,4 @@
+{-# OPTIONS_HADDOCK hide, prune #-}
 module Foundation
     ( module Foundation
     , parseSqlKey
@@ -99,7 +100,7 @@ instance Yesod App where
         pc <- widgetToPageContent widget
 --        pc <- widgetToPageContent $ do
 --            addStylesheet $ StaticR css_bootstrap_css
-            -- $(widgetFile "default-layout")
+            --  (widgetFile "default-layout")
         withUrlRenderer $(hamletFile "templates/site-layout.hamlet")
 
     -- The page to be redirected to when authentication is required.
