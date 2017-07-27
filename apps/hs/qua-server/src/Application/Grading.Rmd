@@ -35,7 +35,7 @@ db_vote <- dbGetQuery(con, paste
     , "   AND rw.author_id = w.author_id AND rb.author_id = b.author_id"
     , "   AND rw.problem_id = w.task_id AND rb.problem_id = b.task_id"
     , "   AND rw.criterion_id = v.criterion_id AND rb.criterion_id = v.criterion_id"
-    , "   AND rw.value != 0 AND rb.value != 0"
+#    , "   AND rw.value != 0 AND rb.value != 0"
 #    , "   AND v.criterion_id = 4"
     ))
 #db_review <- dbGetQuery(con, "SELECT * FROM review")
@@ -79,8 +79,8 @@ rm(rows,rowsv,m,v,c_id)
 
 
 ```{r}
-qplot(value, data=rating, geom="histogram") + ggtitle("submission ratings histogram")
-qplot(value, data=vote_rating, geom="histogram")
+qplot(value, data=db_rating, geom="histogram") + ggtitle("submission ratings histogram")
+qplot(value, data=db_vote_rating, geom="histogram")
 
 # qplot(value, data=db_rating[which(db_rating$value > 0 & db_rating$criterion_id == 1),], geom="histogram")
 ```
@@ -99,7 +99,7 @@ rating_j <- mapply(function(d,vb,vw) if (d > 0) vw else vb, delta, vote$better_v
 rating_v <- sapply(vote$voter_id, function(i) vote_rating[which(vote_rating$student_id == i), "value"][1])
 rating_v[is.na(rating_v)] <- 0
 # qplot( rating_j, geom="histogram")
-z <- delta * exp( rating_v + delta * (rating_j - rating_i) )
+z <- delta * log( 1 + exp( rating_v + delta * (rating_j - rating_i) ))
 
 Dz <- var(z)
 Kz <- (cov(rating_i, z) - cov(rating_j, z))/2
@@ -114,8 +114,9 @@ c(mean(db_rating$value), var(db_rating$value))
 c(mean(db_vote_rating$value), var(db_vote_rating$value))
 
 
-# neasure of quality: covariance of ratings i and j and choice
-c(cov(rating_i, delta), cov(rating_j, delta))
+# neasure of quality: correlation of ratings i and j and choice
+cor(rating_i - rating_j, delta)
+c(cor(rating_i, delta), cor(rating_j, delta))
 
 # variance of unknown random variable Z
 # covariance of unknown random variable Z with r_i (or inverse of cov for r_j)
@@ -126,10 +127,10 @@ c(Dz, Kz)
 ## Output plots
 
 ```{r}
-worse <- qplot(worse_value, data=vote, geom="histogram") + ggtitle("Votes - worse")
-better <- qplot(better_value, data=vote, geom="histogram") + ggtitle("Votes - better")
-grid.arrange(worse, better, ncol=2)
-rm(worse,better)
+ggplot(data = db_vote) +
+  geom_histogram(aes(x = better_value), fill = "red", alpha = 0.3) +
+  geom_histogram(aes(x = worse_value), fill = "blue", alpha = 0.3)
+
 
 pi <- qplot(rating_i, geom="histogram") + ggtitle("Votes - i")
 pj <- qplot(rating_j, geom="histogram") + ggtitle("Votes - j")

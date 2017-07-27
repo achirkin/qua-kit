@@ -116,14 +116,14 @@ constK = 0.7
 --   We get the value of this constant empirically.
 --   It is important to keep this value correct to maintain property Var /r/ = 1.
 constDz :: Double
-constDz = 2
+constDz = 2.5
 
 -- | Covariance of dependent variable /z/ = /δ/e[sup /v/ + /δ/(/r/[sub /j/] - /r/[sub /i/])]
 --   and /r/[sub /i/] (NB, 0 > Cov[/r/[sub /i/],/z/] ≡ - Cov[/r/[sub /j/],/z/]).
 --   We get the value of this constant empirically.
 --   It is important to keep this value correct to maintain property Var /r/ = 1.
 constKz :: Double
-constKz = -0.16
+constKz = 0.25
 
 -- * Updating ratings
 
@@ -224,20 +224,15 @@ updateRatingsOnVoting voteId = do
         v'  = ( ω * v + 0.5 * (wi + wj) * (ri - rj) ) / ω'
 
         -- helpers
-        z   = exp $ v + rj - ri
+        z   = log $ 1 + exp (v + rj - ri)
         fc w = recip $ sqrt ( w * constKz * constKz + constDz ) + sqrt w * constKz
         fww w = sqrt $ w / (w + 1)
         fw1 w = sqrt $ 1 / (w + 1)
 
         -- compute rating updates
-        -- exponents are very tricky, so we do not allow changing the ratings more than
-        -- by one standard deviation
-        ri' = min (ri + 1) $ fww wi * ri + fw1 wi * fc wi * z
-        rj' = max (rj - 1) $ fww wj * rj - fw1 wj * fc wj * z
+        ri' = fww wi * ri + fw1 wi * fc wi * z
+        rj' = fww wj * rj - fw1 wj * fc wj * z
 
-    -- when (isNaN ri' || isNaN rj' || isNaN v'
-    --     || isInfinite ri' || isInfinite rj' || isInfinite v' ) $
-    --  error $ unpack
     $(logDebug) $ [st|
       --------------------------------------------------------------------------
       -- Update ratings on voting ----------------------------------------------
@@ -309,6 +304,7 @@ updateRatingsOnVoting voteId = do
 simulateGradingLearning :: (MonadLogger a, MonadIO a, MonadResource a)
                         => ReaderT SqlBackend a ()
 simulateGradingLearning = do
+    $(logWarn) [st| Starting simulating grading process... |]
     -- first, delete all ratings.
     P.deleteWhere ([] :: [Filter Rating])
     P.deleteWhere ([] :: [Filter VoteRating])
@@ -316,6 +312,7 @@ simulateGradingLearning = do
     let votes = P.selectSource ([] :: [Filter Vote]) [Asc VoteTimestamp]
         submissions = P.selectSource ([] :: [Filter Scenario]) [Asc ScenarioLastUpdate]
     process (newResumableSource votes) (newResumableSource submissions)
+    $(logWarn) [st| Grading simulation finished! |]
   where
     process v s = do
       (v', mvote) <- v $$++ await
