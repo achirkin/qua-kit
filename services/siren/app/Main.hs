@@ -150,9 +150,11 @@ responseMsgs (MsgRun token "scenario.geojson.Delete" pams _)
       yieldAnswer token eresultBS
 
 responseMsgs (MsgRun token "scenario.geojson.Recover" pams _)
-  | Just (Success scID) <- fromJSON <$> HashMap.lookup "ScID" pams = do
+  | Just (Success scID) <- fromJSON <$> HashMap.lookup "ScID" pams
+  , mUserId <- (resultToMaybe . fromJSON) =<< HashMap.lookup "user-id" pams
+  , mAuthRole <- (resultToMaybe . fromJSON) =<< HashMap.lookup "user-role" pams = do
     conn <- Lens.use connection
-    eresultBS <- liftIO $ recoverScenario conn (fromIntegral token) (ScenarioId scID)
+    eresultBS <- liftIO $ recoverScenario conn (fromIntegral token) (ScenarioId scID) mUserId mAuthRole
     yieldAnswer token eresultBS
 
 responseMsgs (MsgRun token "scenario.SubscribeTo" pams _)

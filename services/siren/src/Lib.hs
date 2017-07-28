@@ -136,7 +136,7 @@ copyScenario conn token userId authRole scId = do
 
 
 mkAuthRole :: Maybe AuthRole -> Maybe (Oid, ByteString, Format)
-mkAuthRole mauth = (\ar -> (oidTEXT, BSC.pack $ show ar, Text)) <$> mauth
+mkAuthRole mauth = (\ar -> Just (oidTEXT, BSC.pack $ show ar, Text)) $ fromMaybe Local mauth
 
 deleteScenario :: Connection
                -> Int64 -- ^ token (callID)
@@ -157,9 +157,16 @@ deleteScenario conn token userId authRole scID = do
 recoverScenario :: Connection
                 -> Int64 -- ^ token (callID)
                 -> ScenarioId -- ^ ScID (scenario id)
+                -> Maybe Int64 -- ^ User Id
+                -> Maybe AuthRole
                 -> IO (Either BS.ByteString BS.ByteString) -- ^ Either error or json result
-recoverScenario conn token scID = do
-  mrez <- execParams conn "SELECT wrap_result($1,recover_scenario($2));" [mkInt64 token, mkBigInt scID] Text
+recoverScenario conn token scID userId authRole = do
+  mrez <- execParams conn "SELECT wrap_result($1,recover_scenario($2,$3,$4));"
+    [ mkInt64 token
+    , mkBigInt scID
+    , userId >>= mkInt64
+    , mkAuthRole authRole
+    ] Text
   justResult mrez $ flip checkResult id
 
 
