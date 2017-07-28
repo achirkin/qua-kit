@@ -1,5 +1,5 @@
 name: luci-connect
-version: 1.0.2.0
+version: 1.1.0.0
 cabal-version: >=1.10
 build-type: Simple
 license: MIT
@@ -24,6 +24,7 @@ source-repository head
 flag luci-test
     description:
         Build the luci binary protocol testing program.
+    default: False
 
 flag examples
     description:

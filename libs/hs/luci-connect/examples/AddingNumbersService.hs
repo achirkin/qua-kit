@@ -26,13 +26,13 @@ main = runReallySimpleLuciClient () $ do
     yield $ registerMessage 14
     awaitForever calculate
   where
-    calculate (MsgRun token "AddingNumbers" pams _)
+    calculate (MsgRun token _ _ "AddingNumbers" pams _)
       = case fromJSON (Object pams) of
           Success (RunCalculate x y) ->
              yield $ MsgResult token (resultJSON [ "sum" .= (x + y) ]) []
           Error err ->
              yield $ MsgError token $ "Cannot parse run message: " <> pack err
-    calculate msg@(MsgRun token _ _ _) =
+    calculate msg@(MsgRun token _ _ _ _ _) =
              yield $ MsgError token $ "Unexpected run message " <> showJSON (toJSON . fst $ makeMessage msg)
     calculate msg = logInfoN $ "Ignoring message " <> showJSON (toJSON . fst $ makeMessage msg)
 
@@ -46,7 +46,7 @@ instance FromJSON RunCalculate where
 
 -- | A message we send to register in luci
 registerMessage :: Token -> Message
-registerMessage token = MsgRun token "RemoteRegister" o []
+registerMessage token = MsgRun token Nothing Local "RemoteRegister" o []
   where
     o = objectJSON
       [ "description" .= String "adding two numbers together"

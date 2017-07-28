@@ -1,4 +1,4 @@
-resolver: lts-8.0
+resolver: lts-8.21
 
 extra-deps:
   - validation-0.5.4
