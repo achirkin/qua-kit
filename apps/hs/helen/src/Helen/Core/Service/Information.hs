@@ -50,7 +50,7 @@ infoService = do
 runInfoService :: TargetedMessage -> HelenWorld ()
 
 -- ServiceList
-runInfoService (TargetedMessage _ myId (MsgRun token _ _ "ServiceList" _ _)) = do
+runInfoService (TargetedMessage _ myId (MsgRun token "ServiceList" _ _)) = do
   helen <- get
   let snames = HashMap.keys $ Lens.view (serviceManager.serviceMap) helen
   sendMessage helen $ SourcedMessage myId $ MsgResult token (
@@ -58,7 +58,7 @@ runInfoService (TargetedMessage _ myId (MsgRun token _ _ "ServiceList" _ _)) = d
     ) []
 
 -- ServiceInfo
-runInfoService (TargetedMessage _ myId (MsgRun token _ _ "ServiceInfo" pams _)) = do
+runInfoService (TargetedMessage _ myId (MsgRun token "ServiceInfo" pams _)) = do
     helen <- get
     let allNames = HashMap.keys $ Lens.view (serviceManager.serviceMap) helen
         sNames = reqNames allNames
@@ -71,7 +71,7 @@ runInfoService (TargetedMessage _ myId (MsgRun token _ _ "ServiceInfo" pams _)) 
                  _ -> xs
 
 -- FilterServices
-runInfoService (TargetedMessage _ myId (MsgRun token _ _ "FilterServices" pams _)) = do
+runInfoService (TargetedMessage _ myId (MsgRun token "FilterServices" pams _)) = do
     helen <- get
     let snames = map fst . filter (match . JSON.toJSON . _serviceInfo . snd) . HashMap.toList
                $ Lens.view (serviceManager.serviceMap) helen
@@ -128,7 +128,7 @@ runInfoService (TargetedMessage _ _ msg)   -- ignore register responses
 
 
 serviceInfoMessage :: Message
-serviceInfoMessage = MsgRun (-123456780) Nothing Local "RemoteRegister" o []
+serviceInfoMessage = MsgRun (-123456780) "RemoteRegister" o []
   where
     o = HashMap.fromList
       [ "description"        .= JSON.String ( "Returns all known information on selected services such"
@@ -157,7 +157,7 @@ serviceInfoMessage = MsgRun (-123456780) Nothing Local "RemoteRegister" o []
 
 
 serviceListMessage :: Message
-serviceListMessage = MsgRun (-123456781) Nothing Local "RemoteRegister" o []
+serviceListMessage = MsgRun (-123456781) "RemoteRegister" o []
   where
     o = HashMap.fromList
       [ "description"        .= JSON.String ( "Get a list of all loaded and registered services"
@@ -175,7 +175,7 @@ serviceListMessage = MsgRun (-123456781) Nothing Local "RemoteRegister" o []
 
 
 filterServicesMessage :: Message
-filterServicesMessage = MsgRun (-123456782) Nothing Local "RemoteRegister" o []
+filterServicesMessage = MsgRun (-123456782) "RemoteRegister" o []
   where
     o = HashMap.fromList
       [ "description"        .= JSON.String ( "Filters services according to"

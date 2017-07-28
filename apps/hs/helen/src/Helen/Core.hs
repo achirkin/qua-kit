@@ -36,6 +36,7 @@ import           Luci.Connect
 import           Luci.Connect.Base
 import           Luci.Messages
 
+import           Helen.Core.Auth
 import           Helen.Core.Service              (defServiceManager,
                                                   processMessage)
 import           Helen.Core.Service.Information  (infoService)
@@ -77,6 +78,7 @@ initHelen = do
         STM.takeTMVar clientStore >>=
           STM.putTMVar clientStore . HashMap.update (\(c, u) -> Just (c, u >> action cId)) cId
     , _serviceManager = defServiceManager
+    , trustedClients = []
     }
 
 
@@ -167,7 +169,9 @@ helenChannels' appData = do
                   -- If all is good, put message into Helen's msgChannel
                   JSON.Success msg -> do
                     helen <- get
-                    lift . sendMessage helen $ SourcedMessage clientId msg
+                    lift $ do
+                      authedMsg <- liftHelen $ enforceQuaKitRoles (Network.appSockAddr appData) msg
+                      sendMessage helen $ SourcedMessage clientId authedMsg
               sink
             -- send data back to client if it was early-processed
             Just (ProcessedData d) ->  do

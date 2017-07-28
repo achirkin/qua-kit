@@ -64,6 +64,7 @@ import qualified Data.Sequence                as Seq
 import           Data.Text                    (Text)
 import qualified Data.Text.Encoding           as Text
 import qualified System.Log.FastLogger        as FastLogger
+import qualified Network.Socket               as Network
 import           Luci.Messages
 
 -- | Represent a connected client
@@ -103,6 +104,8 @@ data Helen = Helen
     --   The second argument is an arbitrary action to do given an unregistered `ClientId`.
   , _serviceManager      :: !ServiceManager
     -- ^ Keeps track of all services
+  , trustedClients       :: [Network.SockAddr]
+    -- ^ The clients that we trust when it comes to roles and user identifiers
   }
 
 -- | Put a message into Helen processing channel.

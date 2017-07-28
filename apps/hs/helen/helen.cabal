@@ -20,6 +20,7 @@ author: Artem Chirkin
 library
     exposed-modules:
         Helen.Core
+        Helen.Core.Auth
         Helen.Core.Service
         Helen.Core.Service.Startup
         Helen.Core.Service.Information
@@ -35,6 +36,7 @@ library
         conduit >=1.0.0,
         luci-connect -any,
         monad-control -any,
+        network -any,
         conduit-extra -any,
         unordered-containers -any,
         stm -any,
