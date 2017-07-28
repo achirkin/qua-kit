@@ -118,7 +118,7 @@ unregisterService si@(ServiceInstance sourceCID sName@(ServiceName tname)) = do
 processMessage :: SourcedMessage -> HelenRoom [TargetedMessage]
 
 -- run
-processMessage (SourcedMessage clientId (MsgRun token _ _ sName@(ServiceName tName) pams bs)) = do
+processMessage (SourcedMessage clientId (MsgRun token sName@(ServiceName tName) pams bs)) = do
   -- early inerrupt if there is no such service
   hasService <- isJust . Lens.view (serviceManager.namedPool sName) <$> get
   if not hasService
@@ -199,7 +199,7 @@ processRunMessage (RequestRun (SessionId clientId token) (ServiceName sName) _ _
 processRunMessage msg@(RequestRun (SessionId clientId _) sName pams bs) (Just pool)
     -- If there are idle instances, then ask one to do the job
   | ins@(ServiceInstance servClientId _) :< is <- Seq.viewl (_idleInstances pool)
-      = ( Just ( \t -> TargetedMessage clientId servClientId $ MsgRun t Nothing Local sName pams bs
+      = ( Just ( \t -> TargetedMessage clientId servClientId $ MsgRun t sName pams bs
                , Just ins
                )
           -- if a service is non-blocking, then just rotate instances;
@@ -272,7 +272,7 @@ processErrorOrResult smsg@(SourcedMessage serviceId msg) | sesId <- sessionId sm
 
 -- | Change a message token
 setToken :: Token -> Message -> Message
-setToken t (MsgRun _ u r s p b)      = MsgRun t u r s p b
+setToken t (MsgRun _ s p b)      = MsgRun t s p b
 setToken t (MsgCancel _)         = MsgCancel t
 setToken t (MsgError _ e)        = MsgError t e
 setToken t (MsgProgress _ p r b) = MsgProgress t p r b
@@ -288,7 +288,7 @@ releaseInstance _ Nothing = (Nothing, Nothing)
 releaseInstance si@(ServiceInstance serviceId _) (Just pool)
   -- if there are messages to be processed in a message queue, then return a new task
   | RequestRun rsid@(SessionId clientId _) sName pams bs :< imsgs <- Seq.viewl (_incomingMsgs pool)
-    = ( Just (\token -> TargetedMessage clientId serviceId $ MsgRun token Nothing Local sName pams bs, rsid)
+    = ( Just (\token -> TargetedMessage clientId serviceId $ MsgRun token sName pams bs, rsid)
       , Just pool {_incomingMsgs = imsgs }
       )
   -- otherwise add instance to idle list

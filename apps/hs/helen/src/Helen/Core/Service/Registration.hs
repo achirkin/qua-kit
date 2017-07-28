@@ -49,7 +49,7 @@ registrationService = do
 runRegService :: TargetedMessage -> HelenWorld ()
 
 -- register
-runRegService (TargetedMessage clientId myId (MsgRun token _ _ "RemoteRegister" pams _)) =
+runRegService (TargetedMessage clientId myId (MsgRun token "RemoteRegister" pams _)) =
     case psInfo of
       -- failed to parse message - return it back to client
       JSON.Error err -> get >>= \h -> sendMessage h
@@ -83,7 +83,7 @@ runRegService (TargetedMessage clientId myId (MsgRun token _ _ "RemoteRegister" 
     psInfo = JSON.fromJSON (JSON.Object pams)
 
 -- unregister
-runRegService (TargetedMessage clientId myId (MsgRun token _ _ "RemoteDeregister" pams _)) = do
+runRegService (TargetedMessage clientId myId (MsgRun token "RemoteDeregister" pams _)) = do
   (removals, msgs) <- case msName of
     -- if a name is supplied, just unregister it
     Just sName -> do
@@ -152,7 +152,7 @@ runRegService (TargetedMessage sId tId msg) | sId == tId = return ()
 
 
 remoteRegisterMessage :: Message
-remoteRegisterMessage = MsgRun (-123456789) Nothing Local "RemoteRegister" o []
+remoteRegisterMessage = MsgRun (-123456789) "RemoteRegister" o []
   where
     o = HashMap.fromList
       [ "description"        .=  Text.unlines
@@ -199,7 +199,7 @@ remoteRegisterMessage = MsgRun (-123456789) Nothing Local "RemoteRegister" o []
 
 
 remoteDeregisterMessage :: Message
-remoteDeregisterMessage = MsgRun (-987654321) Nothing Local "RemoteRegister" o []
+remoteDeregisterMessage = MsgRun (-987654321) "RemoteRegister" o []
   where
     o = HashMap.fromList
       [ "description"        .= Text.unlines
