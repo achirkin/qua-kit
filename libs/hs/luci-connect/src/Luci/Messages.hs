@@ -26,7 +26,7 @@ module Luci.Messages
       -- * Parsed message types
     , Message (..), parseMessage, makeMessage, msgToken
     , ServiceName (..), Token (..), Percentage (..), ServiceResult (..)
-    , UserId (..), AuthRole (..)
+    , UserId (..), msgSenderId, AuthRole (..), msgSenderAuthRole
     , resultJSON, objectJSON, showJSON
     ) where
 
@@ -39,7 +39,7 @@ import qualified Data.Aeson.Types        as JSON
 import qualified Data.ByteString         as BS
 import           Data.Hashable
 import           Data.HashMap.Strict     as HashMap
-import           Data.Maybe              (fromMaybe, maybeToList)
+import           Data.Maybe              (fromMaybe)
 import           Data.String             (IsString)
 import qualified Data.Text.Lazy          as LText
 import qualified Data.Text               as SText
@@ -235,7 +235,7 @@ showJSON = LText.toStrict . LText.decodeUtf8 . encode
 
 -- | Represent all registerd message types. Anything else is garbage!
 data Message
-  = MsgRun !Token !(Maybe UserId) !AuthRole !ServiceName !JSON.Object ![ByteString]
+  = MsgRun !Token !ServiceName !JSON.Object ![ByteString]
     -- ^ run service message, e.g. {'run': 'ServiceList', 'token': 'sfhrEg2sh'};
     -- params: 'token', 'run', [(name, value)], optional attachments
   | MsgCancel !Token
@@ -257,7 +257,7 @@ data Message
 
 -- | All messsages have a unique for connection token
 msgToken :: Message -> Token
-msgToken (MsgRun t _ _ _ _ _)  = t
+msgToken (MsgRun t _ _ _)  = t
 msgToken (MsgCancel t)         = t
 msgToken (MsgResult t _ _)     = t
 msgToken (MsgProgress t _ _ _) = t
@@ -266,7 +266,7 @@ msgToken (MsgError t _)        = t
 
 -- | Get attachment from a message, checking its MD5 hash
 attachment :: Message -> AttachmentReference -> Maybe ByteString
-attachment (MsgRun _ _ _ _ _ bs) r = indexList bs (attIndex r - 1) >>= \x ->
+attachment (MsgRun _ _ _ bs) r = indexList bs (attIndex r - 1) >>= \x ->
     if checkAttachment r x then Just x else Nothing
 attachment (MsgResult _  _ bs) r = indexList bs (attIndex r - 1) >>= \x ->
     if checkAttachment r x then Just x else Nothing
@@ -284,7 +284,7 @@ indexList xs i = headMaybe $ drop i xs
 -- | Parse all registered message types
 parseMessage :: LuciMessage -> Result Message
 parseMessage (MessageHeader (JSON.Object js), bss)
-  | Just (JSON.String s) <- HashMap.lookup "run" js      = Success $ MsgRun token mUserId authRole (ServiceName s) js' $ seqList bss
+  | Just (JSON.String s) <- HashMap.lookup "run" js      = Success $ MsgRun token (ServiceName s) js' $ seqList bss
   | Just _               <- HashMap.lookup "cancel" js   = Success $ MsgCancel token
   | Just (JSON.Object o) <- HashMap.lookup "result" js   = Success $ MsgResult token (ServiceResult o) $ seqList bss
   | Just (JSON.Number n) <- HashMap.lookup "progress" js = Success $ MsgProgress token (realToFrac n) (HashMap.lookup "intermediateResult" js >>= toResult) $ seqList bss
@@ -298,19 +298,32 @@ parseMessage (MessageHeader (JSON.Object js), bss)
               Just (Success t) -> t
     toResult (JSON.Object o) = Just $ ServiceResult o
     toResult _               = Nothing
-    mUserId = HashMap.lookup "UserId" js >>= result2mb . fromJSON
-    authRole = fromMaybe Local $ HashMap.lookup "AuthRole" js >>= result2mb . fromJSON
 parseMessage (MessageHeader _, _) = Error "Invalid JSON type (expected object)."
+
+-- | Access UserId of sender
+msgSenderId :: Functor f => (Maybe UserId -> f (Maybe UserId)) -> Message -> f Message
+msgSenderId k (MsgRun token sname js bss) = f <$> k (HashMap.lookup "UserId" js >>= result2mb . fromJSON )
+  where
+    f Nothing = MsgRun token sname js bss
+    f (Just i) = MsgRun token sname (HashMap.insert "UserId" (toJSON i) js) bss
+msgSenderId k msg = msg <$ k Nothing
+
+-- | Access AuthRole of sender
+msgSenderAuthRole :: Functor f => (AuthRole -> f AuthRole) -> Message -> f Message
+msgSenderAuthRole k (MsgRun token sname js bss) = f <$> k (fromMaybe Local $ HashMap.lookup "AuthRole" js >>= result2mb . fromJSON )
+  where
+    f r = MsgRun token sname (HashMap.insert "AuthRole" (toJSON r) js) bss
+msgSenderAuthRole k msg = msg <$ k Local
+
 
 
 -- | Convert registered message type into generic message
 makeMessage :: Message -> LuciMessage
 makeMessage (MsgCancel token) = (MessageHeader $ JSON.object ["cancel" .= token, "callID" .= token], [])
 makeMessage (MsgError token s) = (MessageHeader $ JSON.object ["error" .= s, "callID" .= token], [])
-makeMessage (MsgRun token mUserId authRole sname js bss) =
+makeMessage (MsgRun token sname js bss) =
   (MessageHeader . JSON.object $
-      ["run" .= sname,  "callID" .= token, "AuthRole" .= authRole]
-      ++ maybeToList ((,) "UserId" . toJSON <$> mUserId) ++ HashMap.toList js', seqList bss)
+      ["run" .= sname,  "callID" .= token] ++ HashMap.toList js', seqList bss)
   where
     js' = HashMap.delete "run" $ HashMap.delete "callID" js
 makeMessage (MsgResult token (ServiceResult sr) bss) =

@@ -73,7 +73,7 @@ processMessages = do
 -- | Respond to one message at a time
 responseMsgs :: Message -> Conduit Message (LuciProgram ServiceState) Message
 -- Respond only to run messages with correct input
-responseMsgs (MsgRun token _ _ "hs-example-service" pams atts)
+responseMsgs (MsgRun token "hs-example-service" pams atts)
   | Just (Success scId) <- fromJSON <$> HashMap.lookup "ScID" pams = do
     currentRunToken %= const token
     case fromJSON <$> HashMap.lookup "mode" pams of
@@ -89,7 +89,7 @@ responseMsgs (MsgRun token _ _ "hs-example-service" pams atts)
                                    _ -> yield $ MsgError token "Incorrect number of attachments"
       Just (Success m) -> yield $ MsgError token ("Execution mode " <> m <> " is not supported.")
 
-responseMsgs (MsgRun token _ _ _ _ _) = do
+responseMsgs (MsgRun token _ _ _) = do
     currentRunToken %= const token
     yield $ MsgError token "Incorrect input in the 'run' message."
 -- Log luci errors
@@ -227,7 +227,7 @@ serializeValules xs = BSI.create (length xs * 4) $ \ptr -> mapM_ (uncurry $ poke
 
 -- | A message we send to register in luci
 registerMessage :: Token -> Message
-registerMessage token = MsgRun token Nothing Local "RemoteRegister" o []
+registerMessage token = MsgRun token "RemoteRegister" o []
   where
     o = HashMap.fromList
       [ "description"        .= String "Haskell qua-comliant service example"
@@ -278,6 +278,6 @@ resultMessagePoints t bs = MsgResult t (ServiceResult o) [bs]
 
 -- | Ask luci for a scenario
 getScenarioMessage :: Token -> Int -> Message
-getScenarioMessage token scId = MsgRun token Nothing Local "scenario.geojson.Get" o []
+getScenarioMessage token scId = MsgRun token "scenario.geojson.Get" o []
   where
     o = HashMap.fromList [ "ScID" .= scId ]
