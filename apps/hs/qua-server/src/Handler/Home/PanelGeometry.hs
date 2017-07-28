@@ -1,14 +1,4 @@
------------------------------------------------------------------------------
--- |
--- Module      :  Handler.Home.PanelGeometry
--- Copyright   :  (c) Artem Chirkin
--- License     :  MIT
---
--- Maintainer  :  Artem Chirkin <chirkin@arch.ethz.ch>
--- Stability   :  experimental
---
------------------------------------------------------------------------------
-
+{-# OPTIONS_HADDOCK hide, prune #-}
 module Handler.Home.PanelGeometry
   ( fileUploadGeometry, luciScenarios
   ) where
@@ -223,5 +213,3 @@ luciScenarios = do
               <div style="display:inline; font-size: 0.9em;" ##{fileNameIndicator}>
           |]
   return (popupScenario, luciScenariosPane)
-
-

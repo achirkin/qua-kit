@@ -1,15 +1,4 @@
------------------------------------------------------------------------------
--- |
--- Module      :  Handler.Mooc.BrowseProposals
--- Copyright   :  (c) Artem Chirkin
--- License     :  MIT
---
--- Maintainer  :  Artem Chirkin <chirkin@arch.ethz.ch>
--- Stability   :  experimental
---
---
------------------------------------------------------------------------------
-
+{-# OPTIONS_HADDOCK hide, prune #-}
 module Handler.Mooc.BrowseProposals
   ( getBrowseProposalsR
   ) where
@@ -45,6 +34,9 @@ getBrowseProposalsR page = do
             $('div.card-comment.card-action').each(function(){
                 $(this).css('margin-top', Math.max(210 - $(this).position().top - $(this).height(), 0) + 'px');
               })
+            $('#proposalsForm').change( function() {
+              this.submit();
+            })
           });
         |]
       toWidgetHead $
@@ -76,7 +68,7 @@ getBrowseProposalsR page = do
               color: #b71c1c
         |]
       [whamlet|
-        <form .form-inline>
+        <form .form-inline #proposalsForm>
           <div class="ui-card-wrap">
             <div class=row>
               ^{widget}
@@ -155,6 +147,7 @@ maxLines = 3
 
 data ProposalSortParam = Default
                        | Newest
+                       | Oldest
                        | GradeDesc
                        | GradeAsc
                        deriving (Eq, Show)
@@ -192,6 +185,7 @@ proposalsForm exercises extra = do
   (sortOrderRes, sortOrderView) <- mreq (bootstrapSelectFieldList [
                       ("Default order"::Text, Default)
                     , ("Newest first", Newest)
+                    , ("Oldest first", Oldest)
                     , ("Best grade first", GradeDesc)
                     , ("Best grade last", GradeAsc)
                     ]) "" Nothing
@@ -266,6 +260,7 @@ generateJoins ps mLimitOffset = (whereParams ++ limitParams, joinStr, orderStr)
     primaryOrder = case sortOrder ps of
                      Default   -> "s.task_id DESC, COALESCE(s.grade, 0) DESC"
                      Newest    -> "s.last_update DESC"
+                     Oldest    -> "s.last_update ASC"
                      GradeDesc -> "COALESCE(s.grade, 0) DESC"
                      GradeAsc  -> "COALESCE(s.grade, 0) ASC"
     (limitParams, limitClause) =

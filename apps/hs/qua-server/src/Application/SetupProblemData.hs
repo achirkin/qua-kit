@@ -1,3 +1,4 @@
+{-# OPTIONS_HADDOCK hide, prune #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 {-# Language CPP #-}
 module Application.SetupProblemData

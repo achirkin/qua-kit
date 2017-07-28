@@ -5,6 +5,8 @@ extra-deps:
   - ldap-client-0.1.0
     # LTI interop client
   - ltiv1p1-1.0.0.3
+    # better documentation
+  - superdoc-0.1.2.4
 
 flags: {}
 packages:

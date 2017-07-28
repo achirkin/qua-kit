@@ -1,14 +1,4 @@
------------------------------------------------------------------------------
--- |
--- Module      :  Handler.Mooc.EdxLogin
--- Copyright   :  (c) Artem Chirkin
--- License     :  MIT
---
--- Maintainer  :  Artem Chirkin <chirkin@arch.ethz.ch>
--- Stability   :  experimental
---
---
------------------------------------------------------------------------------
+{-# OPTIONS_HADDOCK hide, prune #-}
 {-# LANGUAGE Rank2Types#-}
 module Handler.Mooc.EdxLogin
   ( authLtiPlugin, dispatchLti
@@ -74,4 +64,3 @@ dispatchLti conf yreq = do
     saveCustomParams ((k,v):xs) = if "custom_" `isPrefixOf` k
                then (Text.decodeUtf8 k, Text.decodeUtf8 v) : saveCustomParams xs
                else saveCustomParams xs
-
