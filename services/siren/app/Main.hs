@@ -23,7 +23,7 @@ import qualified Data.ByteString.Lazy as BSL
 import           Data.HashMap.Strict (HashMap)
 import qualified Data.HashMap.Strict as HashMap
 import qualified Control.Lens as Lens
-import Control.Lens.Operators ((%=), (<+=))
+import Control.Lens.Operators ((^.), (%=), (<+=))
 
 import           Data.List (stripPrefix)
 -- import           Control.Monad.Logger
@@ -106,29 +106,29 @@ responseMsgs :: Message -> Conduit Message (LuciProgram ServiceState) ByteString
 
 -- Respond only to run messages with correct input
 
-responseMsgs (MsgRun token mUserId authRole "scenario.GetList" _ _) = do
+responseMsgs m@(MsgRun token "scenario.GetList" _ _) = do
     conn <- Lens.use connection
-    eresultBS <- liftIO $ listScenarios conn (fromIntegral token) mUserId authRole
+    eresultBS <- liftIO $ listScenarios conn (fromIntegral token) (m ^. msgSenderId) (m ^. msgSenderAuthRole)
     yieldAnswer token eresultBS
 
-responseMsgs (MsgRun token _ _ "scenario.geojson.Get" pams _)
+responseMsgs (MsgRun token "scenario.geojson.Get" pams _)
   | Just (Success scID) <- fromJSON <$> HashMap.lookup "ScID" pams = do
     conn <- Lens.use connection
     eresultBS <- liftIO $ getScenario conn (fromIntegral token) (ScenarioId scID)
     yieldAnswer token eresultBS
 
-responseMsgs (MsgRun token mUserId authRole "scenario.geojson.Create" pams _)
+responseMsgs m@(MsgRun token "scenario.geojson.Create" pams _)
   | Just (Success scName) <- fromJSON <$> HashMap.lookup "name" pams
   , Just geom_input <- BSL.toStrict . JSON.encode <$> HashMap.lookup "geometry_input" pams = do
     conn <- Lens.use connection
-    eresultBS <- liftIO $ createScenario conn (fromIntegral token) mUserId authRole (BSC.pack scName) geom_input
+    eresultBS <- liftIO $ createScenario conn (fromIntegral token) (m ^. msgSenderId) (m ^. msgSenderAuthRole) (BSC.pack scName) geom_input
     yieldAnswer token eresultBS
 
-responseMsgs (MsgRun token mUserId authRole "scenario.geojson.Update" pams _)
+responseMsgs m@(MsgRun token "scenario.geojson.Update" pams _)
   | Just (Success scID) <- fromJSON <$> HashMap.lookup "ScID" pams
   , Just geom_input <- BSL.toStrict . JSON.encode <$> HashMap.lookup "geometry_input" pams = do
     conn <- Lens.use connection
-    eresultBS <- liftIO $ updateScenario conn (fromIntegral token)  mUserId authRole (ScenarioId scID) geom_input
+    eresultBS <- liftIO $ updateScenario conn (fromIntegral token) (m ^. msgSenderId) (m ^. msgSenderAuthRole) (ScenarioId scID) geom_input
     yieldAnswer token eresultBS
     -- send update to all subscribers
     subTokens <- map fromIntegral . fromMaybe [] . HashMap.lookup scID <$> Lens.use subscribers
@@ -137,19 +137,19 @@ responseMsgs (MsgRun token mUserId authRole "scenario.geojson.Update" pams _)
       Left errbs -> logWarnN $ Text.decodeUtf8 errbs
       Right rezs -> mapM_ yield rezs
 
-responseMsgs (MsgRun token mUserId authRole "scenario.geojson.Delete" pams _)
+responseMsgs m@(MsgRun token "scenario.geojson.Delete" pams _)
   | Just (Success scID) <- fromJSON <$> HashMap.lookup "ScID" pams = do
       conn <-  Lens.use connection
-      eresultBS <- liftIO $ deleteScenario conn (fromIntegral token) mUserId authRole (ScenarioId scID)
+      eresultBS <- liftIO $ deleteScenario conn (fromIntegral token) (m ^. msgSenderId) (m ^. msgSenderAuthRole) (ScenarioId scID)
       yieldAnswer token eresultBS
 
-responseMsgs (MsgRun token mUserId authRole "scenario.geojson.Recover" pams _)
+responseMsgs m@(MsgRun token "scenario.geojson.Recover" pams _)
   | Just (Success scID) <- fromJSON <$> HashMap.lookup "ScID" pams = do
     conn <- Lens.use connection
-    eresultBS <- liftIO $ recoverScenario conn (fromIntegral token) mUserId authRole (ScenarioId scID)
+    eresultBS <- liftIO $ recoverScenario conn (fromIntegral token) (m ^. msgSenderId) (m ^. msgSenderAuthRole) (ScenarioId scID)
     yieldAnswer token eresultBS
 
-responseMsgs (MsgRun token _ _ "scenario.SubscribeTo" pams _)
+responseMsgs (MsgRun token "scenario.SubscribeTo" pams _)
   | Just (Success scIDs) <- fromJSON <$> HashMap.lookup "ScIDs" pams = do
     subscribers %= flip (foldr (HashMap.alter addSubscriber)) (scIDs :: [Int64])
     yield . headerBytes $ MsgProgress token 0 Nothing []
@@ -157,7 +157,7 @@ responseMsgs (MsgRun token _ _ "scenario.SubscribeTo" pams _)
     addSubscriber Nothing = Just [token]
     addSubscriber (Just xs) = Just (token:xs)
 
-responseMsgs (MsgRun token _ _ _ _ _) = yield . headerBytes $ MsgError token
+responseMsgs (MsgRun token _ _ _) = yield . headerBytes $ MsgError token
     "Failed to understand scenario service request: incorrect input in the 'run' message."
 
 responseMsgs (MsgCancel token) =
@@ -177,7 +177,7 @@ responseMsgs msg = logInfoN . ("[Ignore Luci message] " <>) . showJSON . toJSON 
 
 -- | A message we send to register in luci
 registerGetList :: Token -> Message
-registerGetList token = MsgRun token Nothing Local "RemoteRegister" o []
+registerGetList token = MsgRun token "RemoteRegister" o []
   where
     o = HashMap.fromList
       [ "description"        .= String "Get list of available scenarios"
@@ -192,7 +192,7 @@ registerGetList token = MsgRun token Nothing Local "RemoteRegister" o []
 
 -- | A message we send to register in luci
 registerGetScenario :: Token -> Message
-registerGetScenario token = MsgRun token Nothing Local "RemoteRegister" o []
+registerGetScenario token = MsgRun token "RemoteRegister" o []
   where
     o = HashMap.fromList
       [ "description"        .= String "Get a scenario in GeoJSON format"
@@ -218,7 +218,7 @@ registerGetScenario token = MsgRun token Nothing Local "RemoteRegister" o []
 
 -- | A message we send to register in luci
 registerCreateScenario :: Token -> Message
-registerCreateScenario token = MsgRun token Nothing Local "RemoteRegister" o []
+registerCreateScenario token = MsgRun token "RemoteRegister" o []
   where
     o = HashMap.fromList
       [ "description"        .= String "Create a new scenario in GeoJSON format"
@@ -258,7 +258,7 @@ registerCreateScenario token = MsgRun token Nothing Local "RemoteRegister" o []
 
 -- | A message we send to register in luci
 registerDeleteScenario :: Token -> Message
-registerDeleteScenario token = MsgRun token Nothing Local "RemoteRegister" o []
+registerDeleteScenario token = MsgRun token "RemoteRegister" o []
   where
     o = HashMap.fromList
       [ "description"        .= String "Delete a scenario (mark it as dead to make it invisible)."
@@ -280,7 +280,7 @@ registerDeleteScenario token = MsgRun token Nothing Local "RemoteRegister" o []
 
 -- | A message we send to register in luci
 registerRecoverScenario :: Token -> Message
-registerRecoverScenario token = MsgRun token Nothing Local "RemoteRegister" o []
+registerRecoverScenario token = MsgRun token "RemoteRegister" o []
   where
     o = HashMap.fromList
       [ "description"        .= String "Recover a scenario (mark it as alive to make it visible)."
@@ -302,7 +302,7 @@ registerRecoverScenario token = MsgRun token Nothing Local "RemoteRegister" o []
 
 -- | A message we send to register in luci
 registerUpdateScenario :: Token -> Message
-registerUpdateScenario token = MsgRun token Nothing Local "RemoteRegister" o []
+registerUpdateScenario token = MsgRun token "RemoteRegister" o []
   where
     o = HashMap.fromList
       [ "description"        .= String "Update a scenario in GeoJSON format"
@@ -334,7 +334,7 @@ registerUpdateScenario token = MsgRun token Nothing Local "RemoteRegister" o []
 
 -- | A message we send to register in luci
 registerSubscribeTo :: Token -> Message
-registerSubscribeTo token = MsgRun token Nothing Local "RemoteRegister" o []
+registerSubscribeTo token = MsgRun token "RemoteRegister" o []
   where
     o = HashMap.fromList
       [ "description"        .= Text.unlines
