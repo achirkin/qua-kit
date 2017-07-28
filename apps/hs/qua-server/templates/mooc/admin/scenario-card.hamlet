@@ -1,24 +1,36 @@
-<div .col-md-12 .col-md-12 .col-sm-12 .col-xs-12>
+<div .col-lg-6 .col-md-7 .col-md-8 .col-sm-9>
   <div .card>
-    <img .card-img-top src=@{ScenarioProblemImgR scenarioProblemId} width="200px" height="200px" alt="Scenario Image">
     <div .card-block>
-      <div .card-inner>
+      <div .col-lg-12 .col-md-12 .col-md-12 .col-sm-12>
+        <div .card-block .card-img-top>
+          <img .img-fluid src=@{ScenarioProblemImgR scenarioProblemId} width="200px" height="200px" alt="Scenario Image">
+        <h4>
+          Scenario 
         <p .card-text>
-          #{show $ fromSqlKey scenarioProblemId}: #{scenarioProblemDescription}
-        <a .btn href=@{ScenarioProblemGeometryR scenarioProblemId}>
-          Download Geometry
-        <br>
-        <br>
-        <a .btn href=@{ScenarioProblemEditR scenarioProblemId}>
-          Edit Scenario Problem
-    <ul .list-group>
-      $forall (Entity criterionId Criterion{..}) <- cs
-        <li .list-group-item>
-          <p>
-            #{criterionName}
-    <div .card-block>
-      <div .card-inner>
+          Id: #{show $ fromSqlKey scenarioProblemId}
+        <p> 
+          Description: #{scenarioProblemDescription}
+        <h4>
+          Criterions
+        <ul .list-group>
+          $forall (Entity criterionId Criterion{..}) <- cs
+            <li .list-group-item>
+              <p>
+                #{criterionName}
+        <h4>
+          Invite link:
+        <p>
+          <span style="font-family:monospace;">
+            #{inviteLink}
+
+        <h4>
+          Edx
         <p>
           Enter the following into "Custom Paramaters" field in the exercise settings at edX:
-        <span style="font-family:monospace;">
-          ["exercise_type=design", "exercise_id=#{show $ fromSqlKey scenarioProblemId}"]
+        <p>
+          <span style="font-family:monospace;">
+            ["exercise_type=design", "exercise_id=#{show $ fromSqlKey scenarioProblemId}"]
+      <a .btn .col-lg-6 .col-md-6 .col-md-6 .col-sm-6 href=@{ScenarioProblemGeometryR scenarioProblemId}>
+        Download Geometry
+      <a .btn .col-lg-6 .col-md-6 .col-md-6 .col-sm-6 href=@{ScenarioProblemEditR scenarioProblemId}>
+        Edit Scenario Problem
