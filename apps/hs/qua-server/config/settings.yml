@@ -14,8 +14,8 @@ ip-from-header: "_env:IP_FROM_HEADER:false"
 # In development, they default to the inverse.
 #
 # development: false
-# detailed-logging: false
-# should-log-all: false
+detailed-logging: false
+should-log-all: false
 # reload-templates: false
 # mutable-static: false
 # skip-combining: false

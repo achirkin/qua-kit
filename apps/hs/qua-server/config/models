@@ -113,9 +113,6 @@ Vote
     betterId      ScenarioId
     worseId       ScenarioId
     explanation   Text Maybe
-    edxResource   EdxResourceId Maybe
-    edxOutcomeUrl Text Maybe
-    edxResultId   Text Maybe
     timestamp     UTCTime default=CURRENT_TIMESTAMP
 
 VoteRating
@@ -127,6 +124,14 @@ VoteRating
     deriving Eq
     deriving Ord
     deriving Show
+
+GradingQueue
+    problemId        ScenarioProblemId
+    studentId        UserId
+    edxResource      EdxResourceId
+    edxOutcomeUrl    Text
+    edxResultId      Text
+    
 
 Rating
     problemId        ScenarioProblemId

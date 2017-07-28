@@ -81,8 +81,9 @@ rm(rows,rowsv,m,v,c_id)
 ```{r}
 qplot(value, data=db_rating, geom="histogram") + ggtitle("submission ratings histogram")
 qplot(value, data=db_vote_rating, geom="histogram")
+c(mean(db_rating$value), var(db_rating$value))
+c(mean(db_vote_rating$value), var(db_vote_rating$value))
 
-# qplot(value, data=db_rating[which(db_rating$value > 0 & db_rating$criterion_id == 1),], geom="histogram")
 ```
 
 ## modelling decisions
@@ -94,15 +95,18 @@ Thus, the decisions become a proper random variable, even though highly correlat
 
 ```{r}
 delta <- 2*rbinom(n,1,0.5)-1
-rating_i <- mapply(function(d,vb,vw) if (d > 0) vb else vw, delta, vote$better_value, vote$worse_value )
-rating_j <- mapply(function(d,vb,vw) if (d > 0) vw else vb, delta, vote$better_value, vote$worse_value )
-rating_v <- sapply(vote$voter_id, function(i) vote_rating[which(vote_rating$student_id == i), "value"][1])
+rating_i <- mapply(function(d,vb,vw) if (d > 0) vb else vw, delta, db_vote$better_value, db_vote$worse_value )
+rating_j <- mapply(function(d,vb,vw) if (d > 0) vw else vb, delta, db_vote$better_value, db_vote$worse_value )
+rating_v <- sapply(db_vote$voter_id, function(i) db_vote_rating[which(db_vote_rating$student_id == i), "value"][1])
 rating_v[is.na(rating_v)] <- 0
 # qplot( rating_j, geom="histogram")
 z <- delta * log( 1 + exp( rating_v + delta * (rating_j - rating_i) ))
+y <- delta * (rating_i - rating_j)
 
 Dz <- var(z)
-Kz <- (cov(rating_i, z) - cov(rating_j, z))/2
+Cz <- (cor(rating_i, z) - cor(rating_j, z))/2
+Dy <- var(y)
+Cy <- cor(rating_v,y)
 ```
 
 ## output values
@@ -120,7 +124,13 @@ c(cor(rating_i, delta), cor(rating_j, delta))
 
 # variance of unknown random variable Z
 # covariance of unknown random variable Z with r_i (or inverse of cov for r_j)
-c(Dz, Kz)
+
+# Ey, Dy, Cy
+c(mean(y), Dy, Cy)
+# Ez, Dz, Cz
+c(mean(z), Dz, Cz)
+# percentage of correct vote decisions
+sum(y>0)/n
 ```
 
 
