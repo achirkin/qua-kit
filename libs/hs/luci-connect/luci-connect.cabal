@@ -68,7 +68,8 @@ executable luci-test
     if !flag(luci-test)
         buildable: False
     main-is: LuciTest.hs
-    build-depends:
+    if flag(luci-test)
+      build-depends:
         base >=4.8.2 && <5.0,
         aeson -any,
         text -any,
@@ -84,7 +85,8 @@ executable luci-console
     if !flag(examples)
         buildable: False
     main-is: LuciConsole.hs
-    build-depends:
+    if flag(examples)
+      build-depends:
         base >=4.8.2 && <5.0,
         aeson -any,
         text -any,
@@ -101,7 +103,8 @@ executable adding-numbers-service
     if !flag(examples)
         buildable: False
     main-is: AddingNumbersService.hs
-    build-depends:
+    if flag(examples)
+      build-depends:
         base >=4.8.2 && <5.0,
         aeson -any,
         text -any,
@@ -120,7 +123,8 @@ executable dist-walls-service
         Lib.ExtraTypes
         Lib.ParseGeoJSON
         Lib.Region
-    build-depends:
+    if flag(examples)
+      build-depends:
         base >=4.8.2 && <5,
         aeson -any,
         text -any,
@@ -147,7 +151,8 @@ executable multi-parametric-service
         Lib.ExtraTypes
         Lib.ParseGeoJSON
         Lib.Region
-    build-depends:
+    if flag(examples)
+      build-depends:
         base >=4.8.2 && <5.0,
         aeson -any,
         text -any,
