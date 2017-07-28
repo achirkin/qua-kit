@@ -156,7 +156,7 @@ responseMsgs (MsgRun token "scenario.geojson.Recover" pams _)
   , mUserId <- (resultToMaybe . fromJSON) =<< HashMap.lookup "user-id" pams
   , mAuthRole <- (resultToMaybe . fromJSON) =<< HashMap.lookup "user-role" pams = do
     conn <- Lens.use connection
-    eresultBS <- liftIO $ recoverScenario conn (fromIntegral token) (ScenarioId scID) mUserId mAuthRole
+    eresultBS <- liftIO $ recoverScenario conn (fromIntegral token) mUserId mAuthRole (ScenarioId scID)
     yieldAnswer token eresultBS
 
 responseMsgs (MsgRun token "scenario.SubscribeTo" pams _)

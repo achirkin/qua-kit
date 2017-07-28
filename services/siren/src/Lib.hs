@@ -156,11 +156,11 @@ deleteScenario conn token userId authRole scID = do
 
 recoverScenario :: Connection
                 -> Int64 -- ^ token (callID)
-                -> ScenarioId -- ^ ScID (scenario id)
                 -> Maybe Int64 -- ^ User Id
                 -> Maybe AuthRole
+                -> ScenarioId -- ^ ScID (scenario id)
                 -> IO (Either BS.ByteString BS.ByteString) -- ^ Either error or json result
-recoverScenario conn token scID userId authRole = do
+recoverScenario conn token userId authRole scID = do
   mrez <- execParams conn "SELECT wrap_result($1,recover_scenario($2,$3,$4));"
     [ mkInt64 token
     , mkBigInt scID
