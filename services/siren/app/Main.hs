@@ -106,9 +106,11 @@ responseMsgs :: Message -> Conduit Message (LuciProgram ServiceState) ByteString
 
 -- Respond only to run messages with correct input
 
-responseMsgs (MsgRun token "scenario.GetList" _ _) = do
+responseMsgs (MsgRun token "scenario.GetList" pams _)
+  | mUserId <- (resultToMaybe . fromJSON) =<< HashMap.lookup "user-id" pams
+  , mAuthRole <- (resultToMaybe . fromJSON) =<< HashMap.lookup "user-role" pams = do
     conn <- Lens.use connection
-    eresultBS <- liftIO $ listScenarios conn (fromIntegral token)
+    eresultBS <- liftIO $ listScenarios conn (fromIntegral token) mUserId mAuthRole
     yieldAnswer token eresultBS
 
 responseMsgs (MsgRun token "scenario.geojson.Get" pams _)

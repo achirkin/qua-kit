@@ -191,9 +191,15 @@ updateScenario conn token  userId authRole scID scenario = do
 
 listScenarios :: Connection
               -> Int64 -- ^ token (callID)
+              -> Maybe Int64 -- ^ User Id
+              -> Maybe AuthRole
               -> IO (Either BS.ByteString BS.ByteString) -- ^ Either error or json result
-listScenarios conn token = do
-  mrez <- execParams conn "SELECT wrap_result($1,list_scenarios());" [mkInt64 token] Text
+listScenarios conn token userId authRole = do
+  mrez <- execParams conn "SELECT wrap_result($1,list_scenarios($1,$2));"
+     [ mkInt64 token
+     , userId >>= mkInt64
+     , mkAuthRole authRole
+     ] Text
   justResult mrez $ \rez -> checkResult rez id
 
 getScenario :: Connection

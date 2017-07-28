@@ -1,4 +1,4 @@
-CREATE OR REPLACE FUNCTION list_scenarios()
+CREATE OR REPLACE FUNCTION list_scenarios(userId bigint, authRole text)
   RETURNS jsonb AS
 $func$
 BEGIN
@@ -14,7 +14,12 @@ BEGIN
                 )
               )
               FROM scenario
-              WHERE scenario.alive
+              WHERE scenario.alive AND
+                      ((authRole == 'Student' AND scenario.owner = userId)
+                    OR (authRole == 'Local'   AND (scenario.owner IS NULL OR scenario.owner = userId))
+                    OR (authRole == 'Admin'   AND TRUE))
+
+
             )
           , '[]'::jsonb
           )
