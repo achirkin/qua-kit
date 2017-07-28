@@ -1,3 +1,4 @@
+{-# OPTIONS_HADDOCK hide, prune #-}
 module Handler.Mooc.ExpertReview
   ( postWriteExpertReviewR
   , writeExpertReview
@@ -16,16 +17,21 @@ postWriteExpertReviewR scId = runJSONExceptT $ do
                  liftM (>>= readMay) $ lookupPostParam "grade"
     comment <- lift $ fromMaybe "" <$> lookupPostParam "comment"
     t       <- liftIO getCurrentTime
-    _ <- ExceptT $ runDB $ runExceptT $ do
+    ExceptT $ runDB $ runExceptT $ do
       scenario <- maybeE "Cannot find a corresponding scenario." $ get scId
       when (userId == scenarioAuthorId scenario) $
         throwE "You cannot review yourself!"
       when (length comment < 80) $
         throwE "Comment needs to be at least 80 characters."
-      lift $ upsert (ExpertReview userId scId comment grade t)
+      _ <- lift $ upsert (ExpertReview userId scId comment grade t)
                    [ ExpertReviewGrade     =. grade
                    , ExpertReviewComment   =. comment
                    , ExpertReviewTimestamp =. t ]
+
+      -- expert grade overrules votes and thus overwrites existing grade
+      lift $ updateWhere [CurrentScenarioHistoryScenarioId ==. scId]
+                         [CurrentScenarioGrade =. (Just $ fromIntegral grade)]
+
     return $ object [ "grade"     .= grade
                     , "comment"   .= comment
                     , "timestamp" .= t

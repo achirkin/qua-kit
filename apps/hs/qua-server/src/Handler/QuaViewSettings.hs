@@ -1,14 +1,4 @@
------------------------------------------------------------------------------
--- |
--- Module      :  Handler.QuaViewSettings
--- Copyright   :  (c) Artem Chirkin
--- License     :  MIT
---
--- Maintainer  :  Artem Chirkin <chirkin@arch.ethz.ch>
--- Stability   :  experimental
---
------------------------------------------------------------------------------
-
+{-# OPTIONS_HADDOCK hide, prune #-}
 module Handler.QuaViewSettings
     ( getQuaViewSettingsR
     ) where
@@ -49,4 +39,3 @@ getQuaViewSettingsR = do
 (^++^) :: [a] -> Maybe a -> [a]
 xs ^++^ Just x = x:xs
 xs ^++^ Nothing = xs
-

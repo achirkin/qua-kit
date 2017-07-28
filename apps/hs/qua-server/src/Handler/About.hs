@@ -1,15 +1,4 @@
------------------------------------------------------------------------------
--- |
--- Module      :  Handler.About
--- Copyright   :  (c) Artem Chirkin
--- License     :  MIT
---
--- Maintainer  :  Artem Chirkin <chirkin@arch.ethz.ch>
--- Stability   :  experimental
---
---
------------------------------------------------------------------------------
-
+{-# OPTIONS_HADDOCK hide, prune #-}
 module Handler.About
   ( getAboutR
   ) where
@@ -124,4 +113,3 @@ getAboutR =
                         <span.icon>check
                         &nbsp;Visit Empower Shack page
         |]
-

@@ -1,3 +1,4 @@
+{-# OPTIONS_HADDOCK hide, prune #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 {-# Language CPP #-}
 module Application
@@ -35,7 +36,7 @@ import System.Log.FastLogger                (defaultBufSize, newStdoutLoggerSet,
 #if DEVELOPMENT
 import Application.SetupProblemData
 #endif
-
+import Application.Grading
 --import qualified Data.ByteString.Base64 as BSB (encode)
 
 -- Import all relevant handler modules here.
@@ -109,7 +110,7 @@ makeFoundation appSettings = do
     -- Fill database with some problem-specific important data.
     importProblemData pool
 #endif
-    -- | Update ratings once in an hour
+    -- Update ratings once in an hour
     -- flip runSqlPool pool $ scheduleUpdateRatings 3600 reviewRating compareRating combR
     -- flip runSqlPool pool $ scheduleGradeVotes 3600
 
@@ -121,7 +122,8 @@ makeFoundation appSettings = do
 #else
     -- scheduleUpdateGrades (3600*24) app pool
 #endif
-
+    runLoggingT (runResourceT $ runSqlPool simulateGradingLearning pool) logFunc
+    
     -- Return the foundation
     return app
 

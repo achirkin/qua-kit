@@ -1,14 +1,4 @@
------------------------------------------------------------------------------
--- |
--- Module      :  Handler.Home.PanelServices
--- Copyright   :  (c) Artem Chirkin
--- License     :  MIT
---
--- Maintainer  :  Artem Chirkin <chirkin@arch.ethz.ch>
--- Stability   :  experimental
---
------------------------------------------------------------------------------
-
+{-# OPTIONS_HADDOCK hide, prune #-}
 module Handler.Home.PanelServices
   ( panelServices
   ) where
@@ -117,4 +107,3 @@ panelServices = do
 --          <label for="floatPamId02">
 --            <input id="floatPamId02" name="floatPamName02" type="number" value="0.3" min="0" style="width: 6em;">
 --            [0..] (kg/(m c)) Float parameter 2 - lower bound only
-

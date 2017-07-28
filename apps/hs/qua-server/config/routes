@@ -25,6 +25,7 @@
 /admin/criterion-editor             AdminCriterionEditorR GET
 /admin/criterion-editor/criterion   AdminCreateCriterionR POST
 /admin/criterion-editor/edit-criterion/#CriterionId AdminEditCriterionR GET POST
+/admin/sendReviewRequest            SendReviewRequestR POST
 
 
 /                                   MoocHomeR GET POST

@@ -1,4 +1,4 @@
--- | Common handler functions.
+{-# OPTIONS_HADDOCK hide, prune #-}
 module Handler.Common where
 
 import Data.FileEmbed (embedFile)

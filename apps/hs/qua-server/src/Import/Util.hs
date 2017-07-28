@@ -1,3 +1,4 @@
+{-# OPTIONS_HADDOCK hide, prune #-}
 module Import.Util where
 
 import Control.Monad.Trans.Except

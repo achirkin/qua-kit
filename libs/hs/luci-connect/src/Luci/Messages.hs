@@ -26,6 +26,7 @@ module Luci.Messages
       -- * Parsed message types
     , Message (..), parseMessage, makeMessage, msgToken
     , ServiceName (..), Token (..), Percentage (..), ServiceResult (..)
+    , UserId (..), AuthRole (..)
     , resultJSON, objectJSON, showJSON
     ) where
 
@@ -38,9 +39,10 @@ import qualified Data.Aeson.Types        as JSON
 import qualified Data.ByteString         as BS
 import           Data.Hashable
 import           Data.HashMap.Strict     as HashMap
-import           Data.Maybe              (fromMaybe)
+import           Data.Maybe              (fromMaybe, maybeToList)
 import           Data.String             (IsString)
 import qualified Data.Text.Lazy          as LText
+import qualified Data.Text               as SText
 import qualified Data.Text.Lazy.Encoding as LText
 
 import           Luci.Connect.Base
@@ -185,7 +187,7 @@ newtype ServiceName = ServiceName Text
 
 -- | Luci callID is used to reference client's calls to luci and services
 newtype Token = Token Int64
-  deriving (Eq,Ord,Show,Num,Enum, Real,Integral,FromJSON, ToJSON, Hashable)
+  deriving (Eq,Ord,Show,Num,Enum, Real,Integral,FromJSON,ToJSON,Hashable)
 
 -- | Percentage [0..100]%; used in luci messages to indicate state of a service computation
 newtype Percentage = Percentage Double
@@ -194,6 +196,30 @@ newtype Percentage = Percentage Double
 -- | Result or progress records is an arbitrary JSON Object
 newtype ServiceResult = ServiceResult JSON.Object
   deriving (Eq, Show, FromJSON, ToJSON)
+
+-- | Authorization level of a sender.
+--   Only use it if you trust the sender!
+data AuthRole
+  = Admin
+  | Student
+  | Local
+  deriving (Show, Read, Eq)
+
+instance FromJSON AuthRole where
+  parseJSON (JSON.String "Admin")   = pure Admin
+  parseJSON (JSON.String "Student") = pure Student
+  parseJSON (JSON.String "Local")   = pure Local
+  parseJSON _                       = pure Local
+
+instance ToJSON AuthRole where
+  toJSON r = JSON.String . SText.pack $ show r
+
+
+
+-- | Abstract user id a sender.
+--   Only use it if you trust the sender!
+newtype UserId = UserId Int64
+  deriving (Eq,Ord,Show,Num,Enum, Real,Integral,FromJSON, ToJSON, Hashable)
 
 -- | Construct ServiceResult similarly to Aeson.object function
 resultJSON :: [(Text,Value)] -> ServiceResult
@@ -209,7 +235,7 @@ showJSON = LText.toStrict . LText.decodeUtf8 . encode
 
 -- | Represent all registerd message types. Anything else is garbage!
 data Message
-  = MsgRun !Token !ServiceName !JSON.Object ![ByteString]
+  = MsgRun !Token !(Maybe UserId) !AuthRole !ServiceName !JSON.Object ![ByteString]
     -- ^ run service message, e.g. {'run': 'ServiceList', 'token': 'sfhrEg2sh'};
     -- params: 'token', 'run', [(name, value)], optional attachments
   | MsgCancel !Token
@@ -227,9 +253,11 @@ data Message
     -- ^ error message, e.g. { 'token': 'sfhrEg2sh', 'error': 'We are in trouble!'};
     -- params: 'token', 'error'
 
+
+
 -- | All messsages have a unique for connection token
 msgToken :: Message -> Token
-msgToken (MsgRun t _ _ _)      = t
+msgToken (MsgRun t _ _ _ _ _)  = t
 msgToken (MsgCancel t)         = t
 msgToken (MsgResult t _ _)     = t
 msgToken (MsgProgress t _ _ _) = t
@@ -238,7 +266,7 @@ msgToken (MsgError t _)        = t
 
 -- | Get attachment from a message, checking its MD5 hash
 attachment :: Message -> AttachmentReference -> Maybe ByteString
-attachment (MsgRun _ _ _ bs) r = indexList bs (attIndex r - 1) >>= \x ->
+attachment (MsgRun _ _ _ _ _ bs) r = indexList bs (attIndex r - 1) >>= \x ->
     if checkAttachment r x then Just x else Nothing
 attachment (MsgResult _  _ bs) r = indexList bs (attIndex r - 1) >>= \x ->
     if checkAttachment r x then Just x else Nothing
@@ -256,7 +284,7 @@ indexList xs i = headMaybe $ drop i xs
 -- | Parse all registered message types
 parseMessage :: LuciMessage -> Result Message
 parseMessage (MessageHeader (JSON.Object js), bss)
-  | Just (JSON.String s) <- HashMap.lookup "run" js      = Success $ MsgRun token (ServiceName s) js' $ seqList bss
+  | Just (JSON.String s) <- HashMap.lookup "run" js      = Success $ MsgRun token mUserId authRole (ServiceName s) js' $ seqList bss
   | Just _               <- HashMap.lookup "cancel" js   = Success $ MsgCancel token
   | Just (JSON.Object o) <- HashMap.lookup "result" js   = Success $ MsgResult token (ServiceResult o) $ seqList bss
   | Just (JSON.Number n) <- HashMap.lookup "progress" js = Success $ MsgProgress token (realToFrac n) (HashMap.lookup "intermediateResult" js >>= toResult) $ seqList bss
@@ -270,6 +298,8 @@ parseMessage (MessageHeader (JSON.Object js), bss)
               Just (Success t) -> t
     toResult (JSON.Object o) = Just $ ServiceResult o
     toResult _               = Nothing
+    mUserId = HashMap.lookup "UserId" js >>= result2mb . fromJSON
+    authRole = fromMaybe Local $ HashMap.lookup "AuthRole" js >>= result2mb . fromJSON
 parseMessage (MessageHeader _, _) = Error "Invalid JSON type (expected object)."
 
 
@@ -277,8 +307,10 @@ parseMessage (MessageHeader _, _) = Error "Invalid JSON type (expected object)."
 makeMessage :: Message -> LuciMessage
 makeMessage (MsgCancel token) = (MessageHeader $ JSON.object ["cancel" .= token, "callID" .= token], [])
 makeMessage (MsgError token s) = (MessageHeader $ JSON.object ["error" .= s, "callID" .= token], [])
-makeMessage (MsgRun token sname js bss) =
-  (MessageHeader . JSON.object $ ["run" .= sname,  "callID" .= token] ++ HashMap.toList js', seqList bss)
+makeMessage (MsgRun token mUserId authRole sname js bss) =
+  (MessageHeader . JSON.object $
+      ["run" .= sname,  "callID" .= token, "AuthRole" .= authRole]
+      ++ maybeToList ((,) "UserId" . toJSON <$> mUserId) ++ HashMap.toList js', seqList bss)
   where
     js' = HashMap.delete "run" $ HashMap.delete "callID" js
 makeMessage (MsgResult token (ServiceResult sr) bss) =
@@ -289,6 +321,9 @@ makeMessage (MsgProgress token p msr bss) =
     srMaybe (Just (ServiceResult x)) = ["intermediateResult" .= x]
     srMaybe _                        = []
 
+result2mb :: Result a -> Maybe a
+result2mb (Error _)   = Nothing
+result2mb (Success a) = Just a
 
 seqList :: [a] -> [a]
 seqList []     = []

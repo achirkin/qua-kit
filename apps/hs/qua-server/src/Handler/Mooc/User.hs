@@ -1,15 +1,4 @@
------------------------------------------------------------------------------
--- |
--- Module      :  Handler.Mooc.User
--- Copyright   :  (c) Artem Chirkin
--- License     :  MIT
---
--- Maintainer  :  Artem Chirkin <chirkin@arch.ethz.ch>
--- Stability   :  experimental
---
---
------------------------------------------------------------------------------
-
+{-# OPTIONS_HADDOCK hide, prune #-}
 module Handler.Mooc.User
   ( postSetupLocalAccount
   , setupLocalAccountW

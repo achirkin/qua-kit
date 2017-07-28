@@ -1,7 +1,7 @@
 name: qua-server
 version: 0.1
 cabal-version: >=1.22
-build-type: Simple
+build-type: Custom
 license: MIT
 license-file: LICENSE
 copyright: (c) Artem Chirkin
@@ -34,6 +34,12 @@ flag postgresql
     default: True
     description:
         Use PostgreSQL database. Otherwise use sqlite.
+
+custom-setup
+    setup-depends:
+        base >=4.8 && <5,
+        Cabal >=1.22,
+        superdoc >=0.1.2
 
 library
 

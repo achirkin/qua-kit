@@ -1,14 +1,4 @@
------------------------------------------------------------------------------
--- |
--- Module      :  Handler.Home.UIButtons
--- Copyright   :  (c) Artem Chirkin
--- License     :  MIT
---
--- Maintainer  :  Artem Chirkin <chirkin@arch.ethz.ch>
--- Stability   :  experimental
---
------------------------------------------------------------------------------
-
+{-# OPTIONS_HADDOCK hide, prune #-}
 module Handler.Home.UIButtons
   ( uiButtons
   ) where
