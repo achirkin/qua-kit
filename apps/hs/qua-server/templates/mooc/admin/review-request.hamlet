@@ -1,0 +1,9 @@
+<div .row>
+  <div .col-lg-12 .col-md-12 .col-sm-12 .col-xs-12>
+    <div .card>
+      <div .card-inner>
+        <p>
+          Ask experts to review scenarios in need of grading
+          which were submitted before a certain date:
+        <form .form-inline method=post action=@{AdminReviewRequestR}>
+          ^{reviewRequestFormWidget}
