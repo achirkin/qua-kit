@@ -5,15 +5,15 @@
         <div .card-block .card-img-top>
           <img .img-fluid src=@{ScenarioProblemImgR scenarioProblemId} width="200px" height="200px" alt="Scenario Image">
         <h4>
-          Scenario 
+          Scenario
         <p .card-text>
           Id: #{show $ fromSqlKey scenarioProblemId}
-        <p> 
+        <p>
           Description: #{scenarioProblemDescription}
         <h4>
           Criterions
         <ul .list-group>
-          $forall (Entity criterionId Criterion{..}) <- cs
+          $forall (Entity _ Criterion{criterionName}) <- cs
             <li .list-group-item>
               <p>
                 #{criterionName}

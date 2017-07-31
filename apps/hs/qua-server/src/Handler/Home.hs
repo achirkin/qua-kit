@@ -6,8 +6,6 @@ module Handler.Home
 
 import Import
 
-import Model.Session
-
 import Handler.Home.LoadingSplash
 import Handler.Home.PopupHelp
 import Handler.Home.UIButtons

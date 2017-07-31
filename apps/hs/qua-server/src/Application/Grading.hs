@@ -110,7 +110,7 @@ constK = 0.7
 constSz :: Double
 
 -- | Correlation of the dependent variable /z/ = /δ/ log ( 1 + e[sup /v/ + /δ/(/r/[sub /j/] - /r/[sub /i/])])
---   and /r/[sub /i/] (NB, 0 > Cov[/r/[sub /i/],/z/] ≡ - Cov[/r/[sub /j/],/z/]).
+--   and /r/[sub /i/] (NB, 0 < Cov[/r/[sub /i/],/z/] ≡ - Cov[/r/[sub /j/],/z/]).
 --   We get the value of this constant empirically.
 --   It is important to keep this value correct to maintain property Var /r/ = 1.
 constCz :: Double
@@ -346,7 +346,7 @@ simulateGradingLearning = do
 
 -- * Communicating with edX
 
--- 
+--
 -- -- | Send all grade changes from GradingQueue table
 -- --   And remove those grades from the table.
 -- sendPendingGrades ::

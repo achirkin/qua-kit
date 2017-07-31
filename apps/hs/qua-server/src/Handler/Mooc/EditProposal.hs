@@ -5,7 +5,6 @@ module Handler.Mooc.EditProposal
 
 import Import
 import qualified Handler.Mooc.Scenario as S
-import Model.Session
 
 getEditProposalR :: Handler Html
 getEditProposalR = do

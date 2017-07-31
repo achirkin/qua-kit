@@ -87,7 +87,7 @@ newScenarioForm =
     areq fileField (labeledField "geometry") Nothing
 
 labeledField :: Text -> FieldSettings App
-labeledField t = bfs t
+labeledField = bfs
 
 getScenarioCards :: Handler [Widget]
 getScenarioCards = do
@@ -103,7 +103,7 @@ getScenarioCards = do
                   just (scenarioProblem ^. ScenarioProblemId))
              pure (scenarioProblem, criterion)) :: Handler [( Entity ScenarioProblem
                                                             , Maybe (Entity Criterion))]
-    mapM (uncurry scenarioWidget) $ map (second catMaybes) $ groupsOf tups
+    mapM (uncurry scenarioWidget . second catMaybes) $ groupsOf tups
 
 groupsOf :: Ord a => [(a, b)] -> [(a, [b])]
 groupsOf =
@@ -111,7 +111,7 @@ groupsOf =
     List.groupBy ((==) `Function.on` fst) . sortOn fst
 
 scenarioWidget ::
-       Entity ScenarioProblem -> [Entity Criterion] -> Handler (Widget)
+       Entity ScenarioProblem -> [Entity Criterion] -> Handler Widget
 scenarioWidget (Entity scenarioProblemId ScenarioProblem {..}) cs = do
     inviteLink <- getInviteLink scenarioProblemId
     pure $(widgetFile "mooc/admin/scenario-card")
@@ -127,14 +127,14 @@ getScenarioProblemImgR scenarioProblemId = do
     scenario <- runDB $ get404 scenarioProblemId
     addHeader "Content-Disposition" "inline"
     sendResponse
-        (("image/png" :: ByteString), toContent $ scenarioProblemImage scenario)
+        ("image/png" :: ByteString, toContent $ scenarioProblemImage scenario)
 
 getScenarioProblemGeometryR :: ScenarioProblemId -> Handler TypedContent
 getScenarioProblemGeometryR scenarioProblemId = do
     scenario <- runDB $ get404 scenarioProblemId
     addHeader "Content-Disposition" "inline"
     sendResponse
-        ( ("text/plain" :: ByteString)
+        ("text/plain" :: ByteString
         , toContent $ scenarioProblemGeometry scenario)
 
 getScenarioProblemEditR :: ScenarioProblemId -> Handler Html

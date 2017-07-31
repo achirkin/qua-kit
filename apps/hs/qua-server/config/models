@@ -43,6 +43,27 @@ EdxCourse
     EdxContextId contextId
     deriving Show
 
+-- | Feedback parameters for an edX student.
+--   One record per (student, resourceId).
+--   Determines how to send a grade to edX.
+--   Should be created at the moment the student starts the exercise.
+EdxGrading
+    resourceId    EdxResourceId
+    studentId     UserId
+    edxOutcomeUrl Text
+    edxResultId   Text
+    EdxGradeKeys resourceId studentId
+    deriving Show
+
+-- | Keep grades to be sent to edX.
+EdxGradingQueue
+    edxGrading       EdxGrading
+    grade            Double
+    comment          Text Maybe
+
+-- | Exercise table.
+--   Keeps description of an exercise (either edX or workshop),
+--   and a template starting geometry.
 ScenarioProblem
     image            ByteString
     geometry         ByteString
@@ -53,30 +74,29 @@ ScenarioProblem
     deriving Eq
     deriving Ord
 
+-- | User design submission.
+--   A history table - keeps all user submissions forever.
+--   Never delete stuff from here.
 Scenario
     authorId      UserId
     taskId        ScenarioProblemId
     image         ByteString
     geometry      ByteString
     description   Text
-    scale         Double
-    edxResource   EdxResourceId
-    edxOutcomeUrl Text Maybe
-    edxResultId   Text Maybe
     lastUpdate    UTCTime default=CURRENT_TIMESTAMP
 
+-- | The latest state of a user submission.
 CurrentScenario
-    historyScenarioId ScenarioId
-    authorId      UserId
-    taskId        ScenarioProblemId
-    description   Text
-    edxResource   EdxResourceId
-    edxOutcomeUrl Text Maybe
-    edxResultId   Text Maybe
-    grade         Double Maybe
-    lastUpdate    UTCTime default=CURRENT_TIMESTAMP
-    SubmissionOf authorId taskId
-    HistoryScenarioId historyScenarioId
+    historyScenarioId    ScenarioId
+    authorId             UserId
+    taskId               ScenarioProblemId
+    description          Text
+    edxGrading           EdxGrading Maybe
+    grade                Double Maybe
+    lastUpdate           UTCTime default=CURRENT_TIMESTAMP
+    expertEnforced       Bool default=false
+    SubmissionOf         authorId taskId
+    LatestSubmissionId   historyScenarioId
 
 Review
     reviewerId  UserId
@@ -125,25 +145,18 @@ VoteRating
     deriving Ord
     deriving Show
 
-GradingQueue
-    problemId        ScenarioProblemId
-    studentId        UserId
-    edxResource      EdxResourceId
-    edxOutcomeUrl    Text
-    edxResultId      Text
-    
-
 Rating
-    problemId        ScenarioProblemId
-    criterionId      CriterionId
-    authorId         UserId
-    value            Double default=0
-    currentVotesN    Int    default=0
-    currentEvidenceW Double default=1
+    problemId         ScenarioProblemId
+    criterionId       CriterionId
+    authorId          UserId
+    value             Double default=0
+    currentVotesN     Int    default=0
+    currentEvidenceW  Double default=1
     RatingOf authorId problemId criterionId
     deriving Eq
     deriving Ord
     deriving Show
+
 
 Feedback
     authorId    UserId Maybe

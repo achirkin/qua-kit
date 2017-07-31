@@ -30,6 +30,7 @@ import Text.Blaze (Markup)
 import qualified Data.Map.Strict as Map
 import Handler.Mooc.EdxLogin
 import Model.Session
+import Application.Edx
 
 
 -- | The foundation datatype for your application. This can be a good place to
@@ -214,12 +215,11 @@ instance YesodAuth App where
                 , userVerified = True
                 }
     authenticate creds@Creds{credsPlugin = "lti"} = do
-      setupEdxParams (credsExtra creds)
-      runDB $ do
+      uid <- runDB $ do
         x <- getBy . EdxUserId . Just $ credsIdent creds
         case x of
-          Just (Entity uid _) -> return $ Authenticated uid
-          Nothing -> Authenticated <$> insert User
+          Just (Entity uid _) -> return uid
+          Nothing -> insert User
               { userName = "anonymous edX student"
               , userRole = UR_STUDENT
               , userEthUserName = Nothing
@@ -228,6 +228,13 @@ instance YesodAuth App where
               , userPassword = Nothing
               , userVerified = True
               }
+      setupEdxGrading uid (credsExtra creds)
+      exercise_type <- getsSafeSession userSessionCustomExerciseType
+      case exercise_type of
+          Just "design" -> setUltDest EditProposalR
+          Just "compare" -> setUltDest CompareProposalsR
+          _ -> return ()
+      return $ Authenticated uid
     authenticate creds
       | "email" `isPrefixOf` credsPlugin creds = runDB $ do
           x <- getBy . UserEmailId . Just $ credsIdent creds

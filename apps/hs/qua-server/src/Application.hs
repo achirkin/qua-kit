@@ -36,6 +36,7 @@ import System.Log.FastLogger                (defaultBufSize, newStdoutLoggerSet,
 #if DEVELOPMENT
 import Application.SetupProblemData
 #endif
+import Application.Edx
 import Application.Grading
 --import qualified Data.ByteString.Base64 as BSB (encode)
 
@@ -123,7 +124,7 @@ makeFoundation appSettings = do
     -- scheduleUpdateGrades (3600*24) app pool
 #endif
     runLoggingT (runResourceT $ runSqlPool simulateGradingLearning pool) logFunc
-    
+
     -- Return the foundation
     return app
 

@@ -4,14 +4,11 @@ module Handler.Mooc.SubmitProposal
   ) where
 
 import           Control.Monad.Trans.Maybe
-import qualified Data.Text                 as Text (unpack, pack)
+import qualified Data.Text                 as Text (pack)
 import           Import
-import           Model.Session
---import Text.Blaze
-import           Web.LTI
 
 import qualified Data.ByteString.Base64    as BSB (decodeLenient)
-
+import           Application.Edx
 
 -- | Submit a design proposal
 --   session params:
@@ -51,7 +48,7 @@ postSubmitProposalR = do
         Nothing -> return ()
 
     completelyNewOne preview geometry description >>= \mscenarioId -> case mscenarioId of
-        Just i -> do
+        Just _ -> do
           setMessage . preEscapedToMarkup $
               "Thank you, " <> userName user <> ", your design proposal has been saved.<br>"
               <> "Now you can come back to edX or stay at qua-kit and explore submissions of other students.<br>"
@@ -59,14 +56,11 @@ postSubmitProposalR = do
               <> "You can come back and continue the work at the current state by going on the same link (button).<br>"
               <> "We sent to edX your base grade (60% of maximum); the grade will be updated as soon"
               <> " as other students start to vote and discuss your submission.</p>"
-          msc <- runDB $ get i
-          case (,) <$> (msc >>= scenarioEdxResultId)  <*> (msc >>= scenarioEdxOutcomeUrl) of
+          ye <- getYesod
+          meResId <- getsSafeSession userSessionEdxResourceId
+          case meResId of
             Nothing -> return ()
-            Just (sourcedId, outcomeUrl) -> do
-              ye <- getYesod
-              req <- replaceResultRequest (appLTICredentials $ appSettings ye) (Text.unpack outcomeUrl) sourcedId 0.6 Nothing
-              _ <- httpNoBody req
-              return ()
+            Just eResId -> sendEdxGrade (appSettings ye) uId eResId 0.6 (Just "Automatic grade on design submission.")
           redirectUltDest MoocHomeR
         Nothing -> do
           ses <- getSession
@@ -101,19 +95,15 @@ resolveBySesExerciseId = runMaybeT $ do
                         [ Desc ScenarioLastUpdate
                         ] $$ await
 
-completelyNewOne :: ByteString -> ByteString -> Text -> Handler (Maybe ScenarioId)
+completelyNewOne :: ByteString -> ByteString -> Text -> Handler (Maybe EdxResourceId)
 completelyNewOne img geometry desc = runMaybeT $ do
   userId <- MaybeT maybeAuthId
+  medxResId <- lift $ getsSafeSession userSessionEdxResourceId
   scpId <- MaybeT $ getsSafeSession userSessionCustomExerciseId
-  resource_link_id  <- MaybeT $ getsSafeSession userSessionResourceLink
-  lis_outcome_service_url <- lift $ getsSafeSession userSessionOutcomeServiceUrl
-  lis_result_sourcedid    <- lift $ getsSafeSession userSessionResultSourceId
-  context_id    <- MaybeT $ getsSafeSession userSessionContextId
   MaybeT . runDB . runMaybeT $ do
-    Entity edxCourseId _ <- MaybeT $ getBy (EdxContextId context_id)
-    (scproblem, edxres) <- MaybeT $ (\mx my -> (,) <$> mx <*> my)
-                                 <$> get scpId
-                                 <*> getBy (EdxResLinkId resource_link_id edxCourseId)
+    medxGrading <- case medxResId of
+        Nothing -> return Nothing
+        Just ri -> lift . getBy $ EdxGradeKeys ri userId
     t <- liftIO getCurrentTime
     let sc = Scenario
                userId
@@ -121,19 +111,14 @@ completelyNewOne img geometry desc = runMaybeT $ do
                img
                geometry
                desc
-               (scenarioProblemScale scproblem)
-               (entityKey edxres)
-               lis_outcome_service_url
-               lis_result_sourcedid
                t
     scId <- lift $ insert sc
-    _ <- lift $ insert $ CurrentScenario scId
+    void . lift . insert $ CurrentScenario scId
                            (scenarioAuthorId      sc)
                            (scenarioTaskId        sc)
                            (scenarioDescription   sc)
-                           (scenarioEdxResource   sc)
-                           (scenarioEdxOutcomeUrl sc)
-                           (scenarioEdxResultId   sc)
+                           (entityVal <$> medxGrading)
                            Nothing
                            (scenarioLastUpdate    sc)
-    return scId
+                           False
+    MaybeT $ return medxResId
