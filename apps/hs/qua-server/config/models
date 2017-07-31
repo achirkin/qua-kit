@@ -57,9 +57,11 @@ EdxGrading
 
 -- | Keep grades to be sent to edX.
 EdxGradingQueue
-    edxGrading       EdxGrading
+    edxGrading       EdxGradingId
     grade            Double
     comment          Text Maybe
+    EdxGradingRef    edxGrading
+    deriving Show
 
 -- | Exercise table.
 --   Keeps description of an exercise (either edX or workshop),
@@ -91,7 +93,7 @@ CurrentScenario
     authorId             UserId
     taskId               ScenarioProblemId
     description          Text
-    edxGrading           EdxGrading Maybe
+    edxGrading           EdxGradingId Maybe
     grade                Double Maybe
     lastUpdate           UTCTime default=CURRENT_TIMESTAMP
     expertEnforced       Bool default=false

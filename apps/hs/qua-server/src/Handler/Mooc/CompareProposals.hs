@@ -1,5 +1,6 @@
 {-# OPTIONS_HADDOCK hide, prune #-}
-{-# Language CPP #-}
+{-# LANGUAGE CPP #-}
+{-# LANGUAGE NamedFieldPuns #-}
 module Handler.Mooc.CompareProposals
   ( getCompareProposalsR
   , getCompareByCriterionR
@@ -9,48 +10,73 @@ module Handler.Mooc.CompareProposals
 
 import Import
 import Text.Blaze
+import Control.Monad.Trans.Maybe
 import Database.Persist.Sql (rawSql, Single(..))
 import qualified Data.Text as Text
 import Application.Edx
-
+import Application.Grading
 
 postVoteForProposalR :: CriterionId -> ScenarioId -> ScenarioId -> Handler Html
 postVoteForProposalR cId better worse = do
-  userId <- requireAuthId
+    userId <- requireAuthId
+    mResId <- getsSafeSession userSessionEdxResourceId
+    mTaskId <- getsSafeSession userSessionCustomExerciseId
 
-  mexplanation <- lookupPostParam "explanation"
-  runDB $ do
-    t <- liftIO getCurrentTime
-    _ <- insert $ Vote userId cId better worse mexplanation t
-    return ()
+    mexplanation <- lookupPostParam "explanation"
+    vId <- runDB $ do
+      t <- liftIO getCurrentTime
+      insert $ Vote userId cId better worse mexplanation t
+    -- update ratings
+    runDB $ updateRatingsOnVoting vId
+    -- grade edX voter
+    void . runMaybeT $ do
+      eResId <- MaybeT $ pure mResId
+      taskId <- MaybeT $ pure mTaskId
+      Entity _ VoteRating{voteRatingValue} <- MaybeT . runDB . getBy $ VoteRatingOf userId taskId
+      lift $ queueForGrading userId eResId
+                            (compareRatingToEdxGrade voteRatingValue)
+                            (Just "Qua-kit rating-based vote grade.")
 
-  mcustom_exercise_count <- getsSafeSession userSessionCustomExerciseCount
-  case mcustom_exercise_count of
-    Nothing -> redirect CompareProposalsR
-    Just custom_exercise_count -> do
-       compare_counter <- fromMaybe 0 <$> getsSafeSession userSessionCompareCounter
-       case custom_exercise_count `compare` (compare_counter+1) of
-          -- continue exercise
-          GT -> do
-            setSafeSession userSessionCompareCounter $ compare_counter + 1
-            getCompareByCriterionR userId cId
-          -- something strange happend, go to standard pipeline
-          LT -> redirect CompareProposalsR
-          -- Finish exercise!
-          EQ -> do
-            setMessage "You are done with this exercise, thank you! You can continue exploring the site or go back to edX."
-            deleteSafeSession userSessionCustomExerciseCount
-            deleteSafeSession userSessionCompareCounter
+    -- grade submitters
+    queueDGrade userId better
+    queueDGrade userId worse
 
-            -- send the base grade back to edX
-            mResId <- getsSafeSession userSessionEdxResourceId
-            case mResId of
-              Nothing -> return ()
-              Just eResId -> do
-                ye <- getYesod
-                sendEdxGrade (appSettings ye) userId eResId 0.6 (Just "Automatic grade on design submission.")
-            redirect MoocHomeR
 
+    mcustom_exercise_count <- getsSafeSession userSessionCustomExerciseCount
+    case mcustom_exercise_count of
+      Nothing -> redirect CompareProposalsR
+      Just custom_exercise_count -> do
+         compare_counter <- fromMaybe 0 <$> getsSafeSession userSessionCompareCounter
+         case custom_exercise_count `compare` (compare_counter+1) of
+            -- continue exercise
+            GT -> do
+              setSafeSession userSessionCompareCounter $ compare_counter + 1
+              getCompareByCriterionR userId cId
+            -- something strange happend, go to standard pipeline
+            LT -> redirect CompareProposalsR
+            -- Finish exercise!
+            EQ -> do
+              setMessage "You are done with this exercise, thank you! You can continue exploring the site or go back to edX."
+              deleteSafeSession userSessionCustomExerciseCount
+              deleteSafeSession userSessionCompareCounter
+
+              -- send the base grade back to edX
+              case mResId of
+                Nothing -> return ()
+                Just eResId -> do
+                  ye <- getYesod
+                  sendEdxGrade (appSettings ye) userId eResId 0.6 (Just "Automatic grade on design submission.")
+              redirect MoocHomeR
+  where
+    queueDGrade userId scId = void . runMaybeT $ do
+       cs <- fmap entityVal . MaybeT . runDB $ getBy (LatestSubmissionId scId)
+       gradingId <- MaybeT . pure . currentScenarioEdxGrading $ cs
+       EdxGrading {edxGradingResourceId} <- MaybeT . runDB $ get gradingId
+       Entity _ Rating{ratingValue} <- MaybeT . runDB . getBy $ RatingOf userId (currentScenarioTaskId cs) cId
+       lift $ queueForGrading (currentScenarioAuthorId cs)
+                              edxGradingResourceId
+                              (designRatingToEdxGrade ratingValue)
+                              (Just "Qua-kit rating-based vote grade.")
 
 --updateSession :: Text -> (Maybe Text -> Maybe Text) -> Handler ()
 --updateSession s f = lookupSession s >>= \m -> case f m of

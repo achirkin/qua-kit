@@ -41,7 +41,7 @@ db_vote <- dbGetQuery(con, paste
 #db_review <- dbGetQuery(con, "SELECT * FROM review")
 
 # cumulative
-db_rating <- dbGetQuery(con, "SELECT rating.* FROM rating WHERE rating.value > 0")
+db_rating <- dbGetQuery(con, "SELECT rating.* FROM rating")
 db_vote_rating <- dbGetQuery(con, "SELECT * FROM vote_rating")
 
 
@@ -80,7 +80,8 @@ rm(rows,rowsv,m,v,c_id)
 
 ```{r}
 qplot(value, data=db_rating, geom="histogram") + ggtitle("submission ratings histogram")
-qplot(value, data=db_vote_rating, geom="histogram")
+qplot(value, data=db_vote_rating, geom="histogram") + ggtitle("voter ratings histogram")
+qplot(current_evidence_w, data=db_rating, geom="histogram") + ggtitle("Evidence level")
 c(mean(db_rating$value), var(db_rating$value))
 c(mean(db_vote_rating$value), var(db_vote_rating$value))
 

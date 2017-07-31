@@ -9,6 +9,7 @@ import           Import
 
 import qualified Data.ByteString.Base64    as BSB (decodeLenient)
 import           Application.Edx
+import           Application.Grading
 
 -- | Submit a design proposal
 --   session params:
@@ -37,18 +38,20 @@ postSubmitProposalR = do
           when (uId /= scenarioAuthorId prevScenario) $
             invalidArgsI ["You can work only on your own scenarios!" :: Text]
           t <- liftIO getCurrentTime
-          runDB . insert_ $ prevScenario
+          scId <- runDB . insert $ prevScenario
                  { scenarioImage =  preview
                  , scenarioDescription = description
                  , scenarioGeometry = geometry
                  , scenarioLastUpdate = t
                  }
+          runDB $ updateRatingOnSubmission scId
           setMessage . toHtml $ "Thank you, " <> userName user <> ", your design proposal has been saved."
           redirectUltDest MoocHomeR
         Nothing -> return ()
 
     completelyNewOne preview geometry description >>= \mscenarioId -> case mscenarioId of
-        Just _ -> do
+        Just scId -> do
+          runDB $ updateRatingOnSubmission scId
           setMessage . preEscapedToMarkup $
               "Thank you, " <> userName user <> ", your design proposal has been saved.<br>"
               <> "Now you can come back to edX or stay at qua-kit and explore submissions of other students.<br>"
@@ -95,7 +98,7 @@ resolveBySesExerciseId = runMaybeT $ do
                         [ Desc ScenarioLastUpdate
                         ] $$ await
 
-completelyNewOne :: ByteString -> ByteString -> Text -> Handler (Maybe EdxResourceId)
+completelyNewOne :: ByteString -> ByteString -> Text -> Handler (Maybe ScenarioId)
 completelyNewOne img geometry desc = runMaybeT $ do
   userId <- MaybeT maybeAuthId
   medxResId <- lift $ getsSafeSession userSessionEdxResourceId
@@ -121,4 +124,4 @@ completelyNewOne img geometry desc = runMaybeT $ do
                            Nothing
                            (scenarioLastUpdate    sc)
                            False
-    MaybeT $ return medxResId
+    return scId

@@ -5,6 +5,7 @@ import qualified Data.Map.Strict as Map
 import qualified Data.Text as Text
 import Web.LTI
 import Model.Session
+import Text.Shakespeare.Text (st)
 
 import Import.NoFoundation
 
@@ -69,8 +70,63 @@ sendEdxGrade :: ( YesodAuth app
              -> HandlerT app IO ()
 sendEdxGrade aSettings userId exUnitId grade comment = do
     mgrading <- runDB . getBy $ EdxGradeKeys exUnitId userId
-    case mgrading of
-      Nothing -> $(logWarn) "Could not send a grade to a student because EdxGrading record is not found."
-      Just (Entity _ (EdxGrading _ _ outcomeUrl resultId)) -> do
-        req <- replaceResultRequest (appLTICredentials aSettings) (Text.unpack outcomeUrl) resultId grade comment
-        void $ httpNoBody req
+    executeEdxGrading aSettings (entityVal <$> mgrading) grade comment
+
+executeEdxGrading :: ( MonadReader env m
+                     , HasHttpManager env
+                     , MonadIO m
+                     , MonadLogger m)
+                  => AppSettings
+                  -> Maybe EdxGrading
+                  -> Double
+                  -> Maybe Text -> m ()
+executeEdxGrading _ Nothing _ _ = $(logWarn) "Could not send a grade to a student because EdxGrading record is not found."
+executeEdxGrading aSettings (Just (EdxGrading _ _ outcomeUrl resultId)) grade comment =
+  void $ replaceResultRequest (appLTICredentials aSettings) (Text.unpack outcomeUrl) resultId grade comment >>= httpNoBody
+
+
+-- | Send all pending grades to edX
+executeEdxGradingQueue :: (MonadLogger a, MonadIO a, MonadResource a)
+                       => AppSettings
+                       -> ReaderT SqlBackend (ReaderT Manager a) ()
+executeEdxGradingQueue aSettings = do
+    $(logInfo) [st| Executing edX grading queue... |]
+    -- send requests
+    gradeRequests $$ awaitForever processReq
+    -- delete all requests in the queue
+    deleteWhere ([] :: [Filter EdxGradingQueue])
+    $(logInfo) [st| edx grading queue execution finished! |]
+  where
+    gradeRequests = selectSource ([] :: [Filter EdxGradingQueue]) []
+    processReq (Entity _ EdxGradingQueue {..}) = lift $ do
+      mgr <- get edxGradingQueueEdxGrading
+      lift $ executeEdxGrading aSettings mgr edxGradingQueueGrade edxGradingQueueComment
+
+
+
+-- | Insert a record into EdxGradingQueue table to be executed
+--   on next batch edX grading.
+queueForGrading :: ( YesodAuth app
+                   , YesodPersist app
+                   , YesodAuthPersist app
+                   , AuthId app ~ UserId
+                   , BaseBackend (YesodPersistBackend app) ~ SqlBackend
+                   , PersistUniqueWrite (YesodPersistBackend app)
+                   , HasHttpManager app
+                   )
+                => UserId
+                -> EdxResourceId -- ^ Exercise unit in edX
+                -> Double -- ^ Grade on a scale [0,1]
+                -> Maybe Text -- ^ Grade comment
+                -> HandlerT app IO ()
+queueForGrading userId eResId grade mcomment = runDB $ do
+    meg <- getBy $ EdxGradeKeys eResId userId
+    case meg of
+      Nothing -> $(logWarn) [st| [GRADING] Student #{show userId} should be graded on exercise #{show eResId},
+                                 but misses their corresponding EdxGrading record!
+                               |]
+      Just eg -> void $ upsertBy (EdxGradingRef $ entityKey eg)
+        (EdxGradingQueue (entityKey eg) grade mcomment)
+        [ EdxGradingQueueGrade =. grade
+        , EdxGradingQueueComment =. mcomment
+        ]
