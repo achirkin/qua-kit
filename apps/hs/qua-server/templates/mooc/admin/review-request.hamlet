@@ -7,3 +7,13 @@
           which were submitted before a certain date:
         <form .form-inline method=post action=@{AdminReviewRequestR}>
           ^{reviewRequestFormWidget}
+
+        <h4>Tasks in need of grading
+        <table .table>
+          <tr>
+            <th>Task
+            <th>#scenarios in need of grading
+          $forall (Entity _ scp, ungradedCount) <- tasks
+            <tr>
+              <td>#{ scenarioProblemDescription scp }
+              <td>#{ show ungradedCount }
