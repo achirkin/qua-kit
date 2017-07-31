@@ -11,7 +11,7 @@ import Import.BootstrapUtil
 import qualified Network.Mail.Mime as Mail
 
 data SendReviewParams = SendReviewParams {
-      expertId   :: Key User
+      mexpertId  :: Maybe (Key User)
     , onlyBefore :: UTCTime
     }
 
@@ -43,9 +43,11 @@ postAdminReviewRequestR = do
       _ -> defaultLayout [whamlet|<p>Invalid input</p>|]
 
 
-reviewRequestForm :: [Entity User] -> Day -> Html -> MForm Handler (FormResult SendReviewParams, Widget)
+reviewRequestForm :: [Entity User] -> Day -> Html
+                  -> MForm Handler (FormResult SendReviewParams, Widget)
 reviewRequestForm experts defaultDay extra = do
-  let expertsList = map (\(Entity usrId ex) -> (userName ex, usrId)) experts
+  let expertsList = ("All experts", Nothing) :
+        map (\(Entity usrId ex) -> (userName ex, Just usrId)) experts
   (expertRes, expertView) <- mreq (bootstrapSelectFieldList expertsList) "" Nothing
   (onlyBeforeRes, onlyBeforeView) <- mreq bootstrapDayField "" $ Just defaultDay
   let toTime day = UTCTime day $ fromInteger 0
@@ -62,41 +64,54 @@ reviewRequestForm experts defaultDay extra = do
 
 reviewRequest :: SendReviewParams -> Handler Html
 reviewRequest params = do
-  mexpert <- runDB $ get $ expertId params
-  let showErr = defaultLayout [whamlet|<p>Expert or his/her email not found</p>|]
-  case mexpert of
-    Nothing -> showErr
-    Just expert -> case userEmail expert of
-      Nothing -> showErr
-      Just email -> do
-        scenarios <- runDB $ selectList [
-                         CurrentScenarioGrade ==. Nothing
-                       , CurrentScenarioLastUpdate <. onlyBefore params
-                     ] []
-        if length scenarios > 0 then do
-          render <- getUrlRender
-          let toLink (Entity _ sc) = render $ SubmissionViewerR
-                                                (currentScenarioTaskId sc)
-                                                (currentScenarioAuthorId sc)
-          let scLinks = intercalate "\n" $ fmap toLink scenarios
-          let mailText = intercalate "\n\n" [
-                             "Dear " <> userName expert
-                           , "The following submissions are in need of reviewing:"
-                           , scLinks
-                           , "Thank you for your help!"
-                           ]
-          $(logDebug) mailText
-          liftIO $ Mail.renderSendMail $ Mail.simpleMail'
-              (Mail.Address Nothing email) --to address
-              (Mail.Address (Just "ETH qua-kit") "noreply@qua-kit.ethz.ch") --from
-              "Please help review the following submissions" --subject
-                $ fromStrict mailText
-          defaultLayout [whamlet|
-                           <p>Success! Email sent.
-                           <p><a onclick="window.history.back()" href="#">Back
-                        |]
-        else
-          defaultLayout [whamlet|<p>No scenarios to review. Email not sent.</p>|]
+  scenarios <- runDB $ selectList [
+                   CurrentScenarioGrade ==. Nothing
+                 , CurrentScenarioLastUpdate <. onlyBefore params
+               ] []
+  statusTxt <-
+    if length scenarios > 0 then do
+      render <- getUrlRender
+      let toLink (Entity _ sc) = render $ SubmissionViewerR
+                                            (currentScenarioTaskId sc)
+                                            (currentScenarioAuthorId sc)
+      let scLinks = fmap toLink scenarios
+      case mexpertId params of
+        Just expertId -> do
+          mexpert <- runDB $ get expertId
+          case mexpert of
+            Just expert -> do
+              sendReviewRequestMail scLinks expert
+              return "Email sent..."
+            Nothing -> return "Expert not found"
+        Nothing -> do
+          experts <- selectExperts
+          _ <- forM experts $ \(Entity _ ex) -> sendReviewRequestMail scLinks ex
+          return "Emails sent..."
+    else
+      return "No scenarios to review. Email not sent."
+  let statusTxt' = statusTxt::Text
+  defaultLayout [whamlet|
+                   <p>#{ statusTxt' }
+                   <p><a onclick="window.history.back()" href="#">Back
+                |]
+
+sendReviewRequestMail :: [Text] -> User -> Handler ()
+sendReviewRequestMail scLinks expert =
+  case userEmail expert of
+    Just email -> do
+      let mailText = intercalate "\n\n" [
+                         "Dear " <> userName expert
+                       , "The following submissions are in need of reviewing:"
+                       , intercalate "\n" scLinks
+                       , "Thank you for your help!"
+                       ]
+      $(logDebug) mailText
+      liftIO $ Mail.renderSendMail $ Mail.simpleMail'
+          (Mail.Address Nothing email) --to address
+          (Mail.Address (Just "ETH qua-kit") "noreply@qua-kit.ethz.ch") --from
+          "Please help review the following submissions" --subject
+            $ fromStrict mailText
+    Nothing -> return ()
 
 selectExperts :: Handler [Entity User]
 selectExperts = runDB $
