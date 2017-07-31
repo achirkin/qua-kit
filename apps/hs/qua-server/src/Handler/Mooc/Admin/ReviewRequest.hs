@@ -5,6 +5,7 @@ module Handler.Mooc.Admin.ReviewRequest
     ) where
 
 import Data.Time.Calendar (addDays)
+import Database.Persist.Sql (rawSql, Single (..))
 import Handler.Mooc.Admin
 import Import
 import Import.BootstrapUtil
@@ -12,16 +13,20 @@ import qualified Network.Mail.Mime as Mail
 
 data SendReviewParams = SendReviewParams {
       mexpertId  :: Maybe (Key User)
+    , mtaskId    :: Maybe ScenarioProblemId
     , onlyBefore :: UTCTime
     }
+
+type TaskData = (Entity ScenarioProblem, Int)
 
 getAdminReviewRequestR :: Handler Html
 getAdminReviewRequestR = do
     requireAdmin
     experts <- selectExperts
+    tasks   <- selectTasks
     defaultDay <- lift (getCurrentTime >>= return . addDays (-7) . utctDay)
     (reviewRequestFormWidget, _) <-
-      generateFormPost $ reviewRequestForm experts defaultDay
+      generateFormPost $ reviewRequestForm experts tasks defaultDay
     fullLayout Nothing "Request reviews" $ do
         setTitle "qua-kit - request reviews"
         toWidgetHead $
@@ -37,26 +42,34 @@ postAdminReviewRequestR :: Handler Html
 postAdminReviewRequestR = do
     requireAdmin
     experts <- selectExperts
-    ((res, _), _) <- runFormPost $ reviewRequestForm experts $ ModifiedJulianDay 0
+    tasks   <- selectTasks
+    ((res, _), _) <- runFormPost $ reviewRequestForm experts tasks $ ModifiedJulianDay 0
     case res of
       (FormSuccess params) -> reviewRequest params
       _ -> defaultLayout [whamlet|<p>Invalid input</p>|]
 
 
-reviewRequestForm :: [Entity User] -> Day -> Html
+reviewRequestForm :: [Entity User] -> [TaskData] -> Day -> Html
                   -> MForm Handler (FormResult SendReviewParams, Widget)
-reviewRequestForm experts defaultDay extra = do
+reviewRequestForm experts tasks defaultDay extra = do
   let expertsList = ("All experts", Nothing) :
         map (\(Entity usrId ex) -> (userName ex, Just usrId)) experts
+  let toOption (Entity scpId scp, ugCount) =
+        (scenarioProblemDescription scp ++
+        " (" ++ (pack $ show ugCount) ++ " in need of grading)", Just scpId)
+  let tasksList = ("All tasks", Nothing) : map toOption tasks
   (expertRes, expertView) <- mreq (bootstrapSelectFieldList expertsList) "" Nothing
+  (taskRes, taskView) <- mreq (bootstrapSelectFieldList tasksList) "" Nothing
   (onlyBeforeRes, onlyBeforeView) <- mreq bootstrapDayField "" $ Just defaultDay
   let toTime day = UTCTime day $ fromInteger 0
   let params = SendReviewParams <$> expertRes
+                                <*> taskRes
                                 <*> fmap toTime onlyBeforeRes
   let widget = do
         [whamlet|
           #{extra}
           ^{fvInput expertView}
+          ^{fvInput taskView}
           ^{fvInput onlyBeforeView}
           <input type=submit value="Send Mail" class="btn btn-default">
         |]
@@ -64,10 +77,11 @@ reviewRequestForm experts defaultDay extra = do
 
 reviewRequest :: SendReviewParams -> Handler Html
 reviewRequest params = do
-  scenarios <- runDB $ selectList [
+  let whereTask = maybe [] (\tId -> [CurrentScenarioTaskId ==. tId]) (mtaskId params)
+  scenarios <- runDB $ selectList (whereTask ++ [
                    CurrentScenarioGrade ==. Nothing
                  , CurrentScenarioLastUpdate <. onlyBefore params
-               ] []
+               ]) []
   statusTxt <-
     if length scenarios > 0 then do
       render <- getUrlRender
@@ -116,3 +130,19 @@ sendReviewRequestMail scLinks expert =
 selectExperts :: Handler [Entity User]
 selectExperts = runDB $
   selectList [UserRole ==. UR_EXPERT, UserEmail /<-. [Nothing]] []
+
+selectTasks :: Handler [TaskData]
+selectTasks = runDB $ (map getVal) <$> rawSql query []
+  where
+    getVal (scp, Single ungradedCount) = (scp, ungradedCount)
+    query = unlines [
+            "SELECT ??, ungraded_count"
+          , "FROM scenario_problem"
+          , "JOIN ( SELECT task_id, count(*) as ungraded_count"
+          , "       FROM current_scenario"
+          , "       WHERE grade IS NULL"
+          , "       GROUP BY task_id"
+          , "     ) s"
+          , "ON scenario_problem.id = s.task_id"
+          , ";"
+          ]
