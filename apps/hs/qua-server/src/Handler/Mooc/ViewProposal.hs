@@ -5,7 +5,6 @@ module Handler.Mooc.ViewProposal
 
 
 import Import
-import Model.Session
 
 getViewProposalR :: ScenarioId -> Handler Html
 getViewProposalR scId = do
