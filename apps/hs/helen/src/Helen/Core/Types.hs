@@ -60,6 +60,7 @@ import           Crypto.Random                (MonadRandom (..))
 import qualified Data.Aeson                   as JSON
 import           Data.ByteString              (ByteString)
 import qualified Data.HashMap.Strict          as HashMap
+import           Data.Set                     (Set)
 import qualified Data.Sequence                as Seq
 import           Data.Text                    (Text)
 import qualified Data.Text.Encoding           as Text
@@ -104,7 +105,7 @@ data Helen = Helen
     --   The second argument is an arbitrary action to do given an unregistered `ClientId`.
   , _serviceManager      :: !ServiceManager
     -- ^ Keeps track of all services
-  , trustedClients       :: [Network.SockAddr]
+  , trustedClients       :: Set Network.SockAddr
     -- ^ The clients that we trust when it comes to roles and user identifiers
   }
 

@@ -26,6 +26,7 @@ import qualified Data.ByteString.Lazy.Char8      as LazyBSC
 import           Data.Conduit
 import qualified Data.Conduit.Network            as Network
 import qualified Data.HashMap.Strict             as HashMap
+import qualified Data.Set                        as Set
 import           Data.Maybe                      (fromMaybe)
 import           Data.Monoid                     ((<>))
 import qualified Data.Text                       as Text
@@ -78,7 +79,7 @@ initHelen = do
         STM.takeTMVar clientStore >>=
           STM.putTMVar clientStore . HashMap.update (\(c, u) -> Just (c, u >> action cId)) cId
     , _serviceManager = defServiceManager
-    , trustedClients = []
+    , trustedClients = Set.empty
     }
 
 
