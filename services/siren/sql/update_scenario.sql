@@ -1,8 +1,12 @@
 CREATE OR REPLACE FUNCTION update_scenario( ScID bigint
-                                          , geom_input jsonb)
+                                          , geom_input jsonb
+                                          , UserId bigint
+                                          , AuthRole text)
   RETURNS jsonb AS
 $func$
 DECLARE
+  allowed boolean;
+  owner bigint;
   curTime TIMESTAMP;
   geomID_max bigint;
   scSRID integer;
@@ -19,6 +23,26 @@ BEGIN
   IF (SELECT count(*) < 1 FROM scenario WHERE scenario.id = ScID) THEN
     RAISE EXCEPTION 'Nonexistent scenario (ScID = %)', ScID
           USING HINT = 'Use "create_scenario" function instead';
+  END IF;
+
+  SELECT
+    CAST((SELECT scenario.owner
+      FROM scenario
+      WHERE scenario.id = ScId)
+    AS bigint)
+  INTO Owner;
+  allowed :=
+    (CASE AuthRole
+          WHEN 'AuthRoleStudent'   THEN UserID IS NOT NULL OR UserId = Owner
+          WHEN 'AuthRoleLocal'     THEN Owner IS NULL OR UserId = Owner
+
+          WHEN 'AuthRoleSuperUser' THEN TRUE
+          WHEN NULL                THEN TRUE
+          ELSE                          FALSE
+     END);
+
+  IF (NOT allowed) THEN
+      RETURN NULL;
   END IF;
 
   -- FeatureCollection is in 'geometry' property of 'geometry_input' json

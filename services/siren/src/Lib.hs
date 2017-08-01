@@ -11,6 +11,7 @@ module Lib
     , getLastScUpdates
     ) where
 
+import qualified Data.Aeson                as JSON
 import           Data.ByteString           (ByteString)
 import           Data.ByteString           as BS
 import qualified Data.ByteString.Char8     as BSC
@@ -82,31 +83,70 @@ oidTEXT = Oid 25
 mkBigInt :: ScenarioId -> Maybe (Oid, ByteString, Format)
 mkBigInt (ScenarioId i) = Just (oidBIGINT, BSC.pack (show i), Text)
 
-mkToken :: Int64 -> Maybe (Oid, ByteString, Format)
-mkToken i = Just (oidBIGINT, BSC.pack (show i), Text)
+mkInt64 :: Int64 -> Maybe (Oid, ByteString, Format)
+mkInt64 i = Just (oidBIGINT, BSC.pack (show i), Text)
 
 createScenario :: Connection
                -> Int64 -- ^ token (callID)
                -> BS.ByteString -- ^ scenario name
+               -> Maybe Int64 -- ^ User identifier
                -> BS.ByteString -- ^ GeoJSON Feature Collection
+               -> Maybe Int64 -- ^ Owner Id
+               -> Maybe AuthRole
                -> IO (Either BS.ByteString BS.ByteString) -- ^ Either error or json result
-createScenario conn token scName scenario = do
-  mrez <- execParams conn "SELECT wrap_result($1,create_scenario($2,$3));"
-    [ mkToken token
+createScenario conn token scName mUser scenario userId authRole = do
+  mrez <- execParams conn "SELECT wrap_result($1,create_scenario($2,$3,$4));"
+    [ mkInt64 token
     , Just (oidTEXT, BSC.filter (\c -> isAlphaNum c || c == ' ') scName, Text)
+    , mUser >>= mkInt64
     , Just (oidJSONB, scenario, Text)
+    , userId >>= mkInt64
+    , mkAuthRole authRole
     ]
     Text
   justResult mrez $ flip checkResult id
 
+copyScenario :: Connection
+             -> Int64 -- ^ token
+             -> Int64 -- ^ Scenario Id
+             -> Maybe Int64 -- ^ Owner Id
+             -> Maybe AuthRole
+             -> IO (Either BS.ByteString BS.ByteString) -- ^ Either error or json result
+copyScenario conn token scId mUser authRole = do
+  mrez <- execParams conn "SELECT wrap_result($1,copy_scenario($2,$3,$4));"
+    [ mkInt64 token
+    , mkInt64 scId 
+    , mUser >>= mkInt64
+    , mkAuthRole authRole
+    ]
+    Text
+  justResult mrez $ flip checkResult id
+  
 
+data AuthRole
+  = AuthRoleSuperUser
+  | AuthRoleStudent
+  | AuthRoleLocal
+  deriving (Show, Read, Eq)
+
+instance JSON.FromJSON AuthRole where
+  parseJSON = JSON.withText "AuthRole" $ \s -> case s of
+    "super-user" -> pure AuthRoleSuperUser
+    "student" -> pure AuthRoleStudent
+    "local" -> pure AuthRoleLocal
+    _ -> fail "unknown auth role"
+
+mkAuthRole :: Maybe AuthRole -> Maybe (Oid, ByteString, Format)
+mkAuthRole mauth = (\ar -> (oidTEXT, BSC.pack $ show ar, Text)) <$> mauth
 
 deleteScenario :: Connection
                -> Int64 -- ^ token (callID)
                -> ScenarioId -- ^ ScID (scenario id)
+               -> Maybe Int64 -- ^ User Id
+               -> Maybe AuthRole
                -> IO (Either BS.ByteString BS.ByteString) -- ^ Either error or json result
-deleteScenario conn token scID = do
-  mrez <- execParams conn "SELECT wrap_result($1,delete_scenario($2));" [mkToken token, mkBigInt scID] Text
+deleteScenario conn token scID userId authRole = do
+  mrez <- execParams conn "SELECT wrap_result($1,delete_scenario($2,$3,$4));" [mkInt64 token, mkBigInt scID, userId >>= mkInt64, mkAuthRole authRole] Text
   justResult mrez $ flip checkResult id
 
 
@@ -115,7 +155,7 @@ recoverScenario :: Connection
                 -> ScenarioId -- ^ ScID (scenario id)
                 -> IO (Either BS.ByteString BS.ByteString) -- ^ Either error or json result
 recoverScenario conn token scID = do
-  mrez <- execParams conn "SELECT wrap_result($1,recover_scenario($2));" [mkToken token, mkBigInt scID] Text
+  mrez <- execParams conn "SELECT wrap_result($1,recover_scenario($2));" [mkInt64 token, mkBigInt scID] Text
   justResult mrez $ flip checkResult id
 
 
@@ -123,12 +163,16 @@ updateScenario :: Connection
                -> Int64 -- ^ token (callID)
                -> ScenarioId -- ^ ScID (scenario id)
                -> BS.ByteString -- ^ GeoJSON Feature Collection
+               -> Maybe Int64 -- ^ User Id
+               -> Maybe AuthRole
                -> IO (Either BS.ByteString BS.ByteString) -- ^ Either error or json result
-updateScenario conn token scID scenario = do
-  mrez <- execParams conn "SELECT wrap_result($1,update_scenario($2,$3));"
-    [ mkToken token
+updateScenario conn token scID scenario userId authRole = do
+  mrez <- execParams conn "SELECT wrap_result($1,update_scenario($2,$3,$4,$5));"
+    [ mkInt64 token
     , mkBigInt scID
     , Just (oidJSONB, scenario, Text)
+    , userId >>= mkInt64
+    , mkAuthRole authRole
     ]
     Text
   justResult mrez $ flip checkResult id
@@ -138,7 +182,7 @@ listScenarios :: Connection
               -> Int64 -- ^ token (callID)
               -> IO (Either BS.ByteString BS.ByteString) -- ^ Either error or json result
 listScenarios conn token = do
-  mrez <- execParams conn "SELECT wrap_result($1,list_scenarios());" [mkToken token] Text
+  mrez <- execParams conn "SELECT wrap_result($1,list_scenarios());" [mkInt64 token] Text
   justResult mrez $ \rez -> checkResult rez id
 
 getScenario :: Connection
@@ -146,7 +190,7 @@ getScenario :: Connection
             -> ScenarioId -- ^ ScID (scenario id)
             -> IO (Either BS.ByteString BS.ByteString) -- ^ Either error or json result
 getScenario conn token scID = do
-  mrez <- execParams conn "SELECT wrap_result($1,get_scenario($2));" [mkToken token, mkBigInt scID] Text
+  mrez <- execParams conn "SELECT wrap_result($1,get_scenario($2));" [mkInt64 token, mkBigInt scID] Text
   justResult mrez $ \rez -> checkResult rez id
 
 
@@ -224,6 +268,7 @@ returnError rez rstatus = do
 sqlFunDefs :: [BS.ByteString]
 sqlFunDefs =
   [ createScenarioF
+  , copyScenarioF
   , deleteScenarioF
   , listScenariosF
   , getScenarioF
@@ -237,6 +282,9 @@ sqlFunDefs =
 
 createScenarioF :: BS.ByteString
 createScenarioF = $(embedFile "sql/create_scenario.sql")
+
+copyScenarioF :: BS.ByteString
+copyScenarioF = $(embedFile "sql/copy_scenario.sql")
 
 deleteScenarioF :: BS.ByteString
 deleteScenarioF = $(embedFile "sql/delete_scenario.sql")

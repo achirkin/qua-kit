@@ -2,10 +2,14 @@
 -- Input geometry is assumed to be in metric system.
 -- Optional parameters are longitude/latitute in degrees and altitude in meters
 CREATE OR REPLACE FUNCTION create_scenario( scName text
-                                          , geom_input jsonb)
+                                          , scOwner bigint
+                                          , geom_input jsonb
+                                          , UserId bigint
+                                          , AuthRole text)
   RETURNS jsonb AS
 $func$
 DECLARE
+  allowed boolean;
   ScID bigint;
   curTime TIMESTAMP;
   geomID_max bigint;
@@ -15,6 +19,20 @@ DECLARE
   scLat decimal;
   scAlt decimal;
 BEGIN
+
+  allowed :=
+    (CASE AuthRole
+          WHEN 'AuthRoleStudent'   THEN scOwner = UserId
+          WHEN 'AuthRoleLocal'     THEN scOwner = UserId
+          WHEN 'AuthRoleSuperUser' THEN TRUE
+          WHEN NULL                THEN TRUE
+          ELSE                          FALSE
+     END);
+
+  IF (NOT allowed) THEN
+      RETURN NULL;
+  END IF;
+
   -- get time of insertion
   curTime := CURRENT_TIMESTAMP;
   -- FeatureCollection is in 'geometry' property of 'geometry_input' json
@@ -96,12 +114,16 @@ BEGIN
      SET geom = ST_Force3D(ST_Transform(ST_SetSRID(geom, scSRID), 4326));
 
   -- create a new scenario and keep its id in ScID variable
-  INSERT INTO scenario (name, lon, lat, alt, srid) VALUES (scName, scLon, scLat, scAlt, scSRID) RETURNING scenario.id INTO ScID;
+  INSERT INTO scenario (name, owner, lon, lat, alt, srid) VALUES (scName, scOwner, scLon, scLat, scAlt, scSRID) RETURNING scenario.id INTO ScID;
 
   -- insert all scenario properties
   INSERT INTO scenario_prop_history (scenario_id, name, ts_update, value)
        SELECT ScID, sprops.key, curTime, sprops.value
-         FROM jsonb_each(jsonb_strip_nulls(geom_input -> 'properties') ) sprops;
+         FROM jsonb_each(jsonb_strip_nulls(
+            CASE (geom_input -> 'properties')
+              WHEN ('null' :: jsonb) THEN ('{}' :: jsonb)
+              ELSE (geom_input -> 'properties')
+            END )) sprops;
   INSERT INTO scenario_prop (scenario_id, name, last_update)
        SELECT ph.scenario_id, ph.name, ph.ts_update
          FROM scenario_prop_history ph

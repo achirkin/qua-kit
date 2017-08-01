@@ -13,7 +13,7 @@ BEGIN
   END IF;
   CREATE TABLE IF NOT EXISTS sc_geometry_prop (scenario_id bigint NOT NULL, geometry_id bigint NOT NULL, name text NOT NULL, last_update timestamp DEFAULT NULL NOT NULL, PRIMARY KEY (scenario_id, geometry_id, name));
   CREATE TABLE IF NOT EXISTS sc_geometry_prop_history (scenario_id bigint NOT NULL, geometry_id bigint NOT NULL, name text NOT NULL, ts_update timestamp DEFAULT CURRENT_TIMESTAMP NOT NULL, ts_prev_update timestamp DEFAULT NULL, alive bool DEFAULT 'TRUE' NOT NULL, value jsonb NOT NULL, PRIMARY KEY (scenario_id, geometry_id, name, ts_update));
-  CREATE TABLE IF NOT EXISTS scenario (id bigserial, alive bool DEFAULT 'TRUE' NOT NULL, name text NOT NULL, lon decimal DEFAULT NULL, lat decimal DEFAULT NULL, alt decimal NOT NULL DEFAULT 0, srid integer NOT NULL, PRIMARY KEY (id));
+  CREATE TABLE IF NOT EXISTS scenario (id bigserial, alive bool DEFAULT 'TRUE' NOT NULL, name text NOT NULL, lon decimal DEFAULT NULL, lat decimal DEFAULT NULL, alt decimal NOT NULL DEFAULT 0, srid integer NOT NULL, owner text, PRIMARY KEY (id));
   CREATE TABLE IF NOT EXISTS scenario_prop (scenario_id bigint NOT NULL, name text NOT NULL, last_update timestamp DEFAULT NULL NOT NULL, PRIMARY KEY (scenario_id, name));
   CREATE TABLE IF NOT EXISTS scenario_prop_history (scenario_id bigint NOT NULL, name text NOT NULL, ts_update timestamp DEFAULT CURRENT_TIMESTAMP NOT NULL, ts_prev_update timestamp DEFAULT NULL, alive bool DEFAULT 'TRUE' NOT NULL, value jsonb NOT NULL, PRIMARY KEY (scenario_id, name, ts_update));
   CREATE INDEX IF NOT EXISTS sc_geometry_scenario_id ON sc_geometry (scenario_id);
