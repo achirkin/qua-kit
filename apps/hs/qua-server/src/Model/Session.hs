@@ -15,6 +15,7 @@ module Model.Session
     , userSessionCompareCounter
     , userSessionQuaViewMode
     , userSessionScenarioId
+    , userSessionEdxResourceId
     ) where
 
 import Import.NoFoundation
@@ -69,6 +70,11 @@ userSessionQuaViewMode = textSessionLens "qua_view_mode"
 userSessionScenarioId :: SessionLens ScenarioId
 userSessionScenarioId =
     SessionLens (>>= parseSqlKey) (T.pack . show . fromSqlKey) "scenario_id"
+
+userSessionEdxResourceId :: SessionLens EdxResourceId
+userSessionEdxResourceId =
+    SessionLens (>>= parseSqlKey) (T.pack . show . fromSqlKey) "edx_resource_id"
+
 
 sessionVar :: SessionLens a -> Text
 sessionVar = ("session_" <>) . convKey

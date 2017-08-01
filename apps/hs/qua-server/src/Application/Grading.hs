@@ -38,20 +38,16 @@ i.e. the rating is higher when user's votes agree with majority.
 Users can update their submissions, so we need to discount older ratings.
 Define the moments of time when scenarios are updated as /t/[sub /τ/] (/τ/ = 0,1.., /t/[sub 0] = 0).
 
-We model all ratings as standard normal distributions (/N(0,1)/).
+We model all ratings as random variables and try to keep their expected values and variances constant.
 That is, we assume the following property holds for the user rating:
-[center /r/[sub /i/](/t/[sub /τ/]) = (1 - /k/) /r/[sub /i/](/t/[sub /τ/-1]) + /kε/,]
-where /ε/ ~ /N(0,1)/, and the initial state is /r/[sub /i/][literal (0)] = /ε/;
+[center /r/[sub /i/](/t/[sub /τ/]) = (1 - /k/)[sup 0.5] /r/[sub /i/](/t/[sub /τ/-1]) + /k/[sup 0.5]/ε/,]
+The initial state is /r/[sub /i/][literal (0)] = /ε/;
 /k/ ∈ [0,1] is a constant that defines how much older submissions of a user affect
 the current rating of the submission;
 /r/[sub /i/](/t/[sub /τ/]) is a submission of a user /i/ made at time /t/[sub /τ/.]
+According to the given definition, /r/[sub /i/] preserves variance for any /t/.
 
-According to the given definition, /r/[sub /i/] preserves standard normal distribution
-for any /t/:
-[center ∀/τ/=0,1,.. : /r/[sub /i/](t[sub /τ/]) ~ /N(0,1)/.]
-
-We model real voter rating as one more standard normal random variable:
-[center /v/[sub /i/] = /N(0,1)/.]
+We model real voter rating /v/[sub /i/] as one more random variable.
 We assume the voter rating /v/[sub /i/] does not change over time.
 
 == Modeling
@@ -84,17 +80,13 @@ The second variable represents the evidence weight of the voter score:
 
 -}
 
-module Application.Grading
-  -- (
-  -- -- reviewRating, compareRating, combR, scheduleUpdateGrades
-  -- )
-   where
+module Application.Grading where
 
 
 
 -- import Data.Time.Clock (DiffTime)
 import qualified Database.Persist.Sql as P
-import Import hiding ((/=.), (==.), (=.), isNothing, on, update)
+import Import.NoFoundation hiding ((/=.), (==.), (=.), isNothing, on, update)
 import Database.Esqueleto
 import Text.Shakespeare.Text (st)
 -- import Model.Rating
@@ -112,18 +104,38 @@ import Text.Shakespeare.Text (st)
 constK :: Double
 constK = 0.7
 
--- | Variance of dependent variable /z/ = /δ/e[sup /v/ + /δ/(/r/[sub /j/] - /r/[sub /i/])].
+-- | Standard deviation of the dependent variable /z/ = /δ/ log ( 1 + e[sup /v/ + /δ/(/r/[sub /j/] - /r/[sub /i/])]).
 --   We get the value of this constant empirically.
 --   It is important to keep this value correct to maintain property Var /r/ = 1.
-constDz :: Double
-constDz = 2.5
+constSz :: Double
 
--- | Covariance of dependent variable /z/ = /δ/e[sup /v/ + /δ/(/r/[sub /j/] - /r/[sub /i/])]
---   and /r/[sub /i/] (NB, 0 > Cov[/r/[sub /i/],/z/] ≡ - Cov[/r/[sub /j/],/z/]).
+-- | Correlation of the dependent variable /z/ = /δ/ log ( 1 + e[sup /v/ + /δ/(/r/[sub /j/] - /r/[sub /i/])])
+--   and /r/[sub /i/] (NB, 0 < Cov[/r/[sub /i/],/z/] ≡ - Cov[/r/[sub /j/],/z/]).
 --   We get the value of this constant empirically.
 --   It is important to keep this value correct to maintain property Var /r/ = 1.
-constKz :: Double
-constKz = 0.25
+constCz :: Double
+
+-- | Standard deviation of the dependent variable /y/ = /δ/(/r/[sub /i/] - /r/[sub /j/]).
+--   We get the value of this constant empirically.
+--   It is important to keep this value correct to maintain property Var /v/ = 1.
+constSy :: Double
+
+-- | Correlation between vote rating and correctness of voter's decisions,
+--   (i.e. correlation between /v/ and /y/ = /δ/(/r/[sub /i/] - /r/[sub /j/]) ).
+--   We get the value of this constant empirically.
+--   It is important to keep this value correct to maintain property Var /v/ = 1.
+constCy :: Double
+
+
+constSz = sqrt 0.2
+constCz = 0.45
+constSy = sqrt 0.46
+constCy = 0.33
+
+-- | Minimum evidence required to grade a design.
+--   1 + constK * n where n is number of votes
+minimumEvidence :: Double
+minimumEvidence = 1 + constK * 3
 
 -- * Updating ratings
 
@@ -156,6 +168,8 @@ updateRatingOnSubmission scId = do
                    , RatingCurrentEvidenceW =. val (updateEvidence r)
                    ]
         where_ $ rating ^. RatingId ==. val i
+
+    updateCurrentScenarioGrade scId
   where
     updateEvidence r    -- if there were no votes for the last submission,
                         -- do not decrease evidence
@@ -183,18 +197,8 @@ First, we need to update counters:
 [center /w/[sub /j/] → /w/[sub /j/] + k,]
 [center /ω/ → /ω/ + /w/[sub /i/] + /w/[sub /j/].]
 
-
-TODO: The following formulae are totally incorrect!
-
 Second, update actual ratings.
-Define /δ/ = 1 if the voter prefers /i/ and  /δ/ = -1 otherwise.
-Then the upated voter rating is defined as follows:
-[center /v/ → (/ωv/ + 0.5/δ/(/w/[sub /i/] + /w/[sub /j/])(/r/[sub /i/] - /r/[sub /j/])) \/ (/ω/ + /w/[sub /i/] + /w/[sub /j/]).]
-
-The updated score for the submission of users /i/ and /j/:
-[center  /r/[sub /i/] → (/w/[sub /i/] /r/[sub /i/] + 0.5 /δ/ max(0, 1 + /v/) (1 + /r/[sub /j/] - /r/[sub /i/])) \/  (/w/[sub /i/] + max(0, 1 + /v/))  ]
-[center  /r/[sub /j/] → (/w/[sub /j/] /r/[sub /j/] - 0.5 /δ/ max(0, 1 + /v/) (1 + /r/[sub /i/] - /r/[sub /j/])) \/  (/w/[sub /j/] + max(0, 1 + /v/))  ]
-
+Refer to Grading Rmd for more formulae.
 -}
 updateRatingsOnVoting :: (MonadLogger a, MonadIO a)
                       => VoteId
@@ -221,11 +225,16 @@ updateRatingsOnVoting voteId = do
         wi' = wi + constK
         wj' = wj + constK
         ω'  = ω + wi + wj
-        v'  = ( ω * v + 0.5 * (wi + wj) * (ri - rj) ) / ω'
+        v'  = ( sqrt ω * v + (ri - rj) / constSy
+                              / ( sqrt (constCy * constCy * ω + wi + wj)
+                                  + constCy * sqrt ω
+                                )
+              )
+              / sqrt ω'
 
         -- helpers
         z   = log $ 1 + exp (v + rj - ri)
-        fc w = recip $ sqrt ( w * constKz * constKz + constDz ) + sqrt w * constKz
+        fc w = recip $ (sqrt ( w * constCz * constCz + 1 ) + sqrt w * constCz) * constSz
         fww w = sqrt $ w / (w + 1)
         fw1 w = sqrt $ 1 / (w + 1)
 
@@ -262,6 +271,10 @@ updateRatingsOnVoting voteId = do
       , VoteRatingValue P.=. v'
       ]
 
+    -- update current scenario grade if needed
+    updateCurrentScenarioGrade (voteBetterId vote)
+    updateCurrentScenarioGrade (voteWorseId vote)
+
   where
     -- select the rating correcponsing to a better or worse design
     mratingQ crId scId = select $ from $ \(InnerJoin rating scenario) -> do
@@ -297,10 +310,47 @@ updateRatingsOnVoting voteId = do
                             <&> val 0
       unsafeHead <$> mVoteRating vote
 
+-- | Whenever we update ratings, we should try to update CurrentScenario grade
+--   using this function.
+--   Also, whenever an experts writes a review, we should use this function too.
+updateCurrentScenarioGrade :: MonadIO a
+                           => ScenarioId
+                           -> ReaderT SqlBackend a ()
+updateCurrentScenarioGrade scId = do
+  mcs <- getBy $ LatestSubmissionId scId
+  case mcs of
+    Nothing -> return ()
+    Just (Entity csId CurrentScenario{..}) -> do
+      grades <- P.selectList
+        [ ExpertReviewScenarioId P.==. scId
+        ] []
+      if null grades
+      then do -- if there are no expert grades, make a grade from rating
+        ratings <- P.selectList
+          [ RatingProblemId P.==. currentScenarioTaskId
+          , RatingAuthorId P.==. currentScenarioAuthorId
+          , RatingCurrentEvidenceW P.>=. minimumEvidence
+          ]
+          []
+        if null ratings -- we really do need a grade!
+        then P.update csId [CurrentScenarioGrade P.=. Nothing]
+        else do
+          let avgRating = sum (ratingValue . entityVal <$> ratings) / fromIntegral (length ratings)
+          P.update csId [CurrentScenarioGrade P.=. Just (designRatingToCSGrade $ avgRating)]
+      else do -- if we have at least one grade, use it as CurrentScenarioGrade
+        let avgGrade = sum (fromIntegral . expertReviewGrade . entityVal <$> grades) / fromIntegral (length grades)
+        P.update csId [CurrentScenarioGrade P.=. Just avgGrade]
 
 
 
 
+
+
+-- | Run the grading process simulation:
+--   update ratings for every single vote or design submission
+--   in chronological order.
+--
+--   Useful for doing and testing changes in rating+grading system.
 simulateGradingLearning :: (MonadLogger a, MonadIO a, MonadResource a)
                         => ReaderT SqlBackend a ()
 simulateGradingLearning = do
@@ -339,137 +389,29 @@ simulateGradingLearning = do
                          process v'' s'
 
 
+-- * Communicating with edX
 
 
+-- | This formula is based on plots generated by Application/Grading.html
+--   The idea is to give 60% of grade for free and remaining 40% from rating.
+compareRatingToEdxGrade :: Double -> Double
+compareRatingToEdxGrade r = 0.6 + min 0.4 (max 0 r)
 
 
---
---
--- -- mininum number of votes for this particular design to participate
--- minNi :: Int
--- minNi = 2
---
--- -- minimum number of votes for a criterion to participate
--- minNn :: Int
--- minNn = 20
+-- | Convert CurrentScenarioGrade (1..5) to edX grade (0..1).
+--   The idea is to give 60% of grade for free and remaining 40% from rating.
+csGradeEdxGrade :: Double -> Double
+csGradeEdxGrade r = 0.6 + (r-1)*0.1
+
+-- | Grades from 1 to 5.
+--   This formula is based on plots generated by Application/Grading.html
+designRatingToCSGrade :: Double -> Double
+designRatingToCSGrade r = (max (-1) (min 1 r)) * 2 + 3
 
 
-----------------------------------------------------------------------------------------------------
---
---
--- reviewRating :: [(DiffTime,NDCount,Bool)] -> Double
--- reviewRating = min 1 . max 0 . (+0.4) . uncurry (/) . second (max 1) . foldl' (\(x, a) (_dt,dn,p) -> let d = vote dn in (if p then x + d else x - d, a+d)) (0,0)
---   where
---     vote = recip . fromIntegral . (+1)
---
--- compareRating :: [(DiffTime, (UserId, NDCount), (UserId, NDCount))] -> [(UserId,Double)]
--- compareRating xs = Map.toList $ iterN 10 naiveMap
---   where
---     -- cumsum
---     nn = recip $ foldl' (\s (_, (_,dn1), (_,dn2)) -> s + vote dn1 + vote dn2) 0 xs / 2
---
---     -- discount votes with nr of versions passed since last vote
---     vote = recip . fromIntegral . (+1)
---
---     -- at first, we naively count votes for and against each proposal
---     updateHMNaive hm (_dt, (u1,dn1), (u2,dn2)) = Map.alter (Just . (+(- vote dn2)) . fromMaybe 0) u2 $ Map.alter (Just . (+vote dn1) . fromMaybe 0) u1 hm
---     naiveMap :: Map.Map UserId Double
---     naiveMap = normMap $ foldl' updateHMNaive Map.empty xs
---
---     -- then we use this logic to iteratively come closer to solution
---     updateR (ob,ow) (cb,cw) = let diff = log (1 + exp (ow-ob)) * nn
---                               in (cb + diff, cw - diff)
---
---     iterN 0 hm = hm
---     iterN n hm = hm `seq` iterN (n-1 :: Int) (updateAllHM hm)
---
---     updateAllHM hm = normMap $ foldl' (updateHM hm) hm xs
---
---     updateHM :: Map.Map UserId Double -> Map.Map UserId Double -> (DiffTime, (UserId, NDCount), (UserId, NDCount)) -> Map.Map UserId Double
---     updateHM ohm hm (_, (u1,_), (u2,_)) = let ov1 = fromMaybe 0 $ Map.lookup u1 ohm
---                                               ov2 = fromMaybe 0 $ Map.lookup u2 ohm
---                                               v1 = fromMaybe 0 $ Map.lookup u1 hm
---                                               v2 = fromMaybe 0 $ Map.lookup u2 hm
---                                               (v1', v2') = updateR (ov1,ov2) (v1,v2)
---                                           in Map.alter (const $ Just v1') u1 $ Map.alter (const $ Just v2') u2 hm
---
---     normMap hm = let (mi, ma) = Map.foldl' (\(l,u) v -> (min l v, max u v)) (0,0) hm
---                      diff = max (ma-mi) 1
---                  in Map.map (\v -> (v - mi) / diff) hm
---
--- combR :: (Int, Int, Maybe Rating) -> (Int, Int, Maybe Rating) -> Rating
--- combR (_,_,Nothing) (_,_,Nothing) = error "[combR] Impossible: both ratings not here."
--- combR (n,i,Just (Rating pid cid uid v)) (_,_,Nothing) = Rating pid cid uid $ filterV n i v
--- combR (_,_,Nothing) (m,j,Just (Rating pid cid uid v)) = Rating pid cid uid $ filterV m j v
--- combR rv@(n,i,Just (Rating pid cid uid v)) ru@(m,j,Just (Rating _ _ _ u))
---     | n >= minNn && i >= minNi = combR (n,i, Nothing) ru
---     | m >= minNn && j >= minNi = combR rv (m,j, Nothing)
---     | otherwise = let cv = fromIntegral $ i * m
---                       cu = fromIntegral $ j * n
---                   in Rating pid cid uid $ (cv * v + cu * u) / (cv + cu)
---
--- filterV :: Int -> Int -> Double -> Double
--- filterV n i x = if n >= minNn && i >= minNi then x else 0
---
---
---
--- ----------------------------------------------------------------------------------------------------
---
---
--- --scheduleUpdateGrades dt app pool = void . forkIO . forever $ do
--- --    flip runSqlPool pool . flip runReaderT (appHttpManager app) $ _
---
--- scheduleUpdateGrades :: Int -> App -> ConnectionPool -> IO ()
--- scheduleUpdateGrades dt app pool = void . forkIO . forever $ do
---     -- wait ten seconds just to let yesod do other work first
---     threadDelay (10*1000000)
---     runResourceT . flip runReaderT (appHttpManager app) . flip runSqlPool pool $ sendGrades app
---     threadDelay dts
---   where
---     dts = dt * 1000000
---
--- sendGrades :: App -> ReaderT SqlBackend (ReaderT Manager (ResourceT IO)) ()
--- sendGrades app = do
---     -- send grades for all vote tasks
---     selectSource [] [] $$ awaitForever
---           (\(Entity _ vg) -> do
---             req <- replaceResultRequest (appLTICredentials $ appSettings app)
---                 (Text.unpack $ voteGradeEdxOutcomeUrl vg) (voteGradeEdxResultId vg) (0.6 + 0.4 * voteGradeGrade vg) Nothing
---             lift . lift $ catch (void $ httpNoBody req) (\e -> putStrLn $ "[edX send vote grades error] " <> Text.pack (show (e :: SomeException)))
---           )
---     -- send grades for all design tasks
---     allRatingGrades >>= mapM_
---           (\(ourl, rid, val) -> do
---             req <- replaceResultRequest (appLTICredentials $ appSettings app) ourl rid (min 1 $ 0.7 + 0.5*val)  Nothing
---             lift $ catch (void $ httpNoBody req) (\e -> putStrLn $ "[edX send design grades error] " <> Text.pack (show (e :: SomeException)))
---           )
---
---
--- allRatingGrades :: MonadIO a => ReaderT SqlBackend a [( String
---                                                       , Text
---                                                       , Double
---                                                       )]
--- allRatingGrades = fmap getVal <$> rawSql query []
---   where
---     getVal (Single a, Single b, Single c) = (a,b,c)
---     query = Text.unlines
---         ["SELECT t.edx_outcome_url, t.edx_result_id, AVG(COALESCE(t.value,0))"
---         ,"FROM criterion"
---         ,"LEFT OUTER JOIN "
---         ,"    ( SELECT scenario.edx_outcome_url, scenario.edx_result_id, rating.criterion_id, rating.value"
---         ,"      FROM scenario"
---         ,"      INNER JOIN rating"
---         ,"              ON scenario.task_id = rating.problem_id AND scenario.author_id = rating.author_id"
---         ,"      WHERE scenario.edx_outcome_url IS NOT NULL"
---         ,"      AND scenario.edx_result_id IS NOT NULL"
---         ,"      AND scenario.task_id = 1" -- TODO: make a proper logic to update ongoing grades only.
---         ,"      GROUP BY rating.problem_id"
---         ,"             , rating.author_id"
---         ,"             , scenario.edx_outcome_url"
---         ,"             , scenario.edx_result_id"
---         ,"             , rating.criterion_id"
---         ,"             , rating.value"
---         ,"    ) t ON criterion.id = t.criterion_id"
---         ,"GROUP BY t.edx_outcome_url"
---         ,"       , t.edx_result_id;"
---         ]
+-- | The scale to visualize in gallery (0..99).
+--   Show Nothing if there is not enough evidence
+designRatingToVisual :: Double -> Double -> Maybe Int
+designRatingToVisual ev r = if ev >= minimumEvidence
+                            then Just . max 0 .  min 99 . round . (100*) . max (-1.05) $ min 1.05 r
+                            else Nothing

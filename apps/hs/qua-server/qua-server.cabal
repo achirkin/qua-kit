@@ -60,6 +60,7 @@ library
             persistent-sqlite -any
     exposed-modules:
         Application
+        Application.Edx
         Application.Grading
         Application.SetupProblemData
         Foundation
@@ -107,7 +108,6 @@ library
         Model
         Model.CustomTypes
         Model.Generated
-        Model.Rating
         Model.Session
         Settings
         Settings.StaticFiles

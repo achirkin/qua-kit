@@ -1,5 +1,6 @@
 {-# OPTIONS_HADDOCK hide, prune #-}
-{-# Language CPP #-}
+{-# LANGUAGE CPP #-}
+{-# LANGUAGE NamedFieldPuns #-}
 module Handler.Mooc.CompareProposals
   ( getCompareProposalsR
   , getCompareByCriterionR
@@ -9,74 +10,59 @@ module Handler.Mooc.CompareProposals
 
 import Import
 import Text.Blaze
-import Database.Persist.Sql (rawSql, Single(..), toSqlKey)
+import Database.Persist.Sql (rawSql, Single(..))
 import qualified Data.Text as Text
-import Web.LTI
-import Model.Session
-
+import Application.Edx
+import Application.Grading
 
 postVoteForProposalR :: CriterionId -> ScenarioId -> ScenarioId -> Handler Html
 postVoteForProposalR cId better worse = do
-  userId <- requireAuthId
-  useSVars <- (\mt -> if mt == Just "compare" then id else const Nothing) <$> getsSafeSession userSessionCustomExerciseType
-  mcontext_id             <- useSVars <$> getsSafeSession userSessionContextId
-  resource_link_id        <- useSVars <$> getsSafeSession userSessionResourceLink
-  lis_outcome_service_url' <- useSVars <$> getsSafeSession userSessionOutcomeServiceUrl
-  lis_result_sourcedid'    <- useSVars <$> getsSafeSession userSessionResultSourceId
-  mresId' <- case (,) <$> resource_link_id <*> mcontext_id of
-       Nothing -> return Nothing
-       Just (rlid, cid) -> runDB $ do
-          Entity edxCourseId _ <- upsert (EdxCourse cid Nothing) []
-          fmap entityKey <$> getBy (EdxResLinkId rlid edxCourseId)
-  (mresId, lis_outcome_service_url, lis_result_sourcedid) <- case (,,) <$> mresId' <*> lis_outcome_service_url' <*> lis_result_sourcedid' of
-      Just _  -> return (mresId', lis_outcome_service_url', lis_result_sourcedid')
-      Nothing -> runDB (getLastExercise userId) >>= \mr -> case mr of
-          Nothing -> return (mresId', lis_outcome_service_url', lis_result_sourcedid')
-          Just (a,b,c) -> return (Just a, Just b, Just c)
-  mexplanation <- lookupPostParam "explanation"
-  runDB $ do
-    t <- liftIO getCurrentTime
-    _ <- insert $ Vote userId cId better worse mexplanation mresId
-                       lis_outcome_service_url lis_result_sourcedid t
-    return ()
+    userId <- requireAuthId
+    mResId <- getsSafeSession userSessionEdxResourceId
 
-  mcustom_exercise_count <- getsSafeSession userSessionCustomExerciseCount
-  case mcustom_exercise_count of
-    Nothing -> redirect CompareProposalsR
-    Just custom_exercise_count -> do
-       compare_counter <- fromMaybe 0 <$> getsSafeSession userSessionCompareCounter
-       case custom_exercise_count `compare` (compare_counter+1) of
-          -- continue exercise
-          GT -> do
-            setSafeSession userSessionCompareCounter $ compare_counter + 1
-            getCompareByCriterionR userId cId
-          -- something strange happend, go to standard pipeline
-          LT -> redirect CompareProposalsR
-          -- Finish exercise!
-          EQ -> do
-            setMessage "You are done with this exercise, thank you! You can continue exploring the site or go back to edX."
-            deleteSafeSession userSessionCustomExerciseCount
-            deleteSafeSession userSessionCompareCounter
+    mexplanation <- lookupPostParam "explanation"
+    vId <- runDB $ do
+      t <- liftIO getCurrentTime
+      mGradingId <- case mResId of
+          Nothing -> pure Nothing
+          Just eResId -> fmap (fmap entityKey) . getBy $ EdxGradeKeys eResId userId
+      insert $ Vote userId cId better worse mexplanation t mGradingId
+    runDB $ do
+      -- update ratings
+      updateRatingsOnVoting vId
+      -- grade edX designs
+      queueDesignGrade better
+      queueDesignGrade worse
 
-            -- send the base grade back to edX
-            case (,) <$> lis_result_sourcedid <*> lis_outcome_service_url of
-              Nothing -> return ()
-              Just (sourcedId, outcomeUrl) -> do
-                ye <- getYesod
-                req <- replaceResultRequest (appLTICredentials $ appSettings ye) (Text.unpack outcomeUrl) sourcedId 0.6 Nothing
-                _ <- httpNoBody req
-                return ()
-            redirect MoocHomeR
+    mcustom_exercise_count <- getsSafeSession userSessionCustomExerciseCount
+    case mcustom_exercise_count of
+      Nothing -> do
+        runDB $ queueVoteGrade vId
+        redirect CompareProposalsR
+      Just custom_exercise_count -> do
+         compare_counter <- fromMaybe 0 <$> getsSafeSession userSessionCompareCounter
+         case custom_exercise_count `compare` (compare_counter+1) of
+            -- continue exercise
+            GT -> do
+              setSafeSession userSessionCompareCounter $ compare_counter + 1
+              getCompareByCriterionR userId cId
+            -- something strange happend, go to standard pipeline
+            LT -> redirect CompareProposalsR
+            -- Finish exercise!
+            EQ -> do
+              setMessage "You are done with this exercise, thank you! You can continue exploring the site or go back to edX."
+              deleteSafeSession userSessionCustomExerciseCount
+              deleteSafeSession userSessionCompareCounter
 
+              -- send the base grade back to edX
+              case mResId of
+                Nothing -> return ()
+                Just eResId -> do
+                  ye <- getYesod
+                  sendEdxGrade (appSettings ye) userId eResId 0.6 (Just "Automatic grade on design submission.")
+              runDB $ queueVoteGrade vId
+              redirect MoocHomeR
 
---updateSession :: Text -> (Maybe Text -> Maybe Text) -> Handler ()
---updateSession s f = lookupSession s >>= \m -> case f m of
---    Nothing -> return ()
---    Just v  -> setSession s v
---
---
---incrementTextValue :: Maybe Text -> Maybe Text
---incrementTextValue t = (pack . show . (+1)) <$> (t >>= parseInt)
 
 getCompareProposalsR :: Handler Html
 getCompareProposalsR = do
@@ -302,18 +288,18 @@ getLeastPopularSubmissions scpId uId cId = do
           ]
 
 
-getLastExercise :: UserId -> ReaderT SqlBackend Handler (Maybe (EdxResourceId,Text,Text))
-getLastExercise uId = getVal <$> rawSql query [toPersistValue uId]
-  where
-    getVal ((Single edre, Single o, Single i):_) = Just (toSqlKey edre,o,i)
-    getVal [] = Nothing
-    query = Text.unlines
-          ["SELECT edx_resource,edx_outcome_url,edx_result_id"
-          ,"FROM vote"
-          ,"WHERE edx_resource IS NOT NULL"
-          ,"  AND edx_outcome_url IS NOT NULL"
-          ,"  AND edx_result_id IS NOT NULL"
-          ,"  AND voter_id = ?"
-          ,"ORDER BY timestamp DESC"
-          ,"LIMIT 1;"
-          ]
+-- getLastExercise :: UserId -> ReaderT SqlBackend Handler (Maybe (EdxResourceId,Text,Text))
+-- getLastExercise uId = getVal <$> rawSql query [toPersistValue uId]
+--   where
+--     getVal ((Single edre, Single o, Single i):_) = Just (toSqlKey edre,o,i)
+--     getVal [] = Nothing
+--     query = Text.unlines
+--           ["SELECT edx_resource,edx_outcome_url,edx_result_id"
+--           ,"FROM vote"
+--           ,"WHERE edx_resource IS NOT NULL"
+--           ,"  AND edx_outcome_url IS NOT NULL"
+--           ,"  AND edx_result_id IS NOT NULL"
+--           ,"  AND voter_id = ?"
+--           ,"ORDER BY timestamp DESC"
+--           ,"LIMIT 1;"
+--           ]

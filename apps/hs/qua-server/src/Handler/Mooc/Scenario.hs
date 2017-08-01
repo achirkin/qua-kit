@@ -8,7 +8,6 @@ module Handler.Mooc.Scenario
 
 import Import
 import Control.Monad.Trans.Maybe
-import Model.Session
 
 getScenarioId :: ScenarioProblemId -> Handler (Maybe ScenarioId)
 getScenarioId scpId = runMaybeT $ do
@@ -27,7 +26,7 @@ getScenarioLink = runMaybeT $ do
   msc_id <- lift $ getsSafeSession userSessionScenarioId
   case msc_id of
     Just sc_id -> do
-      scale <- fmap scenarioScale . MaybeT . runDB $ get sc_id
+      scale <- getScScale sc_id
       return (ScenarioR sc_id, scale)
     Nothing -> do
       userId <- MaybeT maybeAuthId
@@ -43,12 +42,17 @@ getScenarioLink = runMaybeT $ do
                         ] $$ await
       case mScenarioId of
         Just scId -> do
-          scale <- fmap scenarioScale . MaybeT . runDB $ get scId
+          scale <- getScScale scId
           return (ScenarioR scId, scale)
         Nothing -> do
           scp_id <- MaybeT $ return mscp_id
           scale <- fmap scenarioProblemScale . MaybeT . runDB $ get scp_id
           return (ScenarioProblemR scp_id, scale)
+  where
+    getScScale scId = do
+      sc <- MaybeT . runDB $ get scId
+      scp <- MaybeT . runDB $ get (scenarioTaskId sc)
+      return $ scenarioProblemScale scp
 
 
 

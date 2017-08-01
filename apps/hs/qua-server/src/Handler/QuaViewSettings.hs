@@ -5,7 +5,6 @@ module Handler.QuaViewSettings
 
 
 import Import
-import Model.Session
 import qualified Handler.Mooc.Scenario as S
 
 

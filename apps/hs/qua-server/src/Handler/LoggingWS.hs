@@ -14,7 +14,6 @@ import qualified Control.Monad.Trans.Reader as Reader
 import Data.Aeson (decodeStrict')
 import Data.Aeson.Types (typeMismatch)
 import qualified Data.HashMap.Strict as HashMap
-import Model.Session
 
 
 loggingApp :: Maybe UserId -> Maybe ScenarioProblemId -> WebSocketsT Handler ()
