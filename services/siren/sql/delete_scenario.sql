@@ -3,8 +3,12 @@ CREATE OR REPLACE FUNCTION delete_scenario(ScID bigint, userId bigint, authRole 
 $func$
 BEGIN
   IF (CASE authRole
-          WHEN 'Student' THEN TRUE
-          WHEN 'Local'   THEN (SELECT scenario.owner != userId FROM scenario WHERE scenario.id = ScID)
+          WHEN 'Student' THEN (SELECT scenario.owner != userId FROM scenario WHERE scenario.id = ScID)
+          WHEN 'Local'   THEN (SELECT CASE WHEN scenario.owner IS NULL THEN FALSE
+                                           ELSE scenario.owner != userId
+	                                    END 
+                                 FROM scenario
+                                WHERE scenario.id = ScID)
           WHEN 'Admin'   THEN FALSE
           ELSE                TRUE
       END)

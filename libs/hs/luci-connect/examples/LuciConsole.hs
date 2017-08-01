@@ -111,4 +111,3 @@ data RunSettings = RunSettings
   , logLevel :: LogLevel
   , command :: Maybe ByteString
   }
-

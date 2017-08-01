@@ -1,7 +1,24 @@
-CREATE OR REPLACE FUNCTION recover_scenario(ScID bigint)
+CREATE OR REPLACE FUNCTION recover_scenario(ScID bigint, userId bigint, authRole text)
   RETURNS jsonb AS
 $func$
 BEGIN
+
+  IF (CASE authRole
+          WHEN 'Student' THEN (SELECT scenario.owner != userId FROM scenario WHERE scenario.id = ScID)
+          WHEN 'Local'   THEN (SELECT CASE WHEN scenario.owner IS NULL THEN FALSE
+                                           ELSE scenario.owner != userId
+                                      END
+                                 FROM scenario
+                                WHERE scenario.id = ScID)
+          WHEN 'Admin'   THEN FALSE
+          ELSE                TRUE
+      END)
+  THEN
+    RAISE EXCEPTION 'You do not have rights to create new scenarios.'
+          USING HINT = 'You must have authRole = "Admin" or "Local"';
+  END IF;
+
+
   IF (SELECT count(*) < 1 FROM scenario WHERE scenario.id = ScID) THEN
     RAISE EXCEPTION 'Nonexistent scenario (ScID = %)', ScID
           USING HINT = 'You are trying to recover a scenario that has not ever existed!';
