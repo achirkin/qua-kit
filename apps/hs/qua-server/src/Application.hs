@@ -122,12 +122,8 @@ makeFoundation appSettings = do
 #if DEVELOPMENT
     -- Fill database with some problem-specific important data.
     importProblemData pool
-#endif
-
-    let app = mkFoundation pool
-
+#else
     -- send grades once every day
-#if !DEVELOPMENT
     scheduleUpdateGrades (3600*24) appSettings appHttpManager pool logFunc
 #endif
 
@@ -137,7 +133,7 @@ makeFoundation appSettings = do
 #endif
 
     -- Return the foundation
-    return app
+    return $ mkFoundation pool
 
 
 
