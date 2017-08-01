@@ -32,10 +32,13 @@ import Network.Wai.Middleware.RequestLogger (Destination (Logger),
 import System.Log.FastLogger                (defaultBufSize, newStdoutLoggerSet,
                                              toLogStr)
 
--- Run grading simulation (long time proc)
-#define SIMULATE_GRADING_LEARNING False
+-- Run grading simulation (long time proc).
+-- Set to either 1 or 0 to switch it.
+#ifndef SIMULATE_GRADING_LEARNING
+#define SIMULATE_GRADING_LEARNING 0
+#endif
 
-#if SIMULATE_GRADING_LEARNING == True
+#if SIMULATE_GRADING_LEARNING == 1
 import Application.Grading (simulateGradingLearning)
 #endif
 
@@ -128,7 +131,7 @@ makeFoundation appSettings = do
     scheduleUpdateGrades (3600*24) appSettings appHttpManager pool logFunc
 #endif
 
-#if SIMULATE_GRADING_LEARNING == True
+#if SIMULATE_GRADING_LEARNING == 1
     -- run simulation of grading procedure
     runLoggingT (runResourceT $ runSqlPool simulateGradingLearning pool) logFunc
 #endif
