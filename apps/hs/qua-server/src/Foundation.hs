@@ -7,6 +7,7 @@ module Foundation
 import Control.Concurrent.STM.TChan
 
 import qualified Data.Text as Text
+import qualified Data.Map as Map
 import Yesod.Auth.LdapNative
 import Import.NoFoundation
 import Database.Persist.Sql (ConnectionPool, runSqlPool, toSqlKey, fromSqlKey, Single (..), rawSql)
@@ -228,8 +229,7 @@ instance YesodAuth App where
               , userVerified = True
               }
       setupEdxGrading uid (credsExtra creds)
-      exercise_type <- getsSafeSession userSessionCustomExerciseType
-      case exercise_type of
+      case Map.lookup "custom_exercise_type" (Map.fromList $ credsExtra creds) of
           Just "design" -> setUltDest EditProposalR
           Just "compare" -> setUltDest CompareProposalsR
           _ -> return ()
