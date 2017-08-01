@@ -3,13 +3,6 @@ resolver: lts-8.21
 packages:
   - '.'
   - location: ../../libs/hs/luci-connect
-  - location:
-      git: https://github.com/achirkin/easytensor.git
-      commit: 5b42983bf223ffe9e341205f1678339c91f01fe1
-    extra-dep: true
-  - location:
-      git: https://github.com/achirkin/hs-geojson.git
-      commit: 84e02c31ee4f26eabf2d78f4c8fb664d9f7eea38
     extra-dep: true
 
 flags:
