@@ -120,8 +120,7 @@ completelyNewOne img geometry desc = runMaybeT $ do
                            (scenarioAuthorId      sc)
                            (scenarioTaskId        sc)
                            (scenarioDescription   sc)
-                           (entityVal <$> medxGrading)
+                           (entityKey <$> medxGrading)
                            Nothing
                            (scenarioLastUpdate    sc)
-                           False
     return scId

@@ -28,14 +28,14 @@ setupEdxGrading userId params = do
   lookupAndSave "context_id"
   mapM_ (uncurry setSession) $ filter (isPrefixOf "custom_". fst ) params
   runDB $
-    case (,) <$> mresource_link_id <*> mcontext_id of
+    case (,,) <$> mresource_link_id <*> mcontext_id <*> mexercise_id of
       Nothing  -> return ()
-      Just (resource_link_id, context_id) -> do
+      Just (resource_link_id, context_id, exercise_id) -> do
         Entity edxCourseId _ <- upsert (EdxCourse context_id Nothing) []
         mEdxRes <- getBy (EdxResLinkId resource_link_id edxCourseId)
         edxResId <- case mEdxRes of
           Just (Entity ek _) -> return ek
-          Nothing -> insert $ EdxResource resource_link_id edxCourseId (Map.lookup "custom_component_display_name" pm)
+          Nothing -> insert $ EdxResource resource_link_id edxCourseId exercise_id (Map.lookup "custom_component_display_name" pm)
         -- update generic edx resource parameters
         saveCustomParams edxResId
         lift $ setSafeSession userSessionEdxResourceId edxResId
@@ -47,6 +47,7 @@ setupEdxGrading userId params = do
   where
     mresource_link_id = Map.lookup "resource_link_id" pm
     mcontext_id       = Map.lookup "context_id" pm
+    mexercise_id      = Map.lookup "custom_exercise_id" pm >>= parseSqlKey
     lookupAndSave t = forM_ (Map.lookup t pm) (setSession t)
     pm = Map.fromList params
     saveCustomParams ek = mapM_ ((\(k,v) -> void $ upsert (EdxResourceParam ek k v) []) . first (drop 7))
@@ -99,7 +100,7 @@ executeEdxGradingQueue aSettings = do
   where
     gradeRequests = selectSource ([] :: [Filter EdxGradingQueue]) []
     processReq (Entity _ EdxGradingQueue {..}) = lift $ do
-      mgr <- get edxGradingQueueEdxGrading
+      mgr <- get edxGradingQueueEdxGradingId
       lift $ executeEdxGrading aSettings mgr edxGradingQueueGrade edxGradingQueueComment
 
 

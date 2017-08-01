@@ -25,7 +25,10 @@ postVoteForProposalR cId better worse = do
     mexplanation <- lookupPostParam "explanation"
     vId <- runDB $ do
       t <- liftIO getCurrentTime
-      insert $ Vote userId cId better worse mexplanation t
+      mGradingId <- case mResId of
+          Nothing -> pure Nothing
+          Just eResId -> fmap (fmap entityKey) . getBy $ EdxGradeKeys eResId userId
+      insert $ Vote userId cId better worse mexplanation t mGradingId
     -- update ratings
     runDB $ updateRatingsOnVoting vId
     -- grade edX voter
@@ -38,8 +41,8 @@ postVoteForProposalR cId better worse = do
                             (Just "Qua-kit rating-based vote grade.")
 
     -- grade submitters
-    queueDGrade userId better
-    queueDGrade userId worse
+    queueDGrade better
+    queueDGrade worse
 
 
     mcustom_exercise_count <- getsSafeSession userSessionCustomExerciseCount
@@ -68,24 +71,17 @@ postVoteForProposalR cId better worse = do
                   sendEdxGrade (appSettings ye) userId eResId 0.6 (Just "Automatic grade on design submission.")
               redirect MoocHomeR
   where
-    queueDGrade userId scId = void . runMaybeT $ do
+    queueDGrade scId = void . runMaybeT $ do
        cs <- fmap entityVal . MaybeT . runDB $ getBy (LatestSubmissionId scId)
-       gradingId <- MaybeT . pure . currentScenarioEdxGrading $ cs
+       csGrade <- MaybeT . pure $ currentScenarioGrade cs
+       gradingId <- MaybeT . pure . currentScenarioEdxGradingId $ cs
        EdxGrading {edxGradingResourceId} <- MaybeT . runDB $ get gradingId
-       Entity _ Rating{ratingValue} <- MaybeT . runDB . getBy $ RatingOf userId (currentScenarioTaskId cs) cId
        lift $ queueForGrading (currentScenarioAuthorId cs)
                               edxGradingResourceId
-                              (designRatingToEdxGrade ratingValue)
+                              (csGradeEdxGrade csGrade)
                               (Just "Qua-kit rating-based vote grade.")
 
---updateSession :: Text -> (Maybe Text -> Maybe Text) -> Handler ()
---updateSession s f = lookupSession s >>= \m -> case f m of
---    Nothing -> return ()
---    Just v  -> setSession s v
---
---
---incrementTextValue :: Maybe Text -> Maybe Text
---incrementTextValue t = (pack . show . (+1)) <$> (t >>= parseInt)
+
 
 getCompareProposalsR :: Handler Html
 getCompareProposalsR = do

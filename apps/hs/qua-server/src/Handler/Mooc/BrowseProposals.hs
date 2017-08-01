@@ -8,7 +8,7 @@ import Import.BootstrapUtil
 import qualified Data.Text as Text
 import qualified Text.Blaze as Blaze
 import Database.Persist.Sql (rawSql, Single (..))
-
+import Application.Grading
 
 pageSize :: Int
 pageSize = 80
@@ -87,13 +87,13 @@ getBrowseProposalsR page = do
                         <p style="margin: 6px 0px; white-space: pre-line; overflow-y: hidden; color: #555;">
                          #{shortComment desc}
                       <div.card-comment.card-action>
-                        $forall (svg, cname, rating) <- crits
-                         $if rating > 0
+                        $forall (svg, cname, mrating) <- crits
+                         $maybe rating <- mrating
                           <span.card-comment.card-criterion style="opacity: #{cOpacity rating}" title="#{cname}">
                             #{svg}
                             <p style="display: inline; margin: 0; padding:0; color: rgb(#{156 + rating}, 111, 0)">
                               #{rating}
-                         $else
+                         $nothing
                           <span.card-comment.card-criterion style="opacity: 0.3" title="Not enough votes to show rating">
                             #{svg}
                             \ - #
@@ -280,7 +280,7 @@ generateJoins ps mLimitOffset = (whereParams ++ limitParams, joinStr, orderStr)
 
 -- | get user name, scenario, and ratings
 getLastSubmissions :: Int -> ProposalParams -> ReaderT SqlBackend Handler
-  [((ScenarioId, ScenarioProblemId, UserId), UTCTime, Text, Text, (Maybe Double, Maybe Double, [(Blaze.Markup, Text, Int)]))]
+  [((ScenarioId, ScenarioProblemId, UserId), UTCTime, Text, Text, (Maybe Double, Maybe Double, [(Blaze.Markup, Text, Maybe Int)]))]
 getLastSubmissions page params = getVals <$> rawSql query preparedParams
   where
     (preparedParams, joinStr, orderStr) =
@@ -288,17 +288,17 @@ getLastSubmissions page params = getVals <$> rawSql query preparedParams
 
     getVal scId' xxs@(((Single scId, Single _, Single _), Single _, Single _
                        , Single _, Single icon, Single cname
-                       , (Single _grade, Single rating, Single _expertgrade)):xs)
+                       , (Single _grade, Single evidence, Single rating, Single _expertgrade)):xs)
         | scId == scId' = first (
             ( Blaze.preEscapedToMarkup (icon :: Text)
             , cname
-            , min 99 $ round (100*rating::Double)
+            , designRatingToVisual evidence rating
             ) :) $ getVal scId xs
         | otherwise = ([], xxs)
     getVal _ [] = ([], [])
     getVals xxs@(( (Single scId, Single scpId, Single uid), Single lu, Single desc
                   , Single uname, Single _icon, Single _name
-                  , (Single grade, Single _rating, Single expertgrade) ):_)
+                  , (Single grade, Single _evidence, Single _rating, Single expertgrade) ):_)
                  = let (g, rest) = getVal scId xxs
                    in ((scId, scpId, uid), lu, desc, uname, (grade, expertgrade, g)) : getVals rest
     getVals [] = []
@@ -307,7 +307,7 @@ getLastSubmissions page params = getVals <$> rawSql query preparedParams
     query = Text.unlines [
             " SELECT s.history_scenario_id, s.task_id, s.author_id, s.last_update, s.description"
           , "      , username, criterion.icon, criterion.name"
-          , "      , s.grade, COALESCE(rating.value, 0), eg.expertgrade"
+          , "      , s.grade, COALESCE(rating.current_evidence_w, 0), COALESCE(rating.value, 0), eg.expertgrade"
           , joinStr
           , orderStr
           ,";"

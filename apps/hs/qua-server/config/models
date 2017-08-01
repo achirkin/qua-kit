@@ -24,6 +24,7 @@ UserProp
 EdxResource
     linkId       Text
     courseId     EdxCourseId
+    exerciseId   ScenarioProblemId
     friendlyName Text Maybe
     EdxResLinkId linkId courseId
     deriving Show
@@ -52,15 +53,15 @@ EdxGrading
     studentId     UserId
     edxOutcomeUrl Text
     edxResultId   Text
-    EdxGradeKeys resourceId studentId
+    EdxGradeKeys  resourceId studentId
     deriving Show
 
 -- | Keep grades to be sent to edX.
 EdxGradingQueue
-    edxGrading       EdxGradingId
-    grade            Double
-    comment          Text Maybe
-    EdxGradingRef    edxGrading
+    edxGradingId  EdxGradingId
+    grade         Double
+    comment       Text Maybe
+    EdxGradingRef edxGradingId
     deriving Show
 
 -- | Exercise table.
@@ -93,10 +94,9 @@ CurrentScenario
     authorId             UserId
     taskId               ScenarioProblemId
     description          Text
-    edxGrading           EdxGradingId Maybe
+    edxGradingId         EdxGradingId Maybe
     grade                Double Maybe
     lastUpdate           UTCTime default=CURRENT_TIMESTAMP
-    expertEnforced       Bool default=false
     SubmissionOf         authorId taskId
     LatestSubmissionId   historyScenarioId
 
@@ -136,6 +136,7 @@ Vote
     worseId       ScenarioId
     explanation   Text Maybe
     timestamp     UTCTime default=CURRENT_TIMESTAMP
+    edxGradingId  EdxGradingId Maybe
 
 VoteRating
     problemId     ScenarioProblemId

@@ -27,7 +27,6 @@ import Data.Text.Read (decimal)
 import System.Directory (createDirectoryIfMissing)
 
 import Text.Blaze (Markup)
-import qualified Data.Map.Strict as Map
 import Handler.Mooc.EdxLogin
 import Model.Session
 import Application.Edx
@@ -436,38 +435,6 @@ twoCharsName s = case filter (not . null) $ Text.words s of
    [name] -> Text.toUpper $ Text.take 2 name
    n1:n2:_ -> Text.toUpper $ Text.take 1 n1 <> Text.take 1 n2
    _ -> "??"
-
-
-setupEdxParams :: [(Text,Text)] -> Handler ()
-setupEdxParams params = do
-  lookupAndSave "lis_outcome_service_url"
-  lookupAndSave "lis_result_sourcedid"
-  lookupAndSave "resource_link_id"
-  lookupAndSave "context_id"
-  case exercise_type of
-    Just "design" -> setUltDest EditProposalR
-    Just "compare" -> setUltDest CompareProposalsR
-    _ -> return ()
-  mapM_ (uncurry setSession) $ filter (isPrefixOf "custom_". fst ) params
-  runDB $
-    case (,) <$> mresource_link_id <*> mcontext_id of
-      Nothing  -> return ()
-      Just (resource_link_id, context_id) -> do
-        Entity edxCourseId _ <- upsert (EdxCourse context_id Nothing) []
-        mEdxRes <- getBy (EdxResLinkId resource_link_id edxCourseId)
-        case mEdxRes of
-          Just (Entity ek _) -> saveCustomParams ek
-          Nothing -> do
-            ek <- insert $ EdxResource resource_link_id edxCourseId (Map.lookup "custom_component_display_name" pm)
-            saveCustomParams ek
-  where
-    exercise_type = Map.lookup "custom_exercise_type" pm
-    mresource_link_id = Map.lookup "resource_link_id" pm
-    mcontext_id       = Map.lookup "context_id" pm
-    lookupAndSave t = forM_ (Map.lookup t pm) (setSession t)
-    pm = Map.fromList params
-    saveCustomParams ek = mapM_ ((\(k,v) -> void $ upsert (EdxResourceParam ek k v) []) . first (drop 7))
-                                $ filter (isPrefixOf "custom_". fst ) params
 
 
 
