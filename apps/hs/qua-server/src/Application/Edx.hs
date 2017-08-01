@@ -63,7 +63,7 @@ sendEdxGrade :: ( YesodAuth app
                 , YesodPersist app
                 , YesodAuthPersist app
                 , AuthId app ~ UserId
-                , BaseBackend (YesodPersistBackend app) ~ SqlBackend
+                , YesodPersistBackend app ~ SqlBackend
                 , PersistUniqueWrite (YesodPersistBackend app)
                 , HasHttpManager app
                 )
@@ -80,32 +80,36 @@ sendEdxGrade aSettings userId exUnitId grade comment = do
 executeEdxGrading :: ( MonadReader env m
                      , HasHttpManager env
                      , MonadIO m
-                     , MonadLogger m)
+                     , MonadLogger m
+                     , MonadCatch m)
                   => AppSettings
                   -> Maybe EdxGrading
                   -> Double
                   -> Maybe Text -> m ()
-executeEdxGrading _ Nothing _ _ = $(logWarn) "Could not send a grade to a student because EdxGrading record is not found."
-executeEdxGrading aSettings (Just (EdxGrading _ _ outcomeUrl resultId)) grade comment =
-  void $ replaceResultRequest (appLTICredentials aSettings) (Text.unpack outcomeUrl) resultId grade comment >>= httpNoBody
+executeEdxGrading _ Nothing _ _ = $(logWarn) "[GRADING][edX] Could not send a grade to a student because EdxGrading record is not found."
+executeEdxGrading aSettings (Just (EdxGrading _ _ outcomeUrl resultId)) grade comment = do
+  req <- replaceResultRequest (appLTICredentials aSettings) (Text.unpack outcomeUrl) resultId grade comment
+  catch ( void $ httpNoBody req )
+        (\e -> $(logWarn) $ "[GRADING][edX] " <> Text.pack (show (e :: SomeException)))
+
+
 
 
 -- | Send all pending grades to edX
-executeEdxGradingQueue :: (MonadLogger a, MonadIO a, MonadResource a)
+executeEdxGradingQueue :: (MonadLogger a, MonadIO a, MonadResource a, MonadCatch a)
                        => AppSettings
                        -> ReaderT SqlBackend (ReaderT Manager a) ()
 executeEdxGradingQueue aSettings = do
-    $(logInfo) [st| Executing edX grading queue... |]
+    $(logWarn) [st| Executing edX grading queue... |]
     -- send requests
     gradeRequests $$ awaitForever processReq
-    -- delete all requests in the queue
-    deleteWhere ([] :: [Filter EdxGradingQueue])
-    $(logInfo) [st| edx grading queue execution finished! |]
+    $(logWarn) [st| edx grading queue execution finished! |]
   where
     gradeRequests = selectSource ([] :: [Filter EdxGradingQueue]) []
-    processReq (Entity _ EdxGradingQueue {..}) = lift $ do
+    processReq (Entity gqk EdxGradingQueue {..}) = lift $ do
       mgr <- get edxGradingQueueEdxGradingId
       lift $ executeEdxGrading aSettings mgr edxGradingQueueGrade edxGradingQueueComment
+      delete gqk
 
 -- | Schedule sending grades to edX.
 scheduleUpdateGrades :: Int -- ^ time interval in seconds
