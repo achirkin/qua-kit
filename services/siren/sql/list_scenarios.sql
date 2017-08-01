@@ -15,9 +15,9 @@ BEGIN
               )
               FROM scenario
               WHERE scenario.alive AND
-                      ((authRole == 'Student' AND scenario.owner = userId)
-                    OR (authRole == 'Local'   AND (scenario.owner IS NULL OR scenario.owner = userId))
-                    OR (authRole == 'Admin'   AND TRUE))
+                      ((authRole = 'Student' AND scenario.owner = userId)
+                    OR (authRole = 'Local'   AND (scenario.owner IS NULL OR scenario.owner = userId))
+                    OR (authRole = 'Admin'   AND TRUE))
 
 
             )

@@ -11,7 +11,6 @@ module Lib
     , getLastScUpdates
     ) where
 
-import qualified Data.Aeson                as JSON
 import           Data.ByteString           (ByteString)
 import           Data.ByteString           as BS
 import qualified Data.ByteString.Char8     as BSC
@@ -124,9 +123,6 @@ copyScenario conn token userId authRole scId = do
   justResult mrez $ flip checkResult id
 
 
-mkAuthRole :: Maybe AuthRole -> Maybe (Oid, ByteString, Format)
-mkAuthRole mauth = (\ar -> (oidTEXT, BSC.pack $ show ar, Text)) <$> mauth
-
 mkAuthRole :: AuthRole -> Maybe (Oid, ByteString, Format)
 mkAuthRole auth = Just (oidTEXT, BSC.pack $ show auth, Text)
 
@@ -187,7 +183,7 @@ listScenarios :: Connection
               -> AuthRole
               -> IO (Either BS.ByteString BS.ByteString) -- ^ Either error or json result
 listScenarios conn token userId authRole = do
-  mrez <- execParams conn "SELECT wrap_result($1,list_scenarios($1,$2));"
+  mrez <- execParams conn "SELECT wrap_result($1,list_scenarios($2,$3));"
      [ mkInt64 token
      , userId >>= mkUserIdInt64
      , mkAuthRole authRole

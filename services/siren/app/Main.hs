@@ -119,18 +119,14 @@ responseMsgs (MsgRun token "scenario.geojson.Get" pams _)
 
 responseMsgs m@(MsgRun token "scenario.geojson.Create" pams _)
   | Just (Success scName) <- fromJSON <$> HashMap.lookup "name" pams
-  , Just geom_input <- BSL.toStrict . JSON.encode <$> HashMap.lookup "geometry_input" pams
-  , mUserId <- (resultToMaybe . fromJSON) =<< HashMap.lookup "user-id" pams
-  , mAuthRole <- (resultToMaybe . fromJSON) =<< HashMap.lookup "user-role" pams = do
+  , Just geom_input <- BSL.toStrict . JSON.encode <$> HashMap.lookup "geometry_input" pams = do
     conn <- Lens.use connection
     eresultBS <- liftIO $ createScenario conn (fromIntegral token) (m ^. msgSenderId) (m ^. msgSenderAuthRole) (BSC.pack scName) geom_input
     yieldAnswer token eresultBS
 
 responseMsgs m@(MsgRun token "scenario.geojson.Update" pams _)
   | Just (Success scID) <- fromJSON <$> HashMap.lookup "ScID" pams
-  , Just geom_input <- BSL.toStrict . JSON.encode <$> HashMap.lookup "geometry_input" pams
-  , mUserId <- (resultToMaybe . fromJSON) =<< HashMap.lookup "user-id" pams
-  , mAuthRole <- (resultToMaybe . fromJSON) =<< HashMap.lookup "user-role" pams = do
+  , Just geom_input <- BSL.toStrict . JSON.encode <$> HashMap.lookup "geometry_input" pams = do
     conn <- Lens.use connection
     eresultBS <- liftIO $ updateScenario conn (fromIntegral token) (m ^. msgSenderId) (m ^. msgSenderAuthRole) (ScenarioId scID) geom_input
     yieldAnswer token eresultBS

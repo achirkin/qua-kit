@@ -7,13 +7,6 @@ CREATE OR REPLACE FUNCTION copy_scenario( userId bigint
 $func$
 DECLARE
   ScID bigint;
-  curTime TIMESTAMP;
-  geomID_max bigint;
-  scSRID integer;
-  fc jsonb;
-  scLon decimal;
-  scLat decimal;
-  scAlt decimal;
 BEGIN
 
   IF (CASE authRole
