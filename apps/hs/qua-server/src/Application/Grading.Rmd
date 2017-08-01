@@ -21,13 +21,8 @@ con <- dbConnect(drv, dbname = "qua-kit")
 
 The next step is to get all necessary data from DB.
 ```{r query data, echo=TRUE, results='hide', message=FALSE}
-# all users
-#db_users <- dbGetQuery(con, "SELECT id,name,role FROM \"user\"")
-
-#db_scenario <- dbGetQuery(con, "SELECT id,author_id,task_id,last_update FROM scenario")
 
 # all cross feedback
-#db_criterion <- dbGetQuery(con, "SELECT * FROM criterion")
 db_vote <- dbGetQuery(con, paste
     ( "SELECT w.task_id, v.id, v.criterion_id, v.voter_id, v.better_id, v.worse_id, b.last_update as better_time, w.last_update as worse_time, rb.value as better_value, rw.value as worse_value, b.author_id as better_author, w.author_id as worse_author, v.timestamp"
     , "  FROM vote v, rating rb, rating rw, scenario b, scenario w"
@@ -35,10 +30,7 @@ db_vote <- dbGetQuery(con, paste
     , "   AND rw.author_id = w.author_id AND rb.author_id = b.author_id"
     , "   AND rw.problem_id = w.task_id AND rb.problem_id = b.task_id"
     , "   AND rw.criterion_id = v.criterion_id AND rb.criterion_id = v.criterion_id"
-#    , "   AND rw.value != 0 AND rb.value != 0"
-#    , "   AND v.criterion_id = 4"
     ))
-#db_review <- dbGetQuery(con, "SELECT * FROM review")
 
 # cumulative
 db_rating <- dbGetQuery(con, "SELECT rating.* FROM rating")

@@ -32,13 +32,21 @@ import Network.Wai.Middleware.RequestLogger (Destination (Logger),
 import System.Log.FastLogger                (defaultBufSize, newStdoutLoggerSet,
                                              toLogStr)
 
+-- Run grading simulation (long time proc)
+#define SIMULATE_GRADING_LEARNING False
+
+#if SIMULATE_GRADING_LEARNING == True
+import Application.Grading (simulateGradingLearning)
+#endif
+
 
 #if DEVELOPMENT
-import Application.SetupProblemData
+-- automatically import some data to start with
+import Application.SetupProblemData (importProblemData)
+#else
+-- schedule sending grades to edX from time to time
+import Application.Edx (scheduleUpdateGrades)
 #endif
--- import Application.Edx
-import Application.Grading
---import qualified Data.ByteString.Base64 as BSB (encode)
 
 -- Import all relevant handler modules here.
 -- Don't forget to add new modules to your cabal file!
@@ -107,23 +115,23 @@ makeFoundation appSettings = do
 
     -- Perform database migration using our application's logging settings.
     runLoggingT (runSqlPool (runMigration migrateAll) pool) logFunc
+
 #if DEVELOPMENT
     -- Fill database with some problem-specific important data.
     importProblemData pool
 #endif
-    -- Update ratings once in an hour
-    -- flip runSqlPool pool $ scheduleUpdateRatings 3600 reviewRating compareRating combR
-    -- flip runSqlPool pool $ scheduleGradeVotes 3600
-
 
     let app = mkFoundation pool
 
     -- send grades once every day
-#if DEVELOPMENT
-#else
-    -- scheduleUpdateGrades (3600*24) app pool
+#if !DEVELOPMENT
+    scheduleUpdateGrades (3600*24) appSettings appHttpManager pool logFunc
 #endif
-    --runLoggingT (runResourceT $ runSqlPool simulateGradingLearning pool) logFunc
+
+#if SIMULATE_GRADING_LEARNING == True
+    -- run simulation of grading procedure
+    runLoggingT (runResourceT $ runSqlPool simulateGradingLearning pool) logFunc
+#endif
 
     -- Return the foundation
     return app

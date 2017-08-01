@@ -1,6 +1,10 @@
 module Application.Edx where
 
-
+import Control.Monad.Logger (runLoggingT, LogSource, LogStr, Loc)
+import Control.Concurrent   (forkIO)
+import Data.Pool            (Pool)
+import Database.Persist.Sql (runSqlPool)
+import Control.Monad.Trans.Maybe
 import qualified Data.Map.Strict as Map
 import qualified Data.Text as Text
 import Web.LTI
@@ -8,7 +12,7 @@ import Model.Session
 import Text.Shakespeare.Text (st)
 
 import Import.NoFoundation
-
+import Application.Grading
 
 -- | Write correct data into EdxGrading, EdxCourse, EdxResource, etc.
 setupEdxGrading :: ( YesodAuth app
@@ -103,24 +107,36 @@ executeEdxGradingQueue aSettings = do
       mgr <- get edxGradingQueueEdxGradingId
       lift $ executeEdxGrading aSettings mgr edxGradingQueueGrade edxGradingQueueComment
 
+-- | Schedule sending grades to edX.
+scheduleUpdateGrades :: Int -- ^ time interval in seconds
+                     -> AppSettings
+                     -> Manager
+                     -> Pool SqlBackend
+                     -> (Loc -> LogSource -> LogLevel -> LogStr -> IO ())
+                     -> IO ()
+scheduleUpdateGrades dt aSettings httpMan pool logFunc = void . forkIO . forever $ do
+    -- wait ten seconds just to let yesod do other work first
+    threadDelay (10*1000000)
+    runResourceT ( executeEdxGradingQueue aSettings
+                    `runSqlPool` pool
+                    `runReaderT` httpMan
+                 )
+        `runLoggingT` logFunc
+    threadDelay dts
+  where
+    dts = dt * 1000000
+
 
 
 -- | Insert a record into EdxGradingQueue table to be executed
 --   on next batch edX grading.
-queueForGrading :: ( YesodAuth app
-                   , YesodPersist app
-                   , YesodAuthPersist app
-                   , AuthId app ~ UserId
-                   , BaseBackend (YesodPersistBackend app) ~ SqlBackend
-                   , PersistUniqueWrite (YesodPersistBackend app)
-                   , HasHttpManager app
-                   )
+queueForGrading :: (MonadLogger a, MonadIO a)
                 => UserId
                 -> EdxResourceId -- ^ Exercise unit in edX
                 -> Double -- ^ Grade on a scale [0,1]
                 -> Maybe Text -- ^ Grade comment
-                -> HandlerT app IO ()
-queueForGrading userId eResId grade mcomment = runDB $ do
+                -> ReaderT SqlBackend a ()
+queueForGrading userId eResId grade mcomment = do
     meg <- getBy $ EdxGradeKeys eResId userId
     case meg of
       Nothing -> $(logWarn) [st| [GRADING] Student #{show userId} should be graded on exercise #{show eResId},
@@ -131,3 +147,32 @@ queueForGrading userId eResId grade mcomment = runDB $ do
         [ EdxGradingQueueGrade =. grade
         , EdxGradingQueueComment =. mcomment
         ]
+
+-- | Grade design based on its rating
+queueDesignGrade :: (MonadLogger a, MonadIO a)
+                 => ScenarioId
+                 -> ReaderT SqlBackend a ()
+queueDesignGrade scId = void . runMaybeT $ do
+   cs <- fmap entityVal . MaybeT  $ getBy (LatestSubmissionId scId)
+   csGrade <- MaybeT . pure $ currentScenarioGrade cs
+   gradingId <- MaybeT . pure . currentScenarioEdxGradingId $ cs
+   EdxGrading {..} <- MaybeT $ get gradingId
+   lift $ queueForGrading (currentScenarioAuthorId cs)
+                          edxGradingResourceId
+                          (csGradeEdxGrade csGrade)
+                          (Just "Qua-kit rating-based vote grade.")
+
+-- | Grade voter based on their rating.
+queueVoteGrade :: (MonadLogger a, MonadIO a)
+               => VoteId
+               -> ReaderT SqlBackend a ()
+queueVoteGrade voteId =  void . runMaybeT $ do
+    Vote{..} <- MaybeT $ get voteId
+    eGrdId <- MaybeT $ pure voteEdxGradingId
+    EdxGrading{..} <- MaybeT $ get eGrdId
+    EdxResource{..} <- MaybeT $ get edxGradingResourceId
+    Entity _ VoteRating{..} <- MaybeT . getBy $ VoteRatingOf voteVoterId edxResourceExerciseId
+    lift $ queueForGrading voteVoterId
+                           edxGradingResourceId
+                           (compareRatingToEdxGrade voteRatingValue)
+                           (Just "Qua-kit rating-based vote grade.")

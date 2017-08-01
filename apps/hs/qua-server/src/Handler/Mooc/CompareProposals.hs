@@ -10,7 +10,6 @@ module Handler.Mooc.CompareProposals
 
 import Import
 import Text.Blaze
-import Control.Monad.Trans.Maybe
 import Database.Persist.Sql (rawSql, Single(..))
 import qualified Data.Text as Text
 import Application.Edx
@@ -20,7 +19,6 @@ postVoteForProposalR :: CriterionId -> ScenarioId -> ScenarioId -> Handler Html
 postVoteForProposalR cId better worse = do
     userId <- requireAuthId
     mResId <- getsSafeSession userSessionEdxResourceId
-    mTaskId <- getsSafeSession userSessionCustomExerciseId
 
     mexplanation <- lookupPostParam "explanation"
     vId <- runDB $ do
@@ -29,25 +27,18 @@ postVoteForProposalR cId better worse = do
           Nothing -> pure Nothing
           Just eResId -> fmap (fmap entityKey) . getBy $ EdxGradeKeys eResId userId
       insert $ Vote userId cId better worse mexplanation t mGradingId
-    -- update ratings
-    runDB $ updateRatingsOnVoting vId
-    -- grade edX voter
-    void . runMaybeT $ do
-      eResId <- MaybeT $ pure mResId
-      taskId <- MaybeT $ pure mTaskId
-      Entity _ VoteRating{voteRatingValue} <- MaybeT . runDB . getBy $ VoteRatingOf userId taskId
-      lift $ queueForGrading userId eResId
-                            (compareRatingToEdxGrade voteRatingValue)
-                            (Just "Qua-kit rating-based vote grade.")
-
-    -- grade submitters
-    queueDGrade better
-    queueDGrade worse
-
+    runDB $ do
+      -- update ratings
+      updateRatingsOnVoting vId
+      -- grade edX designs
+      queueDesignGrade better
+      queueDesignGrade worse
 
     mcustom_exercise_count <- getsSafeSession userSessionCustomExerciseCount
     case mcustom_exercise_count of
-      Nothing -> redirect CompareProposalsR
+      Nothing -> do
+        runDB $ queueVoteGrade vId
+        redirect CompareProposalsR
       Just custom_exercise_count -> do
          compare_counter <- fromMaybe 0 <$> getsSafeSession userSessionCompareCounter
          case custom_exercise_count `compare` (compare_counter+1) of
@@ -69,18 +60,8 @@ postVoteForProposalR cId better worse = do
                 Just eResId -> do
                   ye <- getYesod
                   sendEdxGrade (appSettings ye) userId eResId 0.6 (Just "Automatic grade on design submission.")
+              runDB $ queueVoteGrade vId
               redirect MoocHomeR
-  where
-    queueDGrade scId = void . runMaybeT $ do
-       cs <- fmap entityVal . MaybeT . runDB $ getBy (LatestSubmissionId scId)
-       csGrade <- MaybeT . pure $ currentScenarioGrade cs
-       gradingId <- MaybeT . pure . currentScenarioEdxGradingId $ cs
-       EdxGrading {edxGradingResourceId} <- MaybeT . runDB $ get gradingId
-       lift $ queueForGrading (currentScenarioAuthorId cs)
-                              edxGradingResourceId
-                              (csGradeEdxGrade csGrade)
-                              (Just "Qua-kit rating-based vote grade.")
-
 
 
 getCompareProposalsR :: Handler Html

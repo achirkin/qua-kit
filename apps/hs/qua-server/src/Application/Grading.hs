@@ -86,7 +86,7 @@ module Application.Grading where
 
 -- import Data.Time.Clock (DiffTime)
 import qualified Database.Persist.Sql as P
-import Import hiding ((/=.), (==.), (=.), isNothing, on, update)
+import Import.NoFoundation hiding ((/=.), (==.), (=.), isNothing, on, update)
 import Database.Esqueleto
 import Text.Shakespeare.Text (st)
 -- import Model.Rating

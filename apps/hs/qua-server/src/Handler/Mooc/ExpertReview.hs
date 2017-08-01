@@ -9,6 +9,8 @@ module Handler.Mooc.ExpertReview
 import Control.Monad.Trans.Except
 import Import
 import Import.Util
+import Application.Grading
+import Application.Edx
 
 postWriteExpertReviewR :: ScenarioId -> Handler Value
 postWriteExpertReviewR scId = runJSONExceptT $ do
@@ -29,8 +31,9 @@ postWriteExpertReviewR scId = runJSONExceptT $ do
                    , ExpertReviewTimestamp =. t ]
 
       -- expert grade overrules votes and thus overwrites existing grade
-      lift $ updateWhere [CurrentScenarioHistoryScenarioId ==. scId]
-                         [CurrentScenarioGrade =. (Just $ fromIntegral grade)]
+      lift $ updateCurrentScenarioGrade scId
+      -- queue new grade for sending to edX
+      lift $ queueDesignGrade scId
 
     return $ object [ "grade"     .= grade
                     , "comment"   .= comment
