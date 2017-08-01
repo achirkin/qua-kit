@@ -11,6 +11,7 @@ module Lib
     , getLastScUpdates
     ) where
 
+import qualified Data.Aeson                as JSON
 import           Data.ByteString           (ByteString)
 import           Data.ByteString           as BS
 import qualified Data.ByteString.Char8     as BSC
@@ -122,6 +123,9 @@ copyScenario conn token userId authRole scId = do
     Text
   justResult mrez $ flip checkResult id
 
+
+mkAuthRole :: Maybe AuthRole -> Maybe (Oid, ByteString, Format)
+mkAuthRole mauth = (\ar -> (oidTEXT, BSC.pack $ show ar, Text)) <$> mauth
 
 mkAuthRole :: AuthRole -> Maybe (Oid, ByteString, Format)
 mkAuthRole auth = Just (oidTEXT, BSC.pack $ show auth, Text)
