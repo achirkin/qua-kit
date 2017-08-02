@@ -81,6 +81,7 @@ library
         Handler.Mooc
         Handler.Mooc.Admin
         Handler.Mooc.Admin.CriterionEditor
+        Handler.Mooc.Admin.ReviewRequest
         Handler.Mooc.Admin.ScenarioEditor
         Handler.Mooc.Admin.UserManager
         Handler.Mooc.BrowseProposals

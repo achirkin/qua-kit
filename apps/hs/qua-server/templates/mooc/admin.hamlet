@@ -38,7 +38,9 @@
       <div class="card">
         <div class="card-main">
           <div class="card-inner">
-            <p>Ask an expert to review scenarios in need of grading
-               which were submitted before a certain date:
-            <form .form-inline method=post action=@{SendReviewRequestR}>
-              ^{sendReviewRequestFormWidget}
+            Request Reviews
+          <div class="card-action">
+            <div class="card-action-btn pull-left">
+              <a class="btn btn-flat waves-attach waves-light waves-effect" href="@{AdminReviewRequestR}">
+                <span class="icon">check
+                &nbsp;Open Request Review Page
