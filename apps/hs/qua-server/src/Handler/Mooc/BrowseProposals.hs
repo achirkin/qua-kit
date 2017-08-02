@@ -1,6 +1,8 @@
 {-# OPTIONS_HADDOCK hide, prune #-}
 module Handler.Mooc.BrowseProposals
   ( getBrowseProposalsR
+  , getBrowseProposalsForExpertsR
+  , getBrowseProposalsForExpertsNR
   ) where
 
 import Import
@@ -13,15 +15,27 @@ import Application.Grading
 pageSize :: Int
 pageSize = 80
 
+
+
+
 getBrowseProposalsR :: Int -> Handler Html
-getBrowseProposalsR page = do
+getBrowseProposalsR = getBrowseProposalsPamsR noProposalParams
+
+getBrowseProposalsForExpertsNR :: Handler Html
+getBrowseProposalsForExpertsNR = getBrowseProposalsPamsR (convenientReviewOrder Nothing) 1
+
+getBrowseProposalsForExpertsR :: ScenarioProblemId -> Handler Html
+getBrowseProposalsForExpertsR scpId = getBrowseProposalsPamsR (convenientReviewOrder $ Just scpId) 1
+
+getBrowseProposalsPamsR :: ProposalParams -> Int -> Handler Html
+getBrowseProposalsPamsR defParams page = do
     role <- muserRole <$> maybeAuth
     let isExpert = role == UR_EXPERT
     exercises <- runDB $ selectList [] []
-    ((res, widget), _) <- runFormGet $ proposalsForm exercises
+    ((res, widget), _) <- runFormGet $ proposalsForm defParams exercises
     let params = case res of
                    (FormSuccess ps) -> ps
-                   _ -> noProposalParams
+                   _ -> defParams
     usersscenarios <- runDB $ getLastSubmissions page params
     pages <- negate . (`div` pageSize) . negate <$> runDB (countUniqueSubmissions params)
     let is = [1..pages]
@@ -167,28 +181,36 @@ noProposalParams = ProposalParams {
     , sortOrder         = Default
     }
 
-proposalsForm :: [Entity ScenarioProblem] -> Html -> MForm Handler (FormResult ProposalParams, Widget)
-proposalsForm exercises extra = do
+convenientReviewOrder :: Maybe ScenarioProblemId -> ProposalParams
+convenientReviewOrder scpId = ProposalParams {
+      onlyNeedsReview   = Just ()
+    , onlyByAuthorId    = Nothing
+    , onlyByExerciseId  = scpId
+    , sortOrder         = Oldest
+    }
+
+proposalsForm :: ProposalParams -> [Entity ScenarioProblem] -> Html -> MForm Handler (FormResult ProposalParams, Widget)
+proposalsForm defParams exercises extra = do
   maybeMe <- lift maybeAuthId
   let exerciseList = map (\(Entity spId sp) -> (scenarioProblemDescription sp, Just spId)) exercises
   (onlyNeedsReviewRes, onlyNeedsReviewView) <- mreq (bootstrapSelectFieldList [
                       ("All"::Text,    Nothing)
                     , ("Needs review", Just ())
-                    ]) "" Nothing
+                    ]) "" (Just $ onlyNeedsReview defParams)
   (onlyByAuthorIdRes, onlyByAuthorView) <- mreq (bootstrapSelectFieldList [
                       ("All users"::Text, Nothing)
                     , ("Only my submissions", maybeMe)
-                    ]) "" Nothing
+                    ]) "" (Just $ onlyByAuthorId defParams)
   (onlyByExerciseIdRes, onlyByExerciseIdView) <- mreq (bootstrapSelectFieldList $
                       ("All exercises"::Text, Nothing) : exerciseList
-                    ) "" Nothing
+                    ) "" (Just $ onlyByExerciseId defParams)
   (sortOrderRes, sortOrderView) <- mreq (bootstrapSelectFieldList [
                       ("Default order"::Text, Default)
                     , ("Newest first", Newest)
                     , ("Oldest first", Oldest)
                     , ("Best grade first", GradeDesc)
                     , ("Best grade last", GradeAsc)
-                    ]) "" Nothing
+                    ]) "" (Just $ sortOrder defParams)
 
   let proposalParams = ProposalParams <$> onlyNeedsReviewRes
                                       <*> onlyByAuthorIdRes

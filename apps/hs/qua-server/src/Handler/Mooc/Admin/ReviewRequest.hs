@@ -4,10 +4,12 @@ module Handler.Mooc.Admin.ReviewRequest
     , postAdminReviewRequestR
     ) where
 
-import Data.Time.Calendar (addDays)
-import Database.Persist.Sql (rawSql, Single (..))
+import Data.Time.Calendar (addDays, showGregorian)
+import qualified Database.Persist.Sql as P
+import Text.Shakespeare.Text (st)
+import Database.Esqueleto
 import Handler.Mooc.Admin
-import Import
+import Import hiding ((/=.), (==.), (=.), (<.), isNothing, on, update, groupBy, count)
 import Import.BootstrapUtil
 import qualified Network.Mail.Mime as Mail
 
@@ -77,10 +79,10 @@ reviewRequestForm experts tasks defaultDay extra = do
 
 reviewRequest :: SendReviewParams -> Handler Html
 reviewRequest params = do
-  let whereTask = maybe [] (\tId -> [CurrentScenarioTaskId ==. tId]) (mtaskId params)
+  let whereTask = maybe [] (\tId -> [CurrentScenarioTaskId P.==. tId]) (mtaskId params)
   scenarios <- runDB $ selectList (whereTask ++ [
-                   CurrentScenarioGrade ==. Nothing
-                 , CurrentScenarioLastUpdate <. onlyBefore params
+                   CurrentScenarioGrade P.==. Nothing
+                 , CurrentScenarioLastUpdate P.<. onlyBefore params
                ]) []
   statusTxt <-
     if length scenarios > 0 then do
@@ -89,17 +91,20 @@ reviewRequest params = do
                                             (currentScenarioTaskId sc)
                                             (currentScenarioAuthorId sc)
       let scLinks = fmap toLink scenarios
+          browseLink = case mtaskId params of
+                          Nothing -> render BrowseProposalsForExpertsNR
+                          Just i  -> render $ BrowseProposalsForExpertsR i
       case mexpertId params of
         Just expertId -> do
           mexpert <- runDB $ get expertId
           case mexpert of
             Just expert -> do
-              sendReviewRequestMail scLinks expert
+              sendReviewRequestMail (onlyBefore params) browseLink scLinks expert
               return "Email sent..."
             Nothing -> return "Expert not found"
         Nothing -> do
           experts <- selectExperts
-          _ <- forM experts $ \(Entity _ ex) -> sendReviewRequestMail scLinks ex
+          _ <- forM experts $ \(Entity _ ex) -> sendReviewRequestMail (onlyBefore params) browseLink scLinks ex
           return "Emails sent..."
     else
       return "No scenarios to review. Email not sent."
@@ -109,16 +114,28 @@ reviewRequest params = do
                    <p><a onclick="window.history.back()" href="#">Back
                 |]
 
-sendReviewRequestMail :: [Text] -> User -> Handler ()
-sendReviewRequestMail scLinks expert =
+sendReviewRequestMail :: UTCTime -> Text -> [Text] -> User -> Handler ()
+sendReviewRequestMail beforeT browseLink scLinks expert =
   case userEmail expert of
     Just email -> do
-      let mailText = intercalate "\n\n" [
-                         "Dear " <> userName expert
-                       , "The following submissions are in need of reviewing:"
-                       , intercalate "\n" scLinks
-                       , "Thank you for your help!"
-                       ]
+      let mailText = [st|Dear #{userName expert},
+
+We would like to let you know that #{show $ length scLinks} oldest design submissions require grading in qua-kit.
+Please, use the following link to see them (you don't need to grade designs submitted after #{showGregorian $ utctDay beforeT}):
+  #{browseLink}
+
+Note on grading:
+  You can set a grade from 1 to 5 {stars}. The grade accounts for 40% of actual user grade at edX.
+  This means 1 star is equivalent to 0.6 of edX grade and 5 stars is equivalent to 1.0 of edX grade.
+  Therefore, setting 1 star is a normal practice; but only really outstanding solutions deserve 5 stars,
+  because 5 stars correspond to 100% rating in qua-kit gallery.
+  Also, in the expert review form, you have to write at least 80 characters of explanation for the grade you give.
+
+Here is the full list of currently ungraded submissions:
+#{unlines scLinks}
+
+Thank you for your help!
+                         |]
       $(logDebug) mailText
       liftIO $ Mail.renderSendMail $ Mail.simpleMail'
           (Mail.Address Nothing email) --to address
@@ -127,22 +144,15 @@ sendReviewRequestMail scLinks expert =
             $ fromStrict mailText
     Nothing -> return ()
 
+
 selectExperts :: Handler [Entity User]
 selectExperts = runDB $
-  selectList [UserRole ==. UR_EXPERT, UserEmail /<-. [Nothing]] []
+  selectList [UserRole P.==. UR_EXPERT, UserEmail P./<-. [Nothing]] []
 
 selectTasks :: Handler [TaskData]
-selectTasks = runDB $ (map getVal) <$> rawSql query []
-  where
-    getVal (scp, Single ungradedCount) = (scp, ungradedCount)
-    query = unlines [
-            "SELECT ??, ungraded_count"
-          , "FROM scenario_problem"
-          , "JOIN ( SELECT task_id, count(*) as ungraded_count"
-          , "       FROM current_scenario"
-          , "       WHERE grade IS NULL"
-          , "       GROUP BY task_id"
-          , "     ) s"
-          , "ON scenario_problem.id = s.task_id"
-          , ";"
-          ]
+selectTasks = fmap (fmap $ second unValue) . runDB $
+  select $ from $ \(InnerJoin scenario scProblem) -> do
+    on $ scenario ^. CurrentScenarioTaskId ==. scProblem ^. ScenarioProblemId
+    where_ $ isNothing (scenario ^. CurrentScenarioGrade)
+    groupBy $ scProblem ^. ScenarioProblemId
+    return (scProblem, count $ scenario ^. CurrentScenarioId)
