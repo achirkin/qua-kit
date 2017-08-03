@@ -48,6 +48,7 @@ import Data.Bits (shiftR, (.&.))
 
 luciApp :: WebSocketsT Handler ()
 luciApp = do
+  void $ lift requireAuthId
   mluciAddr <- lift $ appLuciAddress . appSettings <$> getYesod
   case mluciAddr of
     Nothing -> sendBinaryData (makeSimpleLuciMessage $ "{\"wsError\":\"Luci connection is not set up.\"}")
