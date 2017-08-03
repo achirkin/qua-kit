@@ -26,12 +26,12 @@ import qualified Data.ByteString.Lazy.Char8      as LazyBSC
 import           Data.Conduit
 import qualified Data.Conduit.Network            as Network
 import qualified Data.HashMap.Strict             as HashMap
-import qualified Data.Set                        as Set
 import           Data.Maybe                      (fromMaybe)
 import           Data.Monoid                     ((<>))
 import qualified Data.Text                       as Text
 import           Data.Unique
 import           System.Mem.Weak
+import           Path.IO
 
 import           Luci.Connect
 import           Luci.Connect.Base
@@ -44,6 +44,7 @@ import           Helen.Core.Service.Information  (infoService)
 import           Helen.Core.Service.Registration (registrationService)
 import           Helen.Core.Service.Startup      (startupServices)
 import           Helen.Core.Types
+import           Helen.Core.Utils
 
 
 -- | Initialize state
@@ -54,6 +55,7 @@ initHelen = do
   -- mutable base of clients
   clientStore <- STM.newTMVarIO (HashMap.empty :: HashMap.HashMap ClientId (Client, HelenWorld ()))
   -- construct helen
+  conf <- readConfigFromYamlFile
   return Helen
     { _msgChannel = ch
     , sendDirectMessage = \msg@(TargetedMessage _ cId _) -> do
@@ -79,8 +81,23 @@ initHelen = do
         STM.takeTMVar clientStore >>=
           STM.putTMVar clientStore . HashMap.update (\(c, u) -> Just (c, u >> action cId)) cId
     , _serviceManager = defServiceManager
-    , trustedClients = Set.empty
+    , trustedClients = confTrustedClients conf
     }
+
+readConfigFromYamlFile :: IO Config
+readConfigFromYamlFile = do
+  cf <- resolveFile' "helen-config.yaml"
+  errOrConfig <- readYamlSafe cf
+  case errOrConfig of
+    Left err -> do
+      putStrLn $ unlines
+        [ "WARNING: Failed to read config file: "
+        , err
+        , "pretending that this didn't fail and contained the default config."
+        ]
+      pure defaultConfig
+    Right conf -> pure conf
+
 
 
 -- | Run main program

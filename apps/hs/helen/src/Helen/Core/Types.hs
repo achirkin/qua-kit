@@ -20,7 +20,9 @@
 {-# LANGUAGE TemplateHaskell            #-}
 {-# LANGUAGE TypeFamilies               #-}
 module Helen.Core.Types
-  ( -- * Base server-client relationship
+  ( -- * Config
+    Config(..), defaultConfig
+  , -- * Base server-client relationship
     Helen (..), ClientId (..), Client (..), sendMessage
     -- * Working with services
   , ServiceInstance (..), ServiceManager (..), ServicePool (..), ServiceInfo (..)
@@ -42,11 +44,12 @@ module Helen.Core.Types
 import           Data.Hashable
 import           Data.Unique
 
+import           Control.Applicative
 import           Control.Concurrent           (forkIO)
 import qualified Control.Concurrent.STM.TChan as STM
 import qualified Control.Concurrent.STM.TVar  as STM
 import           Control.Lens
-import           Control.Monad                (void)
+import           Control.Monad                (void, forM)
 import           Control.Monad.IO.Class       (MonadIO (..))
 import           Control.Monad.Base           (MonadBase)
 import           Control.Monad.Logger
@@ -58,15 +61,45 @@ import           Control.Monad.Trans.Control
 import           Control.Monad.Trans.Reader
 import           Crypto.Random                (MonadRandom (..))
 import qualified Data.Aeson                   as JSON
+import           Data.Aeson                   (FromJSON(..), (.:), withObject)
 import           Data.ByteString              (ByteString)
 import qualified Data.HashMap.Strict          as HashMap
 import           Data.Set                     (Set)
+import qualified Data.Set                     as Set
 import qualified Data.Sequence                as Seq
 import           Data.Text                    (Text)
 import qualified Data.Text.Encoding           as Text
+import           Data.IP                      as IP
 import qualified System.Log.FastLogger        as FastLogger
+import           Text.Read                    (readMaybe)
 import qualified Network.Socket               as Network
 import           Luci.Messages
+
+data Config = Config
+  { confTrustedClients :: Set Network.SockAddr
+  } deriving (Eq, Ord)
+
+defaultConfig :: Config
+defaultConfig =
+    Config
+    { confTrustedClients = Set.empty
+    }
+
+instance FromJSON Config where
+  parseJSON = withObject "Config" $ \o -> do
+    tclos <- o .: "trusted-clients"
+    tcls <- forM tclos $ \tclo -> do
+      portstr <- (tclo .: "port")
+             <|> ((show :: Integer -> String) <$> (tclo .: "port"))
+      port <- case readMaybe portstr of
+        Nothing -> fail "Could not parse port."
+        Just a -> pure a
+      addrstr <- (tclo .: "ip") <|> (tclo .: "ip-address")
+      ipaddr <- case IP.toHostAddress <$> readMaybe addrstr of
+         Nothing -> fail "Could not parse IP address."
+         Just a -> pure a
+      pure $ Network.SockAddrInet port ipaddr
+    pure $ Config (Set.fromList tcls)
 
 -- | Represent a connected client
 newtype ClientId = ClientId Unique
