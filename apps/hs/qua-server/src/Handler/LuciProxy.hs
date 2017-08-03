@@ -47,34 +47,43 @@ import Data.Bits (shiftR, (.&.))
 --      |]
 
 luciApp :: WebSocketsT Handler ()
-luciApp = do
+luciApp = requireLuciConnection $ \luciAddr -> do
+  let toClient :: Consumer ByteString (WebSocketsT Handler) ()
+      toClient = sinkWSBinary
+      fromClient :: Producer (WebSocketsT Handler) ByteString
+      fromClient = sourceWS
+  runGeneralTCPClient luciAddr $ \appData -> withStatusMsgs luciAddr $ do
+    let toLuci :: Consumer ByteString (WebSocketsT Handler) ()
+        toLuci = Network.appSink appData
+        fromLuci :: Producer (WebSocketsT Handler) ByteString
+        fromLuci = Network.appSource appData
+        clientDebugConduit = CList.mapM (\x -> ($(logDebug) $ "CLIENT: " <> pack (show x)) >> return x)
+        luciDebugConduit = CList.mapM (\x -> ($(logDebug) $ "LUCI: " <> pack (show x)) >> return x)
+    race_
+        (runConduit $ fromClient =$= clientDebugConduit =$= toLuci)
+        (runConduit $ fromLuci =$= luciDebugConduit =$= toClient)
+  where
+    withStatusMsgs :: ClientSettings -> WebSocketsT Handler () -> WebSocketsT Handler ()
+    withStatusMsgs luciAddr func = do
+      sendBinaryData (makeSimpleLuciMessage $
+            "{\"wsSuccess\":\""
+            <> "Connected to Luci on " <> decodeUtf8 (getHost luciAddr) <> ":" <> (pack . show $ getPort luciAddr)
+            <> "\"}"
+            )
+      -- sendTextData ("Connected to Luci on " <> getHost luciAddr <> ":" <> BSC.pack (show $ getPort luciAddr))
+      func
+      sendBinaryData (makeSimpleLuciMessage $
+            "{\"wsTerminate\":\""
+            <> "Connection to Luci has been closed."
+            <> "\"}"
+            )
+
+requireLuciConnection :: (ClientSettings -> WebSocketsT Handler ()) -> WebSocketsT Handler ()
+requireLuciConnection func = do
   mluciAddr <- lift $ appLuciAddress . appSettings <$> getYesod
   case mluciAddr of
     Nothing -> sendBinaryData (makeSimpleLuciMessage $ "{\"wsError\":\"Luci connection is not set up.\"}")
-    Just luciAddr -> do
-      let toClient :: Consumer ByteString (WebSocketsT Handler) ()
-          toClient = sinkWSBinary
-          fromClient :: Producer (WebSocketsT Handler) ByteString
-          fromClient = sourceWS
-      runGeneralTCPClient luciAddr $ \appData -> do
-        sendBinaryData (makeSimpleLuciMessage $
-                "{\"wsSuccess\":\""
-                <> "Connected to Luci on " <> decodeUtf8 (getHost luciAddr) <> ":" <> (pack . show $ getPort luciAddr)
-                <> "\"}"
-                )
-        -- sendTextData ("Connected to Luci on " <> getHost luciAddr <> ":" <> BSC.pack (show $ getPort luciAddr))
-        let toLuci :: Consumer ByteString (WebSocketsT Handler) ()
-            toLuci = Network.appSink appData
-            fromLuci :: Producer (WebSocketsT Handler) ByteString
-            fromLuci = Network.appSource appData
-        race_
-           (runConduit $ fromClient =$= CList.mapM (\x -> ($(logDebug) $ "CLIENT: " <> pack (show x)) >> return x) =$= toLuci)
-           (runConduit $ fromLuci =$= CList.mapM (\x -> ($(logDebug) $ "LUCI: " <> pack (show x)) >> return x) =$= toClient)
-      sendBinaryData (makeSimpleLuciMessage $
-              "{\"wsTerminate\":\""
-              <> "Connection to Luci has been closed."
-              <> "\"}"
-              )
+    Just luciAddr -> func luciAddr
 
 
 makeSimpleLuciMessage :: Text -> ByteString
