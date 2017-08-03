@@ -41,6 +41,7 @@ library
         conduit-extra -any,
         unordered-containers -any,
         stm -any,
+        split -any,
         hashable -any,
         transformers-base -any,
         monad-logger -any,

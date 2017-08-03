@@ -21,7 +21,7 @@
 {-# LANGUAGE TypeFamilies               #-}
 module Helen.Core.Types
   ( -- * Config
-    Config(..), defaultConfig
+    Config(..)
   , -- * Base server-client relationship
     Helen (..), ClientId (..), Client (..), sendMessage
     -- * Working with services
@@ -79,10 +79,15 @@ data Config = Config
   { confTrustedClients :: Set Network.SockAddr
   } deriving (Eq, Ord)
 
-defaultConfig :: Config
-defaultConfig =
-    Config
-    { confTrustedClients = Set.empty
+instance Monoid Config where
+  mempty = Config
+      { confTrustedClients = Set.empty
+      }
+  mappend c1 c2 = Config
+    { confTrustedClients =
+        Set.union
+          (confTrustedClients c1)
+          (confTrustedClients c2)
     }
 
 instance FromJSON Config where
