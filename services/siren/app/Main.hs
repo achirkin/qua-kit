@@ -401,7 +401,7 @@ runLuciClient s0 pipe = do
                      (hostS sets)
                       Nothing
                      (logWarnNS "PIPELINE ERROR" . Text.pack . show)
-                     (processTo =$= pipe =$= processFrom)
+                     (Main.processTo =$= pipe =$= Main.processFrom)
   where
     showLevel (LevelOther l) = Text.unpack l
     showLevel lvl = map Char.toLower . drop 5 $ show lvl
