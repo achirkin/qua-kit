@@ -29,7 +29,7 @@ getAdminReviewRequestR = do
     defaultDay <- lift (getCurrentTime >>= return . addDays (-7) . utctDay)
     (reviewRequestFormWidget, _) <-
       generateFormPost $ reviewRequestForm experts tasks defaultDay
-    fullLayout Nothing "Request reviews" $ do
+    adminLayout "Request reviews" $ do
         setTitle "qua-kit - request reviews"
         toWidgetHead $
           [cassius|
@@ -108,11 +108,8 @@ reviewRequest params = do
           return "Emails sent..."
     else
       return "No scenarios to review. Email not sent."
-  let statusTxt' = statusTxt::Text
-  defaultLayout [whamlet|
-                   <p>#{ statusTxt' }
-                   <p><a onclick="window.history.back()" href="#">Back
-                |]
+  setMessage statusTxt
+  redirect AdminReviewRequestR
 
 sendReviewRequestMail :: UTCTime -> Text -> [Text] -> User -> Handler ()
 sendReviewRequestMail beforeT browseLink scLinks expert =
