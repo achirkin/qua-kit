@@ -1,19 +1,37 @@
 <!-- all story cards -->
 <div class="ui-card-wrap">
-  <div class="row">
+  <div .row>
 
-    ^{createAccW}
+    $maybe submissionsWidget <- mSubmissionsWidget
 
-    <div class="col-lg-4 col-sm-6">
-      <div class="card card-brand">
-        <div class="card-main">
-          <div class="card-inner">
-            The application provides an easy-to-use geometry editor, suitable for educational and demonstrational purposes.
-          <div class="card-action">
-            <div class="card-action-btn pull-left">
-              <a class="btn btn-flat waves-attach waves-light waves-effect" href="@{EditProposalR}">
-                <span class="icon">check
-                &nbsp;Use geometry editor
+      $if not $ null newsItems
+        <div class="col-md-6">
+          <div .card>
+              <div .card-main>
+                <div .card-header>
+                  <div .card-inner>
+                    <h1 .card-heading>News
+                <div .card-inner>
+                  $forall (date, newsItem) <- newsItems
+                    <div>
+                      <div class="card-action-btn pull-right">
+                        #{ show $ utctDay date}</p>
+                      ^{ newsItem }
+                      <hr>
+
+      ^{ submissionsWidget }
+
+    $if showEditorBtn
+      <div class="col-lg-4 col-sm-6">
+        <div class="card card-brand">
+          <div class="card-main">
+            <div class="card-inner">
+              The application provides an easy-to-use geometry editor, suitable for educational and demonstrational purposes.
+            <div class="card-action">
+              <div class="card-action-btn pull-left">
+                <a class="btn btn-flat waves-attach waves-light waves-effect" href="@{EditProposalR}">
+                  <span class="icon">check
+                  &nbsp;Use geometry editor
 
     <div class="col-lg-4 col-sm-6">
       <div class="card card-orange">
@@ -36,6 +54,8 @@
               <a class="btn btn-flat waves-attach waves-light waves-effect" href="@{BrowseProposalsR 1}">
                 <span class="icon">check
                 &nbsp;Go to gallery
+
+    ^{createAccW}
 
     <div class="col-lg-4 col-sm-6">
       <div class="card">
