@@ -3,6 +3,7 @@ module Handler.Mooc.BrowseProposals
   ( getBrowseProposalsR
   , getBrowseProposalsForExpertsR
   , getBrowseProposalsForExpertsNR
+  , fetchLastSubmissions
   ) where
 
 import Import
@@ -36,7 +37,9 @@ getBrowseProposalsPamsR defParams page = do
     let params = case res of
                    (FormSuccess ps) -> ps
                    _ -> defParams
-    usersscenarios <- runDB $ getLastSubmissions page params
+    usersscenarios <- runDB $ fetchLastSubmissions $ params {
+                                limit  = Just pageSize
+                              , offset = (max 0 $ page-1)*pageSize }
     pages <- negate . (`div` pageSize) . negate <$> runDB (countUniqueSubmissions params)
     let is = [1..pages]
     fullLayout Nothing "Qua-kit student designs" $ do
@@ -171,6 +174,8 @@ data ProposalParams = ProposalParams {
     , onlyByAuthorId    :: Maybe UserId
     , onlyByExerciseId  :: Maybe ScenarioProblemId
     , sortOrder         :: ProposalSortParam
+    , limit             :: Maybe Int
+    , offset            :: Int
     }
 
 noProposalParams :: ProposalParams
@@ -179,6 +184,8 @@ noProposalParams = ProposalParams {
     , onlyByAuthorId    = Nothing
     , onlyByExerciseId  = Nothing
     , sortOrder         = Default
+    , limit             = Nothing
+    , offset            = 0
     }
 
 convenientReviewOrder :: Maybe ScenarioProblemId -> ProposalParams
@@ -187,6 +194,8 @@ convenientReviewOrder scpId = ProposalParams {
     , onlyByAuthorId    = Nothing
     , onlyByExerciseId  = scpId
     , sortOrder         = Oldest
+    , limit             = Nothing
+    , offset            = 0
     }
 
 proposalsForm :: ProposalParams -> [Entity ScenarioProblem] -> Html -> MForm Handler (FormResult ProposalParams, Widget)
@@ -216,6 +225,8 @@ proposalsForm defParams exercises extra = do
                                       <*> onlyByAuthorIdRes
                                       <*> onlyByExerciseIdRes
                                       <*> sortOrderRes
+                                      <*> FormSuccess (limit  defParams)
+                                      <*> FormSuccess (offset defParams)
   let widget = do
         [whamlet|
           #{extra}
@@ -248,8 +259,8 @@ shortComment t = dropInitSpace . remNewLines $
                     . Text.lines
         dropInitSpace = Text.dropWhile (\c -> c == ' ' || c == '\n' || c == '\r' || c == '\t')
 
-generateJoins :: ProposalParams -> Maybe (Int, Int) -> ([PersistValue], Text, Text)
-generateJoins ps mLimitOffset = (whereParams ++ limitParams, joinStr, orderStr)
+generateJoins :: ProposalParams -> ([PersistValue], Text, Text)
+generateJoins ps = (whereParams ++ limitParams, joinStr, orderStr)
   where
     joinStr = Text.unlines [
         " FROM ("
@@ -285,10 +296,11 @@ generateJoins ps mLimitOffset = (whereParams ++ limitParams, joinStr, orderStr)
                      Oldest    -> "s.last_update ASC"
                      GradeDesc -> "COALESCE(s.grade, 0) DESC"
                      GradeAsc  -> "COALESCE(s.grade, 0) ASC"
+    pOffset = toPersistValue $ offset ps
     (limitParams, limitClause) =
-      case mLimitOffset of
-        Just (l, o) -> (map toPersistValue [l, o], "LIMIT ? OFFSET ?")
-        _           -> ([], "")
+      case limit ps of
+        Just limit -> ([toPersistValue limit, pOffset], "LIMIT ? OFFSET ?")
+        _           -> ([pOffset], "OFFSET ?")
     (whereParams, whereClause) =
       if null wheres
       then ([], "")
@@ -301,12 +313,12 @@ generateJoins ps mLimitOffset = (whereParams ++ limitParams, joinStr, orderStr)
                  ]
 
 -- | get user name, scenario, and ratings
-getLastSubmissions :: Int -> ProposalParams -> ReaderT SqlBackend Handler
+fetchLastSubmissions :: ProposalParams -> ReaderT SqlBackend Handler
   [((ScenarioId, ScenarioProblemId, UserId), UTCTime, Text, Text, (Maybe Double, Maybe Double, [(Blaze.Markup, Text, Maybe Int)]))]
-getLastSubmissions page params = getVals <$> rawSql query preparedParams
+fetchLastSubmissions params = getVals <$> rawSql query preparedParams
   where
     (preparedParams, joinStr, orderStr) =
-      generateJoins params $ Just (pageSize, (max 0 $ page-1)*pageSize)
+      generateJoins params
 
     getVal scId' xxs@(((Single scId, Single _, Single _), Single _, Single _
                        , Single _, Single icon, Single cname
@@ -338,7 +350,7 @@ getLastSubmissions page params = getVals <$> rawSql query preparedParams
 countUniqueSubmissions :: ProposalParams -> ReaderT SqlBackend Handler Int
 countUniqueSubmissions params = getVal <$> rawSql query preparedParams
   where
-    (preparedParams, joinStr, _) = generateJoins params Nothing
+    (preparedParams, joinStr, _) = generateJoins params
     getVal (Single c:_)  = c
     getVal [] = 0
     query = Text.unlines
