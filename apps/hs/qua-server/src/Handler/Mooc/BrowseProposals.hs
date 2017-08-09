@@ -37,9 +37,9 @@ getBrowseProposalsPamsR defParams page = do
     let params = case res of
                    (FormSuccess ps) -> ps
                    _ -> defParams
-    usersscenarios <- runDB $ fetchLastSubmissions $ params {
-                                limit  = Just pageSize
-                              , offset = (max 0 $ page-1)*pageSize }
+    submissions <- runDB $ fetchLastSubmissions $ params {
+                             limit  = Just pageSize
+                           , offset = (max 0 $ page-1)*pageSize }
     pages <- negate . (`div` pageSize) . negate <$> runDB (countUniqueSubmissions params)
     let is = [1..pages]
     fullLayout Nothing "Qua-kit student designs" $ do
@@ -90,22 +90,24 @@ getBrowseProposalsPamsR defParams page = do
             <div class=row>
               ^{widget}
             <div class=row>
-              $forall ((scId, scpId, uId), lu, desc, uname, (mgrade, mexpertgrade, crits)) <- usersscenarios
+              $forall sub <- submissions
                 <div class="col-lg-4 col-md-6 col-sm-9 col-xs-9 story_cards">
                   <div.card>
                     <aside.card-side.card-side-img.pull-left.card-side-moocimg>
-                      <img src="@{ProposalPreviewR scId}" width="200px" height="200px" style="margin-left: -25px;">
+                      <img
+                        src=@{ProposalPreviewR $ currentScenarioHistoryScenarioId $ scenario sub}
+                        width="200px" height="200px" style="margin-left: -25px;">
                     <div.card-main>
                       <div.card-inner style="margin: 10px 12px;">
                         <p style="margin: 6px 0px; color: #b71c1c;">
-                          #{uname}
+                          #{authorName sub}
                             <br>
-                          #{show $ utctDay $ lu}
+                          #{show $ utctDay $ currentScenarioLastUpdate $ scenario sub}
                         <p style="margin: 6px 0px; white-space: pre-line; overflow-y: hidden; color: #555;">
-                         #{shortComment desc}
+                         #{shortComment $ currentScenarioDescription $ scenario sub}
                       <div.card-comment.card-action>
-                        $forall (svg, cname, mrating) <- crits
-                         $maybe rating <- mrating
+                        $forall (CriterionData svg cname crating) <- criterions sub
+                         $maybe rating <- crating
                           <span.card-comment.card-criterion style="opacity: #{cOpacity rating}" title="#{cname}">
                             #{svg}
                             <p style="display: inline; margin: 0; padding:0; color: rgb(#{156 + rating}, 111, 0)">
@@ -114,23 +116,24 @@ getBrowseProposalsPamsR defParams page = do
                           <span.card-comment.card-criterion style="opacity: 0.3" title="Not enough votes to show rating">
                             #{svg}
                             \ - #
-                        $maybe expertgrade <- mexpertgrade
+                        $maybe expertgrade <- expertGrade sub
                           <span.card-comment.card-criterion  title="Expert Grade">
                             <span class="icon icon-lg" style="width:24px; height:24px;">star</span>
                               <p style="display: inline; margin: 0; padding:0; color: #b71c1c;)">
                                 #{expertgrade}
                         <div.card-action-btn.pull-right>
-                          $if isExpert && (isNothing mgrade)
-                            <a.btn.btn-flat.btn-brand-accent.waves-attach.waves-effect
-                                style="background: red; color: white !important;"
-                                href="@{SubmissionViewerR scpId uId}" target="_blank">
-                              <span.icon>visibility
-                              Review
-                          $else
-                            <a.btn.btn-flat.btn-brand-accent.waves-attach.waves-effect
-                                href="@{SubmissionViewerR scpId uId}" target="_blank">
-                              <span.icon>visibility
-                              View
+                          $with subViewLink <- SubmissionViewerR (currentScenarioTaskId $ scenario sub) (currentScenarioAuthorId $ scenario sub)
+                            $if isExpert && (isNothing $ currentScenarioGrade $ scenario sub)
+                              <a.btn.btn-flat.btn-brand-accent.waves-attach.waves-effect
+                                  style="background: red; color: white !important;"
+                                  href=@{subViewLink} target="_blank">
+                                <span.icon>visibility
+                                Review
+                            $else
+                              <a.btn.btn-flat.btn-brand-accent.waves-attach.waves-effect
+                                  href=@{subViewLink} target="_blank">
+                                <span.icon>visibility
+                                View
 
           <!-- footer with page numbers -->
           $if pages == 0
@@ -161,6 +164,19 @@ shortLength = 140
 
 maxLines :: Int
 maxLines = 3
+
+data CriterionData = CriterionData {
+      critIcon   :: Blaze.Markup
+    , critName   :: Text
+    , critRating :: Maybe Int
+    }
+
+data Submission = Submission {
+      scenario     :: CurrentScenario
+    , authorName   :: Text
+    , expertGrade  :: Maybe Int
+    , criterions   :: [CriterionData]
+  }
 
 data ProposalSortParam = Default
                        | Newest
@@ -313,35 +329,38 @@ generateJoins ps = (whereParams ++ limitParams, joinStr, orderStr)
                  ]
 
 -- | get user name, scenario, and ratings
-fetchLastSubmissions :: ProposalParams -> ReaderT SqlBackend Handler
-  [((ScenarioId, ScenarioProblemId, UserId), UTCTime, Text, Text, (Maybe Double, Maybe Double, [(Blaze.Markup, Text, Maybe Int)]))]
-fetchLastSubmissions params = getVals <$> rawSql query preparedParams
+fetchLastSubmissions :: ProposalParams -> ReaderT SqlBackend Handler [Submission]
+fetchLastSubmissions params = groupSubs <$> map convertTypes <$> rawSql query preparedParams
   where
-    (preparedParams, joinStr, orderStr) =
-      generateJoins params
+    (preparedParams, joinStr, orderStr) = generateJoins params
 
-    getVal scId' xxs@(((Single scId, Single _, Single _), Single _, Single _
-                       , Single _, Single icon, Single cname
-                       , (Single _grade, Single evidence, Single rating, Single _expertgrade)):xs)
-        | scId == scId' = first (
-            ( Blaze.preEscapedToMarkup (icon :: Text)
-            , cname
-            , designRatingToVisual evidence rating
-            ) :) $ getVal scId xs
-        | otherwise = ([], xxs)
-    getVal _ [] = ([], [])
-    getVals xxs@(( (Single scId, Single scpId, Single uid), Single lu, Single desc
-                  , Single uname, Single _icon, Single _name
-                  , (Single grade, Single _evidence, Single _rating, Single expertgrade) ):_)
-                 = let (g, rest) = getVal scId xxs
-                   in ((scId, scpId, uid), lu, desc, uname, (grade, expertgrade, g)) : getVals rest
-    getVals [] = []
+    groupSubs (sub:subs) = sub' : groupSubs subs'
+      where
+        (sub', subs') = go sub subs
+        go y (x:xs)
+            | currentScenarioHistoryScenarioId (scenario y) ==
+              currentScenarioHistoryScenarioId (scenario x)
+                = let crits = criterions y ++ criterions x
+                  in  go (y {criterions = crits}) xs
+            | otherwise = (y, xs)
+        go y [] = (y, [])
+    groupSubs [] = []
 
 
+    currentScenarioCols = [ "s.id"
+                          , "s.history_scenario_id"
+                          , "s.author_id"
+                          , "s.task_id"
+                          , "s.description"
+                          , "s.grade"
+                          , "s.last_update"
+                          , "s.edx_grading_id"
+                          ]
     query = Text.unlines [
-            " SELECT s.history_scenario_id, s.task_id, s.author_id, s.last_update, s.description"
-          , "      , username, criterion.icon, criterion.name"
-          , "      , s.grade, COALESCE(rating.current_evidence_w, 0), COALESCE(rating.value, 0), eg.expertgrade"
+            " SELECT ", intercalate ", " currentScenarioCols
+          , "   , username, eg.expertgrade"
+          , "   , criterion.icon, criterion.name"
+          , "   , COALESCE(rating.current_evidence_w, 0), COALESCE(rating.value, 0)"
           , joinStr
           , orderStr
           ,";"
@@ -358,3 +377,56 @@ countUniqueSubmissions params = getVal <$> rawSql query preparedParams
           , joinStr
           , ";"
           ]
+
+convertTypes :: ( Single CurrentScenarioId --currentScId
+                , ( Single ScenarioId --historyScenarioId
+                  , Single UserId --authorId
+                  , Single ScenarioProblemId --taskId
+                  , Single Text --description
+                  , Single (Maybe Double) --grade
+                  , Single UTCTime --lastUpdate
+                  , Single (Maybe EdxGradingId)--edxGradingId
+                  )
+                , Single Text --authorName
+                , Single (Maybe Int) --expertGrade
+                , ( Single Text --criterionIcon
+                  , Single Text --criterionName
+                  , Single Double --evidence
+                  , Single Double --rating
+                  )
+                ) -> Submission
+convertTypes ( Single _currentScId
+             , ( Single historyScenarioId
+               , Single authorId
+               , Single taskId
+               , Single description
+               , Single grade
+               , Single lastUpdate
+               , Single edxGradingId
+               )
+             , Single authorName
+             , Single expertGrade
+             , ( Single criterionIcon
+               , Single criterionName
+               , Single evidence
+               , Single rating
+               )
+             )
+             = Submission {
+                scenario    = CurrentScenario {
+                  currentScenarioHistoryScenarioId = historyScenarioId
+                , currentScenarioAuthorId          = authorId
+                , currentScenarioTaskId            = taskId
+                , currentScenarioDescription       = description
+                , currentScenarioEdxGradingId      = edxGradingId
+                , currentScenarioGrade             = grade
+                , currentScenarioLastUpdate        = lastUpdate
+                }
+              , authorName  = authorName
+              , expertGrade = expertGrade
+              , criterions  = [ CriterionData {
+                    critIcon   = Blaze.preEscapedToMarkup (criterionIcon :: Text)
+                  , critName   = criterionName
+                  , critRating = designRatingToVisual evidence rating
+                } ]
+             }
