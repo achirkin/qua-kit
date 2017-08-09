@@ -4,6 +4,10 @@ module Handler.Mooc.BrowseProposals
   , getBrowseProposalsForExpertsR
   , getBrowseProposalsForExpertsNR
   , fetchLastSubmissions
+  , mkSubmissionsWidget
+  , noProposalParams
+  , ProposalParams(..)
+  , ProposalSortParam (..)
   ) where
 
 import Import
@@ -30,16 +34,15 @@ getBrowseProposalsForExpertsR scpId = getBrowseProposalsPamsR (convenientReviewO
 
 getBrowseProposalsPamsR :: ProposalParams -> Int -> Handler Html
 getBrowseProposalsPamsR defParams page = do
-    role <- muserRole <$> maybeAuth
-    let isExpert = role == UR_EXPERT
     exercises <- runDB $ selectList [] []
     ((res, widget), _) <- runFormGet $ proposalsForm defParams exercises
     let params = case res of
                    (FormSuccess ps) -> ps
                    _ -> defParams
     submissions <- runDB $ fetchLastSubmissions $ params {
-                             limit  = Just pageSize
-                           , offset = (max 0 $ page-1)*pageSize }
+                             propLimit  = Just pageSize
+                           , propOffset = (max 0 $ page-1)*pageSize }
+    submissionsWidget <- mkSubmissionsWidget submissions
     pages <- negate . (`div` pageSize) . negate <$> runDB (countUniqueSubmissions params)
     let is = [1..pages]
     fullLayout Nothing "Qua-kit student designs" $ do
@@ -58,13 +61,6 @@ getBrowseProposalsPamsR defParams page = do
         |]
       toWidgetHead $
         [cassius|
-          span.card-comment.card-criterion
-            width: 24px
-            padding: 0px
-            margin: 4px
-            display: inline-block
-            color: #ff6f00
-            text-align: center
           .form-inline
             .form-group
               display: inline-block
@@ -85,55 +81,12 @@ getBrowseProposalsPamsR defParams page = do
               color: #b71c1c
         |]
       [whamlet|
-        <form .form-inline #proposalsForm>
+        <form .form-inline #proposalsForm action=1 method=GET>
           <div class="ui-card-wrap">
             <div class=row>
               ^{widget}
             <div class=row>
-              $forall sub <- submissions
-                <div class="col-lg-4 col-md-6 col-sm-9 col-xs-9 story_cards">
-                  <div.card>
-                    <aside.card-side.card-side-img.pull-left.card-side-moocimg>
-                      <img
-                        src=@{ProposalPreviewR $ currentScenarioHistoryScenarioId $ scenario sub}
-                        width="200px" height="200px" style="margin-left: -25px;">
-                    <div.card-main>
-                      <div.card-inner style="margin: 10px 12px;">
-                        <p style="margin: 6px 0px; color: #b71c1c;">
-                          #{authorName sub}
-                            <br>
-                          #{show $ utctDay $ currentScenarioLastUpdate $ scenario sub}
-                        <p style="margin: 6px 0px; white-space: pre-line; overflow-y: hidden; color: #555;">
-                         #{shortComment $ currentScenarioDescription $ scenario sub}
-                      <div.card-comment.card-action>
-                        $forall (CriterionData svg cname crating) <- criterions sub
-                         $maybe rating <- crating
-                          <span.card-comment.card-criterion style="opacity: #{cOpacity rating}" title="#{cname}">
-                            #{svg}
-                            <p style="display: inline; margin: 0; padding:0; color: rgb(#{156 + rating}, 111, 0)">
-                              #{rating}
-                         $nothing
-                          <span.card-comment.card-criterion style="opacity: 0.3" title="Not enough votes to show rating">
-                            #{svg}
-                            \ - #
-                        $maybe expertgrade <- expertGrade sub
-                          <span.card-comment.card-criterion  title="Expert Grade">
-                            <span class="icon icon-lg" style="width:24px; height:24px;">star</span>
-                              <p style="display: inline; margin: 0; padding:0; color: #b71c1c;)">
-                                #{expertgrade}
-                        <div.card-action-btn.pull-right>
-                          $with subViewLink <- SubmissionViewerR (currentScenarioTaskId $ scenario sub) (currentScenarioAuthorId $ scenario sub)
-                            $if isExpert && (isNothing $ currentScenarioGrade $ scenario sub)
-                              <a.btn.btn-flat.btn-brand-accent.waves-attach.waves-effect
-                                  style="background: red; color: white !important;"
-                                  href=@{subViewLink} target="_blank">
-                                <span.icon>visibility
-                                Review
-                            $else
-                              <a.btn.btn-flat.btn-brand-accent.waves-attach.waves-effect
-                                  href=@{subViewLink} target="_blank">
-                                <span.icon>visibility
-                                View
+              ^{submissionsWidget}
 
           <!-- footer with page numbers -->
           $if pages == 0
@@ -154,8 +107,70 @@ getBrowseProposalsPamsR defParams page = do
                         value=#{i}
                         formaction=@{BrowseProposalsR i}>
       |]
- where
-   cOpacity i = 0.5 + fromIntegral i / 198 :: Double
+
+mkSubmissionsWidget :: [Submission] -> Handler Widget
+mkSubmissionsWidget submissions = do
+  role <- muserRole <$> maybeAuth
+  let isExpert = role == UR_EXPERT
+      cOpacity i = 0.5 + fromIntegral i / 198 :: Double
+  return $ do
+    toWidgetHead
+      [cassius|
+        span.card-comment.card-criterion
+          width: 24px
+          padding: 0px
+          margin: 4px
+          display: inline-block
+          color: #ff6f00
+          text-align: center
+      |]
+    [whamlet|
+      $forall sub <- submissions
+        <div class="col-lg-4 col-md-6 col-sm-9 col-xs-9 story_cards">
+          <div.card>
+            <aside.card-side.card-side-img.pull-left.card-side-moocimg>
+              <img
+                src=@{ProposalPreviewR $ currentScenarioHistoryScenarioId $ scenario sub}
+                width="200px" height="200px" style="margin-left: -25px;">
+            <div.card-main>
+              <div.card-inner style="margin: 10px 12px;">
+                <p style="margin: 6px 0px; color: #b71c1c;">
+                  #{authorName sub}
+                    <br>
+                  #{show $ utctDay $ currentScenarioLastUpdate $ scenario sub}
+                <p style="margin: 6px 0px; white-space: pre-line; overflow-y: hidden; color: #555;">
+                 #{shortComment $ currentScenarioDescription $ scenario sub}
+              <div.card-comment.card-action>
+                $forall (CriterionData svg cname crating) <- criterions sub
+                 $maybe rating <- crating
+                  <span.card-comment.card-criterion style="opacity: #{cOpacity rating}" title="#{cname}">
+                    #{svg}
+                    <p style="display: inline; margin: 0; padding:0; color: rgb(#{156 + rating}, 111, 0)">
+                      #{rating}
+                 $nothing
+                  <span.card-comment.card-criterion style="opacity: 0.3"
+                    title="Not enough votes to show rating">
+                    #{svg}
+                    \ - #
+                $maybe expertgrade <- expertGrade sub
+                  <span.card-comment.card-criterion  title="Expert Grade">
+                    <span class="icon icon-lg" style="width:24px; height:24px;">star</span>
+                      <p style="display: inline; margin: 0; padding:0; color: #b71c1c;)">
+                        #{expertgrade}
+                <div.card-action-btn.pull-right>
+                  $with subViewLink <- SubmissionViewerR (currentScenarioTaskId $ scenario sub) (currentScenarioAuthorId $ scenario sub)
+                    $if isExpert && (isNothing $ currentScenarioGrade $ scenario sub)
+                      <a.btn.btn-flat.btn-brand-accent.waves-attach.waves-effect
+                          style="background: red; color: white !important;"
+                          href=@{subViewLink} target="_blank">
+                        <span.icon>visibility
+                        Review
+                    $else
+                      <a.btn.btn-flat.btn-brand-accent.waves-attach.waves-effect
+                          href=@{subViewLink} target="_blank">
+                        <span.icon>visibility
+                        View
+    |]
 
 
 
@@ -190,8 +205,8 @@ data ProposalParams = ProposalParams {
     , onlyByAuthorId    :: Maybe UserId
     , onlyByExerciseId  :: Maybe ScenarioProblemId
     , sortOrder         :: ProposalSortParam
-    , limit             :: Maybe Int
-    , offset            :: Int
+    , propLimit         :: Maybe Int
+    , propOffset        :: Int
     }
 
 noProposalParams :: ProposalParams
@@ -200,8 +215,8 @@ noProposalParams = ProposalParams {
     , onlyByAuthorId    = Nothing
     , onlyByExerciseId  = Nothing
     , sortOrder         = Default
-    , limit             = Nothing
-    , offset            = 0
+    , propLimit         = Nothing
+    , propOffset        = 0
     }
 
 convenientReviewOrder :: Maybe ScenarioProblemId -> ProposalParams
@@ -210,8 +225,8 @@ convenientReviewOrder scpId = ProposalParams {
     , onlyByAuthorId    = Nothing
     , onlyByExerciseId  = scpId
     , sortOrder         = Oldest
-    , limit             = Nothing
-    , offset            = 0
+    , propLimit         = Nothing
+    , propOffset        = 0
     }
 
 proposalsForm :: ProposalParams -> [Entity ScenarioProblem] -> Html -> MForm Handler (FormResult ProposalParams, Widget)
@@ -241,8 +256,8 @@ proposalsForm defParams exercises extra = do
                                       <*> onlyByAuthorIdRes
                                       <*> onlyByExerciseIdRes
                                       <*> sortOrderRes
-                                      <*> FormSuccess (limit  defParams)
-                                      <*> FormSuccess (offset defParams)
+                                      <*> FormSuccess (propLimit  defParams)
+                                      <*> FormSuccess (propOffset defParams)
   let widget = do
         [whamlet|
           #{extra}
@@ -312,9 +327,9 @@ generateJoins ps = (whereParams ++ limitParams, joinStr, orderStr)
                      Oldest    -> "s.last_update ASC"
                      GradeDesc -> "COALESCE(s.grade, 0) DESC"
                      GradeAsc  -> "COALESCE(s.grade, 0) ASC"
-    pOffset = toPersistValue $ offset ps
+    pOffset = toPersistValue $ propOffset ps
     (limitParams, limitClause) =
-      case limit ps of
+      case propLimit ps of
         Just limit -> ([toPersistValue limit, pOffset], "LIMIT ? OFFSET ?")
         _           -> ([pOffset], "OFFSET ?")
     (whereParams, whereClause) =
