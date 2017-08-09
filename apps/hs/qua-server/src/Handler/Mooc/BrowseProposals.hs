@@ -126,50 +126,51 @@ mkSubmissionsWidget submissions = do
       |]
     [whamlet|
       $forall sub <- submissions
-        <div class="col-lg-4 col-md-6 col-sm-9 col-xs-9 story_cards">
-          <div.card>
-            <aside.card-side.card-side-img.pull-left.card-side-moocimg>
-              <img
-                src=@{ProposalPreviewR $ currentScenarioHistoryScenarioId $ scenario sub}
-                width="200px" height="200px" style="margin-left: -25px;">
-            <div.card-main>
-              <div.card-inner style="margin: 10px 12px;">
-                <p style="margin: 6px 0px; color: #b71c1c;">
-                  #{authorName sub}
-                    <br>
-                  #{show $ utctDay $ currentScenarioLastUpdate $ scenario sub}
-                <p style="margin: 6px 0px; white-space: pre-line; overflow-y: hidden; color: #555;">
-                 #{shortComment $ currentScenarioDescription $ scenario sub}
-              <div.card-comment.card-action>
-                $forall (CriterionData svg cname crating) <- criterions sub
-                 $maybe rating <- crating
-                  <span.card-comment.card-criterion style="opacity: #{cOpacity rating}" title="#{cname}">
-                    #{svg}
-                    <p style="display: inline; margin: 0; padding:0; color: rgb(#{156 + rating}, 111, 0)">
-                      #{rating}
-                 $nothing
-                  <span.card-comment.card-criterion style="opacity: 0.3"
-                    title="Not enough votes to show rating">
-                    #{svg}
-                    \ - #
-                $maybe expertgrade <- expertGrade sub
-                  <span.card-comment.card-criterion  title="Expert Grade">
-                    <span class="icon icon-lg" style="width:24px; height:24px;">star</span>
-                      <p style="display: inline; margin: 0; padding:0; color: #b71c1c;)">
-                        #{expertgrade}
-                <div.card-action-btn.pull-right>
-                  $with subViewLink <- SubmissionViewerR (currentScenarioTaskId $ scenario sub) (currentScenarioAuthorId $ scenario sub)
-                    $if isExpert && (isNothing $ currentScenarioGrade $ scenario sub)
-                      <a.btn.btn-flat.btn-brand-accent.waves-attach.waves-effect
-                          style="background: red; color: white !important;"
-                          href=@{subViewLink} target="_blank">
-                        <span.icon>visibility
-                        Review
-                    $else
-                      <a.btn.btn-flat.btn-brand-accent.waves-attach.waves-effect
-                          href=@{subViewLink} target="_blank">
-                        <span.icon>visibility
-                        View
+        $with sc <- scenario sub
+          <div class="col-lg-4 col-md-6 col-sm-9 col-xs-9 story_cards">
+            <div.card>
+              <aside.card-side.card-side-img.pull-left.card-side-moocimg>
+                <img
+                  src=@{ProposalPreviewR $ currentScenarioHistoryScenarioId sc}
+                  width="200px" height="200px" style="margin-left: -25px;">
+              <div.card-main>
+                <div.card-inner style="margin: 10px 12px;">
+                  <p style="margin: 6px 0px; color: #b71c1c;">
+                    #{authorName sub}
+                      <br>
+                    #{show $ utctDay $ currentScenarioLastUpdate sc}
+                  <p style="margin: 6px 0px; white-space: pre-line; overflow-y: hidden; color: #555;">
+                   #{shortComment $ currentScenarioDescription sc}
+                <div.card-comment.card-action>
+                  $forall (CriterionData svg cname crating) <- criterions sub
+                   $maybe rating <- crating
+                    <span.card-comment.card-criterion style="opacity: #{cOpacity rating}" title="#{cname}">
+                      #{svg}
+                      <p style="display: inline; margin: 0; padding:0; color: rgb(#{156 + rating}, 111, 0)">
+                        #{rating}
+                   $nothing
+                    <span.card-comment.card-criterion style="opacity: 0.3"
+                      title="Not enough votes to show rating">
+                      #{svg}
+                      \ - #
+                  $maybe expertgrade <- avgExpertGrade sub
+                    <span.card-comment.card-criterion  title="Expert Grade">
+                      <span class="icon icon-lg" style="width:24px; height:24px;">star</span>
+                        <p style="display: inline; margin: 0; padding:0; color: #b71c1c;)">
+                          #{expertgrade}
+                  <div.card-action-btn.pull-right>
+                    $with subViewLink <- SubmissionViewerR (currentScenarioTaskId sc) (currentScenarioAuthorId sc)
+                      $if isExpert && (isNothing $ currentScenarioGrade sc)
+                        <a.btn.btn-flat.btn-brand-accent.waves-attach.waves-effect
+                            style="background: red; color: white !important;"
+                            href=@{subViewLink} target="_blank">
+                          <span.icon>visibility
+                          Review
+                      $else
+                        <a.btn.btn-flat.btn-brand-accent.waves-attach.waves-effect
+                            href=@{subViewLink} target="_blank">
+                          <span.icon>visibility
+                          View
     |]
 
 
@@ -187,10 +188,10 @@ data CriterionData = CriterionData {
     }
 
 data Submission = Submission {
-      scenario     :: CurrentScenario
-    , authorName   :: Text
-    , expertGrade  :: Maybe Int
-    , criterions   :: [CriterionData]
+      scenario        :: CurrentScenario
+    , authorName      :: Text
+    , avgExpertGrade  :: Maybe Double
+    , criterions      :: [CriterionData]
   }
 
 data ProposalSortParam = Default
@@ -403,7 +404,7 @@ convertTypes :: ( Single CurrentScenarioId --currentScId
                   , Single (Maybe EdxGradingId)--edxGradingId
                   )
                 , Single Text --authorName
-                , Single (Maybe Int) --expertGrade
+                , Single (Maybe Double) --avgExpertGrade
                 , ( Single Text --criterionIcon
                   , Single Text --criterionName
                   , Single Double --evidence
@@ -420,7 +421,7 @@ convertTypes ( Single _currentScId
                , Single edxGradingId
                )
              , Single authorName
-             , Single expertGrade
+             , Single avgExpertGrade
              , ( Single criterionIcon
                , Single criterionName
                , Single evidence
@@ -438,7 +439,7 @@ convertTypes ( Single _currentScId
                 , currentScenarioLastUpdate        = lastUpdate
                 }
               , authorName  = authorName
-              , expertGrade = expertGrade
+              , avgExpertGrade = avgExpertGrade
               , criterions  = [ CriterionData {
                     critIcon   = Blaze.preEscapedToMarkup (criterionIcon :: Text)
                   , critName   = criterionName
