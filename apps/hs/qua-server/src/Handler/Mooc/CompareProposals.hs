@@ -8,7 +8,7 @@ module Handler.Mooc.CompareProposals
   ) where
 
 
-import Import hiding (on, (==.), groupBy, Value)
+import Import hiding (on, (==.), (||.), groupBy, Value)
 import Text.Blaze
 import Database.Persist.Sql (rawSql, Single(..))
 import Data.FileEmbed (embedStringFile)
@@ -85,8 +85,8 @@ getCompareByCriterionR uId cId = do
   scpId <- getCurrentScenarioProblem
   let showPopup = custom_exercise_count > 0 && compare_counter == 0
   when showPopup $ void getMessages
-  (criterion,msubs) <- runDB $ do
-      cr <- get404 cId
+  (criterion,msubs) <- do
+      cr <- runDB $ get404 cId
       ms <- getLeastPopularSubmissions scpId uId cId
       return (cr,ms)
   case msubs of
@@ -233,8 +233,7 @@ getLeastPopularCriterion scpId uId =
       groupBy (rating ?. RatingAuthorId, problemCriterion ^. ProblemCriterionCriterionId)
       let ratingEvidence = coalesceDefault
             [ rating ?. RatingCurrentEvidenceW
-            ]
-            (val 0)
+            ] (val 0)
       let sum_' = sum_ ratingEvidence :: SqlExpr (Value (Maybe Double))
       orderBy [asc sum_']
       limit 1
@@ -244,19 +243,37 @@ getLeastPopularCriterion scpId uId =
     getValue ((Value n):_) = Just n
     getValue _ = Nothing
 
-getLeastPopularSubmissions :: ScenarioProblemId -> UserId -> CriterionId -> ReaderT SqlBackend Handler (Maybe (Entity Scenario, Entity Scenario))
+getLeastPopularSubmissions :: ScenarioProblemId -> UserId -> CriterionId -> Handler (Maybe (Entity Scenario, Entity Scenario))
 getLeastPopularSubmissions scpId uId cId = do
-    r <- rawSql query ( [uid, uid, uid, toPersistValue scpId, uid, cid])
-    case r of
-      ((Single i1,Single i2):_) -> do
-        ms1 <- get i1
-        ms2 <- get i2
-        return $ (,) <$> (Entity i1 <$> ms1) <*> (Entity i2 <$> ms2)
-      _ -> return Nothing
-  where
-    uid = toPersistValue uId
-    cid = toPersistValue cId
-    query = $(embedStringFile "sql/get-least-popular-submissions.sql")
+    -- First list current scenarios and their evidence
+    scenarios <- fmap (map unValue) $ runDB $ select $ from $ \(rating `RightOuterJoin` currentScenario) -> do
+      on $ ((rating ?. RatingAuthorId) ==. just (currentScenario ^. CurrentScenarioAuthorId)
+           &&. (rating ?. RatingProblemId ==. just (val scpId))
+           &&. (rating ?. RatingCriterionId ==. just (val cId)))
+      let ratingEvidence = coalesceDefault
+            [ rating ?. RatingCurrentEvidenceW
+            ] (val 0)
+      orderBy [asc $ ratingEvidence +. (val 3 *. random_)]
+      pure $ currentScenario ^. CurrentScenarioHistoryScenarioId
+    let scenarios' = scenarios :: [ScenarioId]
+    let loop [] = pure Nothing
+        loop ((s1, s2):rest) = do
+             voteIds <- runDB $ select $ from $ \vote -> do
+               let match s1_ s2_ = (vote ^. VoteBetterId ==. val s1) &&. (vote ^. VoteWorseId ==. val s2)
+               where_ $ vote ^. VoteVoterId ==. val uId
+                    &&. (match s1 s2 ||. match s2 s1)
+               limit 1
+               pure $ vote ^. VoteId
+             if null voteIds -- This pair hasn't been voten on yet.
+             then pure $ Just (s1, s2)
+             else loop rest
+    mr <- loop $ liftM2 (,) scenarios scenarios
+    case mr of
+      Nothing -> pure Nothing
+      Just (sid1, sid2) -> do
+       ms1 <- runDB $ getEntity sid1
+       ms2 <- runDB $ getEntity sid2
+       pure $ (,) <$> ms1 <*> ms2
 
 -- getLastExercise :: UserId -> ReaderT SqlBackend Handler (Maybe (EdxResourceId,Text,Text))
 -- getLastExercise uId = getVal <$> rawSql query [toPersistValue uId]
