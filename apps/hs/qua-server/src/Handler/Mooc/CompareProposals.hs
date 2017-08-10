@@ -8,12 +8,15 @@ module Handler.Mooc.CompareProposals
   ) where
 
 
-import Import
+import Import hiding (on, (==.), groupBy, Value)
 import Text.Blaze
 import Database.Persist.Sql (rawSql, Single(..))
 import Data.FileEmbed (embedStringFile)
 import Application.Edx
 import Application.Grading
+
+import Database.Esqueleto
+import qualified Database.Persist as P
 
 postVoteForProposalR :: CriterionId -> ScenarioId -> ScenarioId -> Handler Html
 postVoteForProposalR cId better worse = do
@@ -69,7 +72,7 @@ getCompareProposalsR = do
   setUltDest MoocHomeR
   userId <- requireAuthId
   scpId <- getCurrentScenarioProblem
-  runDB (getLeastPopularCriterion scpId userId) >>= \mcID -> case mcID of
+  getLeastPopularCriterion scpId userId >>= \mcID -> case mcID of
      Nothing  -> notFound
      Just cid -> getCompareByCriterionR userId cid
 
@@ -222,13 +225,24 @@ prepareDescription sc = if n > 3
 
 
 -- | Select a criterion that was used least among others
-getLeastPopularCriterion :: ScenarioProblemId -> UserId -> ReaderT SqlBackend Handler (Maybe CriterionId)
-getLeastPopularCriterion scpId uId = getValue <$> rawSql query [toPersistValue scpId, toPersistValue uId]
+getLeastPopularCriterion :: ScenarioProblemId -> UserId -> Handler (Maybe CriterionId)
+getLeastPopularCriterion scpId uId =
+    fmap getValue $ runDB $ select $ from $ \(problemCriterion `LeftOuterJoin` rating) -> do
+      on (just (problemCriterion ^. ProblemCriterionProblemId) ==. rating ?. RatingProblemId)
+      where_ (rating ?. RatingProblemId ==. just (val scpId))
+      groupBy (rating ?. RatingAuthorId, problemCriterion ^. ProblemCriterionCriterionId)
+      let ratingEvidence = coalesceDefault
+            [ rating ?. RatingCurrentEvidenceW
+            ]
+            (val 0)
+      let sum_' = sum_ ratingEvidence :: SqlExpr (Value (Maybe Double))
+      orderBy [asc sum_']
+      limit 1
+      pure $ problemCriterion ^. ProblemCriterionCriterionId
   where
-    getValue :: [(Single CriterionId)] -> Maybe CriterionId
-    getValue ((Single n):_) = Just n
+    getValue :: [(Value CriterionId)] -> Maybe CriterionId
+    getValue ((Value n):_) = Just n
     getValue _ = Nothing
-    query = $(embedStringFile "sql/get-least-popular-criterion.sql")
 
 getLeastPopularSubmissions :: ScenarioProblemId -> UserId -> CriterionId -> ReaderT SqlBackend Handler (Maybe (Entity Scenario, Entity Scenario))
 getLeastPopularSubmissions scpId uId cId = do
