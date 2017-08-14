@@ -312,12 +312,14 @@ instance YesodAuthEmail App where
       Nothing -> return Nothing
       Just _ -> do
         update uid [UserVerified =. True]
-        -- set verkey to empty string to prevent reuse
-        _ <- upsertBy (UserProperty uid "verkey") (UserProp uid "verkey" "")
-               [UserPropValue =. ""]
         return $ Just uid
   getPassword = runDB . fmap (join . fmap userPassword) . get
-  setPassword uid pass = runDB $ update uid [UserPassword =. Just pass]
+  setPassword uid pass = runDB $ do
+    update uid [UserPassword =. Just pass]
+    -- set verkey to empty string to prevent reuse
+    _ <- upsertBy (UserProperty uid "verkey") (UserProp uid "verkey" "")
+           [UserPropValue =. ""]
+    return ()
   getEmailCreds email = runDB $ do
     mu <- getBy $ UserEmailId (Just email)
     case mu of
