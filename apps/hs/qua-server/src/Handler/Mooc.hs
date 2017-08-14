@@ -70,6 +70,13 @@ getMoocHomeR  = toTypedContent <$> do
               top: 5px
             .stars
               color: #ff6f00
+            .newscard
+              width: 100%
+              padding: 0 10px
+              .stars
+                margin: 8px 0
+              .commentPara
+                margin-top: 3px
           |]
         $(widgetFile "mooc/home")
 
@@ -122,7 +129,7 @@ fetchReviews uId = do
             widget =
               [whamlet|
                 ^{viewSubmissionBtn sc}
-                <p>
+                <p .commentPara>
                   <span .critIcon>#{ critIcon }
                   <span class="icon icon24 text-brand-accent">
                     $if reviewPositive r

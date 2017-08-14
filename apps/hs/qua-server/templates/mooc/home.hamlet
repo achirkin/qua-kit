@@ -5,19 +5,13 @@
     $maybe submissionsWidget <- mSubmissionsWidget
 
       $if not $ null newsItems
-        <div class="col-md-6">
-          <div .card>
-              <div .card-main>
-                <div .card-header>
-                  <div .card-inner>
-                    <h1 .card-heading>News
-                <div .card-inner>
-                  $forall (date, newsItem) <- newsItems
-                    <div>
-                      <div class="card-action-btn pull-right">
-                        #{ show $ utctDay date}</p>
-                      ^{ newsItem }
-                      <hr>
+        <div class="col-lg-4 col-md-6 col-sm-9">
+          $forall (date, newsItem) <- newsItems
+              <div .card>
+                <div .newscard>
+                  <div class="card-action-btn pull-right">
+                    #{ show $ utctDay date}</p>
+                  ^{ newsItem }
 
       ^{ submissionsWidget }
 
@@ -55,8 +49,6 @@
                 <span class="icon">check
                 &nbsp;Go to gallery
 
-    ^{createAccW}
-
     <div class="col-lg-4 col-sm-6">
       <div class="card">
         <div class="card-main">
@@ -67,3 +59,5 @@
               <a class="btn btn-flat waves-attach waves-light waves-effect" href="http://www.ia.arch.ethz.ch/">
                 <span class="icon">check
                 &nbsp;Visit our site
+
+    ^{createAccW}
