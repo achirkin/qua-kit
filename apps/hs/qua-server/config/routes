@@ -39,8 +39,7 @@
 /mooc/scproblem/#ScenarioProblemId/detach-criterion/#CriterionId ScenarioProblemDetachCriterionR POST
 /mooc/user/#UserId/role                                          SetUserRoleR POST
 /mooc/proposals/browse/#Int                                      BrowseProposalsR GET
-/mooc/proposals/ebrowse/                                         BrowseProposalsForExpertsNR GET
-/mooc/proposals/ebrowse/#ScenarioProblemId                       BrowseProposalsForExpertsR GET
+/mooc/proposals/ebrowse/                                         BrowseProposalsForExpertsR GET
 /mooc/proposals/preview/#ScenarioId                              ProposalPreviewR GET
 /mooc/proposals/edit                                             EditProposalR GET
 /mooc/proposals/view/#ScenarioId                                 ViewProposalR GET

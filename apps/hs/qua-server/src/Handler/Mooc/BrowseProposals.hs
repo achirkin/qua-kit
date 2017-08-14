@@ -2,7 +2,6 @@
 module Handler.Mooc.BrowseProposals
   ( getBrowseProposalsR
   , getBrowseProposalsForExpertsR
-  , getBrowseProposalsForExpertsNR
   ) where
 
 import Application.Grading
@@ -22,11 +21,8 @@ pageSize = 80
 getBrowseProposalsR :: Int -> Handler Html
 getBrowseProposalsR = getBrowseProposalsPamsR noProposalParams
 
-getBrowseProposalsForExpertsNR :: Handler Html
-getBrowseProposalsForExpertsNR = getBrowseProposalsPamsR (convenientReviewOrder Nothing) 1
-
-getBrowseProposalsForExpertsR :: ScenarioProblemId -> Handler Html
-getBrowseProposalsForExpertsR scpId = getBrowseProposalsPamsR (convenientReviewOrder $ Just scpId) 1
+getBrowseProposalsForExpertsR :: Handler Html
+getBrowseProposalsForExpertsR = getBrowseProposalsPamsR convenientReviewOrder 1
 
 getBrowseProposalsPamsR :: ProposalParams -> Int -> Handler Html
 getBrowseProposalsPamsR defParams page = do
@@ -190,11 +186,11 @@ noProposalParams = ProposalParams {
     , sortOrder         = Default
     }
 
-convenientReviewOrder :: Maybe ScenarioProblemId -> ProposalParams
-convenientReviewOrder scpId = ProposalParams {
+convenientReviewOrder :: ProposalParams
+convenientReviewOrder = ProposalParams {
       onlyNeedsReview   = Just ()
     , onlyByAuthorId    = Nothing
-    , onlyByExerciseId  = scpId
+    , onlyByExerciseId  = Nothing
     , sortOrder         = Oldest
     }
 
