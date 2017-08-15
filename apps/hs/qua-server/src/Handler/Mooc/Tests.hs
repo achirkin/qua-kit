@@ -2,6 +2,7 @@
 module Handler.Mooc.Tests
   ( getSimulateDesignExerciseR
   , getSimulateCompareExerciseR
+  , getLoginAsUserIdR
   ) where
 
 import Import
@@ -37,6 +38,12 @@ getSimulateCompareExerciseR = do
              ,("custom_exercise_id", "1")
              ,("custom_exercise_count", "10")
              ]
+
+getLoginAsUserIdR :: UserId -> Handler TypedContent
+getLoginAsUserIdR userId = do
+  u <- runDB $ get404 userId
+  clearSession
+  setCredsRedirect $ Creds "lti" (fromMaybe "not an edX user" $ userEdxUserId u) []
 
 
 genRandomName :: Handler Text
