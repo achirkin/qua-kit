@@ -21,6 +21,11 @@ pageSize = 80
 getBrowseProposalsR :: Int -> Handler Html
 getBrowseProposalsR = getBrowseProposalsPamsR noProposalParams
 
+
+-- | We are using a separate route to have different sorting defaults.
+--   i.e. `noProposalParams` differs from `convenientReviewOrder`,
+--   and it would take more time to implement all these defaults via get parameters
+--   (and also links would become more weird and less typesafe TM).
 getBrowseProposalsForExpertsR :: Handler Html
 getBrowseProposalsForExpertsR = getBrowseProposalsPamsR convenientReviewOrder 1
 
