@@ -2,15 +2,15 @@
 module Handler.Mooc.BrowseProposals
   ( getBrowseProposalsR
   , getBrowseProposalsForExpertsR
-  , getBrowseProposalsForExpertsNR
   ) where
 
+import Application.Grading
+import Database.Persist.Sql (rawSql, Single (..), toSqlKey)
+import qualified Data.Text as Text
 import Import
 import Import.BootstrapUtil
-import qualified Data.Text as Text
 import qualified Text.Blaze as Blaze
-import Database.Persist.Sql (rawSql, Single (..))
-import Application.Grading
+import Text.Read (read)
 
 pageSize :: Int
 pageSize = 80
@@ -21,23 +21,28 @@ pageSize = 80
 getBrowseProposalsR :: Int -> Handler Html
 getBrowseProposalsR = getBrowseProposalsPamsR noProposalParams
 
-getBrowseProposalsForExpertsNR :: Handler Html
-getBrowseProposalsForExpertsNR = getBrowseProposalsPamsR (convenientReviewOrder Nothing) 1
-
-getBrowseProposalsForExpertsR :: ScenarioProblemId -> Handler Html
-getBrowseProposalsForExpertsR scpId = getBrowseProposalsPamsR (convenientReviewOrder $ Just scpId) 1
+getBrowseProposalsForExpertsR :: Handler Html
+getBrowseProposalsForExpertsR = getBrowseProposalsPamsR convenientReviewOrder 1
 
 getBrowseProposalsPamsR :: ProposalParams -> Int -> Handler Html
 getBrowseProposalsPamsR defParams page = do
     role <- muserRole <$> maybeAuth
     let isExpert = role == UR_EXPERT
     exercises <- runDB $ selectList [] []
-    ((res, widget), _) <- runFormGet $ proposalsForm defParams exercises
-    let params = case res of
+    exerciseGet <- lookupGetParam "exercise_id"
+    let params = defParams {onlyByExerciseId = byExerciseDef}
+          where
+            byExerciseDef = orElse (toSqlKey . read . unpack <$> exerciseGet)
+                                   (onlyByExerciseId defParams)
+            orElse x y = case x of
+                           Just _  -> x
+                           Nothing -> y
+    ((res, widget), _) <- runFormGet $ proposalsForm params exercises
+    let params' = case res of
                    (FormSuccess ps) -> ps
-                   _ -> defParams
-    usersscenarios <- runDB $ getLastSubmissions page params
-    pages <- negate . (`div` pageSize) . negate <$> runDB (countUniqueSubmissions params)
+                   _ -> params
+    usersscenarios <- runDB $ getLastSubmissions page params'
+    pages <- negate . (`div` pageSize) . negate <$> runDB (countUniqueSubmissions params')
     let is = [1..pages]
     fullLayout Nothing "Qua-kit student designs" $ do
       setTitle "Qua-kit student designs"
@@ -181,11 +186,11 @@ noProposalParams = ProposalParams {
     , sortOrder         = Default
     }
 
-convenientReviewOrder :: Maybe ScenarioProblemId -> ProposalParams
-convenientReviewOrder scpId = ProposalParams {
+convenientReviewOrder :: ProposalParams
+convenientReviewOrder = ProposalParams {
       onlyNeedsReview   = Just ()
     , onlyByAuthorId    = Nothing
-    , onlyByExerciseId  = scpId
+    , onlyByExerciseId  = Nothing
     , sortOrder         = Oldest
     }
 

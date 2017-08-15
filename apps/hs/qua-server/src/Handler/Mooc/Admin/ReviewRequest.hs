@@ -91,9 +91,11 @@ reviewRequest params = do
                                             (currentScenarioTaskId sc)
                                             (currentScenarioAuthorId sc)
       let scLinks = fmap toLink scenarios
-          browseLink = case mtaskId params of
-                          Nothing -> render BrowseProposalsForExpertsNR
-                          Just i  -> render $ BrowseProposalsForExpertsR i
+          browseLink =
+            case mtaskId params of
+              Nothing -> render BrowseProposalsForExpertsR
+              Just i  -> render BrowseProposalsForExpertsR <>
+                           "?exercise_id=" <> tshow (P.fromSqlKey i)
       case mexpertId params of
         Just expertId -> do
           mexpert <- runDB $ get expertId
