@@ -49,11 +49,11 @@ getBrowseProposalsPamsR defParams page = do
     let params' = case res of
                    (FormSuccess ps) -> ps
                    _ -> params
-    submissions <- runDB $ fetchLastSubmissions $ params {
+    submissions <- runDB $ fetchLastSubmissions $ params' {
                              propLimit  = Just pageSize
                            , propOffset = (max 0 $ page-1)*pageSize }
     submissionsWidget <- mkSubmissionsWidget submissions
-    pages <- negate . (`div` pageSize) . negate <$> runDB (countUniqueSubmissions params)
+    pages <- negate . (`div` pageSize) . negate <$> runDB (countUniqueSubmissions params')
     let is = [1..pages]
     fullLayout Nothing "Qua-kit student designs" $ do
       setTitle "Qua-kit student designs"
