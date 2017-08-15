@@ -9,7 +9,7 @@ module Handler.Mooc.BrowseProposals
   , ProposalSortParam (..)
   ) where
 
-import Application.Grading
+import Application.Grading (designRatingToVisual)
 import Database.Persist.Sql (rawSql, Single (..), toSqlKey)
 import qualified Data.Text as Text
 import Import
@@ -368,7 +368,7 @@ fetchLastSubmissions params = groupSubs <$> map convertTypes <$> rawSql query pr
               currentScenarioHistoryScenarioId (scenario x)
                 = let crits = criterions y ++ criterions x
                   in  go (y {criterions = crits}) xs
-            | otherwise = (y, xs)
+            | otherwise = (y, x:xs)
         go y [] = (y, [])
     groupSubs [] = []
 
