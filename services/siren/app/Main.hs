@@ -92,7 +92,8 @@ processMessages = do
   -- send a first message to register as a service
   genToken >>= yield . headerBytes . registerGetList
   genToken >>= yield . headerBytes . registerGetScenario
-  genToken >>= yield . headerBytes . registerCreateScenario
+  genToken >>= yield . headerBytes . registerCreateScenario "scenario.geojson.Create"
+  genToken >>= yield . headerBytes . registerCreateScenario "scenario.Create"
   genToken >>= yield . headerBytes . registerUpdateScenario
   genToken >>= yield . headerBytes . registerDeleteScenario
   genToken >>= yield . headerBytes . registerRecoverScenario
@@ -221,12 +222,12 @@ registerGetScenario token = MsgRun token "RemoteRegister" o []
 
 
 -- | A message we send to register in luci
-registerCreateScenario :: Token -> Message
-registerCreateScenario token = MsgRun token "RemoteRegister" o []
+registerCreateScenario :: Text -> Token -> Message
+registerCreateScenario funname token = MsgRun token "RemoteRegister" o []
   where
     o = HashMap.fromList
       [ "description"        .= String "Create a new scenario in GeoJSON format"
-      , "serviceName"        .= String "scenario.geojson.Create"
+      , "serviceName"        .= String funname
       , "inputs"             .= object
           [ "name" .= String "string"
           , "geometry_input" .= object
@@ -245,7 +246,7 @@ registerCreateScenario token = MsgRun token "RemoteRegister" o []
           , "name" .= String "name"
           ]
       , "exampleCall"        .= object
-          [ "run"    .= String "scenario.geojson.Create"
+          [ "run"    .= String funname
           , "name"   .= String "My First Scenario"
           , "geometry_input" .= object
             [ "geometry" .= object
