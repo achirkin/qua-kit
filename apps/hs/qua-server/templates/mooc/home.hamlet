@@ -1,19 +1,31 @@
 <!-- all story cards -->
 <div class="ui-card-wrap">
-  <div class="row">
+  <div .row>
 
-    ^{createAccW}
+    $maybe submissionsWidget <- mSubmissionsWidget
 
-    <div class="col-lg-4 col-sm-6">
-      <div class="card card-brand">
-        <div class="card-main">
-          <div class="card-inner">
-            The application provides an easy-to-use geometry editor, suitable for educational and demonstrational purposes.
-          <div class="card-action">
-            <div class="card-action-btn pull-left">
-              <a class="btn btn-flat waves-attach waves-light waves-effect" href="@{EditProposalR}">
-                <span class="icon">check
-                &nbsp;Use geometry editor
+      $if not $ null newsItems
+        <div class="col-lg-4 col-md-6 col-sm-9">
+          $forall (date, newsItem) <- newsItems
+              <div .card>
+                <div .newscard>
+                  <div class="card-action-btn pull-right">
+                    #{ show $ utctDay date}</p>
+                  ^{ newsItem }
+
+      ^{ submissionsWidget }
+
+    $if showEditorBtn
+      <div class="col-lg-4 col-sm-6">
+        <div class="card card-brand">
+          <div class="card-main">
+            <div class="card-inner">
+              The application provides an easy-to-use geometry editor, suitable for educational and demonstrational purposes.
+            <div class="card-action">
+              <div class="card-action-btn pull-left">
+                <a class="btn btn-flat waves-attach waves-light waves-effect" href="@{EditProposalR}">
+                  <span class="icon">check
+                  &nbsp;Use geometry editor
 
     <div class="col-lg-4 col-sm-6">
       <div class="card card-orange">
@@ -47,3 +59,5 @@
               <a class="btn btn-flat waves-attach waves-light waves-effect" href="http://www.ia.arch.ethz.ch/">
                 <span class="icon">check
                 &nbsp;Visit our site
+
+    ^{createAccW}
