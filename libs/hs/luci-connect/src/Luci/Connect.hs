@@ -312,6 +312,7 @@ talkToLuci' :: (MonadIO m, MonadRandom m, MonadLogger m)
 talkToLuci' mt errHandle pipe appData =
     runConduit $ talkToLuciConduit mt errHandle pipe appData appData
 
+-- | Talk to luci with a seperate input and output 'AppData'
 talkToLuciConduit 
                   :: (MonadIO m, MonadRandom m, MonadLogger m)
             => Maybe Double          -- ^ reading timeout
@@ -333,6 +334,8 @@ talkToLuciConduit mt errHandle pipe inData outData  =
                   else mapOutput (maybe (ProcessingError $ LuciComError LuciTimedOut) Processing)
                           $ appTimedSource (t*checkGranularity) inData
 
+-- | Make a 'ByteString' conduit for talking to luci by specifying what to
+-- do with a 'LuciMessage' and with a 'LuciError e'.
 talkToLuciConduitByteString
             :: (MonadIO m, MonadRandom m, MonadLogger m)
             => (LuciError e -> m ()) -- ^ Do something on error
