@@ -76,7 +76,7 @@ import qualified Network.Socket               as Network
 import           Luci.Messages
 
 data Config = Config
-  { confTrustedClients :: Set Network.SockAddr
+  { confTrustedClients :: Set IPv4
   } deriving (Eq, Ord)
 
 instance Monoid Config where
@@ -94,17 +94,11 @@ instance FromJSON Config where
   parseJSON = withObject "Config" $ \o -> do
     tclos <- o .: "trusted-clients"
     tcls <- forM tclos $ \tclo -> do
-      portstr <- (tclo .: "port")
-             <|> ((show :: Integer -> String) <$> (tclo .: "port"))
-      port <- case readMaybe portstr of
-        Nothing -> fail "Could not parse port."
-        Just a -> pure a
-      addrstr <- (tclo .: "ip") <|> (tclo .: "ip-address")
-      ipaddr <- case IP.toHostAddress <$> readMaybe addrstr of
-         Nothing -> fail "Could not parse IP address."
-         Just a -> pure a
-      pure $ Network.SockAddrInet port ipaddr
-    pure $ Config (Set.fromList tcls)
+      str <- parseJSON tclo
+      case readMaybe str of
+        Nothing -> fail "Could not parse IP address."
+        Just ip -> pure ip
+    pure $ Config $ Set.fromList tcls
 
 -- | Represent a connected client
 newtype ClientId = ClientId Unique
@@ -143,7 +137,7 @@ data Helen = Helen
     --   The second argument is an arbitrary action to do given an unregistered `ClientId`.
   , _serviceManager      :: !ServiceManager
     -- ^ Keeps track of all services
-  , trustedClients       :: Set Network.SockAddr
+  , trustedClients       :: Set IPv4
     -- ^ The clients that we trust when it comes to roles and user identifiers
   }
 

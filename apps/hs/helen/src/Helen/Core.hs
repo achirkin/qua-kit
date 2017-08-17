@@ -25,16 +25,13 @@ import qualified Data.Aeson                      as JSON
 import qualified Data.ByteString.Lazy.Char8      as LazyBSC
 import           Data.Conduit
 import qualified Data.Conduit.Network            as Network
-import qualified Network.Socket                  as Network
 import qualified Data.HashMap.Strict             as HashMap
-import           Data.List.Split
-import           Data.Maybe                      (fromMaybe)
+import           Data.Maybe                      (fromMaybe, catMaybes)
 import           Data.Monoid                     ((<>))
 import qualified Data.Text                       as Text
 import qualified Data.Set                        as Set
 import           Data.Unique
 import           Text.Read                       (readMaybe)
-import           System.Exit                     (die)
 import           System.Mem.Weak
 import           System.Environment              (lookupEnv)
 import           Path.IO
@@ -63,7 +60,7 @@ initHelen = do
   -- construct helen
   yamlConf <- readConfigFromYamlFile
   envConf <- readConfigFromEnv
-  let conf = envConf <> yamlConf 
+  let conf = envConf <> yamlConf
   return Helen
     { _msgChannel = ch
     , sendDirectMessage = \msg@(TargetedMessage _ cId _) -> do
@@ -111,16 +108,12 @@ readConfigFromEnv = do
   mtce <- lookupEnv "TRUSTED_CLIENTS"
   tcs <- case mtce of
     Nothing -> pure Set.empty
-    Just clientStr -> fmap Set.fromList $ forM (words clientStr) $ \cs ->
-      case splitOn ":" cs of
-        [ipstr, portstr] -> do
-          ipAddr <- Network.inet_addr ipstr
-          port <- case readMaybe portstr of
-            Nothing -> die $ "Failed to parse port from " <> portstr
-            Just p -> pure p
-          pure $ Network.SockAddrInet port ipAddr
-        _ -> die $ "Failed to parse ip address from " <> cs
-  pure $ Config { confTrustedClients = tcs  }
+    Just clientStr -> fmap (Set.fromList . catMaybes) $ forM (words clientStr) $ \cs -> case readMaybe cs of
+      Nothing -> do
+        putStrLn $ "WARNING: Failed to parse IP address from " <> cs
+        pure Nothing
+      Just ip -> pure $ Just ip
+  pure $ Config { confTrustedClients = tcs }
 
 -- | Run main program
 program :: Int -- ^ Port
