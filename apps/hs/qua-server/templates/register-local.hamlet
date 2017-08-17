@@ -26,3 +26,13 @@
                     <div class="col-md-10 col-md-push-1">
                       <button class="btn btn-block btn-red waves-attach waves-light waves-effect" type="submit">
                         Register
+              $if allowTempUserOption
+                <form class="form" action="@{TempUserR}" method="post">
+                  $forall (key, val) <- extraFields
+                    <input type=hidden name=#{key} value=#{val}>
+                  <div class="form-group">
+                    <div class="row">
+                      <div class="col-md-10 col-md-push-1">
+                        <button class="btn btn-block btn-default waves-attach waves-light waves-effect" type="submit" >
+                          Continue without an account.
+                  

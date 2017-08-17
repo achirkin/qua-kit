@@ -27,7 +27,7 @@ registerAdmins pool = flip runSqlPool pool $ do
     mme <- getBy $ ETHUserName (Just "achirkin")
     case mme of
      Nothing -> insert_ $ User
-       "Artem Chirkin" UR_ADMIN (Just "achirkin") Nothing Nothing Nothing True
+       "Artem Chirkin" UR_ADMIN (Just "achirkin") Nothing Nothing Nothing True False
      Just (Entity key _) -> update key [UserRole =. UR_ADMIN]
     let un = Just "admin@qua-kit.hs"
     mme' <- getBy $ UserEmailId un
@@ -35,7 +35,7 @@ registerAdmins pool = flip runSqlPool pool $ do
      Nothing ->
        let pw = Just "sha256|16|AK5Dd0IF3Hdkgywn506B5Q==|MxrRScUOlKp7dXOEGMpEYiiMvN/Us7S9XRKVXJnAQlg="
        in insert_ $ User
-       "Qua-kit Super Admin" UR_ADMIN Nothing Nothing un pw True
+       "Qua-kit Super Admin" UR_ADMIN Nothing Nothing un pw True False
      Just (Entity key _) -> update key [UserRole =. UR_ADMIN]
 
 
