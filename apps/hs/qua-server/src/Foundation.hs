@@ -277,7 +277,8 @@ instance YesodAuthPersist App
 instance YesodAuthEmail App where
   type AuthEmailId App = UserId
 
-  afterPasswordRoute _ = MoocHomeR
+  afterPasswordRoute _ = HomeR
+  confirmationEmailSentResponse _ = redirect HomeR
 
   addUnverified email verkey = do
     uid <- runDB $ do
