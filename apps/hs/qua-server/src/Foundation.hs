@@ -264,8 +264,8 @@ instance YesodAuthEmail App where
 
   afterPasswordRoute _ = MoocHomeR
 
-  addUnverified email verkey =
-    runDB $ do
+  addUnverified email verkey = do
+    uid <- runDB $ do
       uid <- insert User
               { userName = takeWhile (/= '@') email
               , userRole = UR_NOBODY
@@ -277,6 +277,8 @@ instance YesodAuthEmail App where
               }
       _ <- insert $ UserProp uid "verkey" verkey
       return uid
+    maybeSetRoleBasedOnParams uid
+    pure uid
 
 
   sendVerifyEmail email _ verurl = do
@@ -468,6 +470,10 @@ lastScenarioProblemId = getVal <$> rawSql query []
           ["SELECT max(id) FROM scenario_problem;"
           ]
 
+maybeSetRoleBasedOnParams :: UserId -> Handler ()
+maybeSetRoleBasedOnParams userId = do
+    _ <- checkInvitationParams
+    runDB $ update userId [UserRole =. UR_STUDENT]
 
 maybeEnroll :: Email -> Handler ()
 maybeEnroll email = do
