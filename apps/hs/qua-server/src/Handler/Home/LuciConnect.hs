@@ -11,6 +11,8 @@ luciConnectPane = do
   luciConnectedClass <- newIdent
   luciConnectingClass <- newIdent
   luciDisconnectedClass <- newIdent
+  muser <- maybeAuth
+  let urole = muserRole muser
   return . (,,) luciConnectedClass luciDisconnectedClass $ do
     connectButton <- newIdent
     luciProxyUrl <- newIdent
@@ -23,14 +25,18 @@ luciConnectPane = do
     let connectForm =
           [hamlet|
            <div style="margin: 10px 0 0 20px;">
-            <div>
-              Connect to Luci
-            <div>
-              <a.btn.btn-red.waves-attach.waves-light.waves-effect ##{connectButton}">
-                connect
-              <div.form-group.form-group-label.control-highlight style="display: inline-block; margin: 12px 0px -12px 4px;">
-                <label.floating-label for="#{luciProxyUrl}">Host address
-                <input.form-control ##{luciProxyUrl} type="url" value="ws://localhost/luci">
+            $if urole /= UR_NOBODY
+              <div>
+                Connect to Luci
+              <div>
+                <a.btn.btn-red.waves-attach.waves-light.waves-effect ##{connectButton}">
+                  connect
+                <div.form-group.form-group-label.control-highlight style="display: inline-block; margin: 12px 0px -12px 4px;">
+                  <label.floating-label for="#{luciProxyUrl}">Host address
+                  <input.form-control ##{luciProxyUrl} type="url" value="ws://localhost/luci">
+            $else
+              <div style="display: none;" ##{connectButton}">
+                <input type="hidden" style="display: none;" ##{luciProxyUrl} type="url" value="ws://localhost/luci">
           |]
         connectedInfo =
           [hamlet|
