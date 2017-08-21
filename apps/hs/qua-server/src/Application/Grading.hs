@@ -413,5 +413,5 @@ designRatingToCSGrade r = (max (-1) (min 1 r)) * 2 + 3
 --   Show Nothing if there is not enough evidence
 designRatingToVisual :: Double -> Double -> Maybe Int
 designRatingToVisual ev r = if ev >= minimumEvidence
-                            then Just . max 0 .  min 99 . round . (100*) . max (-1.05) $ min 1.05 r
+                            then Just . max 0 .  min 99 . round . (100*) . (/2.1) . (1.05+) . max (-1.05) $ min 1.05 r
                             else Nothing

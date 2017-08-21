@@ -8,10 +8,9 @@ module Handler.Mooc
 
 --import qualified Data.Map as Map
 
-import qualified Data.Function as Fn
 import qualified Data.Maybe as Mb
 import Database.Esqueleto
-import Import hiding ((/=.), (==.), (=.), on, isNothing)
+import Import hiding ((/=.), (==.), (=.), on, isNothing, count)
 import Handler.Mooc.BrowseProposals
 import Handler.Mooc.EdxLogin
 import Handler.Mooc.User
@@ -50,6 +49,7 @@ getMoocHomeR  = toTypedContent <$> do
       Nothing -> return Nothing
 
     newsItems <- renderNewsItems muser
+    mvoteCountWidget <- renderVoteCountWidget muser
 
     let showEditorBtn = Mb.isNothing mSubmissionsWidget || urole /= UR_STUDENT
 
@@ -87,7 +87,10 @@ renderNewsItems (Just (Entity uId _)) = do
   eRs <- fetchExpertReviews uId
   bVs <- fetchBetterVotes uId
   wVs <- fetchWorseVotes uId
-  return $ sortBy (Fn.on compare fst) $ rs ++ eRs ++ bVs ++ wVs
+  let newestFirst (d1, _) (d2, _)
+        | d1 < d2   = GT
+        | otherwise = LT
+  return $ sortBy newestFirst $ rs ++ eRs ++ bVs ++ wVs
 
 -- | TODO: at some point, it is better to implement pagination instead of a hard limit
 newsLimit :: Int64
@@ -149,44 +152,82 @@ fetchReviews uId = do
   return $ map renderReview reviewData
 
 fetchBetterVotes :: UserId -> Handler [(UTCTime, Widget)]
-fetchBetterVotes uId = do
-  betterVotes <- runDB $ select $ from $ \(vote `InnerJoin` scenario) -> do
-                   on $ vote ^. VoteBetterId ==. scenario ^. ScenarioId
-                   where_ $ scenario ^. ScenarioAuthorId ==. val uId
-                   orderBy [desc $ vote ^. VoteTimestamp]
-                   limit newsLimit
-                   return (vote, scenario)
-  let renderReview (Entity _ v, Entity _ sc) =
-        let widget =
-              [whamlet|
-                ^{viewSubmissionBtn sc}
-                <p>
-                  <strong>Your submission was voted better than another
-                  $maybe expl <- voteExplanation v
-                    – #{expl}
-              |]
-        in  (voteTimestamp v, widget)
-  return $ map renderReview betterVotes
+fetchBetterVotes = fetchVotesWithComment VoteBetterId renderReview
+  where
+    renderReview (Entity _ v, Entity _ sc) =
+      let widget =
+            [whamlet|
+              ^{viewSubmissionBtn sc}
+              <p>
+                <strong>Your submission was voted better than another
+                $maybe expl <- voteExplanation v
+                  – #{expl}
+            |]
+      in (voteTimestamp v, widget)
 
 fetchWorseVotes :: UserId -> Handler [(UTCTime, Widget)]
-fetchWorseVotes uId = do
-  betterVotes <- runDB $ select $ from $ \(vote `InnerJoin` scenario) -> do
-                   on $ vote ^. VoteWorseId ==. scenario ^. ScenarioId
-                   where_ $ scenario ^. ScenarioAuthorId ==. val uId
-                   orderBy [desc $ vote ^. VoteTimestamp]
-                   limit newsLimit
-                   return (vote, scenario)
-  let renderReview (Entity _ v, Entity _ sc) =
-        let widget =
-              [whamlet|
-                ^{viewSubmissionBtn sc}
+fetchWorseVotes = fetchVotesWithComment VoteWorseId renderReview
+  where
+    renderReview (Entity _ v, Entity _ sc) =
+      let widget =
+            [whamlet|
+              ^{viewSubmissionBtn sc}
+              <p>
+                <strong>Another submission was voted even better than yours
+                $maybe expl <- voteExplanation v
+                  – #{expl}
+            |]
+      in  (voteTimestamp v, widget)
+
+fetchVotesWithComment :: EntityField Vote ScenarioId
+                      -> ((Entity Vote, Entity Scenario) -> (UTCTime, Widget))
+                      -> UserId
+                      -> Handler [(UTCTime, Widget)]
+fetchVotesWithComment voteBetterOrWorse renderReview uId = do
+  votes <- runDB $ select $ from $ \(vote `InnerJoin` scenario) -> do
+             on $ vote ^. voteBetterOrWorse ==. scenario ^. ScenarioId
+             where_ $ scenario ^. ScenarioAuthorId ==. val uId
+                  &&. (not_ $ vote ^. VoteExplanation ==. nothing)
+             orderBy [desc $ vote ^. VoteTimestamp]
+             limit newsLimit
+             return (vote, scenario)
+  return $ map renderReview votes
+
+
+renderVoteCountWidget :: Maybe (Entity User) -> Handler (Maybe Widget)
+renderVoteCountWidget Nothing = return Nothing
+renderVoteCountWidget (Just (Entity uId _)) = do
+  let countVotes voteBetterOrWorse = do
+        counts <- runDB $ select $ from $ \(vote `InnerJoin` scenario) -> do
+                    on $ vote ^. voteBetterOrWorse ==. scenario ^. ScenarioId
+                    where_ $ scenario ^. ScenarioAuthorId ==. val uId
+                    return $ count $ vote ^. VoteId
+        return $ case counts of
+                   c:_ -> unValue c
+                   []  -> 0::Int
+  betterVoteCount <- countVotes VoteBetterId
+  worseVoteCount  <- countVotes VoteWorseId
+  let totalVoteCount = betterVoteCount + worseVoteCount
+      widget =
+        [whamlet|
+          <div class="col-lg-4 col-md-6 col-sm-9">
+            <div .card>
+              <div .card-inner>
                 <p>
-                  <strong>Another submission was voted even better than yours
-                  $maybe expl <- voteExplanation v
-                    – #{expl}
-              |]
-        in  (voteTimestamp v, widget)
-  return $ map renderReview betterVotes
+                  Your submission was compared #{totalVoteCount} times to another:
+                <p>
+                  <span class="icon icon24 text-brand-accent">
+                    thumb_up
+                  #{betterVoteCount} times it was voted better,
+                <p>
+                  <span class="icon icon24 text-brand-accent">
+                    thumb_down
+                  #{worseVoteCount} times the other one was voted better.
+        |]
+  return $ if totalVoteCount > 0
+           then Just widget
+           else Nothing
+
 
 viewSubmissionBtn :: Scenario -> Widget
 viewSubmissionBtn sc = [whamlet|

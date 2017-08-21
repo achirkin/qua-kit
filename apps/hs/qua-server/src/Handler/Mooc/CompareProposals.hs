@@ -21,12 +21,16 @@ postVoteForProposalR cId better worse = do
     mResId <- getsSafeSession userSessionEdxResourceId
 
     mexplanation <- lookupPostParam "explanation"
+    let mexplanation' = case Text.strip <$> mexplanation of
+                          Just "" -> Nothing
+                          Just ex -> Just ex
+                          Nothing -> Nothing
     vId <- runDB $ do
       t <- liftIO getCurrentTime
       mGradingId <- case mResId of
           Nothing -> pure Nothing
           Just eResId -> fmap (fmap entityKey) . getBy $ EdxGradeKeys eResId userId
-      insert $ Vote userId cId better worse mexplanation t mGradingId
+      insert $ Vote userId cId better worse mexplanation' t mGradingId
     runDB $ do
       -- update ratings
       updateRatingsOnVoting vId
