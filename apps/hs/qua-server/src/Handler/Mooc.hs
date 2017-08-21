@@ -77,6 +77,8 @@ getMoocHomeR  = toTypedContent <$> do
                 margin: 8px 0
               .commentPara
                 margin-top: 3px
+                >.icon24
+                  margin-right: 3px
           |]
         $(widgetFile "mooc/home")
 
@@ -127,14 +129,16 @@ fetchReviews uId = do
                   from $ \(review
                     `InnerJoin` scenario
                     `InnerJoin` criterion
+                    `InnerJoin` user
                     ) -> do
+                  on (review ^. ReviewReviewerId  ==. user      ^. UserId)
                   on (review ^. ReviewCriterionId ==. criterion ^. CriterionId)
                   on (review ^. ReviewScenarioId  ==. scenario  ^. ScenarioId)
                   where_ $ scenario ^. ScenarioAuthorId ==. val uId
                   orderBy [desc $ review ^. ReviewTimestamp]
                   limit newsLimit
-                  return (review, scenario, criterion)
-  let renderReview (Entity _ r, Entity _ sc, Entity _ crit) =
+                  return (review, scenario, criterion, user)
+  let renderReview (Entity _ r, Entity _ sc, Entity _ crit, Entity _ reviewer) =
         let critIcon = Blaze.preEscapedToMarkup $ criterionIcon crit
             widget =
               [whamlet|
@@ -146,6 +150,8 @@ fetchReviews uId = do
                       thumb_up
                     $else
                       thumb_down
+                  Review from #{userName reviewer}
+                <p>
                   #{reviewComment r}
               |]
         in  (reviewTimestamp r, widget)
