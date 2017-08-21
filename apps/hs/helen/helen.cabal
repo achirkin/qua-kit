@@ -26,6 +26,7 @@ library
         Helen.Core.Service.Information
         Helen.Core.Service.Registration
         Helen.Core.Types
+        Helen.Core.Utils
     build-depends:
         base >=4.8 && <5,
         text -any,
@@ -51,7 +52,8 @@ library
         path -any,
         path-io -any,
         yaml -any,
-        process -any
+        process -any,
+        iproute -any
     default-language: Haskell2010
     hs-source-dirs: src
     ghc-options: -Wall -ferror-spans

@@ -25,7 +25,7 @@ module Luci.Connect
       --   `LuciProgram` provides methods to store and read the state.
       --   Conduit lets user to read upstream messages from the network
       --     and send new messages downstream back to the network.
-      runReallySimpleLuciClient
+      runReallySimpleLuciClient, processTo, processFrom
     , LuciProgram
       -- * Sending and receiving messages
       -- | Following is a mixture of helper functions and re-exports from `Data.Conduit` module of @conduit@ package.
@@ -48,6 +48,8 @@ module Luci.Connect
       -- * Simple Luci clients
     , luciChannels
     , talkToLuci
+    , talkToLuciConduit
+    , talkToLuciConduitByteString
     , talkAsLuci
     , talkToLuciE
     , talkAsLuciE
@@ -202,13 +204,13 @@ runReallySimpleLuciClient s0 pipe = do
 
 
 -- | helper for parsing incoming messages
-processTo :: Conduit LuciMessage (LuciProgram s) Message
+processTo :: MonadLogger m => Conduit LuciMessage m Message
 processTo = awaitForever $ \lmsg -> case parseMessage lmsg of
     JSON.Error s -> logWarnN $ "[Parsing header] " <> Text.pack s <> " Received: " <>  (showJSON . toJSON $ fst lmsg)
     JSON.Success m -> yield m
 
 -- | helper for sending outgoing messages
-processFrom :: Conduit Message (LuciProgram s) (LuciProcessing Text LuciMessage)
+processFrom :: MonadLogger m => Conduit Message m (LuciProcessing Text LuciMessage)
 processFrom = awaitForever $ yieldMessage . makeMessage
 
 
@@ -308,23 +310,58 @@ talkToLuci' :: (MonadIO m, MonadRandom m, MonadLogger m)
             -> Network.AppData
             -> m ()
 talkToLuci' mt errHandle pipe appData =
-    runConduit $ incoming =&= parseMsgsPanicCatching
-                          =&= panicResponseConduit
-                          =&= mapOutput (withLuciError LuciClientError) pipe
-                          =$= handleErrors
-                          =$= CList.mapM (\m -> do
-                                logDebugN . ("SEND: " <>) . Text.pack $ show m
-                                return m
-                              )
-                          =$= outgoing
+    runConduit $ talkToLuciConduit mt errHandle pipe appData appData
+
+-- | Talk to luci with a seperate input and output 'AppData'
+talkToLuciConduit 
+                  :: (MonadIO m, MonadRandom m, MonadLogger m)
+            => Maybe Double          -- ^ reading timeout
+            -> (LuciError e -> m ()) -- ^ Do something on error
+            -> LuciConduit e m       -- ^ How to process LuciMessage
+            -> Network.AppData       -- ^ Incoming 'AppData'
+            -> Network.AppData       -- ^ Outgoing 'AppData'
+            -> Conduit () m void
+talkToLuciConduit mt errHandle pipe inData outData  =
+        incoming
+    =$= talkToLuciConduitByteStringProcessing errHandle pipe
+    =$= outgoing
   where
-    outgoing = Network.appSink appData
+    outgoing = Network.appSink outData
     incoming = case (round . (/ fromIntegral checkGranularity) . (1000000 *)) <$> mt of
-        Nothing -> mapOutput Processing $ Network.appSource appData
+        Nothing -> mapOutput Processing $ Network.appSource inData
         Just t -> if t <= 0
-                  then mapOutput Processing $ Network.appSource appData
+                  then mapOutput Processing $ Network.appSource inData
                   else mapOutput (maybe (ProcessingError $ LuciComError LuciTimedOut) Processing)
-                          $ appTimedSource (t*checkGranularity) appData
+                          $ appTimedSource (t*checkGranularity) inData
+
+-- | Make a 'ByteString' conduit for talking to luci by specifying what to
+-- do with a 'LuciMessage' and with a 'LuciError e'.
+talkToLuciConduitByteString
+            :: (MonadIO m, MonadRandom m, MonadLogger m)
+            => (LuciError e -> m ()) -- ^ Do something on error
+            -> LuciConduit e m       -- ^ How to process LuciMessage
+            -> Conduit ByteString m ByteString
+talkToLuciConduitByteString errHandle pipe =
+        CList.map Processing
+    =$= talkToLuciConduitByteStringProcessing errHandle pipe
+
+
+talkToLuciConduitByteStringProcessing
+            :: (MonadIO m, MonadRandom m, MonadLogger m)
+            => (LuciError e -> m ()) -- ^ Do something on error
+            -> LuciConduit e m       -- ^ How to process LuciMessage
+            -> Conduit (LuciProcessing (LuciError e) ByteString) m ByteString
+talkToLuciConduitByteStringProcessing errHandle pipe  =
+        CList.map id
+    =&= parseMsgsPanicCatching
+    =&= panicResponseConduit
+    =&= mapOutput (withLuciError LuciClientError) pipe
+    =$= handleErrors
+    =$= CList.mapM (\m -> do
+          logDebugN . ("SEND: " <>) . Text.pack $ show m
+          return m
+        )
+  where
     handleErrors = do
       x <- await
       case x of
@@ -332,7 +369,6 @@ talkToLuci' mt errHandle pipe appData =
         Just (Processing m) -> lift (errHandle $ LuciMsgLeft m) >> handleErrors
         Just (ProcessedData d) -> yield d >> handleErrors
         Just (ProcessingError e) -> lift (errHandle e) >> handleErrors
-
 
 
 

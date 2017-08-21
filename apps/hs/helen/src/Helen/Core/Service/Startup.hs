@@ -5,19 +5,15 @@
 module Helen.Core.Service.Startup where
 
 import Data.Aeson
-import qualified Data.ByteString as SB
 import Data.Text (Text)
 import qualified Data.Text as T
 import qualified Data.Text.IO as T
-import Data.Yaml as Yaml
 
 import Control.Applicative
 import Control.Exception
 import Control.Monad
 import Control.Monad.IO.Class
 import Control.Monad.Logger
-import Control.Monad.Trans.Except
-import Control.Monad.Trans.Maybe
 
 import System.IO.Error
 import System.Process
@@ -26,6 +22,7 @@ import Path
 import Path.IO
 
 import Helen.Core.Types
+import Helen.Core.Utils
 
 startupServices :: HelenWorld ()
 startupServices = do
@@ -65,17 +62,6 @@ instance FromJSON BinConfig where
         withObject "BinConfig" $ \o ->
             BinConfig <$> o .: "name" <*> o .: "executable" <*>
             ((o .: "args") <|> (words <$> o .: "args"))
-
-readYamlSafe :: (MonadIO m, FromJSON a) => Path Abs File -> m (Either String a)
-readYamlSafe path = runExceptT $ do
-    contents <- maybeToExceptT (unwords ["No yaml file found:", toFilePath path])
-             . MaybeT . liftIO . forgivingAbsence $ SB.readFile (toFilePath path)
-    withExceptT (\err -> unwords
-                  [ "Unable to parse YAML in file", toFilePath path
-                  , "with error:", err
-                  ]
-                 ) . ExceptT . pure $ Yaml.decodeEither contents
-
 
 data BinState = BinState
     { binStateConfig :: BinConfig
