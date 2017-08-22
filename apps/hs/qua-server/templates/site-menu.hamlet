@@ -10,8 +10,9 @@
             Explore submissions
           <a class="waves-attach waves-effect" href="@{CriteriaListR}">
             Understand criteria
-          <a class="waves-attach waves-effect" href="@{CompareProposalsR}">
-            Compare designs
+          $if isJust muser
+            <a class="waves-attach waves-effect" href="@{CompareProposalsR}">
+              Compare designs
           <a class="waves-attach waves-effect" href="@{FAQR}">
             Frequently Asked Questions
           <a class="waves-attach waves-effect" href="@{AboutR}">
@@ -21,4 +22,3 @@
           $if fmap userRole muser == Just UR_ADMIN
             <a class="waves-attach waves-effect" href="@{AdminR}">
               Admin
-      
