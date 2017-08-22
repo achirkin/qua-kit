@@ -61,9 +61,6 @@ getBrowseProposalsPamsR defParams page = do
         -- move card-action down. Note, height 210 is 200 for image + 10 for overlapping margin of element above
         [julius|
           $(document).ready(function() {
-            $('div.card-comment.card-action').each(function(){
-                $(this).css('margin-top', Math.max(210 - $(this).position().top - $(this).height(), 0) + 'px');
-              })
             $('#proposalsForm').change( function() {
               this.submit();
             })
@@ -75,7 +72,7 @@ getBrowseProposalsPamsR defParams page = do
             .form-group
               display: inline-block
               margin-left: 15px
-            .btn
+            .btn-default
               margin-left: 15px
           .pageSelector
             display:inline
@@ -89,6 +86,11 @@ getBrowseProposalsPamsR defParams page = do
             color: #ff6f00
             &:hover
               color: #b71c1c
+          @media (min-width: 2000px)
+            .col-xl-3
+              width: 25%
+            .container
+              max-width: 3000px
         |]
       [whamlet|
         <form .form-inline #proposalsForm action=1 method=GET>
@@ -133,17 +135,29 @@ mkSubmissionsWidget submissions = do
           display: inline-block
           color: #ff6f00
           text-align: center
+        .containerCard
+          position: relative
+          padding: 0
+        .criterions
+          padding: 3px 16px 0 16px
+          position: absolute
+          bottom: 0
+          width: 100%
+          background: white
+        @media (min-width: 500px)
+          .submissionCard
+            height: 200px
       |]
     [whamlet|
       $forall sub <- submissions
         $with sc <- scenario sub
-          <div class="col-lg-4 col-md-6 col-sm-9 col-xs-9 story_cards">
-            <div.card>
+          <div class="col-xl-3 col-lg-4 col-md-6 col-xs-12">
+            <div.card.submissionCard>
               <aside.card-side.card-side-img.pull-left.card-side-moocimg>
                 <img
                   src=@{ProposalPreviewR $ currentScenarioHistoryScenarioId sc}
                   width="200px" height="200px" style="margin-left: -25px;">
-              <div.card-main>
+              <div.card-main.containerCard>
                 <div.card-inner style="margin: 10px 12px;">
                   <p style="margin: 6px 0px; color: #b71c1c;">
                     #{authorName sub}
@@ -151,7 +165,7 @@ mkSubmissionsWidget submissions = do
                     #{show $ utctDay $ currentScenarioLastUpdate sc}
                   <p style="margin: 6px 0px; white-space: pre-line; overflow-y: hidden; color: #555;">
                    #{shortComment $ currentScenarioDescription sc}
-                <div.card-comment.card-action>
+                <div.card-comment.card-action.criterions>
                   $forall (CriterionData svg cname crating) <- criterions sub
                    $maybe rating <- crating
                     <span.card-comment.card-criterion style="opacity: #{cOpacity rating}" title="#{cname}">
