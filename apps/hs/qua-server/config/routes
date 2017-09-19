@@ -4,6 +4,7 @@
 /favicon.ico FaviconR GET
 /robots.txt RobotsR GET
 
+/new-viewer ViewerR GET
 /viewer HomeR GET POST
 /luci LuciR GET
 -- /chat ChatR GET

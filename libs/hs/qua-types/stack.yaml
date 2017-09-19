@@ -1,0 +1,8 @@
+resolver: lts-8.21
+require-stack-version: ">= 1.1.0"
+
+packages:
+- '.'
+extra-deps: []
+flags: {}
+extra-package-dbs: []

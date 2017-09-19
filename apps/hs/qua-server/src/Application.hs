@@ -82,6 +82,7 @@ import Handler.Mooc.Survey
 -- import Handler.Mooc.Tests
 import Handler.Mooc.SubmissionViewer
 import Handler.Mooc.FAQ
+import Handler.Viewer
 import Handler.LoggingWS
 
 -- This line actually creates our YesodDispatch instance. It is the second half
