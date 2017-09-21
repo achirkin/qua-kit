@@ -9,7 +9,7 @@ This is a server side of qua-kit projet.
 
 The fastest and recommended method to build and run qua-server is to use stack:
 ```
-stack install --install-ghc --flag qua-server:-postgresql
+stack install --install-ghc --flag qua-server:postgresql
 ```
 This command installs in an isolated environment qua-server executable and all its dependencies (including a compiler if needed).
 Hence, it may take a while.
