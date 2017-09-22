@@ -60,13 +60,12 @@ import           Crypto.Random                (MonadRandom (..))
 import qualified Data.Aeson                   as JSON
 import           Data.ByteString              (ByteString)
 import qualified Data.HashMap.Strict          as HashMap
-import           Data.Set                     (Set)
 import qualified Data.Sequence                as Seq
 import           Data.Text                    (Text)
 import qualified Data.Text.Encoding           as Text
-import           Data.IP                      as IP
 import qualified System.Log.FastLogger        as FastLogger
 import           Luci.Messages
+import           Helen.Core.OptParse.Types
 
 -- | Represent a connected client
 newtype ClientId = ClientId Unique
@@ -105,8 +104,7 @@ data Helen = Helen
     --   The second argument is an arbitrary action to do given an unregistered `ClientId`.
   , _serviceManager      :: !ServiceManager
     -- ^ Keeps track of all services
-  , trustedClients       :: Set IPv4
-    -- ^ The clients that we trust when it comes to roles and user identifiers
+  , helenSettings        :: Settings
   }
 
 -- | Put a message into Helen processing channel.
@@ -251,8 +249,9 @@ instance HelenMonad HelenWorld where
 
 
 -- | Run a program in IO monad.
-runHelenProgram :: Helen -> LogLevel -> HelenWorld r -> IO (r,Helen)
-runHelenProgram s ll (HelenWorld p) = do
+runHelenProgram :: Helen -> HelenWorld r -> IO (r,Helen)
+runHelenProgram s (HelenWorld p) = do
+    let ll = setLogLevel . helenSettings $ s
     hvar <- STM.newTVarIO s
     r <- runStdoutLoggingT . filterLogger (\_ l -> l >= ll) $ runReaderT p hvar
     h <- STM.atomically $ STM.readTVar hvar

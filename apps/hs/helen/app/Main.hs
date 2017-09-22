@@ -20,5 +20,5 @@ main = do
     sets <- getSettings
     putStrLn $ "Helen is running on port " ++ show (setPort sets)
     helen <- initHelen sets
-    _ <- runHelenProgram helen (setLogLevel sets) $ program (setPort sets)
+    _ <- runHelenProgram helen program
     putStrLn "Helen finished."

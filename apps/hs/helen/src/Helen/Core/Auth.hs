@@ -13,10 +13,11 @@ import Luci.Messages
        (AuthRole(Local), Message, msgSenderAuthRole, msgSenderId)
 
 import Helen.Core.Types
+import Helen.Core.OptParse.Types
 
 enforceQuaKitRoles :: Network.SockAddr -> Message -> HelenRoom Message
 enforceQuaKitRoles client message = do
-    trusteds <- gets trustedClients
+    trusteds <- gets $ setTrustedClients . helenSettings
     let stripAuth message = message & msgSenderId .~ Nothing
                                     & msgSenderAuthRole .~ Local
     pure $ ($ message) $ case client of

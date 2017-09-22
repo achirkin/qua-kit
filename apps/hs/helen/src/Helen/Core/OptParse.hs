@@ -45,7 +45,8 @@ combineToSettings Flags {..} Environment {..} mconf = do
         , setTrustedClients =
               S.fromList
                   (flagTrustedClients `union` envTrustedClients `union`
-                   fromMaybe [] ( c confTrustedClients))
+                   fromMaybe [] (c confTrustedClients))
+        , setBins = fromMaybe [] $ c confBins
         }
 
 logLevelOptions :: [(String, LogLevel)]

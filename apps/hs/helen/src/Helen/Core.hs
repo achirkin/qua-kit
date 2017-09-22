@@ -49,7 +49,7 @@ import           Helen.Core.OptParse
 
 -- | Initialize state
 initHelen :: Settings -> IO Helen
-initHelen Settings{..} = do
+initHelen sets = do
   -- message channel
   ch <- STM.newTChanIO
   -- mutable base of clients
@@ -80,19 +80,18 @@ initHelen Settings{..} = do
         STM.takeTMVar clientStore >>=
           STM.putTMVar clientStore . HashMap.update (\(c, u) -> Just (c, u >> action cId)) cId
     , _serviceManager = defServiceManager
-    , trustedClients = setTrustedClients
+    , helenSettings = sets
     }
 
 -- | Run main program
-program :: Int -- ^ Port
-        -> HelenWorld ()
-program port = do
+program :: HelenWorld ()
+program = do
   startupServices
   -- register pre-defined services
   registrationService
   infoService
   -- Run all TCP server in a separate thread
-  forkHelen $ helenChannels port
+  forkHelen helenChannels
   -- Now process message queue
   ch <- _msgChannel <$> get
   forever $ (liftIO . STM.atomically $ STM.readTChan ch) >>= (\msg -> do
@@ -103,11 +102,11 @@ program port = do
 
 -- | Start a TCP server to listen to connections;
 --   Each time message comes, it registered together with callback in a global message channel.
-helenChannels :: Int                  -- ^ Port
-              -> HelenWorld ()
-helenChannels port = Network.runGeneralTCPServer connSettings helenChannels'
-  where
-    connSettings = Network.serverSettings port "*4"
+helenChannels :: HelenWorld ()
+helenChannels = do
+  port <- gets (setPort . helenSettings)
+  let connSettings = Network.serverSettings port "*4"
+  Network.runGeneralTCPServer connSettings helenChannels'
 
 
 -- | Use existing connection to run a message-processing conduit.
