@@ -11,6 +11,7 @@
 --
 -----------------------------------------------------------------------------
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE RecordWildCards #-}
 module Helen.Core
   ( Helen (..), program, initHelen
   , Client (), clientAddr
@@ -18,7 +19,7 @@ module Helen.Core
 
 import qualified Control.Concurrent.STM.TChan    as STM
 import qualified Control.Concurrent.STM.TMVar    as STM
-import           Control.Monad                   (forever, when, forM)
+import           Control.Monad                   (forever, when)
 import qualified Control.Monad.STM               as STM
 import           Control.Monad.Trans.Class       (lift)
 import qualified Data.Aeson                      as JSON
@@ -26,15 +27,11 @@ import qualified Data.ByteString.Lazy.Char8      as LazyBSC
 import           Data.Conduit
 import qualified Data.Conduit.Network            as Network
 import qualified Data.HashMap.Strict             as HashMap
-import           Data.Maybe                      (fromMaybe, catMaybes)
+import           Data.Maybe                      (fromMaybe)
 import           Data.Monoid                     ((<>))
 import qualified Data.Text                       as Text
-import qualified Data.Set                        as Set
 import           Data.Unique
-import           Text.Read                       (readMaybe)
 import           System.Mem.Weak
-import           System.Environment              (lookupEnv)
-import           Path.IO
 
 import           Luci.Connect
 import           Luci.Connect.Base
@@ -47,20 +44,17 @@ import           Helen.Core.Service.Information  (infoService)
 import           Helen.Core.Service.Registration (registrationService)
 import           Helen.Core.Service.Startup      (startupServices)
 import           Helen.Core.Types
-import           Helen.Core.Utils
+import           Helen.Core.OptParse
 
 
 -- | Initialize state
-initHelen :: IO Helen
-initHelen = do
+initHelen :: Settings -> IO Helen
+initHelen Settings{..} = do
   -- message channel
   ch <- STM.newTChanIO
   -- mutable base of clients
   clientStore <- STM.newTMVarIO (HashMap.empty :: HashMap.HashMap ClientId (Client, HelenWorld ()))
   -- construct helen
-  yamlConf <- readConfigFromYamlFile
-  envConf <- readConfigFromEnv
-  let conf = envConf <> yamlConf
   return Helen
     { _msgChannel = ch
     , sendDirectMessage = \msg@(TargetedMessage _ cId _) -> do
@@ -86,34 +80,8 @@ initHelen = do
         STM.takeTMVar clientStore >>=
           STM.putTMVar clientStore . HashMap.update (\(c, u) -> Just (c, u >> action cId)) cId
     , _serviceManager = defServiceManager
-    , trustedClients = confTrustedClients conf
+    , trustedClients = setTrustedClients
     }
-
-readConfigFromYamlFile :: IO Config
-readConfigFromYamlFile = do
-  cf <- resolveFile' "helen-config.yaml"
-  errOrConfig <- readYamlSafe cf
-  case errOrConfig of
-    Left err -> do
-      putStrLn $ unlines
-        [ "WARNING: Failed to read config file: "
-        , err
-        , "pretending that this didn't fail and contained the default config."
-        ]
-      pure mempty
-    Right conf -> pure conf
-
-readConfigFromEnv :: IO Config
-readConfigFromEnv = do
-  mtce <- lookupEnv "TRUSTED_CLIENTS"
-  tcs <- case mtce of
-    Nothing -> pure Set.empty
-    Just clientStr -> fmap (Set.fromList . catMaybes) $ forM (words clientStr) $ \cs -> case readMaybe cs of
-      Nothing -> do
-        putStrLn $ "WARNING: Failed to parse IP address from " <> cs
-        pure Nothing
-      Just ip -> pure $ Just ip
-  pure $ Config { confTrustedClients = tcs }
 
 -- | Run main program
 program :: Int -- ^ Port
