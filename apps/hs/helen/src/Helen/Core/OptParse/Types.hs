@@ -16,6 +16,7 @@ data Flags = Flags
     { flagConfigFile :: Maybe FilePath
     , flagHost :: Maybe String
     , flagPort :: Maybe Int
+    , flagLogFile :: Maybe FilePath
     , flagLogLevel :: Maybe String
     , flagTrustedClients :: [IPv4]
     , flagRestartAttempts :: Maybe Int
@@ -25,6 +26,7 @@ data Environment = Environment
     { envConfigFile :: Maybe FilePath
     , envHost :: Maybe String
     , envPort :: Maybe Int
+    , envLogFile :: Maybe FilePath
     , envLogLevel :: Maybe String
     , envTrustedClients :: [IPv4]
     , envRestartAttempts :: Maybe Int
@@ -33,6 +35,7 @@ data Environment = Environment
 data Configuration = Configuration
     { confHost :: Maybe String
     , confPort :: Maybe Int
+    , confLogFile :: Maybe FilePath
     , confLogLevel :: Maybe String
     , confTrustedClients :: Maybe [IPv4]
     , confBins :: Maybe [BinConfig]
@@ -44,6 +47,7 @@ instance FromJSON Configuration where
         withObject "Config" $ \o -> do
             h <- o .:? "host"
             p <- o .:? "port"
+            lf <- o .:? "logfile"
             ll <- o .:? "loglevel"
             tcls <-
                 do mtclos <- o .:? "trusted-clients"
@@ -64,6 +68,7 @@ instance FromJSON Configuration where
                 Configuration
                 { confHost = h
                 , confPort = p
+                , confLogFile = lf
                 , confLogLevel = ll
                 , confTrustedClients = tcls
                 , confBins = bcfs
@@ -85,6 +90,7 @@ instance FromJSON BinConfig where
 data Settings = Settings
     { setHost :: String
     , setPort :: Int
+    , setLogFile :: Maybe (Path Abs File)
     , setLogLevel :: LogLevel
     , setTrustedClients :: Set IPv4
     , setBins :: [BinConfig]

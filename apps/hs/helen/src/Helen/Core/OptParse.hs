@@ -1,4 +1,5 @@
 {-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
 
 module Helen.Core.OptParse
@@ -7,11 +8,12 @@ module Helen.Core.OptParse
     ) where
 
 import Control.Monad
+import Control.Monad.Logger
 import Data.List (intercalate, union)
 import Data.Maybe (fromMaybe, mapMaybe)
 import Data.Monoid ((<>), mconcat)
 import qualified Data.Set as S
-import Luci.Connect
+import qualified Data.Text as T
 import Path
 import Path.IO (resolveFile')
 import System.Environment (getArgs, getEnvironment)
@@ -32,12 +34,17 @@ getSettings = do
 combineToSettings :: Flags -> Environment -> Maybe Configuration -> IO Settings
 combineToSettings Flags {..} Environment {..} mconf = do
     let c func = mconf >>= func
+    mlf <-
+        case flagLogFile `mplus` envLogFile `mplus` c confLogFile of
+            Nothing -> pure Nothing
+            Just lf -> Just <$> resolveFile' lf
     pure
         Settings
         { setHost =
               fromMaybe "localhost" $
               flagHost `mplus` envHost `mplus` c confHost
         , setPort = fromMaybe 7654 $ flagPort `mplus` envPort `mplus` c confPort
+        , setLogFile = mlf
         , setLogLevel =
               fromMaybe LevelInfo $
               (flagLogLevel `mplus` envLogLevel `mplus` c confLogLevel) >>=
@@ -70,17 +77,29 @@ getConfiguration Flags {..} Environment {..} = do
             Just fcf -> resolveFile' fcf
     errOrConfig <- readYamlSafe cf
     case errOrConfig of
-            Left err -> do
-                putStrLn $
-                    unwords
-                        [ "WARNING: Could not read YAML file:"
-                        , toFilePath cf
-                        , "because of error:"
-                        , err
-                        , "; using defaults."
-                        ]
-                pure Nothing
-            Right c ->pure $ Just c
+        Left err -> do
+            let runWithLog =
+                    (case flagLogFile `mplus` envLogFile of
+                         Nothing -> runStdoutLoggingT
+                         Just lf -> runFileLoggingT lf) .
+                    (filterLogger
+                         (\_ l ->
+                              l >=
+                              fromMaybe
+                                  LevelInfo
+                                  ((flagLogLevel `mplus` envLogLevel >>=
+                                    (`lookup` logLevelOptions)))))
+            runWithLog $
+                logWarnNS "ConfigParser" $
+                T.unwords
+                    [ "WARNING: Could not read YAML file:"
+                    , T.pack (toFilePath cf)
+                    , "because of error:"
+                    , T.pack err
+                    , "; using defaults."
+                    ]
+            pure Nothing
+        Right c -> pure $ Just c
 
 defaultConfigFile :: IO (Path Abs File)
 defaultConfigFile = resolveFile' "helen-config.yaml"
@@ -94,6 +113,7 @@ getEnv = do
         { envConfigFile = v "CONFIG_FILE"
         , envHost = v "HOST"
         , envPort = v "PORT" >>= readMaybe
+        , envLogFile = v "LOGFILE"
         , envLogLevel = v "LOGLEVEL"
         , envTrustedClients =
               case v "TRUSTED_CLIENTS" of
@@ -152,6 +172,15 @@ parseFlags =
              , long "port"
              , short 'p'
              , help "Port"
+             , value Nothing
+             ]) <*>
+    option
+        (Just <$> str)
+        (mconcat
+             [ metavar "FILE"
+             , long "logfile"
+             , short 'o'
+             , help "Log file"
              , value Nothing
              ]) <*>
     option

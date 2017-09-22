@@ -64,6 +64,7 @@ import qualified Data.Sequence                as Seq
 import           Data.Text                    (Text)
 import qualified Data.Text.Encoding           as Text
 import qualified System.Log.FastLogger        as FastLogger
+import           Path
 import           Luci.Messages
 import           Helen.Core.OptParse.Types
 
@@ -251,9 +252,13 @@ instance HelenMonad HelenWorld where
 -- | Run a program in IO monad.
 runHelenProgram :: Helen -> HelenWorld r -> IO (r,Helen)
 runHelenProgram s (HelenWorld p) = do
-    let ll = setLogLevel . helenSettings $ s
     hvar <- STM.newTVarIO s
-    r <- runStdoutLoggingT . filterLogger (\_ l -> l >= ll) $ runReaderT p hvar
+    let ll = setLogLevel . helenSettings $ s
+    let mlf = setLogFile . helenSettings $ s
+    let runWithLog = case mlf of
+            Nothing -> runStdoutLoggingT
+            Just lf -> runFileLoggingT $ toFilePath lf
+    r <- runWithLog . filterLogger (\_ l -> l >= ll) $ runReaderT p hvar
     h <- STM.atomically $ STM.readTVar hvar
     return (r,h)
 
