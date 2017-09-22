@@ -4,6 +4,7 @@
 
 module Helen.Core.Service.Startup where
 
+import Data.Monoid ((<>))
 import qualified Data.Text as T
 import qualified Data.Text.IO as T
 
@@ -36,7 +37,7 @@ startBinaryWithRestarts bc@BinConfig {..} = do
     ph <- startBinary bc
     nras <- gets $ setBinRestartAttempts . helenSettings
     let bs = BinState {binStateProcessHandle = ph, binStateRestartsLeft = nras}
-    go bs
+    forkHelen $ go bs
   where
     go BinState {..} = do
         ec <- liftIO $ waitForProcess binStateProcessHandle
@@ -47,7 +48,9 @@ startBinaryWithRestarts bc@BinConfig {..} = do
                     T.unwords
                         [ binConfigName
                         , "failed with exit code"
-                        , T.pack $ show c
+                        , T.pack (show c) <> ","
+                        , T.pack (show binStateRestartsLeft)
+                        , "restarts left."
                         ]
                 when (binStateRestartsLeft > 0) $ do
                     logOtherNS binConfigName LevelInfo $
