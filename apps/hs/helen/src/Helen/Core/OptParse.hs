@@ -47,6 +47,10 @@ combineToSettings Flags {..} Environment {..} mconf = do
                   (flagTrustedClients `union` envTrustedClients `union`
                    fromMaybe [] (c confTrustedClients))
         , setBins = fromMaybe [] $ c confBins
+        , setBinRestartAttempts =
+              fromMaybe 3 $
+              flagRestartAttempts `mplus` envRestartAttempts `mplus`
+              c confRestartAttempts
         }
 
 logLevelOptions :: [(String, LogLevel)]
@@ -65,10 +69,18 @@ getConfiguration Flags {..} Environment {..} = do
             Nothing -> defaultConfigFile
             Just fcf -> resolveFile' fcf
     errOrConfig <- readYamlSafe cf
-    pure $
-        case errOrConfig of
-            Left _ -> Nothing
-            Right c -> Just c
+    case errOrConfig of
+            Left err -> do
+                putStrLn $
+                    unwords
+                        [ "WARNING: Could not read YAML file:"
+                        , toFilePath cf
+                        , "because of error:"
+                        , err
+                        , "; using defaults."
+                        ]
+                pure Nothing
+            Right c ->pure $ Just c
 
 defaultConfigFile :: IO (Path Abs File)
 defaultConfigFile = resolveFile' "helen-config.yaml"
@@ -87,6 +99,7 @@ getEnv = do
               case v "TRUSTED_CLIENTS" of
                   Nothing -> []
                   Just clientsStr -> mapMaybe readMaybe $ words clientsStr
+        , envRestartAttempts = v "RESTARTS" >>= readMaybe
         }
 
 getFlags :: IO Flags
@@ -160,4 +173,13 @@ parseFlags =
                   , long "trusted"
                   , short 't'
                   , help "Trusted client"
-                  ]))
+                  ])) <*>
+    option
+        (Just <$> auto)
+        (mconcat
+             [ metavar "INT"
+             , long "restarts"
+             , short 'r'
+             , help "Number of restart attempts for services"
+             , value Nothing
+             ])

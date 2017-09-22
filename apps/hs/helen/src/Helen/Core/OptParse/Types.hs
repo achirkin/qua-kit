@@ -18,6 +18,7 @@ data Flags = Flags
     , flagPort :: Maybe Int
     , flagLogLevel :: Maybe String
     , flagTrustedClients :: [IPv4]
+    , flagRestartAttempts :: Maybe Int
     } deriving (Show, Eq)
 
 data Environment = Environment
@@ -26,6 +27,7 @@ data Environment = Environment
     , envPort :: Maybe Int
     , envLogLevel :: Maybe String
     , envTrustedClients :: [IPv4]
+    , envRestartAttempts :: Maybe Int
     } deriving (Show, Eq)
 
 data Configuration = Configuration
@@ -34,6 +36,7 @@ data Configuration = Configuration
     , confLogLevel :: Maybe String
     , confTrustedClients :: Maybe [IPv4]
     , confBins :: Maybe [BinConfig]
+    , confRestartAttempts :: Maybe Int
     } deriving (Show, Eq)
 
 instance FromJSON Configuration where
@@ -56,6 +59,7 @@ instance FromJSON Configuration where
                                        "Could not parse IP address: " ++ str
                                    Just ip -> pure ip
             bcfs <- o .:? "bundled-services"
+            cra <- o .:? "restart-attempts"
             pure $
                 Configuration
                 { confHost = h
@@ -63,6 +67,7 @@ instance FromJSON Configuration where
                 , confLogLevel = ll
                 , confTrustedClients = tcls
                 , confBins = bcfs
+                , confRestartAttempts = cra
                 }
 
 data BinConfig = BinConfig
@@ -75,7 +80,7 @@ instance FromJSON BinConfig where
     parseJSON =
         withObject "BinConfig" $ \o ->
             BinConfig <$> o .: "name" <*> o .: "executable" <*>
-            ((o .: "args") <|> (words <$> o .: "args"))
+            (((o .:? "args") <|> (fmap words <$> o .:? "args")) .!= [])
 
 data Settings = Settings
     { setHost :: String
@@ -83,4 +88,5 @@ data Settings = Settings
     , setLogLevel :: LogLevel
     , setTrustedClients :: Set IPv4
     , setBins :: [BinConfig]
+    , setBinRestartAttempts :: Int
     } deriving (Show, Eq)
