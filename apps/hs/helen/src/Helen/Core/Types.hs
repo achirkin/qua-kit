@@ -253,8 +253,8 @@ instance HelenMonad HelenWorld where
 runHelenProgram :: Helen -> HelenWorld r -> IO (r,Helen)
 runHelenProgram s (HelenWorld p) = do
     hvar <- STM.newTVarIO s
-    let ll = setLogLevel . helenSettings $ s
-    let mlf = setLogFile . helenSettings $ s
+    let ll = settingsLogLevel . helenSettings $ s
+    let mlf = settingsLogFile . helenSettings $ s
     let runWithLog = case mlf of
             Nothing -> runStdoutLoggingT
             Just lf -> runFileLoggingT $ toFilePath lf

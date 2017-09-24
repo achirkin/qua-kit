@@ -24,7 +24,7 @@ import Helen.Core.Types
 
 startupServices :: HelenWorld ()
 startupServices = do
-    bcs <- gets $ setBins . helenSettings
+    bcs <- gets $ settingsBins . helenSettings
     mapM_ startBinaryWithRestarts bcs
 
 data BinState = BinState
@@ -35,7 +35,7 @@ data BinState = BinState
 startBinaryWithRestarts :: BinConfig -> HelenWorld ()
 startBinaryWithRestarts bc@BinConfig {..} = do
     ph <- startBinary bc
-    nras <- gets $ setBinRestartAttempts . helenSettings
+    nras <- gets $ settingsBinRestartAttempts . helenSettings
     let bs = BinState {binStateProcessHandle = ph, binStateRestartsLeft = nras}
     forkHelen $ go bs
   where

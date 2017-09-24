@@ -40,21 +40,21 @@ combineToSettings Flags {..} Environment {..} mconf = do
             Just lf -> Just <$> resolveFile' lf
     pure
         Settings
-        { setHost =
+        { settingsHost =
               fromMaybe "localhost" $
               flagHost `mplus` envHost `mplus` c confHost
-        , setPort = fromMaybe 7654 $ flagPort `mplus` envPort `mplus` c confPort
-        , setLogFile = mlf
-        , setLogLevel =
+        , settingsPort = fromMaybe 7654 $ flagPort `mplus` envPort `mplus` c confPort
+        , settingsLogFile = mlf
+        , settingsLogLevel =
               fromMaybe LevelInfo $
               (flagLogLevel `mplus` envLogLevel `mplus` c confLogLevel) >>=
               (`lookup` logLevelOptions)
-        , setTrustedClients =
+        , settingsTrustedClients =
               S.fromList
                   (flagTrustedClients `union` envTrustedClients `union`
                    fromMaybe [] (c confTrustedClients))
-        , setBins = fromMaybe [] $ c confBins
-        , setBinRestartAttempts =
+        , settingsBins = fromMaybe [] $ c confBins
+        , settingsBinRestartAttempts =
               fromMaybe 3 $
               flagRestartAttempts `mplus` envRestartAttempts `mplus`
               c confRestartAttempts

@@ -88,11 +88,11 @@ instance FromJSON BinConfig where
             (((o .:? "args") <|> (fmap words <$> o .:? "args")) .!= [])
 
 data Settings = Settings
-    { setHost :: String
-    , setPort :: Int
-    , setLogFile :: Maybe (Path Abs File)
-    , setLogLevel :: LogLevel
-    , setTrustedClients :: Set IPv4
-    , setBins :: [BinConfig]
-    , setBinRestartAttempts :: Int
+    { settingsHost :: String
+    , settingsPort :: Int
+    , settingsLogFile :: Maybe (Path Abs File)
+    , settingsLogLevel :: LogLevel
+    , settingsTrustedClients :: Set IPv4
+    , settingsBins :: [BinConfig]
+    , settingsBinRestartAttempts :: Int
     } deriving (Show, Eq)

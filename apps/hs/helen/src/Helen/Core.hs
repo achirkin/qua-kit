@@ -104,7 +104,7 @@ program = do
 --   Each time message comes, it registered together with callback in a global message channel.
 helenChannels :: HelenWorld ()
 helenChannels = do
-  port <- gets (setPort . helenSettings)
+  port <- gets (settingsPort . helenSettings)
   let connSettings = Network.serverSettings port "*4"
   Network.runGeneralTCPServer connSettings helenChannels'
 
