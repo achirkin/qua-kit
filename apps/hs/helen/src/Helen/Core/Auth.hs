@@ -18,11 +18,10 @@ import Helen.Core.OptParse.Types
 enforceQuaKitRoles :: Network.SockAddr -> Message -> HelenRoom Message
 enforceQuaKitRoles client message = do
     trusteds <- gets $ settingsTrustedClients . helenSettings
-    let stripAuth message = message & msgSenderId .~ Nothing
-                                    & msgSenderAuthRole .~ Local
+    let stripAuth msg = msg & msgSenderId .~ Nothing
+                            & msgSenderAuthRole .~ Local
     pure $ ($ message) $ case client of
         Network.SockAddrInet _ ha -> if Set.member (IP.fromHostAddress ha) trusteds
            then id
            else stripAuth
         _ -> stripAuth
-

@@ -28,7 +28,6 @@ library
         Helen.Core.Service.Information
         Helen.Core.Service.Registration
         Helen.Core.Types
-        Helen.Core.Utils
     build-depends:
         base >=4.8 && <5,
         text -any,

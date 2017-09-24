@@ -1,4 +1,3 @@
-{-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
 
@@ -9,20 +8,25 @@ module Helen.Core.OptParse
 
 import Control.Monad
 import Control.Monad.Logger
+import Control.Monad.IO.Class
+import Control.Monad.Trans.Except
+import Control.Monad.Trans.Maybe
+import Data.Aeson (FromJSON)
 import Data.List (intercalate, union)
 import Data.Maybe (fromMaybe, mapMaybe)
 import Data.Monoid ((<>), mconcat)
+import qualified Data.ByteString as SB
 import qualified Data.Set as S
 import qualified Data.Text as T
+import qualified Data.Yaml as Yaml
 import Path
-import Path.IO (resolveFile')
+import Path.IO (resolveFile', forgivingAbsence)
 import System.Environment (getArgs, getEnvironment)
 import Text.Read
 
 import Options.Applicative
 
 import Helen.Core.OptParse.Types
-import Helen.Core.Utils
 
 getSettings :: IO Settings
 getSettings = do
@@ -82,13 +86,13 @@ getConfiguration Flags {..} Environment {..} = do
                     (case flagLogFile `mplus` envLogFile of
                          Nothing -> runStdoutLoggingT
                          Just lf -> runFileLoggingT lf) .
-                    (filterLogger
+                    filterLogger
                          (\_ l ->
                               l >=
                               fromMaybe
                                   LevelInfo
-                                  ((flagLogLevel `mplus` envLogLevel >>=
-                                    (`lookup` logLevelOptions)))))
+                                  (flagLogLevel `mplus` envLogLevel >>=
+                                    (`lookup` logLevelOptions)))
             runWithLog $
                 logWarnNS "ConfigParser" $
                 T.unwords
@@ -212,3 +216,21 @@ parseFlags =
              , help "Number of restart attempts for services"
              , value Nothing
              ])
+
+readYamlSafe :: (MonadIO m, FromJSON a) => Path Abs File -> m (Either String a)
+readYamlSafe path =
+    runExceptT $ do
+        contents <-
+            maybeToExceptT (unwords ["No yaml file found:", toFilePath path]) .
+            MaybeT . liftIO . forgivingAbsence $
+            SB.readFile (toFilePath path)
+        withExceptT
+            (\err ->
+                 unwords
+                     [ "Unable to parse YAML in file"
+                     , toFilePath path
+                     , "with error:"
+                     , err
+                     ]) .
+            ExceptT . pure $
+            Yaml.decodeEither contents

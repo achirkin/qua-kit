@@ -18,7 +18,7 @@ import Helen.Core.Types
 main :: IO ()
 main = do
     sets <- getSettings
-    putStrLn $ "Helen is running on " ++ show (settingsHost sets) ++ ":" ++ show (settingsPort sets)
+    putStrLn $ "Helen is running on " ++ settingsHost sets ++ ":" ++ show (settingsPort sets)
     helen <- initHelen sets
     _ <- runHelenProgram helen program
     putStrLn "Helen finished."
