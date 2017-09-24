@@ -213,6 +213,7 @@ instance YesodAuth App where
                 , userEmail = Nothing
                 , userPassword = Nothing
                 , userVerified = True
+                , userTemporary = False
                 }
     authenticate creds@Creds{credsPlugin = "lti"} = do
       uid <- runDB $ do
@@ -227,12 +228,26 @@ instance YesodAuth App where
               , userEmail = Nothing
               , userPassword = Nothing
               , userVerified = True
+              , userTemporary = False
               }
       setupEdxGrading uid (credsExtra creds)
       case Map.lookup "custom_exercise_type" (Map.fromList $ credsExtra creds) of
           Just "design" -> setUltDest EditProposalR
           Just "compare" -> setUltDest CompareProposalsR
           _ -> return ()
+      return $ Authenticated uid
+    authenticate Creds{credsPlugin = "temporary"} = do
+      uid <- runDB $
+        insert User
+              { userName = "Temporary user"
+              , userRole = UR_STUDENT
+              , userEthUserName = Nothing
+              , userEdxUserId = Nothing
+              , userEmail = Nothing
+              , userPassword = Nothing
+              , userVerified = False
+              , userTemporary = True
+              }
       return $ Authenticated uid
     authenticate creds
       | "email" `isPrefixOf` credsPlugin creds = runDB $ do
@@ -262,10 +277,11 @@ instance YesodAuthPersist App
 instance YesodAuthEmail App where
   type AuthEmailId App = UserId
 
-  afterPasswordRoute _ = MoocHomeR
+  afterPasswordRoute _ = HomeR
+  confirmationEmailSentResponse _ = redirect HomeR
 
-  addUnverified email verkey =
-    runDB $ do
+  addUnverified email verkey = do
+    uid <- runDB $ do
       uid <- insert User
               { userName = takeWhile (/= '@') email
               , userRole = UR_NOBODY
@@ -274,13 +290,16 @@ instance YesodAuthEmail App where
               , userEmail = Just email
               , userPassword = Nothing
               , userVerified = False
+              , userTemporary = False
               }
       _ <- insert $ UserProp uid "verkey" verkey
       return uid
+    maybeSetRoleBasedOnParams uid
+    pure uid
 
 
   sendVerifyEmail email _ verurl = do
-    maybeEnroll email
+    maybeEnroll
     -- Print out to the console the verification email, for easier
     -- debugging.
     $(logDebug) $ "Copy/ Paste this URL in your browser: " <> verurl
@@ -341,10 +360,11 @@ instance YesodAuthEmail App where
     extraParams <- mapM extraParam ["scenario-problem", "invitation-secret"]
 
     toParRt <- getRouteToParent
-    (widget, _) <- lift $ generateFormPost (registrationForm (catMaybes extraParams) toParRt)
+    let allowTempUserOption = all isJust extraParams
+    (widget, _) <- lift $ generateFormPost $ registrationForm (catMaybes extraParams) toParRt allowTempUserOption
     lift $ authLayout widget
     where
-      registrationForm extraFields toParentRoute extra = do
+      registrationForm extraFields toParentRoute allowTempUserOption extra  = do
         let emailSettings = FieldSettings {
               fsLabel = SomeMessage ("Email"::Text),
               fsTooltip = Nothing,
@@ -468,14 +488,18 @@ lastScenarioProblemId = getVal <$> rawSql query []
           ["SELECT max(id) FROM scenario_problem;"
           ]
 
+maybeSetRoleBasedOnParams :: UserId -> Handler ()
+maybeSetRoleBasedOnParams userId = do
+    _ <- checkInvitationParams
+    runDB $ update userId [UserRole =. UR_STUDENT]
 
-maybeEnroll :: Email -> Handler ()
-maybeEnroll email = do
+maybeEnroll :: Handler ()
+maybeEnroll = do
     msId <- checkInvitationParams
     case msId of
         Nothing -> pure ()
         Just i -> do
-             $(logDebug) $ "Enrolling new user with email " <> email <> " in scenario problem " <> Text.pack (show $ fromSqlKey i)
+             $(logDebug) $ "Enrolling new user in scenario problem " <> Text.pack (show $ fromSqlKey i)
              setSafeSession userSessionCustomExerciseId i
              setSafeSession userSessionCustomExerciseType "edit"
 
@@ -495,3 +519,9 @@ checkInvitationParams = do
           pure $ if Just (scenarioProblemInvitationSecret sp) == is
               then Just spId
               else Nothing
+
+postTempUserR :: Handler Html
+postTempUserR = do
+    maybeEnroll
+    setCreds False $ Creds "temporary" "Temporary user" []
+    redirect HomeR

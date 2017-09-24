@@ -27,6 +27,7 @@
 /admin/criterion-editor/edit-criterion/#CriterionId AdminEditCriterionR GET POST
 /admin/request-review               AdminReviewRequestR GET POST
 
+/temporary-user                     TempUserR POST
 
 /                                                                MoocHomeR GET POST
 /mooc/submit                                                     SubmitProposalR POST

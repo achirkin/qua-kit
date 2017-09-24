@@ -7,6 +7,7 @@ User
     email Text Maybe
     password Text Maybe -- Password may not be set yet
     verified Bool default=false
+    temporary Bool default=false
     ETHUserName ethUserName !force
     EdxUserId edxUserId !force
     UserEmailId email !force
