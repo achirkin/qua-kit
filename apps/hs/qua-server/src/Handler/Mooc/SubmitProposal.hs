@@ -46,25 +46,34 @@ postSubmitProposalR = do
                  }
           runDB $ updateRatingOnSubmission scId
           setMessage . toHtml $ "Thank you, " <> userName user <> ", your design proposal has been saved."
+
           redirectUltDest MoocHomeR
         Nothing -> return ()
 
     completelyNewOne preview geometry description >>= \mscenarioId -> case mscenarioId of
         Just scId -> do
           runDB $ updateRatingOnSubmission scId
+          meResId <- getsSafeSession userSessionEdxResourceId
+          unless (userVerified user) clearSession
           setMessage . preEscapedToMarkup $
               "Thank you, " <> userName user <> ", your design proposal has been saved.<br>"
-              <> "Now you can come back to edX or stay at qua-kit and explore submissions of other students.<br>"
-              <> "<p class=\"text-brand-accent\"><b>Note!</b><br>We identified you via a special link on edX (when you pressed \"Go!\" button). "
-              <> "You can come back and continue the work at the current state by going on the same link (button).<br>"
-              <> "We sent to edX your base grade (60% of maximum); the grade will be updated as soon"
-              <> " as other students start to vote and discuss your submission.</p>"
+              <> ( case meResId of
+                     Nothing -> ""
+                     Just _ ->
+                           "Now you can come back to edX or stay at qua-kit and explore submissions of other students.<br>"
+                        <> "<p class=\"text-brand-accent\"><b>Note!</b><br>We identified you via a special link on edX (when you pressed \"Go!\" button). "
+                        <> "You can come back and continue the work at the current state by going on the same link (button).<br>"
+                        <> "We sent to edX your base grade (60% of maximum); the grade will be updated as soon"
+                        <> " as other students start to vote and discuss your submission.</p>"
+                 )
           ye <- getYesod
-          meResId <- getsSafeSession userSessionEdxResourceId
           case meResId of
             Nothing -> return ()
-            Just eResId -> sendEdxGrade (appSettings ye) uId eResId 0.6 (Just "Automatic grade on design submission.")
-          redirectUltDest MoocHomeR
+            Just eResId -> sendEdxGrade (appSettings ye) uId eResId 0.6 (Just "Automatic grade upon design submission.")
+
+          if userVerified user
+          then redirectUltDest MoocHomeR
+          else redirectUltDest $ BrowseProposalsR 0
         Nothing -> do
           ses <- getSession
           $(logError) $ "A student failed to submit a proposal. Here is their session: "

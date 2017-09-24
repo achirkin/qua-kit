@@ -35,6 +35,7 @@ renderQuaView scpId authorId = do
   authorName <- runDB (get authorId) >>= \mu -> case mu of
     Nothing -> return "anonymous"
     Just u  -> return $ userName u
+  isEdx <- isJust <$> getsSafeSession userSessionEdxResourceId
 
   scId <- case scIds of
     Just x -> return x

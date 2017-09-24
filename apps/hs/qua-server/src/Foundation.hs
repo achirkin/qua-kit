@@ -213,7 +213,6 @@ instance YesodAuth App where
                 , userEmail = Nothing
                 , userPassword = Nothing
                 , userVerified = True
-                , userTemporary = False
                 }
     authenticate creds@Creds{credsPlugin = "lti"} = do
       uid <- runDB $ do
@@ -228,7 +227,6 @@ instance YesodAuth App where
               , userEmail = Nothing
               , userPassword = Nothing
               , userVerified = True
-              , userTemporary = False
               }
       setupEdxGrading uid (credsExtra creds)
       case Map.lookup "custom_exercise_type" (Map.fromList $ credsExtra creds) of
@@ -239,14 +237,13 @@ instance YesodAuth App where
     authenticate Creds{credsPlugin = "temporary"} = do
       uid <- runDB $
         insert User
-              { userName = "Temporary user"
+              { userName = "Anonymous user"
               , userRole = UR_STUDENT
               , userEthUserName = Nothing
               , userEdxUserId = Nothing
               , userEmail = Nothing
               , userPassword = Nothing
               , userVerified = False
-              , userTemporary = True
               }
       return $ Authenticated uid
     authenticate creds
@@ -278,7 +275,9 @@ instance YesodAuthEmail App where
   type AuthEmailId App = UserId
 
   afterPasswordRoute _ = HomeR
-  confirmationEmailSentResponse _ = redirect HomeR
+  confirmationEmailSentResponse _ = do
+    setMessage "A confirmain email has been sent. Please, check your mailbox."
+    redirectUltDest MoocHomeR
 
   addUnverified email verkey = do
     uid <- runDB $ do
@@ -290,22 +289,23 @@ instance YesodAuthEmail App where
               , userEmail = Just email
               , userPassword = Nothing
               , userVerified = False
-              , userTemporary = False
               }
       _ <- insert $ UserProp uid "verkey" verkey
       return uid
     maybeSetRoleBasedOnParams uid
+
     pure uid
 
 
   sendVerifyEmail email _ verurl = do
-    maybeEnroll
+    mscId <- maybeEnroll
     -- Print out to the console the verification email, for easier
     -- debugging.
     $(logDebug) $ "Copy/ Paste this URL in your browser: " <> verurl
 
     -- Send email.
-    liftIO $ Mail.renderSendMail $ Mail.simpleMail'
+    catch
+      (liftIO . Mail.renderSendMail $ Mail.simpleMail'
         (Mail.Address Nothing email) -- To address
         (Mail.Address (Just "ETH qua-kit") "noreply@qua-kit.ethz.ch") -- From address
         "Please validate your email address" -- Subject
@@ -316,6 +316,18 @@ instance YesodAuthEmail App where
 
             Thank you
         |]
+      )
+      (\e -> $(logWarn) $ "[EMAIL REGISTRATION] Could not send an email: " <> Text.pack (show (e :: SomeException)))
+
+    case mscId of
+      Nothing ->
+        setUltDest MoocHomeR
+      Just i -> do
+        setSafeSession userSessionCustomExerciseId i
+        setSafeSession userSessionCustomExerciseType "edit"
+        setSafeSession userSessionQuaViewMode "edit"
+        setUltDest HomeR
+    setCreds False $ Creds "email" email []
   getVerifyKey uid = runDB $ do
     mup <- getBy $ UserProperty uid "verkey"
     return $ case mup of
@@ -493,7 +505,7 @@ maybeSetRoleBasedOnParams userId = do
     _ <- checkInvitationParams
     runDB $ update userId [UserRole =. UR_STUDENT]
 
-maybeEnroll :: Handler ()
+maybeEnroll :: Handler (Maybe ScenarioProblemId)
 maybeEnroll = do
     msId <- checkInvitationParams
     case msId of
@@ -502,6 +514,8 @@ maybeEnroll = do
              $(logDebug) $ "Enrolling new user in scenario problem " <> Text.pack (show $ fromSqlKey i)
              setSafeSession userSessionCustomExerciseId i
              setSafeSession userSessionCustomExerciseType "edit"
+             setSafeSession userSessionQuaViewMode "edit"
+    return msId
 
 invitationParams :: ScenarioProblemId -> Handler [(Text, Text)]
 invitationParams spId = do
@@ -522,6 +536,6 @@ checkInvitationParams = do
 
 postTempUserR :: Handler Html
 postTempUserR = do
-    maybeEnroll
-    setCreds False $ Creds "temporary" "Temporary user" []
+    _ <- maybeEnroll
+    setCreds False $ Creds "temporary" "Anonymous user" []
     redirect HomeR

@@ -121,6 +121,9 @@ makeFoundation appSettings = do
     -- Perform database migration using our application's logging settings.
     runLoggingT (runSqlPool (runMigration migrateAll) pool) logFunc
 
+    -- register a single admin user if there are no users in the database
+    registerAdmin pool
+
 #if DEVELOPMENT
     -- Fill database with some problem-specific important data.
     importProblemData pool
@@ -240,3 +243,23 @@ handler h = getAppSettings >>= makeFoundation >>= flip unsafeHandler h
 -- | Run DB queries
 db :: ReaderT SqlBackend (HandlerT App IO) a -> IO a
 db = handler . runDB
+
+-- | Create a default admin user and set a password at the program startup.
+--
+--   username: "admin@qua-kit.hs"
+--   password: "make it some random thing"
+--     (no quotes in both cases)
+registerAdmin :: ConnectionPool -> IO ()
+registerAdmin pool = flip runSqlPool pool $ do
+    userCount <- count ([] :: [Filter User])
+    when (userCount <= 0) $ do
+      -- make me the first admin
+      let un = Just "admin@qua-kit.hs"
+      mme' <- getBy $ UserEmailId un
+      case mme' of
+        Nothing ->
+          let pw = Just "sha256|16|AK5Dd0IF3Hdkgywn506B5Q==|MxrRScUOlKp7dXOEGMpEYiiMvN/Us7S9XRKVXJnAQlg="
+          in insert_ $ User
+              "Qua-kit Super Admin" UR_ADMIN Nothing Nothing un pw True
+        Just _ -> return ()
+       --Just (Entity key _) -> update key [UserRole =. UR_ADMIN]

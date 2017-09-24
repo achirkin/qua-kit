@@ -65,7 +65,7 @@ $if showFull
 
 $if showHelp
   $if urole == UR_STUDENT
-    ^{popupEdxGuide}
+    ^{popupEdxGuide isEdx}
     <script type="text/javascript">
       \$( document ).ready(function() { $('#popupedxguide').modal('show'); } );
   $else

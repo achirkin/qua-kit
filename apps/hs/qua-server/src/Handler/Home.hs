@@ -30,6 +30,7 @@ renderQuaView = do
   muser <- maybeAuth
   let urole = muserRole muser
   mscId <- getsSafeSession userSessionScenarioId
+  isEdx <- isJust <$> getsSafeSession userSessionEdxResourceId
 
   -- if the user is an owner of scenario, let him edit it!
   case (,,) urole <$> muser <*> mscId of
