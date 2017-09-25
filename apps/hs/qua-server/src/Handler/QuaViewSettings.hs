@@ -16,18 +16,20 @@ import Types
 getQuaViewSettingsR :: Handler TypedContent
 getQuaViewSettingsR = do
     qua_view_mode <- fromMaybe "full" <$> getsSafeSession userSessionQuaViewMode
+    mscId <- getsSafeSession userSessionScenarioId
 
     scenarioLinkScale <- S.getScenarioLink
 
     app <- getYesod
     req <- waiRequest
-    let appr = getApprootText guessApproot app req
-        quaviewHTTP   = yesodRender app appr HomeR []
-        luciProxyHTTP = yesodRender app appr LuciR []
-        luciProxyWS      = "ws" <> drop 4 luciProxyHTTP
-        quaViewLoggingWS = "ws" <> drop 4 (yesodRender app appr QVLoggingR [])
-        submitHTTP = yesodRender app appr SubmitProposalR []
-        mscenarioHTTP = flip (yesodRender app appr) [] . fst <$> scenarioLinkScale
+    let routeUrl route = let appr = getApprootText guessApproot app req
+                         in  yesodRender app appr route []
+        quaviewHTTP      = routeUrl HomeR
+        luciProxyWS      = "ws" <> drop 4 (routeUrl LuciR)
+        quaViewLoggingWS = "ws" <> drop 4 (routeUrl QVLoggingR)
+        submitHTTP       = routeUrl SubmitProposalR
+        mwriteReviewUrl  = mscId >>= \scId -> return $ routeUrl (WriteReviewR scId)
+        mscenarioHTTP    = routeUrl . fst <$> scenarioLinkScale
     -- return . TypedContent typeJson . toContent . object $
     --   [ "viewRoute"  .= quaviewHTTP
     --   , "luciRoute"  .= luciProxyWS
@@ -44,6 +46,7 @@ getQuaViewSettingsR = do
       , luciUrl                 = Just luciProxyWS
       , getSubmissionGeoJsonUrl = mscenarioHTTP
       , postSubmissionUrl       = Just submitHTTP
+      , postReviewUrl           = mwriteReviewUrl
       , viewMode                = qua_view_mode
       , viewUrl                 = quaviewHTTP
       }
