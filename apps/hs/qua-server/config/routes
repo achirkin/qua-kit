@@ -12,6 +12,7 @@
 -- /mouseDebug MouseDebugR GET
 
 /qua-view-settings QuaViewSettingsR GET
+/qua-view-review-settings QuaViewReviewSettingsR GET
 
 /about                              AboutR GET
 /faq                                FAQR GET

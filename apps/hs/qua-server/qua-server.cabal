@@ -102,6 +102,7 @@ library
         Handler.Mooc.ViewProposal
         Handler.Mooc.SubmissionViewer
         Handler.Mooc.FAQ
+        Handler.QuaViewReviewSettings
         Handler.QuaViewSettings
         Handler.Viewer
         Import

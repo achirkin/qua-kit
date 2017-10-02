@@ -58,6 +58,7 @@ import Handler.About
 import Handler.Feedback
 import Handler.Home
 import Handler.LuciProxy
+import Handler.QuaViewReviewSettings
 import Handler.QuaViewSettings
 import Handler.Mooc
 import Handler.Mooc.Criteria
