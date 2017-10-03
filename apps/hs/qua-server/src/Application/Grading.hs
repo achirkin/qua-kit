@@ -313,6 +313,9 @@ updateRatingsOnVoting voteId = do
 -- | Whenever we update ratings, we should try to update CurrentScenario grade
 --   using this function.
 --   Also, whenever an experts writes a review, we should use this function too.
+--
+--   This function relies on the database being up-to-date and
+--    currentScenarioHistoryScenarioId referring to the latest user submission.
 updateCurrentScenarioGrade :: MonadIO a
                            => ScenarioId
                            -> ReaderT SqlBackend a ()
@@ -321,9 +324,11 @@ updateCurrentScenarioGrade scId = do
   case mcs of
     Nothing -> return ()
     Just (Entity csId CurrentScenario{..}) -> do
-      grades <- P.selectList
-        [ ExpertReviewScenarioId P.==. scId
-        ] []
+      grades <- select $ from $ \(InnerJoin scenario expertReview) -> do
+         on $ expertReview ^. ExpertReviewScenarioId ==. scenario ^. ScenarioId
+         where_ $ scenario ^. ScenarioAuthorId ==. val currentScenarioAuthorId
+              &&. scenario ^. ScenarioTaskId ==. val currentScenarioTaskId
+         return expertReview
       if null grades
       then do -- if there are no expert grades, make a grade from rating
         ratings <- P.selectList

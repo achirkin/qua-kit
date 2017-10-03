@@ -34,7 +34,7 @@ postSubmitProposalR = do
     when (qua_view_mode /= "edit") $ invalidArgsI ["You must be in an 'edit' mode to save scenario." :: Text]
 
     tryMaybies resolveBySesScenarioId resolveBySesExerciseId >>= \mscenario -> case mscenario of
-        Just prevScenario -> do
+        Just (Entity prevId prevScenario) -> do
           when (uId /= scenarioAuthorId prevScenario) $
             invalidArgsI ["You can work only on your own scenarios!" :: Text]
           t <- liftIO getCurrentTime
@@ -44,10 +44,21 @@ postSubmitProposalR = do
                  , scenarioGeometry = geometry
                  , scenarioLastUpdate = t
                  }
-          runDB $ updateRatingOnSubmission scId
-          setMessage . toHtml $ "Thank you, " <> userName user <> ", your design proposal has been saved."
+          success <- runDB $ do
+            mcs <- getBy $ LatestSubmissionId prevId
+            case mcs of
+              Nothing -> return False
+              Just (Entity csId _) -> do
+                update csId [ CurrentScenarioHistoryScenarioId =. scId
+                            , CurrentScenarioDescription =. description
+                            , CurrentScenarioLastUpdate =. t
+                            ]
+                updateRatingOnSubmission scId
+                return True
+          when success $ do
+            setMessage . toHtml $ "Thank you, " <> userName user <> ", your design proposal has been saved."
+            redirectUltDest MoocHomeR
 
-          redirectUltDest MoocHomeR
         Nothing -> return ()
 
     completelyNewOne preview geometry description >>= \mscenarioId -> case mscenarioId of
@@ -85,19 +96,19 @@ postSubmitProposalR = do
                           Just _  -> return mv1
 
 
-resolveBySesScenarioId :: Handler (Maybe Scenario)
+resolveBySesScenarioId :: Handler (Maybe (Entity Scenario))
 resolveBySesScenarioId = do
   mescenario_id <- getsSafeSession userSessionScenarioId
   deleteSafeSession userSessionScenarioId
   case mescenario_id of
-      Just i -> runDB (get i)
+      Just i -> fmap (Entity i) <$> runDB (get i)
       Nothing -> return Nothing
 
-resolveBySesExerciseId :: Handler (Maybe Scenario)
+resolveBySesExerciseId :: Handler (Maybe (Entity Scenario))
 resolveBySesExerciseId = runMaybeT $ do
   userId <- MaybeT maybeAuthId
   mscp_id <- lift $ getsSafeSession userSessionCustomExerciseId
-  fmap entityVal . MaybeT . runDB $ selectSource
+  MaybeT . runDB $ selectSource
                         (case mscp_id of
                            Just i  -> [ ScenarioAuthorId ==. userId
                                       , ScenarioTaskId   ==. i
