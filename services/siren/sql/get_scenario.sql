@@ -1,15 +1,19 @@
-CREATE OR REPLACE FUNCTION get_scenario(ScID bigint)
+CREATE OR REPLACE FUNCTION get_scenario(ScID bigint, forceSRID integer)
   RETURNS jsonb AS
 $func$
 DECLARE
   features jsonb;
   geometry_output jsonb;
   result jsonb;
+  scSRID integer;
 BEGIN
   IF (SELECT count(*) < 1 FROM scenario WHERE scenario.id = ScID) THEN
     RAISE EXCEPTION 'Nonexistent scenario (ScID = %)', ScID
           USING HINT = 'You are trying to get a scenario that has not ever existed!';
   END IF;
+
+  -- set forced export SRID if necessary.
+  SELECT COALESCE(forceSRID, s.srid) FROM scenario s WHERE s.id = ScID INTO scSRID;
 
   SELECT jsonb_build_object(
         'type',     'FeatureCollection',
@@ -19,7 +23,7 @@ BEGIN
         SELECT jsonb_build_object(
           'type',       'Feature',
           'id',         CAST(g.id AS text),
-          'geometry',   ST_AsGeoJSON(ST_Transform(g.geom, (SELECT srid FROM scenario WHERE id = ScID)))::jsonb,
+          'geometry',   ST_AsGeoJSON(ST_Transform(g.geom, scSRID))::jsonb,
           'properties', coalesce(
                         ( SELECT jsonb_object_agg(ph.name, ph.value)
                             FROM sc_geometry_prop p, sc_geometry_prop_history ph
@@ -47,7 +51,7 @@ BEGIN
     ( 'format'       , 'GeoJSON'
     , 'name'         , (SELECT name FROM scenario WHERE id = ScID)
     , 'ScID'         , ScID
-    , 'srid'         , (SELECT srid FROM scenario WHERE id = ScID)
+    , 'srid'         , scSRID
     , 'lon'          , (SELECT lon  FROM scenario WHERE id = ScID)
     , 'lat'          , (SELECT lat  FROM scenario WHERE id = ScID)
     , 'alt'          , (SELECT alt  FROM scenario WHERE id = ScID)

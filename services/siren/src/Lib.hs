@@ -59,6 +59,9 @@ withPostgres PSSettings {..} commands = do
 oidBIGINT :: Oid
 oidBIGINT = Oid 20
 
+oidINTEGER :: Oid
+oidINTEGER = Oid 23
+
 oidJSONB :: Oid
 oidJSONB = Oid 3802
 
@@ -83,6 +86,9 @@ mkBigInt (ScenarioId i) = Just (oidBIGINT, BSC.pack (show i), Text)
 
 mkInt64 :: Int64 -> Maybe (Oid, ByteString, Format)
 mkInt64 i = Just (oidBIGINT, BSC.pack (show i), Text)
+
+mkInteger :: Int64 -> Maybe (Oid, ByteString, Format)
+mkInteger i = Just (oidINTEGER, BSC.pack (show i), Text)
 
 mkUserIdInt64 :: UserId -> Maybe (Oid, ByteString, Format)
 mkUserIdInt64 (UserId i) = mkInt64 i
@@ -193,9 +199,10 @@ listScenarios conn token userId authRole = do
 getScenario :: Connection
             -> Int64 -- ^ token (callID)
             -> ScenarioId -- ^ ScID (scenario id)
+            -> Maybe Int64 -- ^ SRID
             -> IO (Either BS.ByteString BS.ByteString) -- ^ Either error or json result
-getScenario conn token scID = do
-  mrez <- execParams conn "SELECT wrap_result($1,get_scenario($2));" [mkInt64 token, mkBigInt scID] Text
+getScenario conn token scID msrid = do
+  mrez <- execParams conn "SELECT wrap_result($1,get_scenario($2,$3::integer));" [mkInt64 token, mkBigInt scID, msrid >>= mkInteger] Text
   justResult mrez $ \rez -> checkResult rez id
 
 

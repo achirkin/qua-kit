@@ -113,10 +113,14 @@ responseMsgs m@(MsgRun token "scenario.GetList" _ _) = do
     yieldAnswer token eresultBS
 
 responseMsgs (MsgRun token "scenario.geojson.Get" pams _)
-  | Just (Success scID) <- fromJSON <$> HashMap.lookup "ScID" pams = do
+  | Just (Success scID) <- fromJSON <$> HashMap.lookup "ScID" pams
+  , msrid <- (fromJSON <$> HashMap.lookup "srid" pams) >>= f = do
     conn <- Lens.use connection
-    eresultBS <- liftIO $ getScenario conn (fromIntegral token) (ScenarioId scID)
+    eresultBS <- liftIO $ getScenario conn (fromIntegral token) (ScenarioId scID) msrid
     yieldAnswer token eresultBS
+  where
+    f (Success x) = Just x
+    f _ = Nothing
 
 responseMsgs m@(MsgRun token "scenario.geojson.Create" pams _)
   | Just (Success scName) <- fromJSON <$> HashMap.lookup "name" pams
