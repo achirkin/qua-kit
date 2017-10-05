@@ -26,7 +26,7 @@
 /admin/criterion-editor/criterion   AdminCreateCriterionR POST
 /admin/criterion-editor/edit-criterion/#CriterionId AdminEditCriterionR GET POST
 /admin/request-review               AdminReviewRequestR GET POST
-
+/admin/get-luci-scenario            LuciScenarioDownloaderR GET
 /temporary-user                     TempUserR POST
 
 /                                                                MoocHomeR GET POST

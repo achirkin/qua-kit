@@ -44,3 +44,14 @@
               <a class="btn btn-flat waves-attach waves-light waves-effect" href="@{AdminReviewRequestR}">
                 <span class="icon">check
                 &nbsp;Open Request Review Page
+
+    <div class="col-lg-4 col-sm-6">
+      <div class="card">
+        <div class="card-main">
+          <div class="card-inner">
+            Luci Scenarios
+          <div class="card-action">
+            <div class="card-action-btn pull-left">
+              <a class="btn btn-flat waves-attach waves-light waves-effect" href="@{LuciScenarioDownloaderR}">
+                <span class="icon">check
+                &nbsp;Open Download Luci Scenarios Page

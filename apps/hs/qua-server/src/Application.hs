@@ -67,6 +67,7 @@ import Handler.Mooc.Admin.CriterionEditor
 import Handler.Mooc.Admin.ReviewRequest
 import Handler.Mooc.Admin.ScenarioEditor
 import Handler.Mooc.Admin.UserManager
+import Handler.Mooc.Admin.LuciScenarioDownloader
 import Handler.Mooc.Comment
 import Handler.Mooc.ExpertReview
 import Handler.Mooc.Scenario
