@@ -19,9 +19,11 @@ library
       build-depends:
           ghcjs-base >=0.2.0.0,
           base >= 4.8 && < 5,
-          text >=1.2.0.0
+          text >=1.2.0.0,
+          time >= 0.1.0.0
   else
       build-depends:
           aeson >= 1.0.2,
           base >= 4.8 && < 5,
-          text >=1.2.0.0
+          text >=1.2.0.0,
+          time >= 0.1.0.0

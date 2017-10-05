@@ -4,12 +4,15 @@
 
 module Types
     ( ReviewPost (..)
-    , ThumbState (..)
     , ReviewSettings (..)
-    , Settings   (..)
+    , Settings (..)
+    , TCriterion (..)
+    , ThumbState (..)
+    , TReview (..)
     ) where
 
 import Data.Semigroup
+import Data.Time.Clock (UTCTime)
 import GHC.Generics
 
 #ifdef ghcjs_HOST_OS
@@ -40,17 +43,6 @@ orElseText :: QuaText -> QuaText -> QuaText
 x `orElseText` y = if emptyQuaText x
                      then y
                      else x
-
-data ThumbState = None | ThumbUp | ThumbDown deriving Generic
-instance ToJSON ThumbState
-instance FromJSON ThumbState
-
-data ReviewPost = ReviewPost {
-    thumb             :: !ThumbState
-  , reviewPostComment :: !QuaText
-  } deriving Generic
-instance ToJSON   ReviewPost
-instance FromJSON ReviewPost
 
 data Settings = Settings {
     loggingUrl              :: Maybe QuaText -- ^ WebSocket URL to send user analytics to
@@ -86,7 +78,51 @@ instance Monoid Settings where
            }
 
 data ReviewSettings = ReviewSettings {
-    postReviewUrl :: QuaText
+    criterions :: [TCriterion] -- ^ criterions this submission can be reviewed with
+  , reviews    :: [TReview]    -- ^ reviews of this submission
+  , reviewsUrl :: QuaText      -- ^ URL to fetch updated list of reviews
   } deriving Generic
 instance ToJSON    ReviewSettings
 instance FromJSON  ReviewSettings
+
+
+data TCriterion = TCriterion {
+    tCriterionId          :: Int
+  , tCriterionName        :: QuaText
+  --, criterionDescription :: QuaText
+  --, criterionImage       :: ByteString
+  , tCriterionIcon        :: QuaText
+  } deriving Generic
+instance ToJSON    TCriterion
+instance FromJSON  TCriterion
+
+data ThumbState = None | ThumbUp | ThumbDown deriving (Generic, Eq)
+instance FromJSON ThumbState
+instance ToJSON ThumbState
+#ifndef ghcjs_HOST_OS
+  where
+    toEncoding = genericToEncoding defaultOptions
+#endif
+
+data ReviewPost = ReviewPost {
+    criterionId       :: !Int
+  , thumb             :: !ThumbState
+  , reviewPostComment :: !QuaText
+  } deriving Generic
+instance FromJSON ReviewPost
+instance ToJSON   ReviewPost
+#ifndef ghcjs_HOST_OS
+  where
+    toEncoding = genericToEncoding defaultOptions
+#endif
+
+data TReview = TReview {
+    tReviewId          :: !Int
+  , tReviewUserName    :: !QuaText
+  , tReviewCriterionId :: !Int
+  , tReviewThumb       :: !ThumbState
+  , tReviewComment     :: !QuaText
+  , tReviewTimestamp   :: !UTCTime
+  } deriving Generic
+instance ToJSON    TReview
+instance FromJSON  TReview
