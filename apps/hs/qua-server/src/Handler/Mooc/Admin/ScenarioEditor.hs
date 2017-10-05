@@ -52,7 +52,7 @@ postAdminCreateScenarioR = do
                     { scenarioProblemDescription = newScenarioDataDescription
                     , scenarioProblemImage = imageBs
                     , scenarioProblemGeometry = geometryBs
-                    , scenarioProblemScale = 1
+                    , scenarioProblemScale = newScenarioDataScale
                     , scenarioProblemInvitationSecret = invitationSecret
                     }
             showForm (Just dat) [] widget enctype
@@ -77,6 +77,7 @@ generateInvitationSecret = T.pack <$> replicateM 16 (randomRIO ('a', 'z'))
 data NewScenarioData = NewScenarioData
     { newScenarioDataDescription :: Text
     , newScenarioDataImage :: FileInfo
+    , newScenarioDataScale :: Double
     , newScenarioDataGeometry :: FileInfo
     }
 
@@ -84,6 +85,7 @@ newScenarioForm :: AForm Handler NewScenarioData
 newScenarioForm =
     NewScenarioData <$> areq textField (labeledField "description") Nothing <*>
     areq fileField (labeledField "image") Nothing <*>
+    areq doubleField (labeledField "scale") (Just 0.5) <*>
     areq fileField (labeledField "geometry") Nothing
 
 labeledField :: Text -> FieldSettings App

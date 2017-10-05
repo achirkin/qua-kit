@@ -15,6 +15,8 @@
               <li .list-group-item>
                 Image: #{fileName $ newScenarioDataImage dat}
               <li .list-group-item>
+                Scale: #{show $ newScenarioDataScale dat}
+              <li .list-group-item>
                 Geometry: #{fileName $ newScenarioDataGeometry dat}
     $nothing
     <div .card>
