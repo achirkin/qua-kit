@@ -7,19 +7,27 @@ import Data.Aeson (encode)
 import Import
 import Types
 
-import Database.Persist.Sql (toSqlKey)
+import Handler.Mooc.Comment (fetchReviewsFromDb, currentCriteria)
 
+import Database.Persist.Sql (fromSqlKey)
 
-getQuaViewReviewSettingsR :: Handler TypedContent
-getQuaViewReviewSettingsR = do
+getQuaViewReviewSettingsR :: ScenarioId -> Handler TypedContent
+getQuaViewReviewSettingsR scId = do
     app <- getYesod
     req <- waiRequest
     let routeUrl route = let appr = getApprootText guessApproot app req
                          in  yesodRender app appr route []
 
-    let scId = toSqlKey 3--TODO: fix this line
-    let writeReviewUrl = routeUrl (WriteReviewR scId)
-
+    msc <- runDB $ get404 scId
+    let taskId = scenarioTaskId msc
+    criterions <- runDB $ currentCriteria taskId
+    reviews    <- runDB $ fetchReviewsFromDb scId
     return $ TypedContent typeJson $ toContent $ encode $ ReviewSettings {
-        postReviewUrl    = writeReviewUrl
+        criterions = flip map criterions $ \(Entity cId c) -> TCriterion {
+                          tCriterionId   = fromIntegral $ fromSqlKey cId
+                        , tCriterionName = criterionName c
+                        , tCriterionIcon = criterionIcon c
+                        }
+      , reviews    = reviews
+      , reviewsUrl = routeUrl (ReviewsR scId)
       }

@@ -9,6 +9,7 @@ import Import
 import qualified Handler.Mooc.Scenario as S
 import Types
 
+import Database.Persist.Sql (toSqlKey)
 
 -- | Set up settings for qua-view
 --   * qua_view_mode=mode -- edit or view or full; full is default
@@ -17,6 +18,8 @@ getQuaViewSettingsR :: Handler TypedContent
 getQuaViewSettingsR = do
     qua_view_mode <- fromMaybe "full" <$> getsSafeSession userSessionQuaViewMode
     scenarioLinkScale <- S.getScenarioLink
+
+    let scId = toSqlKey 3--TODO: fix this line
 
     app <- getYesod
     req <- waiRequest
@@ -27,7 +30,7 @@ getQuaViewSettingsR = do
       , luciUrl                 = Just $ "ws" <> drop 4 (routeUrl LuciR)
       , getSubmissionGeoJsonUrl = routeUrl . fst <$> scenarioLinkScale
       , postSubmissionUrl       = Just $ routeUrl SubmitProposalR
-      , reviewSettingsUrl       = Just $ routeUrl QuaViewReviewSettingsR
+      , reviewSettingsUrl       = Just $ routeUrl $ QuaViewReviewSettingsR scId
       , viewMode                = qua_view_mode
       , viewUrl                 = routeUrl HomeR
       }
