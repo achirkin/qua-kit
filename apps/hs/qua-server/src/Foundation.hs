@@ -151,7 +151,7 @@ instance Yesod App where
             || level == LevelError
 
     makeLogger = return . appLogger
-    maximumContentLength _ _ = Just 2000000
+    maximumContentLength _ _ = Just 4000000
 
 
 fullLayout :: Maybe Markup -> Text -> Widget -> Handler Html
