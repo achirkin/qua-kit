@@ -16,7 +16,6 @@ import Handler.Home.PanelGeometry
 import Handler.Home.PanelInfo
 import Handler.Home.PopupEdxGuide
 import Handler.Home.LuciConnect
-import Handler.Mooc.Comment
 import Handler.Mooc.ExpertReview
 
 getSubmissionViewerR ::  ScenarioProblemId -> UserId -> Handler Html
@@ -55,7 +54,7 @@ renderQuaView scpId authorId = do
       showFull = False
       showHelp = False
   setSafeSession userSessionQuaViewMode qua_view_mode
-  commentsW <- viewComments scId
+  commentsW <- undefined -- viewComments scId
 
   writeExpertReviewW <- case muser of
     (Just (Entity userId user))

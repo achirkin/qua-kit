@@ -14,7 +14,6 @@ import Handler.Home.PanelGeometry
 import Handler.Home.PanelInfo
 import Handler.Home.PopupEdxGuide
 import Handler.Home.LuciConnect
-import Handler.Mooc.Comment
 import Handler.Mooc.ExpertReview
 
 getHomeR :: Handler Html
@@ -50,7 +49,7 @@ renderQuaView = do
   qua_view_mode <- fromMaybe "full" <$> getsSafeSession userSessionQuaViewMode
   let showFull = qua_view_mode == "full"
 
-  commentsW <- maybe (pure mempty) viewComments mscId
+  commentsW <- undefined -- maybe (pure mempty) viewComments mscId
 
   let writeExpertReviewW = mempty::Widget
   viewExpertReviewsW <- maybe (pure mempty) viewExpertReviews mscId

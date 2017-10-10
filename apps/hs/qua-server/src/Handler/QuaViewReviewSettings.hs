@@ -7,7 +7,7 @@ import Data.Aeson (encode)
 import Import
 import Types
 
-import Handler.Mooc.Comment (fetchReviewsFromDb, currentCriteria)
+import Handler.Mooc.Reviews (fetchReviewsFromDb, currentCriteria)
 
 import Database.Persist.Sql (fromSqlKey)
 

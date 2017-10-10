@@ -1,10 +1,9 @@
 {-# OPTIONS_HADDOCK hide, prune #-}
 {-# LANGUAGE RecordWildCards #-}
-module Handler.Mooc.Comment
+module Handler.Mooc.Reviews
   ( postReviewsR
   , getReviewsR
   , fetchReviewsFromDb
-  , viewComments -- deprecated
   , currentCriteria
   ) where
 
@@ -14,10 +13,6 @@ import Control.Monad.Trans.Except
 import Database.Persist.Sql (fromSqlKey, toSqlKey, rawSql, Single(..))
 import qualified Data.Text as Text
 import Types
-
--- | we won't need this any more since reflex rewrite
-viewComments :: ScenarioId -> Handler Widget
-viewComments = undefined
 
 postReviewsR :: ScenarioId -> Handler Value
 postReviewsR scenarioId = runJSONExceptT $ do

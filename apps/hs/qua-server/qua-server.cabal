@@ -86,7 +86,7 @@ library
         Handler.Mooc.Admin.UserManager
         Handler.Mooc.Admin.LuciScenarioDownloader
         Handler.Mooc.BrowseProposals
-        Handler.Mooc.Comment
+        Handler.Mooc.Reviews
         Handler.Mooc.CompareProposals
         Handler.Mooc.Criteria
         Handler.Mooc.EditProposal
