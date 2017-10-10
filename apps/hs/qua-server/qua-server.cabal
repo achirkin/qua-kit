@@ -67,7 +67,6 @@ library
         Handler.About
         Handler.Common
         Handler.Feedback
-        Handler.Home
         Handler.Home.LoadingSplash
         Handler.Home.LuciConnect
         Handler.Home.PanelGeometry
@@ -89,22 +88,19 @@ library
         Handler.Mooc.Reviews
         Handler.Mooc.CompareProposals
         Handler.Mooc.Criteria
-        Handler.Mooc.EditProposal
         Handler.Mooc.EdxLogin
         Handler.Mooc.ExpertReview
         Handler.Mooc.ProposalPreview
         Handler.Mooc.RenameMe
-        Handler.Mooc.Scenario
-        Handler.Mooc.SubmitProposal
+        Handler.Mooc.ScenarioProblem
         Handler.Mooc.Survey
         Handler.Mooc.Tests
         Handler.Mooc.User
-        Handler.Mooc.ViewProposal
         Handler.Mooc.SubmissionViewer
         Handler.Mooc.FAQ
         Handler.QuaViewReviewSettings
         Handler.QuaViewSettings
-        Handler.Viewer
+        Handler.Submissions
         Import
         Import.NoFoundation
         Import.Util

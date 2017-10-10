@@ -45,36 +45,36 @@ x `orElseText` y = if emptyQuaText x
                      else x
 
 data Settings = Settings {
-    loggingUrl              :: Maybe QuaText -- ^ WebSocket URL to send user analytics to
-  , luciUrl                 :: Maybe QuaText -- ^ WebSocket URL to connect to Luci
-  , getSubmissionGeoJsonUrl :: Maybe QuaText -- ^ URL to GET geoJSON for current submission
-  , postSubmissionUrl       :: Maybe QuaText -- ^ URL for students to POST their new submission to
-  , reviewSettingsUrl       :: Maybe QuaText
-  , viewMode                :: QuaText       -- TODO: use proper type
-  , viewUrl                 :: QuaText       -- ^ URL of current qua-viewer page
+    loggingUrl               :: Maybe QuaText -- ^ WebSocket URL to send user analytics to
+  , luciUrl                  :: Maybe QuaText -- ^ WebSocket URL to connect to Luci
+  , getSubmissionGeometryUrl :: Maybe QuaText -- ^ URL to GET geoJSON for current submission
+  , postSubmissionUrl        :: Maybe QuaText -- ^ URL for students to POST their new submission to
+  , reviewSettingsUrl        :: Maybe QuaText -- ^ URL to get settings related to reviews
+  , editMode                 :: Bool          -- ^ Are we in edit mode?
+  , viewUrl                  :: QuaText       -- ^ URL of current qua-viewer page
   } deriving Generic
 instance ToJSON    Settings
 instance FromJSON  Settings
 instance Semigroup Settings where
   (<>) s1 s2 = Settings {
-                 loggingUrl              = orElse (loggingUrl s1) (loggingUrl s2)
-               , luciUrl                 = orElse (luciUrl s1) (luciUrl s2)
-               , getSubmissionGeoJsonUrl = orElse (getSubmissionGeoJsonUrl s1) (getSubmissionGeoJsonUrl s2)
-               , postSubmissionUrl       = orElse (postSubmissionUrl s1) (postSubmissionUrl s2)
-               , reviewSettingsUrl       = orElse (reviewSettingsUrl s1) (reviewSettingsUrl s2)
-               , viewMode                = orElseText (viewMode s1) (viewMode s2)
-               , viewUrl                 = orElseText (viewUrl s1) (viewUrl s2)
+                 loggingUrl               = orElse (loggingUrl s1) (loggingUrl s2)
+               , luciUrl                  = orElse (luciUrl s1) (luciUrl s2)
+               , getSubmissionGeometryUrl = orElse (getSubmissionGeometryUrl s1) (getSubmissionGeometryUrl s2)
+               , postSubmissionUrl        = orElse (postSubmissionUrl s1) (postSubmissionUrl s2)
+               , reviewSettingsUrl        = orElse (reviewSettingsUrl s1) (reviewSettingsUrl s2)
+               , editMode                 = editMode s1 || editMode s2
+               , viewUrl                  = orElseText (viewUrl s1) (viewUrl s2)
                }
 instance Monoid Settings where
   mappend = (<>)
   mempty = Settings {
-             loggingUrl              = Nothing
-           , luciUrl                 = Nothing
-           , getSubmissionGeoJsonUrl = Nothing
-           , postSubmissionUrl       = Nothing
-           , reviewSettingsUrl       = Nothing
-           , viewMode                = ""
-           , viewUrl                 = ""
+             loggingUrl               = Nothing
+           , luciUrl                  = Nothing
+           , getSubmissionGeometryUrl = Nothing
+           , postSubmissionUrl        = Nothing
+           , reviewSettingsUrl        = Nothing
+           , editMode                 = False
+           , viewUrl                  = ""
            }
 
 data ReviewSettings = ReviewSettings {

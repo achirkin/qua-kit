@@ -6,31 +6,22 @@ module Handler.QuaViewSettings
 
 import Data.Aeson (encode)
 import Import
-import qualified Handler.Mooc.Scenario as S
 import Types
 
 import Database.Persist.Sql (toSqlKey)
 
--- | Set up settings for qua-view
---   * qua_view_mode=mode -- edit or view or full; full is default
---   * scenario_id=i -- if set up then load this scenario from database
-getQuaViewSettingsR :: Handler TypedContent
-getQuaViewSettingsR = do
-    qua_view_mode <- fromMaybe "full" <$> getsSafeSession userSessionQuaViewMode
-    scenarioLinkScale <- S.getScenarioLink
-
-    let scId = toSqlKey 3--TODO: fix this line
-
+getQuaViewSettingsR :: Maybe ScenarioId -> Handler Value
+getQuaViewSettingsR mScId = do
     app <- getYesod
     req <- waiRequest
     let routeUrl route = let appr = getApprootText guessApproot app req
                          in  yesodRender app appr route []
-    return $ TypedContent typeJson $ toContent $ encode $ Settings {
-        loggingUrl              = Just $ "ws" <> drop 4 (routeUrl QVLoggingR)
-      , luciUrl                 = Just $ "ws" <> drop 4 (routeUrl LuciR)
-      , getSubmissionGeoJsonUrl = routeUrl . fst <$> scenarioLinkScale
-      , postSubmissionUrl       = Just $ routeUrl SubmitProposalR
-      , reviewSettingsUrl       = Just $ routeUrl $ QuaViewReviewSettingsR scId
-      , viewMode                = qua_view_mode
-      , viewUrl                 = routeUrl HomeR
+    returnJson $ Settings {
+        loggingUrl               = Just $ "ws" <> drop 4 (routeUrl QVLoggingR)
+      , luciUrl                  = Just $ "ws" <> drop 4 (routeUrl LuciR)
+      , getSubmissionGeometryUrl = mScId >>= return . routeUrl . SubmissionGeometryR
+      , postSubmissionUrl        = Just $ routeUrl SubmissionsR
+      , reviewSettingsUrl        = mScId >>= return . routeUrl . QuaViewReviewSettingsR
+      , editMode                 = undefined
+      , viewUrl                  = routeUrl $ maybe MyCurrentScenarioR SubmissionR mScId
       }

@@ -146,7 +146,8 @@ getCompareByCriterionR uId cId = do
                           #{prepareDescription s1}
                       <div.card-action>
                         <div.card-action-btn.pull-left>
-                          <a.btn.btn-flat.btn-brand-accent.waves-attach.waves-effect href="@{ViewProposalR k1}" target="_blank">
+                          <a.btn.btn-flat.btn-brand-accent.waves-attach.waves-effect
+                              href="@{SubmissionR k1}" target="_blank">
                             <span.icon>visibility
                             View
                         <div.card-action-btn.pull-left #leftChoiceButton style="opacity: 0.6;">
@@ -164,7 +165,8 @@ getCompareByCriterionR uId cId = do
                           #{prepareDescription s2}
                       <div.card-action>
                         <div.card-action-btn.pull-left>
-                          <a.btn.btn-flat.btn-brand-accent.waves-attach.waves-effect href="@{ViewProposalR k2}" target="_blank">
+                          <a.btn.btn-flat.btn-brand-accent.waves-attach.waves-effect
+                              href="@{SubmissionR k2}" target="_blank">
                             <span.icon>visibility
                             View
                         <div.card-action-btn.pull-left #rightChoiceButton style="opacity: 0.6;">
