@@ -329,10 +329,7 @@ instance YesodAuthEmail App where
     case mscId of
       Nothing ->
         setUltDest MoocHomeR
-      Just i -> do
-        setSafeSession userSessionCustomExerciseId i
-        setSafeSession userSessionCustomExerciseType "edit"
-        setSafeSession userSessionQuaViewMode "edit"
+      Just _ -> do
         setUltDest MyCurrentScenarioR
     setCreds False $ Creds "email" email []
   getVerifyKey uid = runDB $ do
@@ -509,25 +506,24 @@ lastScenarioProblemId = getVal <$> rawSql query []
 
 maybeSetRoleBasedOnParams :: UserId -> Handler ()
 maybeSetRoleBasedOnParams userId = do
-    _ <- checkInvitationParams
     runDB $ update userId [UserRole =. UR_STUDENT]
 
 maybeEnroll :: Handler (Maybe ScenarioProblemId)
 maybeEnroll = do
-    msId <- checkInvitationParams
-    case msId of
-        Nothing -> pure ()
-        Just i -> do
-             $(logDebug) $ "Enrolling new user in scenario problem " <> Text.pack (show $ fromSqlKey i)
-             setSafeSession userSessionCustomExerciseId i
-             setSafeSession userSessionCustomExerciseType "edit"
-             setSafeSession userSessionQuaViewMode "edit"
-    return msId
+    mExId <- checkInvitationParams
+    musrId <- maybeAuthId
+    case (mExId, musrId) of
+        (Just exId, Just usrId) -> do
+          $(logDebug) $ "Enrolling new user in scenario problem " <> tshow (fromSqlKey exId)
+          void $ runDB $ upsert (UserExercise usrId exId)
+            [UserExerciseUserId =. usrId, UserExerciseExerciseId =. exId]
+        _ -> pure ()
+    return mExId
 
 invitationParams :: ScenarioProblemId -> Handler [(Text, Text)]
 invitationParams spId = do
     sp <- runDB $ get404 spId
-    pure [("scenario-problem", Text.pack $ show $ fromSqlKey spId), ("invitation-secret", scenarioProblemInvitationSecret sp)]
+    pure [("scenario-problem", tshow $ fromSqlKey spId), ("invitation-secret", scenarioProblemInvitationSecret sp)]
 
 checkInvitationParams :: Handler (Maybe ScenarioProblemId)
 checkInvitationParams = do

@@ -14,6 +14,7 @@ import qualified Control.Monad.Trans.Reader as Reader
 import Data.Aeson (decodeStrict')
 import Data.Aeson.Types (typeMismatch)
 import qualified Data.HashMap.Strict as HashMap
+import Handler.Mooc.User (maybeFetchExerciseId)
 
 
 loggingApp :: Maybe UserId -> Maybe ScenarioProblemId -> WebSocketsT Handler ()
@@ -81,7 +82,9 @@ instance FromJSON WSInfo where
 
 getQVLoggingR :: Handler Html
 getQVLoggingR = do
-    mUId <- maybeAuthId
-    mcustom_exercise_id <- getsSafeSession userSessionCustomExerciseId
-    webSockets $ loggingApp mUId mcustom_exercise_id
+    mUId  <- maybeAuthId
+    mExId <- case mUId of
+      Just uid -> maybeFetchExerciseId uid
+      Nothing  -> return Nothing
+    webSockets $ loggingApp mUId mExId
     notFound

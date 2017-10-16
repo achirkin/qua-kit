@@ -50,8 +50,7 @@ x `orElseText` y = if emptyQuaText x
                      else x
 
 data Settings = Settings {
-    editMode                 :: Bool       -- ^ Are we in edit mode?
-  , loggingUrl               :: Maybe Url  -- ^ WebSocket URL to send user analytics to
+    loggingUrl               :: Maybe Url  -- ^ WebSocket URL to send user analytics to
   , luciUrl                  :: Maybe Url  -- ^ WebSocket URL to connect to Luci
   , getSubmissionGeometryUrl :: Maybe Url  -- ^ URL to GET geoJSON for current submission
   , postSubmissionUrl        :: Maybe Url  -- ^ URL for students to POST their new submission to
@@ -71,7 +70,6 @@ instance Semigroup Settings where
                , getSubmissionGeometryUrl = orElse (getSubmissionGeometryUrl s1) (getSubmissionGeometryUrl s2)
                , postSubmissionUrl        = orElse (postSubmissionUrl s1) (postSubmissionUrl s2)
                , reviewSettingsUrl        = orElse (reviewSettingsUrl s1) (reviewSettingsUrl s2)
-               , editMode                 = editMode s1 || editMode s2
                , viewUrl                  = orElseText (viewUrl s1) (viewUrl s2)
                }
 instance Monoid Settings where
@@ -82,7 +80,6 @@ instance Monoid Settings where
            , getSubmissionGeometryUrl = Nothing
            , postSubmissionUrl        = Nothing
            , reviewSettingsUrl        = Nothing
-           , editMode                 = False
            , viewUrl                  = ""
            }
 

@@ -5,16 +5,8 @@ module Model.Session
     , deleteSafeSession
     , setSafeSession
     , parseSqlKey
-    , userSessionContextId
-    , userSessionResourceLink
-    , userSessionOutcomeServiceUrl
-    , userSessionResultSourceId
-    , userSessionCustomExerciseId
     , userSessionCustomExerciseCount
-    , userSessionCustomExerciseType
     , userSessionCompareCounter
-    , userSessionQuaViewMode
-    , userSessionScenarioId
     , userSessionEdxResourceId
     ) where
 
@@ -36,40 +28,11 @@ textSessionLens = SessionLens id id
 readSessionLens :: (Show a, Read a) => Text -> SessionLens a
 readSessionLens = SessionLens (>>= readMay) (T.pack . show)
 
-userSessionContextId :: SessionLens Text
-userSessionContextId = textSessionLens "context_id"
-
-userSessionResourceLink :: SessionLens Text
-userSessionResourceLink = textSessionLens "resource_link_id"
-
-userSessionOutcomeServiceUrl :: SessionLens Text
-userSessionOutcomeServiceUrl = textSessionLens "lis_outcome_service_url"
-
-userSessionResultSourceId :: SessionLens Text
-userSessionResultSourceId = textSessionLens "lis_result_sourcedid"
-
-userSessionCustomExerciseId :: SessionLens ScenarioProblemId
-userSessionCustomExerciseId =
-    SessionLens
-        (>>= parseSqlKey)
-        (T.pack . show . fromSqlKey)
-        "custom_exercise_id"
-
 userSessionCustomExerciseCount :: SessionLens Int
 userSessionCustomExerciseCount = readSessionLens "custom_exercise_count"
 
-userSessionCustomExerciseType :: SessionLens Text
-userSessionCustomExerciseType = readSessionLens "custom_exercise_type"
-
 userSessionCompareCounter :: SessionLens Int
 userSessionCompareCounter = readSessionLens "compare_counter"
-
-userSessionQuaViewMode :: SessionLens Text
-userSessionQuaViewMode = textSessionLens "qua_view_mode"
-
-userSessionScenarioId :: SessionLens ScenarioId
-userSessionScenarioId =
-    SessionLens (>>= parseSqlKey) (T.pack . show . fromSqlKey) "scenario_id"
 
 userSessionEdxResourceId :: SessionLens EdxResourceId
 userSessionEdxResourceId =
@@ -118,6 +81,7 @@ deleteSafeSession sl = do
         Just uid -> runDB $ deleteBy $ UserProperty uid $ sessionVar sl
     deleteSession $ convKey sl
 
+-- | sets cookie and also upserts UserProp in DB
 setSafeSession ::
        ( YesodAuth app
        , YesodPersist app

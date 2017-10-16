@@ -39,18 +39,22 @@
 /mooc/criteria/img/#CriterionId                                  CriteriaImgR GET
 /mooc/survey                                                     SurveyR GET POST
 
-/submissions/view/settings/#Maybe-ScenarioId               QuaViewSettingsR GET
 /submissions/view/review-settings/#ScenarioId              QuaViewReviewSettingsR GET
 /submissions/ebrowse/                                      BrowseProposalsForExpertsR GET
 /submissions/compare                                       CompareProposalsR GET
 /submissions/vote/#CriterionId/#ScenarioId/#ScenarioId     VoteForProposalR POST
 /submissions/find/#ScenarioProblemId/#UserId               SubmissionViewerR GET
-/submissions/#ScenarioId/preview                           ProposalPreviewR GET
-/submissions/#ScenarioId/reviews                           ReviewsR GET POST
-/submissions/#ScenarioId/expertreview                      WriteExpertReviewR POST
-/submissions/#ScenarioId/geometry                          SubmissionGeometryR GET
+/submissions/submit/#ScenarioProblemId                     SubmissionsR POST
+/submissions/settings                                      QuaViewSettingsR GET
+/mooc/scproblem/#ScenarioProblemId/settings                QuaViewSettingsFromExIdR GET
+!/submissions/#ScenarioId/settings                         QuaViewSettingsFromScIdR GET
+!/submissions/#ScenarioId/preview                          ProposalPreviewR GET
+!/submissions/#ScenarioId/reviews                          ReviewsR GET POST
+!/submissions/#ScenarioId/expertreview                     WriteExpertReviewR POST
+!/submissions/#ScenarioId/geometry                         SubmissionGeometryR GET
 !/submissions/browse/#Int                                  BrowseProposalsR GET
-/submissions                                               SubmissionsR POST
+/submissions/new                                           NewSubmissionR GET
+/submissions/new-for-exercise/#ScenarioProblemId           NewSubmissionForExerciseR GET
 /submissions/mycurrent                                     MyCurrentScenarioR GET
 !/submissions/#ScenarioId                                  SubmissionR GET PUT
 

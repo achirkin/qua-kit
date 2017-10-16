@@ -1,6 +1,7 @@
 {-# OPTIONS_HADDOCK hide, prune #-}
 module Handler.Mooc.User
-  ( postSetupLocalAccount
+  ( maybeFetchExerciseId
+  , postSetupLocalAccount
   , setupLocalAccountFromExistingUserW
   ) where
 
@@ -8,6 +9,11 @@ module Handler.Mooc.User
 import Import
 import Control.Monad.Trans.Except
 import Yesod.Auth.Email (saltPass)
+
+maybeFetchExerciseId :: UserId -> Handler (Maybe ScenarioProblemId)
+maybeFetchExerciseId usrId = do
+  muserExercise <- runDB $ getBy $ UserExerciseUnique usrId
+  return $ userExerciseExerciseId <$> entityVal <$> muserExercise
 
 postSetupLocalAccount :: UserId -> Handler Value
 postSetupLocalAccount uId = fmap send . runExceptT $ do

@@ -2,14 +2,10 @@ module Handler.QuaViewReviewSettings
     ( getQuaViewReviewSettingsR
     ) where
 
-
-import Data.Aeson (encode)
+import Database.Persist.Sql (fromSqlKey)
+import Handler.Mooc.Reviews (fetchReviewsFromDb, currentCriteria)
 import Import
 import Types
-
-import Handler.Mooc.Reviews (fetchReviewsFromDb, currentCriteria)
-
-import Database.Persist.Sql (fromSqlKey)
 
 getQuaViewReviewSettingsR :: ScenarioId -> Handler Value
 getQuaViewReviewSettingsR scId = do
