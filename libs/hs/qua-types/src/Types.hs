@@ -6,6 +6,7 @@ module Types
     ( ReviewPost (..)
     , ReviewSettings (..)
     , Settings (..)
+    , SubmissionPost (..)
     , TCriterion (..)
     , ThumbState (..)
     , TReview (..)
@@ -33,6 +34,10 @@ type QuaText = Text
 emptyQuaText = Data.Text.null
 #endif
 
+type Base64  = QuaText -- ^ binary data serialized as a base64-encoded string
+type GeoJson = QuaText -- ^ to avoid parsing JSON unnecessarily, this is stored as a string
+type Url     = QuaText -- ^ a string holding a URL
+
 -- | Left-biased choice on foldables
 orElse :: Foldable t => t a -> t a -> t a
 x `orElse` y = if Prelude.null x
@@ -45,16 +50,20 @@ x `orElseText` y = if emptyQuaText x
                      else x
 
 data Settings = Settings {
-    loggingUrl               :: Maybe QuaText -- ^ WebSocket URL to send user analytics to
-  , luciUrl                  :: Maybe QuaText -- ^ WebSocket URL to connect to Luci
-  , getSubmissionGeometryUrl :: Maybe QuaText -- ^ URL to GET geoJSON for current submission
-  , postSubmissionUrl        :: Maybe QuaText -- ^ URL for students to POST their new submission to
-  , reviewSettingsUrl        :: Maybe QuaText -- ^ URL to get settings related to reviews
-  , editMode                 :: Bool          -- ^ Are we in edit mode?
-  , viewUrl                  :: QuaText       -- ^ URL of current qua-viewer page
+    editMode                 :: Bool       -- ^ Are we in edit mode?
+  , loggingUrl               :: Maybe Url  -- ^ WebSocket URL to send user analytics to
+  , luciUrl                  :: Maybe Url  -- ^ WebSocket URL to connect to Luci
+  , getSubmissionGeometryUrl :: Maybe Url  -- ^ URL to GET geoJSON for current submission
+  , postSubmissionUrl        :: Maybe Url  -- ^ URL for students to POST their new submission to
+  , reviewSettingsUrl        :: Maybe Url  -- ^ URL to get settings related to reviews
+  , viewUrl                  :: Url        -- ^ URL of current qua-viewer page
   } deriving Generic
-instance ToJSON    Settings
 instance FromJSON  Settings
+instance ToJSON    Settings
+#ifndef ghcjs_HOST_OS
+  where
+    toEncoding = genericToEncoding defaultOptions -- see Yesod.Core.Json
+#endif
 instance Semigroup Settings where
   (<>) s1 s2 = Settings {
                  loggingUrl               = orElse (loggingUrl s1) (loggingUrl s2)
@@ -80,10 +89,14 @@ instance Monoid Settings where
 data ReviewSettings = ReviewSettings {
     criterions :: [TCriterion] -- ^ criterions this submission can be reviewed with
   , reviews    :: [TReview]    -- ^ reviews of this submission
-  , reviewsUrl :: QuaText      -- ^ URL to fetch updated list of reviews
+  , reviewsUrl :: Url          -- ^ URL to fetch updated list of reviews
   } deriving Generic
-instance ToJSON    ReviewSettings
 instance FromJSON  ReviewSettings
+instance ToJSON    ReviewSettings
+#ifndef ghcjs_HOST_OS
+  where
+    toEncoding = genericToEncoding defaultOptions -- see Yesod.Core.Json
+#endif
 
 
 data TCriterion = TCriterion {
@@ -93,15 +106,19 @@ data TCriterion = TCriterion {
   --, criterionImage       :: ByteString
   , tCriterionIcon        :: QuaText
   } deriving Generic
-instance ToJSON    TCriterion
 instance FromJSON  TCriterion
+instance ToJSON    TCriterion
+#ifndef ghcjs_HOST_OS
+  where
+    toEncoding = genericToEncoding defaultOptions -- see Yesod.Core.Json
+#endif
 
 data ThumbState = None | ThumbUp | ThumbDown deriving (Generic, Eq)
 instance FromJSON ThumbState
 instance ToJSON ThumbState
 #ifndef ghcjs_HOST_OS
   where
-    toEncoding = genericToEncoding defaultOptions
+    toEncoding = genericToEncoding defaultOptions -- see Yesod.Core.Json
 #endif
 
 data ReviewPost = ReviewPost {
@@ -111,10 +128,6 @@ data ReviewPost = ReviewPost {
   } deriving Generic
 instance FromJSON ReviewPost
 instance ToJSON   ReviewPost
-#ifndef ghcjs_HOST_OS
-  where
-    toEncoding = genericToEncoding defaultOptions
-#endif
 
 data TReview = TReview {
     tReviewId          :: !Int
@@ -124,5 +137,21 @@ data TReview = TReview {
   , tReviewComment     :: !QuaText
   , tReviewTimestamp   :: !UTCTime
   } deriving Generic
-instance ToJSON    TReview
 instance FromJSON  TReview
+instance ToJSON    TReview
+#ifndef ghcjs_HOST_OS
+  where
+    toEncoding = genericToEncoding defaultOptions -- see Yesod.Core.Json
+#endif
+
+data SubmissionPost = SubmissionPost {
+    tSubPostDescription  :: !QuaText
+  , tSubPostGeometry     :: !GeoJson
+  , tSubPostPreviewImage :: !Base64
+  } deriving Generic
+instance FromJSON  SubmissionPost
+instance ToJSON    SubmissionPost
+#ifndef ghcjs_HOST_OS
+  where
+    toEncoding = genericToEncoding defaultOptions -- see Yesod.Core.Json
+#endif
