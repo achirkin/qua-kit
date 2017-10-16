@@ -7,13 +7,6 @@ module Handler.Mooc.Admin.LuciScenarioDownloader
 import Import hiding ((==.), on)
 import Text.Julius
 
-import qualified Data.ByteString.Lazy as LB
-import qualified Data.Conduit.Binary as CB
-import qualified Data.Text.Encoding as TE
-import qualified Text.Blaze as Blaze
-
-import Yesod.Form.Bootstrap3
-
 import Handler.Mooc.Admin
 
 getLuciScenarioDownloaderR :: Handler Html
