@@ -77,6 +77,12 @@ ScenarioProblem
     deriving Eq
     deriving Ord
 
+UserExercise
+    userId           UserId
+    exerciseId       ScenarioProblemId
+    UserExerciseUnique userId -- for the time being, only allow one exercise per user
+    deriving Show
+
 -- | User design submission.
 --   A history table - keeps all user submissions forever.
 --   Never delete stuff from here.
