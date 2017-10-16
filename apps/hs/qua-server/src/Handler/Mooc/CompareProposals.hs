@@ -10,13 +10,14 @@ module Handler.Mooc.CompareProposals
 
 import Import hiding (on, (==.), (||.), groupBy, Value)
 import Text.Blaze
-import Database.Persist.Sql (rawSql, Single(..))
-import Data.FileEmbed (embedStringFile)
+import qualified Data.Text as Text
+-- import Database.Persist.Sql (rawSql, Single(..))
+-- import Data.FileEmbed (embedStringFile)
 import Application.Edx
 import Application.Grading
 
 import Database.Esqueleto
-import qualified Database.Persist as P
+-- import qualified Database.Persist as P
 
 postVoteForProposalR :: CriterionId -> ScenarioId -> ScenarioId -> Handler Html
 postVoteForProposalR cId better worse = do
@@ -227,7 +228,7 @@ prepareDescription sc = if n > 3
     ts = lines t
     n = length ts
 
-
+-- compare it to https://github.com/achirkin/qua-kit/blob/8ed549c1a39480a1d878e2e979b53d26df00c158/apps/hs/qua-server/src/Handler/Mooc/CompareProposals.hs
 -- | Select a criterion that was used least among others
 getLeastPopularCriterion :: ScenarioProblemId -> UserId -> Handler (Maybe CriterionId)
 getLeastPopularCriterion scpId uId =
@@ -259,11 +260,10 @@ getLeastPopularSubmissions scpId uId cId = do
             ] (val 0)
       orderBy [asc $ ratingEvidence +. (val 3 *. random_)]
       pure $ currentScenario ^. CurrentScenarioHistoryScenarioId
-    let scenarios' = scenarios :: [ScenarioId]
     let loop [] = pure Nothing
         loop ((s1, s2):rest) = do
              voteIds <- runDB $ select $ from $ \vote -> do
-               let match s1_ s2_ = (vote ^. VoteBetterId ==. val s1) &&. (vote ^. VoteWorseId ==. val s2)
+               let match s1_ s2_ = (vote ^. VoteBetterId ==. val s1_) &&. (vote ^. VoteWorseId ==. val s2_)
                where_ $ vote ^. VoteVoterId ==. val uId
                     &&. (match s1 s2 ||. match s2 s1)
                limit 1
@@ -278,19 +278,3 @@ getLeastPopularSubmissions scpId uId cId = do
        ms1 <- runDB $ getEntity sid1
        ms2 <- runDB $ getEntity sid2
        pure $ (,) <$> ms1 <*> ms2
-
--- getLastExercise :: UserId -> ReaderT SqlBackend Handler (Maybe (EdxResourceId,Text,Text))
--- getLastExercise uId = getVal <$> rawSql query [toPersistValue uId]
---   where
---     getVal ((Single edre, Single o, Single i):_) = Just (toSqlKey edre,o,i)
---     getVal [] = Nothing
---     query = Text.unlines
---           ["SELECT edx_resource,edx_outcome_url,edx_result_id"
---           ,"FROM vote"
---           ,"WHERE edx_resource IS NOT NULL"
---           ,"  AND edx_outcome_url IS NOT NULL"
---           ,"  AND edx_result_id IS NOT NULL"
---           ,"  AND voter_id = ?"
---           ,"ORDER BY timestamp DESC"
---           ,"LIMIT 1;"
---           ]
