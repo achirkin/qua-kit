@@ -246,8 +246,11 @@ instance YesodAuth App where
               , userVerified = False
               }
       return $ Authenticated uid
-    authenticate creds
-      | "email" `isPrefixOf` credsPlugin creds = runDB $ do
+    -- use Yesod.Auth.Email plugin,
+    -- also for legacy usernames that are stored in the email column:
+    authenticate creds@(Creds cPlugin _ _)
+      | "email" `isPrefixOf` cPlugin || "username" == cPlugin
+        = runDB $ do
           x <- getBy . UserEmailId . Just $ credsIdent creds
           return $ case x of
             Just (Entity uid _) -> Authenticated uid
@@ -378,7 +381,7 @@ instance YesodAuthEmail App where
     where
       registrationForm extraFields toParentRoute allowTempUserOption extra  = do
         let emailSettings = FieldSettings {
-              fsLabel = SomeMessage ("Email"::Text),
+              fsLabel = SomeMessage ("E-Mail"::Text),
               fsTooltip = Nothing,
               fsId = Just "email",
               fsName = Just "email",

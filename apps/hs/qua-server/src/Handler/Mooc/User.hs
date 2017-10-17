@@ -1,12 +1,13 @@
 {-# OPTIONS_HADDOCK hide, prune #-}
 module Handler.Mooc.User
   ( postSetupLocalAccount
-  , setupLocalAccountW
+  , setupLocalAccountFromExistingUserW
   ) where
 
 
 import Import
 import Control.Monad.Trans.Except
+import Yesod.Auth.Email (saltPass)
 
 postSetupLocalAccount :: UserId -> Handler Value
 postSetupLocalAccount uId = fmap send . runExceptT $ do
@@ -17,9 +18,9 @@ postSetupLocalAccount uId = fmap send . runExceptT $ do
           when (length t < 5) $
             throwE "Username must be at least 5 characters long"
           return t
-    unames <- lift . runDB $ selectList [UserPropKey ==. "username", UserPropValue ==. username] []
-    unless (null unames) $
-        throwE "This login name is already used."
+    muname <- lift . runDB $ selectFirst [UserEmail ==. Just username] []
+    when (isJust muname) $
+        throwE "This login email is already used."
     mp <- lift $ lookupPostParam "password"
     p <- case mp of
        Nothing -> throwE "Need a password"
@@ -27,18 +28,22 @@ postSetupLocalAccount uId = fmap send . runExceptT $ do
           when (length t < 6) $
             throwE "Password must be at least 6 characters long"
           return t
+    saltedP <- liftIO $ saltPass p
     lift . runDB $ do
-        _ <- upsert (UserProp uId "username" username) [UserPropValue =. username]
-        -- yes, I store it unencrypted, because I don't give a shit!
-        _ <- upsert (UserProp uId "password" p) [UserPropValue =. p]
+        update uId [
+            UserName     =. takeWhile (/= '@') username
+          , UserEmail    =. Just username
+          , UserPassword =. Just saltedP
+          , UserVerified =. True
+          ]
         setMessage "Thanks! Your account login created!"
     return True
   where
     send (Left v) = object ["error" .= String v]
     send (Right v) = object ["success" .= v]
 
-setupLocalAccountW :: UserId -> Widget
-setupLocalAccountW userId = do
+setupLocalAccountFromExistingUserW :: UserId -> Widget
+setupLocalAccountFromExistingUserW userId = do
     toWidgetHead
       [julius|
         function tryCreateAccount() {
@@ -74,8 +79,8 @@ setupLocalAccountW userId = do
                     <div class="form-group form-group-label">
                       <div class="row">
                         <div class="col-md-10 col-md-push-1">
-                          <label class="floating-label" for="username">Username
-                          <input class="form-control" id="username" name="username" type="text" required>
+                          <label class="floating-label" for="username">E-Mail
+                          <input class="form-control" id="username" name="username" type="email" required>
                     <div class="form-group form-group-label">
                       <div class="row">
                         <div class="col-md-10 col-md-push-1">
