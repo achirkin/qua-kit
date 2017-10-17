@@ -248,6 +248,10 @@ instance YesodAuth App where
       return $ Authenticated uid
     -- use Yesod.Auth.Email plugin,
     -- also for legacy usernames that are stored in the email column:
+    -- Look at https://hackage.haskell.org/package/yesod-auth-1.4.19/docs/src/Yesod-Auth-Email.html#postLoginR
+    -- according to that page, 'credsPlugin' record of creds can be one of
+    --  "email", "email-verified", "username", or who knows what else.
+    -- That is why we need this weird check below.
     authenticate creds@(Creds cPlugin _ _)
       | "email" `isPrefixOf` cPlugin || "username" == cPlugin
         = runDB $ do
