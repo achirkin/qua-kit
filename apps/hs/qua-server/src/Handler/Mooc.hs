@@ -31,7 +31,7 @@ getMoocHomeR  = toTypedContent <$> do
       Nothing -> return mempty
       Just (Entity userId user) -> do
         return $ if Mb.isNothing $ userEmail user
-                 then setupLocalAccountW userId
+                 then setupLocalAccountFromExistingUserW userId
                  else mempty
 
 --    ses <- map (\(k,v) -> k <> " - " <> decodeUtf8 v) . Map.toList <$> getSession
