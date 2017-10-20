@@ -18,13 +18,16 @@ We support the following execution modes:
 
 Example of such a service is available in `services/examples-hs/` - it computes distance to a closest object for each point on a grid. You can see how it works on our live page:
  1. Go to https://qua-kit.ethz.ch/viewer
- 2. Open control panel (Red "Tools" button -> gear button)
- 3. Press button "CONNECT" (connect to luci)
- 4. Press "SCENARIOS" and select "Empower Shack" on the bottom of the list
- 5. Go to "SERVICES" tab
- 6. There will be one service available "hs-example-service". Make sure "points" mode is selected.
- 7. Press green button "Play" to run service
- 8. You will see heatmap-like visualization for mode "points"
+ 2. To be able to connect to luci, you need to login. The default admin credentials are:
+    * username: "admin@qua-kit.hs"
+    * password: "make it some random thing"
+ 3. Open control panel (Red "Tools" button -> gear button)
+ 4. Press button "CONNECT" (connect to luci)
+ 5. Press "SCENARIOS" and select "Empower Shack" on the bottom of the list
+ 6. Go to "SERVICES" tab
+ 7. There will be one service available "hs-example-service". Make sure "points" mode is selected.
+ 8. Press green button "Play" to run service
+ 9. You will see heatmap-like visualization for mode "points"
 
 
 # Quick Urban Analysis Kit
@@ -138,27 +141,30 @@ refer to `siren` docs for details.
      Siren provides scenario support for helen and services.
   2. Compile and run `qua-server` (`apps/hs/qua-server`).
   4. Compile and run your service connected to localhost `helen`.
-     Alternatively, you can try `dist-walls-service` executable - it has been tested to work with current version of luci and helen.
-     It is available at `libs/hs/luci-connect` folder.
+     Alternatively, you can try `hs-example-service` executable - it has been tested to work with current version of luci and helen.
+     It is available at `services/examples-hs` folder.
      To run it use following command:
      
         stack setup # you only need this once to set up GHC
         stack install
-        dist-walls-service
+        hs-example-service
      
   5. Go to page `http://localhost:3000/viewer`
       * (hint) Open browser console to see debug output if you have any troubles.
-  6. Open toolbox -> connect to luci.
-  7. Run scenario:
+  6. To be able to connect to luci, you need to login. The default admin credentials are:
+      * username: "admin@qua-kit.hs"
+      * password: "make it some random thing"
+  7. Open toolbox -> connect to luci.
+  8. Run scenario:
       * (a) Load some scenario via luci (if uploaded something before).
       * (b) Upload some scenario using `FILES` button.
             There is one available at `apps/hs/qua-server/static/data/mooctask.geojson`.
             Save it to luci.
-  8. Make sure that `luci` and some service is running, then go to `SERVICES` tab.
+  9. Make sure that `luci` and some service is running, then go to `SERVICES` tab.
      It should show a list of available services.
      You can select one to run it.
      Click on `refresh` button if you do not see your service in a list.
      Selecting an active service invokes parameter refreshing and display.
      Check if all optional parameters of your service are displayed as intended.
-  9. Press green `play` button.
+  10. Press green `play` button.
      
