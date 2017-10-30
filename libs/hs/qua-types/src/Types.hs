@@ -86,7 +86,7 @@ instance Monoid Settings where
 data ReviewSettings = ReviewSettings {
     criterions :: [TCriterion] -- ^ criterions this submission can be reviewed with
   , reviews    :: [TReview]    -- ^ reviews of this submission
-  , reviewsUrl :: Url          -- ^ URL to fetch updated list of reviews
+  , reviewsUrl :: Maybe Url    -- ^ URL to post new review to and fetch updated list of reviews from
   } deriving Generic
 instance FromJSON  ReviewSettings
 instance ToJSON    ReviewSettings
