@@ -67,14 +67,6 @@ library
         Handler.About
         Handler.Common
         Handler.Feedback
-        Handler.Home.LoadingSplash
-        Handler.Home.LuciConnect
-        Handler.Home.PanelGeometry
-        Handler.Home.PanelInfo
-        Handler.Home.PanelServices
-        Handler.Home.PopupEdxGuide
-        Handler.Home.PopupHelp
-        Handler.Home.UIButtons
         Handler.LoggingWS
         Handler.LuciProxy
         Handler.Mooc
