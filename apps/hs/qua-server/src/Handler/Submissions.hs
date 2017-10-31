@@ -1,3 +1,10 @@
+{-|
+This module contains:
+1. HTML Handlers for displaying or redirecting to a qua-view
+2. JSON Handlers that form the REST API for Submissions (aka Scenarios)
+   see e.g. http://www.restapitutorial.com/lessons/httpmethods.html
+-}
+
 module Handler.Submissions
     ( getNewSubmissionR
     , getNewSubmissionForExerciseR
@@ -8,6 +15,7 @@ module Handler.Submissions
     , putSubmissionR
     ) where
 
+import Application.Edx (sendEdxGrade)
 import Application.Grading (updateRatingOnSubmission)
 import Control.Monad.Trans.Except
 import qualified Data.ByteString.Base64 as BSB (decodeLenient)
@@ -75,7 +83,7 @@ postSubmissionsR scpId = runJSONExceptT $ do
   userId <- maybeE "You must login to post." maybeAuthId
   let (desc, geo, img) = unbundleSubPost submissionPost
   medxResId <- lift $ getsSafeSession userSessionEdxResourceId
-  ExceptT $ runDB $ runExceptT $ do
+  scId <- ExceptT $ runDB $ runExceptT $ do
     medxGrading <- case medxResId of
                      Nothing -> return Nothing
                      Just ri -> lift . getBy $ EdxGradeKeys ri userId
@@ -94,8 +102,20 @@ postSubmissionsR scpId = runJSONExceptT $ do
                               (entityKey <$> medxGrading)
                               Nothing
                               (scenarioLastUpdate    sc)
-    lift $ updateRatingOnSubmission scId
     return scId
+
+  -- set grading/ratings
+  lift $ runDB $ updateRatingOnSubmission scId
+  lift $ setGrade userId
+  return scId
+  where
+    setGrade userId = do
+      ye <- getYesod
+      medxResId <- getsSafeSession userSessionEdxResourceId
+      case medxResId of
+        Just edxResId -> sendEdxGrade (appSettings ye) userId edxResId 0.6
+                           $ Just "Automatic grade upon design submission."
+        Nothing -> return ()
 
 -- | Update submission
 putSubmissionR :: ScenarioId -> Handler Value
@@ -123,6 +143,7 @@ putSubmissionR prevScId = runJSONExceptT $ do
                       , CurrentScenarioDescription =. desc
                       , CurrentScenarioLastUpdate =. time
                       ]
+          -- update grading/ratings
           updateRatingOnSubmission newScId
           return True
     return success
