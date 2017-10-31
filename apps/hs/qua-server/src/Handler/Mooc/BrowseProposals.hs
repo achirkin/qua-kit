@@ -183,7 +183,7 @@ mkSubmissionsWidget submissions = do
                         <p style="display: inline; margin: 0; padding:0; color: #b71c1c;)">
                           #{expertgrade}
                   <div.card-action-btn.pull-right>
-                    $with subViewLink <- SubmissionViewerR (currentScenarioTaskId sc) (currentScenarioAuthorId sc)
+                    $with subViewLink <- SubmissionR $ currentScenarioHistoryScenarioId sc
                       $if isExpert && (isNothing $ currentScenarioGrade sc)
                         <a.btn.btn-flat.btn-brand-accent.waves-attach.waves-effect
                             style="background: red; color: white !important;"

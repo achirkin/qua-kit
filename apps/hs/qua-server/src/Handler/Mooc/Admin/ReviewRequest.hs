@@ -87,9 +87,7 @@ reviewRequest params = do
   statusTxt <-
     if length scenarios > 0 then do
       render <- getUrlRender
-      let toLink (Entity _ sc) = render $ SubmissionViewerR
-                                            (currentScenarioTaskId sc)
-                                            (currentScenarioAuthorId sc)
+      let toLink (Entity _ sc) = render $ SubmissionR $ currentScenarioHistoryScenarioId sc
       let scLinks = fmap toLink scenarios
           browseLink =
             case mtaskId params of
