@@ -43,7 +43,6 @@
 /submissions/ebrowse/                                      BrowseProposalsForExpertsR GET
 /submissions/compare                                       CompareProposalsR GET
 /submissions/vote/#CriterionId/#ScenarioId/#ScenarioId     VoteForProposalR POST
-/submissions/find/#ScenarioProblemId/#UserId               SubmissionViewerR GET
 /submissions/submit/#ScenarioProblemId                     SubmissionsR POST
 /submissions/settings                                      QuaViewSettingsR GET
 /mooc/scproblem/#ScenarioProblemId/settings                QuaViewSettingsFromExIdR GET

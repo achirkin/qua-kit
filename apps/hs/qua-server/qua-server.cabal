@@ -88,7 +88,6 @@ library
         Handler.Mooc.Survey
         Handler.Mooc.Tests
         Handler.Mooc.User
-        Handler.Mooc.SubmissionViewer
         Handler.Mooc.FAQ
         Handler.QuaViewReviewSettings
         Handler.QuaViewSettings
