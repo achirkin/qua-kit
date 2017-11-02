@@ -9,9 +9,9 @@ import GHC.Generics
 import QuaTypes.Commons
 
 data SubmissionPost = SubmissionPost {
-    tSubPostDescription  :: !QuaText
-  , tSubPostGeometry     :: !GeoJson
-  , tSubPostPreviewImage :: !Base64
+    subPostDescription  :: !QuaText
+  , subPostGeometry     :: !GeoJson
+  , subPostPreviewImage :: !Base64
   } deriving Generic
 instance FromJSON  SubmissionPost
 instance ToJSON    SubmissionPost

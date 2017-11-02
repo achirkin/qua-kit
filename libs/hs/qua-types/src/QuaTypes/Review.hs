@@ -4,9 +4,9 @@
 module QuaTypes.Review (
     ReviewPost (..)
   , ReviewSettings (..)
-  , TCriterion (..)
+  , Criterion (..)
   , ThumbState (..)
-  , TReview (..)
+  , Review (..)
   ) where
 
 import Data.Time.Clock (UTCTime)
@@ -14,8 +14,8 @@ import GHC.Generics
 import QuaTypes.Commons
 
 data ReviewSettings = ReviewSettings {
-    criterions :: [TCriterion] -- ^ criterions this submission can be reviewed with
-  , reviews    :: [TReview]    -- ^ reviews of this submission
+    criterions :: [Criterion] -- ^ criterions this submission can be reviewed with
+  , reviews    :: [Review]    -- ^ reviews of this submission
   , reviewsUrl :: Maybe Url    -- ^ URL to post new review to and fetch updated list of reviews from
   } deriving Generic
 instance FromJSON  ReviewSettings
@@ -26,15 +26,13 @@ instance ToJSON    ReviewSettings
 #endif
 
 
-data TCriterion = TCriterion {
-    tCriterionId          :: Int
-  , tCriterionName        :: QuaText
-  --, criterionDescription :: QuaText
-  --, criterionImage       :: ByteString
-  , tCriterionIcon        :: QuaText
+data Criterion = Criterion {
+    criterionId   :: !Int
+  , criterionName :: !QuaText
+  , criterionIcon :: !QuaText
   } deriving Generic
-instance FromJSON  TCriterion
-instance ToJSON    TCriterion
+instance FromJSON  Criterion
+instance ToJSON    Criterion
 #ifndef ghcjs_HOST_OS
   where
     toEncoding = genericToEncoding defaultOptions -- see Yesod.Core.Json
@@ -42,30 +40,30 @@ instance ToJSON    TCriterion
 
 data ThumbState = None | ThumbUp | ThumbDown deriving (Generic, Eq)
 instance FromJSON ThumbState
-instance ToJSON ThumbState
+instance ToJSON   ThumbState
 #ifndef ghcjs_HOST_OS
   where
     toEncoding = genericToEncoding defaultOptions -- see Yesod.Core.Json
 #endif
 
 data ReviewPost = ReviewPost {
-    criterionId       :: !Int
-  , thumb             :: !ThumbState
-  , reviewPostComment :: !QuaText
+    reviewPostCriterionId :: !Int
+  , reviewPostThumb       :: !ThumbState
+  , reviewPostComment     :: !QuaText
   } deriving Generic
 instance FromJSON ReviewPost
 instance ToJSON   ReviewPost
 
-data TReview = TReview {
-    tReviewId          :: !Int
-  , tReviewUserName    :: !QuaText
-  , tReviewCriterionId :: !Int
-  , tReviewThumb       :: !ThumbState
-  , tReviewComment     :: !QuaText
-  , tReviewTimestamp   :: !UTCTime
+data Review = Review {
+    reviewId          :: !Int
+  , reviewUserName    :: !QuaText
+  , reviewCriterionId :: !Int
+  , reviewThumb       :: !ThumbState
+  , reviewComment     :: !QuaText
+  , reviewTimestamp   :: !UTCTime
   } deriving Generic
-instance FromJSON  TReview
-instance ToJSON    TReview
+instance FromJSON  Review
+instance ToJSON    Review
 #ifndef ghcjs_HOST_OS
   where
     toEncoding = genericToEncoding defaultOptions -- see Yesod.Core.Json
