@@ -22,9 +22,6 @@ data SessionLens a = SessionLens
     , convKey :: Text
     }
 
-textSessionLens :: Text -> SessionLens Text
-textSessionLens = SessionLens id id
-
 readSessionLens :: (Show a, Read a) => Text -> SessionLens a
 readSessionLens = SessionLens (>>= readMay) (T.pack . show)
 
