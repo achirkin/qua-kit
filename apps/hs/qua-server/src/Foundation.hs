@@ -230,7 +230,7 @@ instance YesodAuth App where
               }
       setupEdxGrading uid (credsExtra creds)
       case Map.lookup "custom_exercise_type" (Map.fromList $ credsExtra creds) of
-          Just "design"  -> setUltDest MyCurrentScenarioR
+          Just "design"  -> setUltDest RedirectToCurrentScenarioR
           Just "compare" -> setUltDest CompareProposalsR
           _ -> return ()
       return $ Authenticated uid
@@ -281,7 +281,7 @@ instance YesodAuthPersist App
 instance YesodAuthEmail App where
   type AuthEmailId App = UserId
 
-  afterPasswordRoute _ = MyCurrentScenarioR
+  afterPasswordRoute _ = RedirectToCurrentScenarioR
   confirmationEmailSentResponse _ = do
     setMessage "A confirmain email has been sent. Please, check your mailbox."
     redirectUltDest MoocHomeR
@@ -330,7 +330,7 @@ instance YesodAuthEmail App where
       Nothing ->
         setUltDest MoocHomeR
       Just _ -> do
-        setUltDest MyCurrentScenarioR
+        setUltDest RedirectToCurrentScenarioR
     setCreds False $ Creds "email" email []
   getVerifyKey uid = runDB $ do
     mup <- getBy $ UserProperty uid "verkey"
@@ -541,4 +541,4 @@ postTempUserR :: Handler Html
 postTempUserR = do
     _ <- maybeEnroll
     setCreds False $ Creds "temporary" "Anonymous user" []
-    redirect MyCurrentScenarioR
+    redirect RedirectToCurrentScenarioR

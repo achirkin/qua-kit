@@ -34,5 +34,5 @@ quaViewSettingsR mScId mExId = do
     , getSubmissionGeometryUrl = mScId >>= return . routeUrl . SubmissionGeometryR
     , postSubmissionUrl        = mExId >>= return . routeUrl . SubmissionsR
     , reviewSettingsUrl        = mScId >>= return . routeUrl . QuaViewReviewSettingsR
-    , viewUrl                  = routeUrl $ maybe MyCurrentScenarioR SubmissionR mScId
+    , viewUrl                  = routeUrl $ maybe RedirectToCurrentScenarioR SubmissionR mScId
     }

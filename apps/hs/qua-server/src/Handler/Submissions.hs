@@ -8,7 +8,7 @@ This module contains:
 module Handler.Submissions
     ( getNewSubmissionR
     , getNewSubmissionForExerciseR
-    , getMyCurrentScenarioR
+    , getRedirectToCurrentScenarioR
     , getSubmissionR
     , getSubmissionGeometryR
     , postSubmissionsR
@@ -47,8 +47,8 @@ getSubmissionR scId = minimalLayout $ do
 
 -- | Redirect to the user's most recent submission,
 --   or to new submission if no current submission exists
-getMyCurrentScenarioR :: Handler Html
-getMyCurrentScenarioR = do
+getRedirectToCurrentScenarioR :: Handler Html
+getRedirectToCurrentScenarioR = do
   mUsrId <- maybeAuthId
   mExId  <- (fmap join . mapM maybeFetchExerciseId) mUsrId
   let lastUpdatedSc usrId = selectFirst [CurrentScenarioAuthorId ==. usrId]

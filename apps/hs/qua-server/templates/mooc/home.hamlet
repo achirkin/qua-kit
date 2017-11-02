@@ -27,7 +27,7 @@
             <div class="card-action">
               <div class="card-action-btn pull-left">
                 <a class="btn btn-flat waves-attach waves-light waves-effect"
-                    href="@{MyCurrentScenarioR}">
+                    href="@{RedirectToCurrentScenarioR}">
                   <span class="icon">check
                   &nbsp;Use geometry editor
 

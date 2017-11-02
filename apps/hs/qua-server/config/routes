@@ -54,7 +54,7 @@
 !/submissions/browse/#Int                                  BrowseProposalsR GET
 /submissions/new                                           NewSubmissionR GET
 /submissions/new-for-exercise/#ScenarioProblemId           NewSubmissionForExerciseR GET
-/submissions/mycurrent                                     MyCurrentScenarioR GET
+/submissions/mycurrent                                     RedirectToCurrentScenarioR GET
 !/submissions/#ScenarioId                                  SubmissionR GET PUT
 
 /renameme                           RenameMeR GET
