@@ -5,7 +5,7 @@ module Handler.QuaViewReviewSettings
 import Database.Persist.Sql (fromSqlKey)
 import Handler.Mooc.Reviews (fetchReviewsFromDb, currentCriteria)
 import Import
-import Types
+import qualified QuaTypes.Review as QtR
 
 getQuaViewReviewSettingsR :: ScenarioId -> Handler Value
 getQuaViewReviewSettingsR scId = do
@@ -21,11 +21,11 @@ getQuaViewReviewSettingsR scId = do
     criterions <- runDB $ currentCriteria taskId
     reviews    <- runDB $ fetchReviewsFromDb scId
     let canReview = maybe False (/= scenarioAuthorId sc) mUsrId
-    returnJson ReviewSettings {
-        criterions = flip map criterions $ \(Entity cId c) -> TCriterion {
-                          tCriterionId   = fromIntegral $ fromSqlKey cId
-                        , tCriterionName = criterionName c
-                        , tCriterionIcon = criterionIcon c
+    returnJson QtR.ReviewSettings {
+        criterions = flip map criterions $ \(Entity cId c) -> QtR.Criterion {
+                          criterionId   = fromIntegral $ fromSqlKey cId
+                        , criterionName = criterionName c
+                        , criterionIcon = criterionIcon c
                         }
       , reviews    = reviews
       , reviewsUrl = if canReview

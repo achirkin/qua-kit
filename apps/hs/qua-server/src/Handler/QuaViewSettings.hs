@@ -6,7 +6,7 @@ module Handler.QuaViewSettings
     ) where
 
 import Import
-import Types
+import qualified QuaTypes
 
 getQuaViewSettingsR :: Handler Value
 getQuaViewSettingsR = quaViewSettingsR Nothing Nothing
@@ -28,7 +28,7 @@ quaViewSettingsR mScId mExId = do
   req <- waiRequest
   let routeUrl route = let appr = getApprootText guessApproot app req
                        in  yesodRender app appr route []
-  returnJson $ Settings {
+  returnJson $ QuaTypes.Settings {
       loggingUrl               = Just $ "ws" <> drop 4 (routeUrl QVLoggingR)
     , luciUrl                  = mUsrId >> Just ("ws" <> drop 4 (routeUrl LuciR))
     , getSubmissionGeometryUrl = mScId >>= return . routeUrl . SubmissionGeometryR

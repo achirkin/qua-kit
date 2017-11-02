@@ -12,7 +12,7 @@ import Import.Util
 import Control.Monad.Trans.Except
 import Database.Persist.Sql (fromSqlKey, toSqlKey, rawSql, Single(..))
 import qualified Data.Text as Text
-import Types
+import qualified QuaTypes.Review as QtR
 
 postReviewsR :: ScenarioId -> Handler Value
 postReviewsR scenarioId = runJSONExceptT $ do
@@ -20,10 +20,10 @@ postReviewsR scenarioId = runJSONExceptT $ do
     reviewPost <- requireJsonBody
 
     t <- liftIO getCurrentTime
-    let fromThumb ThumbUp   = True
-        fromThumb ThumbDown = False
+    let fromThumb QtR.ThumbUp   = True
+        fromThumb QtR.ThumbDown = False
         fromThumb _ = error "invalid thumb state"
-    let criterionId = toSqlKey $ fromIntegral $ Types.criterionId reviewPost
+    let criterionId = toSqlKey $ fromIntegral $ QtR.reviewPostCriterionId reviewPost
     ExceptT $ runDB $ runExceptT $ do
       scenario <- maybeE "Cannot find a correcsponding scenario." $ get scenarioId
       when (userId == scenarioAuthorId scenario) $
@@ -34,8 +34,8 @@ postReviewsR scenarioId = runJSONExceptT $ do
       let review = Review userId
                           scenarioId
                           criterionId
-                          (fromThumb $ thumb reviewPost)
-                          (reviewPostComment reviewPost)
+                          (fromThumb $ QtR.reviewPostThumb reviewPost)
+                          (QtR.reviewPostComment reviewPost)
                           t
       reviewId <- lift $ insert review
       return $ reviewToTReview (userName user) (Entity reviewId review)
@@ -47,7 +47,7 @@ getReviewsR scId = do
       reviews <- fetchReviewsFromDb scId
       returnJson reviews
 
-fetchReviewsFromDb :: ScenarioId -> ReaderT SqlBackend Handler [TReview]
+fetchReviewsFromDb :: ScenarioId -> ReaderT SqlBackend Handler [QtR.Review]
 fetchReviewsFromDb scId = do
   let query = Text.unlines
           ["SELECT \"user\".name, ??"
@@ -63,18 +63,18 @@ fetchReviewsFromDb scId = do
   rows <- rawSql query [toPersistValue scId]
   return $ map (\(Single userName, review) -> reviewToTReview userName review) rows
 
-reviewToTReview :: Text -> Entity Review -> TReview
-reviewToTReview userName (Entity reviewId r) = TReview {
-      tReviewId          = fromIntegral $ fromSqlKey reviewId
-    , tReviewUserName    = userName
-    , tReviewCriterionId = fromIntegral $ fromSqlKey $ reviewCriterionId r
-    , tReviewThumb       = toThumb $ reviewPositive r
-    , tReviewComment     = reviewComment r
-    , tReviewTimestamp   = reviewTimestamp r
+reviewToTReview :: Text -> Entity Review -> QtR.Review
+reviewToTReview userName (Entity reviewId r) = QtR.Review {
+      reviewId          = fromIntegral $ fromSqlKey reviewId
+    , reviewUserName    = userName
+    , reviewCriterionId = fromIntegral $ fromSqlKey $ reviewCriterionId r
+    , reviewThumb       = toThumb $ reviewPositive r
+    , reviewComment     = reviewComment r
+    , reviewTimestamp   = reviewTimestamp r
     }
   where
-    toThumb True  = ThumbUp
-    toThumb False = ThumbDown
+    toThumb True  = QtR.ThumbUp
+    toThumb False = QtR.ThumbDown
 
 currentCriteria :: ScenarioProblemId -> ReaderT SqlBackend Handler [Entity Criterion]
 currentCriteria scp_id = rawSql query [toPersistValue scp_id]

@@ -22,7 +22,7 @@ import qualified Data.ByteString.Base64 as BSB (decodeLenient)
 import Handler.Mooc.User (maybeFetchExerciseId)
 import Import
 import Import.Util
-import Types
+import qualified QuaTypes.Submission as QtS
 
 -- | Serve GUI for free-form editor
 getNewSubmissionR :: Handler Html
@@ -148,13 +148,13 @@ putSubmissionR prevScId = runJSONExceptT $ do
           return True
     return success
 
-unbundleSubPost :: SubmissionPost -> (Text, ByteString, ByteString)
+unbundleSubPost :: QtS.SubmissionPost -> (Text, ByteString, ByteString)
 unbundleSubPost subPost = (desc, geo, img)
   where
-    desc = tSubPostDescription subPost
-    geo  = encodeUtf8 $ tSubPostGeometry subPost
+    desc = QtS.subPostDescription subPost
+    geo  = encodeUtf8 $ QtS.subPostGeometry subPost
     img  = BSB.decodeLenient $ encodeUtf8 $ drop 1 $ dropWhile (',' /=) $
-             tSubPostPreviewImage subPost
+             QtS.subPostPreviewImage subPost
 
 quaW :: Widget
 quaW = do
