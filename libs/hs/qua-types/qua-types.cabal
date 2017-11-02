@@ -13,7 +13,11 @@ cabal-version:       >=1.22
 
 library
   hs-source-dirs:      src
-  exposed-modules:     Types
+  exposed-modules:     QuaTypes,
+                       QuaTypes.Review,
+                       QuaTypes.Submission
+  other-modules:
+                       QuaTypes.Commons
   default-language:    Haskell2010
   if impl(ghcjs)
       build-depends:
