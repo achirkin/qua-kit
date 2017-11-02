@@ -1,6 +1,6 @@
 {-# OPTIONS_HADDOCK hide, prune #-}
 module Handler.QuaViewSettings
-    ( getQuaViewSettingsR
+    ( getQuaViewSettingsNewR
     , getQuaViewSettingsFromScIdR
     , getQuaViewSettingsFromExIdR
     ) where
@@ -8,21 +8,23 @@ module Handler.QuaViewSettings
 import Import
 import qualified QuaTypes
 
-getQuaViewSettingsR :: Handler Value
-getQuaViewSettingsR = quaViewSettingsR Nothing Nothing
+getQuaViewSettingsNewR :: Handler Value
+getQuaViewSettingsNewR = quaViewSettingsR NewSubmissionR Nothing Nothing
 
 getQuaViewSettingsFromScIdR :: ScenarioId -> Handler Value
 getQuaViewSettingsFromScIdR scId = do
   sc <- runDB $ get404 scId
-  quaViewSettingsR (Just scId) (Just $ scenarioTaskId sc)
+  quaViewSettingsR (SubmissionR scId) (Just scId) (Just $ scenarioTaskId sc)
 
 getQuaViewSettingsFromExIdR :: ScenarioProblemId -> Handler Value
-getQuaViewSettingsFromExIdR = quaViewSettingsR Nothing . Just
+getQuaViewSettingsFromExIdR mExId =
+  quaViewSettingsR (NewSubmissionForExerciseR mExId) Nothing $ Just mExId
 
-quaViewSettingsR :: Maybe ScenarioId
+quaViewSettingsR :: Route App
+                 -> Maybe ScenarioId
                  -> Maybe ScenarioProblemId
                  -> Handler Value
-quaViewSettingsR mScId mExId = do
+quaViewSettingsR curRoute mScId mExId = do
   mUsrId <- maybeAuthId
   app <- getYesod
   req <- waiRequest
@@ -34,5 +36,5 @@ quaViewSettingsR mScId mExId = do
     , getSubmissionGeometryUrl = mScId >>= return . routeUrl . SubmissionGeometryR
     , postSubmissionUrl        = mExId >>= return . routeUrl . SubmissionsR
     , reviewSettingsUrl        = mScId >>= return . routeUrl . QuaViewReviewSettingsR
-    , viewUrl                  = routeUrl $ maybe RedirectToCurrentScenarioR SubmissionR mScId
+    , viewUrl                  = routeUrl curRoute
     }

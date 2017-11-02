@@ -44,7 +44,7 @@
 /submissions/compare                                       CompareProposalsR GET
 /submissions/vote/#CriterionId/#ScenarioId/#ScenarioId     VoteForProposalR POST
 /submissions/submit/#ScenarioProblemId                     SubmissionsR POST
-/submissions/settings                                      QuaViewSettingsR GET
+/submissions/settings                                      QuaViewSettingsNewR GET
 /mooc/scproblem/#ScenarioProblemId/settings                QuaViewSettingsFromExIdR GET
 !/submissions/#ScenarioId/settings                         QuaViewSettingsFromScIdR GET
 !/submissions/#ScenarioId/preview                          ProposalPreviewR GET

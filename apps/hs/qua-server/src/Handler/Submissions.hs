@@ -28,7 +28,7 @@ import qualified QuaTypes.Submission as QtS
 getNewSubmissionR :: Handler Html
 getNewSubmissionR = minimalLayout $ do
   toWidgetHead [hamlet|
-    <meta property="qua-view:settingsUrl" content="@{QuaViewSettingsR}" /> |]
+    <meta property="qua-view:settingsUrl" content="@{QuaViewSettingsNewR}" /> |]
   quaW
 
 -- | Serve GUI to edit or create the submission for a particular exercise
