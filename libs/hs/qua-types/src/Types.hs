@@ -12,6 +12,7 @@ module Types
     , TReview (..)
     ) where
 
+import Control.Applicative ((<|>))
 import Data.Semigroup
 import Data.Time.Clock (UTCTime)
 import GHC.Generics
@@ -23,7 +24,6 @@ import JavaScript.JSON.Types.Instances
 import JavaScript.JSON.Types.Generic ()
 
 type QuaText = JSString
-emptyQuaText = Data.JSString.null
 
 #else
 
@@ -31,23 +31,11 @@ import Data.Aeson
 import Data.Text
 
 type QuaText = Text
-emptyQuaText = Data.Text.null
 #endif
 
 type Base64  = QuaText -- ^ binary data serialized as a base64-encoded string
 type GeoJson = QuaText -- ^ to avoid parsing JSON unnecessarily, this is stored as a string
 type Url     = QuaText -- ^ a string holding a URL
-
--- | Left-biased choice on foldables
-orElse :: Foldable t => t a -> t a -> t a
-x `orElse` y = if Prelude.null x
-                 then y
-                 else x
-
-orElseText :: QuaText -> QuaText -> QuaText
-x `orElseText` y = if emptyQuaText x
-                     then y
-                     else x
 
 data Settings = Settings {
     loggingUrl               :: Maybe Url  -- ^ WebSocket URL to send user analytics to
@@ -65,13 +53,15 @@ instance ToJSON    Settings
 #endif
 instance Semigroup Settings where
   (<>) s1 s2 = Settings {
-                 loggingUrl               = orElse (loggingUrl s1) (loggingUrl s2)
-               , luciUrl                  = orElse (luciUrl s1) (luciUrl s2)
-               , getSubmissionGeometryUrl = orElse (getSubmissionGeometryUrl s1) (getSubmissionGeometryUrl s2)
-               , postSubmissionUrl        = orElse (postSubmissionUrl s1) (postSubmissionUrl s2)
-               , reviewSettingsUrl        = orElse (reviewSettingsUrl s1) (reviewSettingsUrl s2)
-               , viewUrl                  = orElseText (viewUrl s1) (viewUrl s2)
-               }
+      loggingUrl               = loggingUrl s1               <|> loggingUrl s2
+    , luciUrl                  = luciUrl s1                  <|> luciUrl s2
+    , getSubmissionGeometryUrl = getSubmissionGeometryUrl s1 <|> getSubmissionGeometryUrl s2
+    , postSubmissionUrl        = postSubmissionUrl s1        <|> postSubmissionUrl s2
+    , reviewSettingsUrl        = reviewSettingsUrl s1        <|> reviewSettingsUrl s2
+    , viewUrl                  = case viewUrl s1 of
+                                   "" -> viewUrl s2
+                                   s  -> s
+    }
 instance Monoid Settings where
   mappend = (<>)
   mempty = Settings {
