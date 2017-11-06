@@ -40,10 +40,19 @@ getNewSubmissionForExerciseR exId = minimalLayout $ do
 
 -- | Serve GUI to edit a particular submission
 getSubmissionR :: ScenarioId -> Handler Html
-getSubmissionR scId = minimalLayout $ do
-  toWidgetHead [hamlet|
-    <meta property="qua-view:settingsUrl" content="@{QuaViewSettingsFromScIdR scId}" /> |]
-  quaW
+getSubmissionR scId = do
+  sc <- runDB $ get404 scId
+  authorName <- runDB (get $ scenarioAuthorId sc) >>= return . (maybe "anonymous" userName)
+  minimalLayout $ do
+    toWidgetHead [hamlet|
+      <meta property="qua-view:settingsUrl" content="@{QuaViewSettingsFromScIdR scId}" />
+      <meta property="og:url"         content="@{SubmissionR scId}" />
+      <meta property="og:type"        content="website" />
+      <meta property="og:title"       content="Qua-kit: #{authorName}'s design" />
+      <meta property="og:description" content="#{authorName} made a design proposal on qua-kit website. Check it out!" />
+      <meta property="og:image"       content="@{ProposalPreviewR scId}" />
+    |]
+    quaW
 
 -- | Redirect to the user's most recent submission,
 --   or to new submission if no current submission exists
