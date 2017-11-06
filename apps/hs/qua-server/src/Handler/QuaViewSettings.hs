@@ -14,15 +14,15 @@ getQuaViewSettingsNewR = quaViewSettingsR NewSubmissionR Nothing Nothing
 getQuaViewSettingsFromScIdR :: ScenarioId -> Handler Value
 getQuaViewSettingsFromScIdR scId = do
   sc <- runDB $ get404 scId
-  quaViewSettingsR (SubmissionR scId) (Just scId) (Just $ scenarioTaskId sc)
+  quaViewSettingsR (SubmissionR scId) (Just scId) (Just $ scenarioExerciseId sc)
 
-getQuaViewSettingsFromExIdR :: ScenarioProblemId -> Handler Value
+getQuaViewSettingsFromExIdR :: ExerciseId -> Handler Value
 getQuaViewSettingsFromExIdR mExId =
   quaViewSettingsR (NewSubmissionForExerciseR mExId) Nothing $ Just mExId
 
 quaViewSettingsR :: Route App
                  -> Maybe ScenarioId
-                 -> Maybe ScenarioProblemId
+                 -> Maybe ExerciseId
                  -> Handler Value
 quaViewSettingsR curRoute mScId mExId = do
   mUsrId <- maybeAuthId

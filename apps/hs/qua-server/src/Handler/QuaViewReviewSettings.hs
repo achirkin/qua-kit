@@ -17,8 +17,7 @@ getQuaViewReviewSettingsR scId = do
                          in  yesodRender app appr route []
 
     msc <- runDB $ get404 scId
-    let taskId = scenarioTaskId msc
-    criterions <- runDB $ currentCriteria taskId
+    criterions <- runDB $ currentCriteria $ scenarioExerciseId msc
     reviews    <- runDB $ fetchReviewsFromDb scId
     let canReview = maybe False (/= scenarioAuthorId sc) mUsrId
     returnJson QtR.ReviewSettings {

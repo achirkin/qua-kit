@@ -10,7 +10,7 @@ import Import
 import Control.Monad.Trans.Except
 import Yesod.Auth.Email (saltPass)
 
-maybeFetchExerciseId :: UserId -> Handler (Maybe ScenarioProblemId)
+maybeFetchExerciseId :: UserId -> Handler (Maybe ExerciseId)
 maybeFetchExerciseId usrId = do
   muserExercise <- runDB $ getBy $ UserExerciseUnique usrId
   return $ userExerciseExerciseId <$> entityVal <$> muserExercise

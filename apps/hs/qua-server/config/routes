@@ -26,26 +26,26 @@
 /admin/get-luci-scenario            LuciScenarioDownloaderR GET
 /temporary-user                     TempUserR POST
 
-/                                                                MoocHomeR GET POST
-/mooc/scproblem/#ScenarioProblemId                               ScenarioProblemR GET
-/mooc/scproblem/#ScenarioProblemId/img                           ScenarioProblemImgR GET
-/mooc/scproblem/#ScenarioProblemId/geometry                      ScenarioProblemGeometryR GET
-/mooc/scproblem/#ScenarioProblemId/edit                          ScenarioProblemEditR GET
-/mooc/scproblem/#ScenarioProblemId/attach-criterion/#CriterionId ScenarioProblemAttachCriterionR POST
-/mooc/scproblem/#ScenarioProblemId/detach-criterion/#CriterionId ScenarioProblemDetachCriterionR POST
+/                                                          MoocHomeR GET POST
+/exercises/#ExerciseId                                     ExerciseR GET
+/exercises/#ExerciseId/img                                 ExerciseImgR GET
+/exercises/#ExerciseId/geometry                            ExerciseGeometryR GET
+/exercises/#ExerciseId/edit                                ExerciseEditR GET
+/exercises/#ExerciseId/attach-criterion/#CriterionId       ExerciseAttachCriterionR POST
+/exercises/#ExerciseId/detach-criterion/#CriterionId       ExerciseDetachCriterionR POST
 
-/mooc/user/#UserId/role                                          SetUserRoleR POST
-/mooc/criteria/browse                                            CriteriaListR GET
-/mooc/criteria/img/#CriterionId                                  CriteriaImgR GET
-/mooc/survey                                                     SurveyR GET POST
+/mooc/user/#UserId/role                                    SetUserRoleR POST
+/mooc/criteria/browse                                      CriteriaListR GET
+/mooc/criteria/img/#CriterionId                            CriteriaImgR GET
+/mooc/survey                                               SurveyR GET POST
 
 /submissions/view/review-settings/#ScenarioId              QuaViewReviewSettingsR GET
 /submissions/ebrowse/                                      BrowseProposalsForExpertsR GET
 /submissions/compare                                       CompareProposalsR GET
 /submissions/vote/#CriterionId/#ScenarioId/#ScenarioId     VoteForProposalR POST
-/submissions/submit/#ScenarioProblemId                     SubmissionsR POST
+/submissions/submit/#ExerciseId                            SubmissionsR POST
 /submissions/settings                                      QuaViewSettingsNewR GET
-/mooc/scproblem/#ScenarioProblemId/settings                QuaViewSettingsFromExIdR GET
+/exercises/#ExerciseId/settings                            QuaViewSettingsFromExIdR GET
 !/submissions/#ScenarioId/settings                         QuaViewSettingsFromScIdR GET
 !/submissions/#ScenarioId/preview                          ProposalPreviewR GET
 !/submissions/#ScenarioId/reviews                          ReviewsR GET POST
@@ -53,7 +53,7 @@
 !/submissions/#ScenarioId/geometry                         SubmissionGeometryR GET
 !/submissions/browse/#Int                                  BrowseProposalsR GET
 /submissions/new                                           NewSubmissionR GET
-/submissions/new-for-exercise/#ScenarioProblemId           NewSubmissionForExerciseR GET
+/submissions/new-for-exercise/#ExerciseId                  NewSubmissionForExerciseR GET
 /submissions/mycurrent                                     RedirectToCurrentScenarioR GET
 !/submissions/#ScenarioId                                  SubmissionR GET PUT
 

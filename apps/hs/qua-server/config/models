@@ -24,7 +24,7 @@ UserProp
 EdxResource
     linkId       Text
     courseId     EdxCourseId
-    exerciseId   ScenarioProblemId
+    exerciseId   ExerciseId
     friendlyName Text Maybe
     EdxResLinkId linkId courseId
     deriving Show
@@ -67,7 +67,7 @@ EdxGradingQueue
 -- | Exercise table.
 --   Keeps description of an exercise (either edX or workshop),
 --   and a template starting geometry.
-ScenarioProblem
+Exercise
     image            ByteString
     geometry         ByteString
     description      Text
@@ -79,7 +79,7 @@ ScenarioProblem
 
 UserExercise
     userId           UserId
-    exerciseId       ScenarioProblemId
+    exerciseId       ExerciseId
     UserExerciseUnique userId -- for the time being, only allow one exercise per user
     deriving Show
 
@@ -88,7 +88,7 @@ UserExercise
 --   Never delete stuff from here.
 Scenario
     authorId      UserId
-    taskId        ScenarioProblemId
+    exerciseId    ExerciseId
     image         ByteString
     geometry      ByteString
     description   Text
@@ -98,12 +98,12 @@ Scenario
 CurrentScenario
     historyScenarioId    ScenarioId
     authorId             UserId
-    taskId               ScenarioProblemId
+    exerciseId           ExerciseId
     description          Text
     edxGradingId         EdxGradingId Maybe
     grade                Double Maybe
     lastUpdate           UTCTime default=CURRENT_TIMESTAMP
-    SubmissionOf         authorId taskId
+    SubmissionOf         authorId exerciseId
     LatestSubmissionId   historyScenarioId
 
 Review
@@ -130,10 +130,10 @@ Criterion
     icon         Text
     CriterionDef name
 
-ProblemCriterion
-    problemId ScenarioProblemId
+ExerciseCriterion
+    exerciseId ExerciseId
     criterionId CriterionId
-    ProblemCriterionUnique problemId criterionId
+    ExerciseCriterionUnique exerciseId criterionId
 
 Vote
     voterId       UserId
@@ -145,23 +145,23 @@ Vote
     edxGradingId  EdxGradingId Maybe
 
 VoteRating
-    problemId     ScenarioProblemId
+    exerciseId    ExerciseId
     studentId     UserId
     evidenceW     Double default=0
     value         Double default=0
-    VoteRatingOf  studentId problemId
+    VoteRatingOf  studentId exerciseId
     deriving Eq
     deriving Ord
     deriving Show
 
 Rating
-    problemId         ScenarioProblemId
+    exerciseId        ExerciseId
     criterionId       CriterionId
     authorId          UserId
     value             Double default=0
     currentVotesN     Int    default=0
     currentEvidenceW  Double default=1
-    RatingOf authorId problemId criterionId
+    RatingOf authorId exerciseId criterionId
     deriving Eq
     deriving Ord
     deriving Show
@@ -173,7 +173,7 @@ Feedback
 
 UserScenarioLoad
     authorId     UserId Maybe
-    scenarioId   ScenarioProblemId Maybe
+    scenarioId   ExerciseId Maybe
     timestamp    UTCTime default=CURRENT_TIMESTAMP
     geometry     Text
     scale        Double

@@ -70,7 +70,7 @@ import Handler.Mooc.Admin.UserManager
 import Handler.Mooc.Admin.LuciScenarioDownloader
 import Handler.Mooc.Reviews
 import Handler.Mooc.ExpertReview
-import Handler.Mooc.ScenarioProblem
+import Handler.Mooc.Exercise
 import Handler.Mooc.BrowseProposals
 import Handler.Mooc.CompareProposals
 import Handler.Mooc.ProposalPreview

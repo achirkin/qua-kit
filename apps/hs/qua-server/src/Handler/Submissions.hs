@@ -32,7 +32,7 @@ getNewSubmissionR = minimalLayout $ do
   quaW
 
 -- | Serve GUI to edit or create the submission for a particular exercise
-getNewSubmissionForExerciseR :: ScenarioProblemId -> Handler Html
+getNewSubmissionForExerciseR :: ExerciseId -> Handler Html
 getNewSubmissionForExerciseR exId = minimalLayout $ do
   toWidgetHead [hamlet|
     <meta property="qua-view:settingsUrl" content="@{QuaViewSettingsFromExIdR exId}" /> |]
@@ -66,7 +66,7 @@ getRedirectToCurrentScenarioR = do
     case (mUsrId, mExId) of
       (Just usrId, Just exId) -> do
         mcScEnt' <- selectFirst [ CurrentScenarioAuthorId ==. usrId
-                                , CurrentScenarioTaskId ==. exId] []
+                                , CurrentScenarioExerciseId ==. exId] []
         if isJust mcScEnt'
           then return mcScEnt'
           else lastUpdatedSc usrId
@@ -85,8 +85,8 @@ getSubmissionGeometryR scId =
   maybe "{}" (decodeUtf8 . scenarioGeometry) <$> runDB (get scId)
 
 -- | Make new submission
-postSubmissionsR :: ScenarioProblemId -> Handler Value
-postSubmissionsR scpId = runJSONExceptT $ do
+postSubmissionsR :: ExerciseId -> Handler Value
+postSubmissionsR exId = runJSONExceptT $ do
   submissionPost <- requireJsonBody
   time   <- liftIO getCurrentTime
   userId <- maybeE "You must login to post." maybeAuthId
@@ -98,7 +98,7 @@ postSubmissionsR scpId = runJSONExceptT $ do
                      Just ri -> lift . getBy $ EdxGradeKeys ri userId
     let sc = Scenario
                userId
-               scpId
+               exId
                img
                geo
                desc
@@ -106,7 +106,7 @@ postSubmissionsR scpId = runJSONExceptT $ do
     scId <- lift $ insert sc
     void . lift . insert $ CurrentScenario scId
                               (scenarioAuthorId      sc)
-                              (scenarioTaskId        sc)
+                              (scenarioExerciseId        sc)
                               (scenarioDescription   sc)
                               (entityKey <$> medxGrading)
                               Nothing

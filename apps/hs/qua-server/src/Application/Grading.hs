@@ -157,7 +157,7 @@ updateRatingOnSubmission :: MonadIO a
                          -> ReaderT SqlBackend a ()
 updateRatingOnSubmission scId = do
     ratings <- select $ from $ \(InnerJoin scenario rating) -> do
-        on ( rating ^. RatingProblemId ==. scenario ^. ScenarioTaskId
+        on ( rating ^. RatingExerciseId ==. scenario ^. ScenarioExerciseId
          &&. rating ^. RatingAuthorId  ==. scenario ^. ScenarioAuthorId
            )
         where_ $ scenario ^. ScenarioId ==. val scId
@@ -278,7 +278,7 @@ updateRatingsOnVoting voteId = do
   where
     -- select the rating correcponsing to a better or worse design
     mratingQ crId scId = select $ from $ \(InnerJoin rating scenario) -> do
-      on $ rating ^. RatingProblemId ==. scenario ^. ScenarioTaskId
+      on $ rating ^. RatingExerciseId ==. scenario ^. ScenarioExerciseId
        &&. rating ^. RatingAuthorId  ==. scenario ^. ScenarioAuthorId
        &&. rating ^. RatingCriterionId ==. val crId
       where_ $ scenario ^. ScenarioId ==. val scId
@@ -288,7 +288,7 @@ updateRatingsOnVoting voteId = do
     fromMaybeRating crId scId [] = do
       insertSelect $ from $ \scenario -> do
         where_ $ scenario ^. ScenarioId ==. val scId
-        return $ Rating <#  (scenario ^. ScenarioTaskId)
+        return $ Rating <#  (scenario ^. ScenarioExerciseId)
                         <&> val crId
                         <&> (scenario ^. ScenarioAuthorId)
                         <&> val 0 <&> val 0 <&> val 1
@@ -296,7 +296,7 @@ updateRatingsOnVoting voteId = do
 
     -- select voter rating
     mVoteRating vote = select $ from $ \(InnerJoin voteR scenario) -> do
-      on $ scenario ^. ScenarioTaskId ==. voteR ^. VoteRatingProblemId
+      on $ scenario ^. ScenarioExerciseId ==. voteR ^. VoteRatingExerciseId
       where_ $ scenario ^. ScenarioId ==. val (voteBetterId vote)
            &&. voteR ^. VoteRatingStudentId ==. val (voteVoterId vote)
       return voteR
@@ -304,7 +304,7 @@ updateRatingsOnVoting voteId = do
     fromMaybeVRating vote [] = do
       insertSelect $ from $ \scenario -> do
         where_ $ scenario ^. ScenarioId ==. val (voteBetterId vote)
-        return $ VoteRating <#  (scenario ^. ScenarioTaskId)
+        return $ VoteRating <#  (scenario ^. ScenarioExerciseId)
                             <&> val (voteVoterId vote)
                             <&> val 0
                             <&> val 0
@@ -327,12 +327,12 @@ updateCurrentScenarioGrade scId = do
       grades <- select $ from $ \(InnerJoin scenario expertReview) -> do
          on $ expertReview ^. ExpertReviewScenarioId ==. scenario ^. ScenarioId
          where_ $ scenario ^. ScenarioAuthorId ==. val currentScenarioAuthorId
-              &&. scenario ^. ScenarioTaskId ==. val currentScenarioTaskId
+              &&. scenario ^. ScenarioExerciseId ==. val currentScenarioExerciseId
          return expertReview
       if null grades
       then do -- if there are no expert grades, make a grade from rating
         ratings <- P.selectList
-          [ RatingProblemId P.==. currentScenarioTaskId
+          [ RatingExerciseId P.==. currentScenarioExerciseId
           , RatingAuthorId P.==. currentScenarioAuthorId
           , RatingCurrentEvidenceW P.>=. minimumEvidence
           ]

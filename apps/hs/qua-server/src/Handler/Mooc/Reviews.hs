@@ -56,8 +56,8 @@ fetchReviewsFromDb scId = do
           ,"        ON \"user\".id = review.reviewer_id"
           ,"WHERE review.scenario_id IN ("
           ,"    SELECT scenario.id FROM scenario"
-          ,"    INNER JOIN (SELECT scenario.author_id, scenario.task_id FROM scenario WHERE scenario.id = ?) t"
-          ,"            ON scenario.task_id = t.task_id AND scenario.author_id = t.author_id)"
+          ,"    INNER JOIN (SELECT scenario.author_id, scenario.exercise_id FROM scenario WHERE scenario.id = ?) t"
+          ,"            ON scenario.exercise_id = t.exercise_id AND scenario.author_id = t.author_id)"
           ,"ORDER BY review.timestamp DESC;"
           ]
   rows <- rawSql query [toPersistValue scId]
@@ -76,11 +76,11 @@ reviewToTReview userName (Entity reviewId r) = QtR.Review {
     toThumb True  = QtR.ThumbUp
     toThumb False = QtR.ThumbDown
 
-currentCriteria :: ScenarioProblemId -> ReaderT SqlBackend Handler [Entity Criterion]
-currentCriteria scp_id = rawSql query [toPersistValue scp_id]
+currentCriteria :: ExerciseId -> ReaderT SqlBackend Handler [Entity Criterion]
+currentCriteria exId = rawSql query [toPersistValue exId]
   where
     query = unlines
-        ["SELECT ?? FROM criterion,problem_criterion"
-        ,"         WHERE problem_criterion.problem_id = ?"
-        ,"           AND problem_criterion.criterion_id = criterion.id;"
+        ["SELECT ?? FROM criterion,exercise_criterion"
+        ,"         WHERE exercise_criterion.exercise_id = ?"
+        ,"           AND exercise_criterion.criterion_id = criterion.id;"
         ]

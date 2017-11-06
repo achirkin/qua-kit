@@ -15,11 +15,11 @@ import qualified Network.Mail.Mime as Mail
 
 data SendReviewParams = SendReviewParams {
       mexpertId  :: Maybe (Key User)
-    , mtaskId    :: Maybe ScenarioProblemId
+    , mtaskId    :: Maybe ExerciseId
     , onlyBefore :: UTCTime
     }
 
-type TaskData = (Entity ScenarioProblem, Int)
+type TaskData = (Entity Exercise, Int)
 
 getAdminReviewRequestR :: Handler Html
 getAdminReviewRequestR = do
@@ -56,9 +56,9 @@ reviewRequestForm :: [Entity User] -> [TaskData] -> Day -> Html
 reviewRequestForm experts tasks defaultDay extra = do
   let expertsList = ("All experts", Nothing) :
         map (\(Entity usrId ex) -> (userName ex, Just usrId)) experts
-  let toOption (Entity scpId scp, ugCount) =
-        (scenarioProblemDescription scp ++
-        " (" ++ (pack $ show ugCount) ++ " in need of grading)", Just scpId)
+  let toOption (Entity exId ex, ugCount) =
+        (exerciseDescription ex ++
+        " (" ++ (pack $ show ugCount) ++ " in need of grading)", Just exId)
   let tasksList = ("All tasks", Nothing) : map toOption tasks
   (expertRes, expertView) <- mreq (bootstrapSelectFieldList expertsList) "" Nothing
   (taskRes, taskView) <- mreq (bootstrapSelectFieldList tasksList) "" Nothing
@@ -79,7 +79,7 @@ reviewRequestForm experts tasks defaultDay extra = do
 
 reviewRequest :: SendReviewParams -> Handler Html
 reviewRequest params = do
-  let whereTask = maybe [] (\tId -> [CurrentScenarioTaskId P.==. tId]) (mtaskId params)
+  let whereTask = maybe [] (\tId -> [CurrentScenarioExerciseId P.==. tId]) (mtaskId params)
   scenarios <- runDB $ selectList (whereTask ++ [
                    CurrentScenarioGrade P.==. Nothing
                  , CurrentScenarioLastUpdate P.<. onlyBefore params
@@ -149,7 +149,7 @@ selectExperts = runDB $
 selectTasks :: Handler [TaskData]
 selectTasks = fmap (fmap $ second unValue) . runDB $
   select $ from $ \(InnerJoin scenario scProblem) -> do
-    on $ scenario ^. CurrentScenarioTaskId ==. scProblem ^. ScenarioProblemId
+    on $ scenario ^. CurrentScenarioExerciseId ==. scProblem ^. ExerciseId
     where_ $ isNothing (scenario ^. CurrentScenarioGrade)
-    groupBy $ scProblem ^. ScenarioProblemId
+    groupBy $ scProblem ^. ExerciseId
     return (scProblem, count $ scenario ^. CurrentScenarioId)

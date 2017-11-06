@@ -373,7 +373,7 @@ instance YesodAuthEmail App where
     let extraParam key = do
             mr <- lookupGetParam key
             pure $ (,) key <$> mr
-    extraParams <- mapM extraParam ["scenario-problem", "invitation-secret"]
+    extraParams <- mapM extraParam ["exercise", "invitation-secret"]
 
     toParRt <- getRouteToParent
     let allowTempUserOption = all isJust extraParams
@@ -486,54 +486,54 @@ requirePostParam pam errstr = lookupPostParam pam >>= \mv -> case mv of
     Nothing -> invalidArgsI [errstr]
     Just v  -> return v
 
-getCurrentScenarioProblem :: Handler ScenarioProblemId
-getCurrentScenarioProblem = do
-    mtscp_id <- lookupSession "custom_exercise_id"
-    max_scp_id <- runDB lastScenarioProblemId
-    return $ case decimal <$> mtscp_id of
+getCurrentExercise :: Handler ExerciseId
+getCurrentExercise = do
+    mtExId <- lookupSession "custom_exercise_id"
+    maxExId <- runDB lastExerciseId
+    return $ case decimal <$> mtExId of
           Just (Right (i, _)) -> toSqlKey i
-          _ -> max_scp_id
+          _ -> maxExId
 
 
-lastScenarioProblemId :: ReaderT SqlBackend Handler ScenarioProblemId
-lastScenarioProblemId = getVal <$> rawSql query []
+lastExerciseId :: ReaderT SqlBackend Handler ExerciseId
+lastExerciseId = getVal <$> rawSql query []
   where
     getVal (Single c:_)  = c
     getVal [] = toSqlKey 0
     query = unlines
-          ["SELECT max(id) FROM scenario_problem;"
+          ["SELECT max(id) FROM exercise;"
           ]
 
 maybeSetRoleBasedOnParams :: UserId -> Handler ()
 maybeSetRoleBasedOnParams userId = do
     runDB $ update userId [UserRole =. UR_STUDENT]
 
-maybeEnroll :: Handler (Maybe ScenarioProblemId)
+maybeEnroll :: Handler (Maybe ExerciseId)
 maybeEnroll = do
     mExId <- checkInvitationParams
     musrId <- maybeAuthId
     case (mExId, musrId) of
         (Just exId, Just usrId) -> do
-          $(logDebug) $ "Enrolling new user in scenario problem " <> tshow (fromSqlKey exId)
+          $(logDebug) $ "Enrolling new user in exercise " <> tshow (fromSqlKey exId)
           void $ runDB $ upsert (UserExercise usrId exId)
             [UserExerciseUserId =. usrId, UserExerciseExerciseId =. exId]
         _ -> pure ()
     return mExId
 
-invitationParams :: ScenarioProblemId -> Handler [(Text, Text)]
+invitationParams :: ExerciseId -> Handler [(Text, Text)]
 invitationParams spId = do
     sp <- runDB $ get404 spId
-    pure [("scenario-problem", tshow $ fromSqlKey spId), ("invitation-secret", scenarioProblemInvitationSecret sp)]
+    pure [("exercise", tshow $ fromSqlKey spId), ("invitation-secret", exerciseInvitationSecret sp)]
 
-checkInvitationParams :: Handler (Maybe ScenarioProblemId)
+checkInvitationParams :: Handler (Maybe ExerciseId)
 checkInvitationParams = do
-    mid <- (>>= parseSqlKey) <$> lookupPostParam "scenario-problem"
+    mid <- (>>= parseSqlKey) <$> lookupPostParam "exercise"
     case mid of
        Nothing -> pure Nothing
        Just spId -> do
           sp <- runDB $ get404 spId
           is <- lookupPostParam "invitation-secret"
-          pure $ if Just (scenarioProblemInvitationSecret sp) == is
+          pure $ if Just (exerciseInvitationSecret sp) == is
               then Just spId
               else Nothing
 

@@ -84,7 +84,7 @@ library
         Handler.Mooc.ExpertReview
         Handler.Mooc.ProposalPreview
         Handler.Mooc.RenameMe
-        Handler.Mooc.ScenarioProblem
+        Handler.Mooc.Exercise
         Handler.Mooc.Survey
         Handler.Mooc.Tests
         Handler.Mooc.User

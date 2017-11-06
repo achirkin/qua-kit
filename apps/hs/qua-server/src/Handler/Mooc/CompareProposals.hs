@@ -72,8 +72,8 @@ getCompareProposalsR :: Handler Html
 getCompareProposalsR = do
   setUltDest MoocHomeR
   userId <- requireAuthId
-  scpId <- getCurrentScenarioProblem
-  runDB (getLeastPopularCriterion scpId userId) >>= \mcID -> case mcID of
+  exId <- getCurrentExercise
+  runDB (getLeastPopularCriterion exId userId) >>= \mcID -> case mcID of
      Nothing  -> notFound
      Just cid -> getCompareByCriterionR userId cid
 
@@ -83,12 +83,12 @@ getCompareByCriterionR :: UserId -> CriterionId -> Handler Html
 getCompareByCriterionR uId cId = do
   custom_exercise_count   <- fromMaybe 0 <$> getsSafeSession userSessionCustomExerciseCount
   compare_counter   <- fromMaybe 0 <$> getsSafeSession userSessionCompareCounter
-  scpId <- getCurrentScenarioProblem
+  exId <- getCurrentExercise
   let showPopup = custom_exercise_count > 0 && compare_counter == 0
   when showPopup $ void getMessages
   (criterion,msubs) <- runDB $ do
       cr <- get404 cId
-      ms <- getLeastPopularSubmissions scpId uId cId
+      ms <- getLeastPopularSubmissions exId uId cId
       return (cr,ms)
   case msubs of
     Nothing -> do
@@ -228,8 +228,8 @@ prepareDescription sc = if n > 3
 
 
 -- | Select a criterion that was used least among others
-getLeastPopularCriterion :: ScenarioProblemId -> UserId -> ReaderT SqlBackend Handler (Maybe CriterionId)
-getLeastPopularCriterion scpId uId = getValue <$> rawSql query [toPersistValue scpId, toPersistValue uId]
+getLeastPopularCriterion :: ExerciseId -> UserId -> ReaderT SqlBackend Handler (Maybe CriterionId)
+getLeastPopularCriterion exId uId = getValue <$> rawSql query [toPersistValue exId, toPersistValue uId]
   where
     getValue :: [(Single CriterionId)] -> Maybe CriterionId
     getValue ((Single n):_) = Just n
@@ -237,7 +237,7 @@ getLeastPopularCriterion scpId uId = getValue <$> rawSql query [toPersistValue s
     query = Text.unlines
           ["SELECT criterion.id as id"
           ,"FROM criterion"
-          ,"INNER JOIN problem_criterion ON criterion.id = problem_criterion.criterion_id AND problem_criterion.problem_id = ?"
+          ,"INNER JOIN exercise_criterion ON criterion.id = exercise_criterion.criterion_id AND exercise_criterion.exercise_id = ?"
           ,"LEFT OUTER JOIN"
           ,"    (SELECT vote.criterion_id as cid,COALESCE(sum(CASE WHEN vote.voter_id = ? THEN 1 ELSE 0 END),0) as m, COALESCE(count(*),0) as n"
           ,"       FROM vote GROUP BY vote.criterion_id"
@@ -249,9 +249,9 @@ getLeastPopularCriterion scpId uId = getValue <$> rawSql query [toPersistValue s
           ,"LIMIT 1;"
           ]
 
-getLeastPopularSubmissions :: ScenarioProblemId -> UserId -> CriterionId -> ReaderT SqlBackend Handler (Maybe (Entity Scenario, Entity Scenario))
-getLeastPopularSubmissions scpId uId cId = do
-    r <- rawSql query ( [uid, uid, uid, toPersistValue scpId, uid, cid])
+getLeastPopularSubmissions :: ExerciseId -> UserId -> CriterionId -> ReaderT SqlBackend Handler (Maybe (Entity Scenario, Entity Scenario))
+getLeastPopularSubmissions exId uId cId = do
+    r <- rawSql query ( [uid, uid, uid, toPersistValue exId, uid, cid])
     case r of
       ((Single i1,Single i2):_) -> do
         ms1 <- get i1
@@ -266,7 +266,7 @@ getLeastPopularSubmissions scpId uId cId = do
           ,"WITH sc AS ("
           ,"SELECT scenario.*, t.nn, t.mm"
           ,"FROM scenario"
-          ,"INNER JOIN ( SELECT scenario.author_id as author_id, scenario.task_id as task_id, MAX(scenario.last_update) as last_update, SUM (COALESCE(v.m, 0)) as mm, SUM (COALESCE(v.n, 0))  as nn"
+          ,"INNER JOIN ( SELECT scenario.author_id as author_id, scenario.exercise_id as exercise_id, MAX(scenario.last_update) as last_update, SUM (COALESCE(v.m, 0)) as mm, SUM (COALESCE(v.n, 0))  as nn"
           ,"             FROM scenario"
           ,"             LEFT OUTER JOIN"
           ,"                 ( SELECT  vote.better_id as sid, COALESCE(sum(CASE WHEN vote.voter_id = ? THEN 1 ELSE 0 END),0) as m, count(*) as n FROM vote GROUP BY  vote.better_id"
@@ -274,11 +274,11 @@ getLeastPopularSubmissions scpId uId cId = do
           ,"                   SELECT  vote.worse_id as sid, COALESCE(sum(CASE WHEN vote.voter_id = ? THEN 1 ELSE 0 END),0)  as m, count(*) as n FROM vote GROUP BY  vote.worse_id"
           ,"                 ) v"
           ,"                          ON scenario.id = v.sid"
-          ,"             WHERE scenario.author_id != ? AND scenario.task_id = ?"
-          ,"             GROUP BY scenario.author_id, scenario.task_id"
+          ,"             WHERE scenario.author_id != ? AND scenario.exercise_id = ?"
+          ,"             GROUP BY scenario.author_id, scenario.exercise_id"
           ,"             ORDER BY mm ASC, nn ASC"
           ,"           ) t"
-          ,"        ON t.author_id = scenario.author_id AND t.task_id = scenario.task_id AND t.last_update = scenario.last_update"
+          ,"        ON t.author_id = scenario.author_id AND t.exercise_id = scenario.exercise_id AND t.last_update = scenario.last_update"
           ,")"
           ,"-- get all pairs of designs"
           ,"SELECT s1.id, s2.id"
@@ -287,7 +287,7 @@ getLeastPopularSubmissions scpId uId cId = do
           ,"LEFT OUTER JOIN (SELECT vote.better_id, vote.worse_id FROM vote WHERE vote.voter_id = ? AND vote.criterion_id = ?) vv"
           ,"        ON (vv.better_id = s1.id AND vv.worse_id = s2.id) OR (vv.better_id = s2.id AND vv.worse_id = s1.id)"
           ,"-- remove duplicates and submissions from different exercises"
-          ,"WHERE vv.better_id IS NULL AND s1.id < s2.id AND s1.task_id = s2.task_id"
+          ,"WHERE vv.better_id IS NULL AND s1.id < s2.id AND s1.exercise_id = s2.exercise_id"
           ,"-- order by popularity, but randomize a little"
           ,"ORDER BY round(random()*4) ASC, (s1.mm + s2.mm) ASC, (s1.nn + s2.nn) ASC"
           ,"LIMIT 1;"
