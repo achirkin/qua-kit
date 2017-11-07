@@ -4,9 +4,9 @@ version:             0.1.0.0
 -- description:
 license:             MIT
 license-file:        LICENSE
-author:              Author name here
+author:              Mauro Bieg, Artem Chirkin
 maintainer:          example@example.com
-copyright:           2017 Author name here
+copyright:           2017 Artem Chirkin
 build-type:          Simple
 extra-source-files:  README.md
 cabal-version:       >=1.22

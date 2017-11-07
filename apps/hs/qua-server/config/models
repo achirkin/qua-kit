@@ -130,11 +130,14 @@ Criterion
     icon         Text
     CriterionDef name
 
+-- | Implement many-to-many for design criterions and exercises
 ExerciseCriterion
     exerciseId ExerciseId
     criterionId CriterionId
     ExerciseCriterionUnique exerciseId criterionId
 
+
+-- | Record a single user voting for a pair of scenarios (which scenario is better).
 Vote
     voterId       UserId
     criterionId   CriterionId
@@ -144,6 +147,9 @@ Vote
     timestamp     UTCTime default=CURRENT_TIMESTAMP
     edxGradingId  EdxGradingId Maybe
 
+
+-- | Rating of a person who votes.
+--   Updated every times the user votes.
 VoteRating
     exerciseId    ExerciseId
     studentId     UserId
@@ -154,6 +160,14 @@ VoteRating
     deriving Ord
     deriving Show
 
+-- | Rating of a user scenario (submission).
+--   It is updated every time a user updates submission or another one votes.
+--   Rating record does not necessarily exists for a current_scenario:
+--   it is created for a (current_scenario, criterion) pair when the first voted
+--   for this pair is received.
+--
+--   currentEvidenceW field tells how much we can believe in the rating.
+--   Use this value to select scenario to present it to users for further voting.
 Rating
     exerciseId        ExerciseId
     criterionId       CriterionId
