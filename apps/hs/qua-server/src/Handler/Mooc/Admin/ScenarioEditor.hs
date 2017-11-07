@@ -3,11 +3,11 @@
 module Handler.Mooc.Admin.ScenarioEditor
     ( getAdminScenarioEditorR
     , postAdminCreateScenarioR
-    , getScenarioProblemImgR
-    , getScenarioProblemGeometryR
-    , getScenarioProblemEditR
-    , postScenarioProblemAttachCriterionR
-    , postScenarioProblemDetachCriterionR
+    , getExerciseImgR
+    , getExerciseGeometryR
+    , getExerciseEditR
+    , postExerciseAttachCriterionR
+    , postExerciseDetachCriterionR
     ) where
 
 import Import hiding ((/=.), (==.), isNothing, on)
@@ -48,12 +48,12 @@ postAdminCreateScenarioR = do
             invitationSecret <- liftIO generateInvitationSecret
             runDB $
                 insert_
-                    ScenarioProblem
-                    { scenarioProblemDescription = newScenarioDataDescription
-                    , scenarioProblemImage = imageBs
-                    , scenarioProblemGeometry = geometryBs
-                    , scenarioProblemScale = newScenarioDataScale
-                    , scenarioProblemInvitationSecret = invitationSecret
+                    Exercise
+                    { exerciseDescription = newScenarioDataDescription
+                    , exerciseImage = imageBs
+                    , exerciseGeometry = geometryBs
+                    , exerciseScale = newScenarioDataScale
+                    , exerciseInvitationSecret = invitationSecret
                     }
             showForm (Just dat) [] widget enctype
   where
@@ -96,14 +96,14 @@ getScenarioCards = do
     tups <-
         (runDB $
          select $
-         from $ \(LeftOuterJoin (LeftOuterJoin scenarioProblem problemCriterion) criterion) -> do
+         from $ \(LeftOuterJoin (LeftOuterJoin exercise exerciseCriterion) criterion) -> do
              on
-                 (problemCriterion ?. ProblemCriterionCriterionId ==. criterion ?.
+                 (exerciseCriterion ?. ExerciseCriterionCriterionId ==. criterion ?.
                   CriterionId)
              on
-                 (problemCriterion ?. ProblemCriterionProblemId ==.
-                  just (scenarioProblem ^. ScenarioProblemId))
-             pure (scenarioProblem, criterion)) :: Handler [( Entity ScenarioProblem
+                 (exerciseCriterion ?. ExerciseCriterionExerciseId ==.
+                  just (exercise ^. ExerciseId))
+             pure (exercise, criterion)) :: Handler [( Entity Exercise
                                                             , Maybe (Entity Criterion))]
     mapM (uncurry scenarioWidget . second catMaybes) $ groupsOf tups
 
@@ -113,86 +113,86 @@ groupsOf =
     List.groupBy ((==) `Function.on` fst) . sortOn fst
 
 scenarioWidget ::
-       Entity ScenarioProblem -> [Entity Criterion] -> Handler Widget
-scenarioWidget (Entity scenarioProblemId ScenarioProblem {..}) cs = do
-    inviteLink <- getInviteLink scenarioProblemId
+       Entity Exercise -> [Entity Criterion] -> Handler Widget
+scenarioWidget (Entity exerciseId Exercise {..}) cs = do
+    inviteLink <- getInviteLink exerciseId
     pure $(widgetFile "mooc/admin/scenario-card")
 
-getInviteLink :: ScenarioProblemId -> Handler Text
-getInviteLink scenarioProblemId = do
+getInviteLink :: ExerciseId -> Handler Text
+getInviteLink exerciseId = do
     urlRender <- getUrlRenderParams
-    params <- invitationParams scenarioProblemId
+    params <- invitationParams exerciseId
     pure $ urlRender (AuthR registerR) params
 
-getScenarioProblemImgR :: ScenarioProblemId -> Handler TypedContent
-getScenarioProblemImgR scenarioProblemId = do
-    scenario <- runDB $ get404 scenarioProblemId
+getExerciseImgR :: ExerciseId -> Handler TypedContent
+getExerciseImgR exerciseId = do
+    scenario <- runDB $ get404 exerciseId
     addHeader "Content-Disposition" "inline"
     sendResponse
-        ("image/png" :: ByteString, toContent $ scenarioProblemImage scenario)
+        ("image/png" :: ByteString, toContent $ exerciseImage scenario)
 
-getScenarioProblemGeometryR :: ScenarioProblemId -> Handler TypedContent
-getScenarioProblemGeometryR scenarioProblemId = do
-    scenario <- runDB $ get404 scenarioProblemId
+getExerciseGeometryR :: ExerciseId -> Handler TypedContent
+getExerciseGeometryR exerciseId = do
+    scenario <- runDB $ get404 exerciseId
     addHeader "Content-Disposition" "inline"
     sendResponse
         ("text/plain" :: ByteString
-        , toContent $ scenarioProblemGeometry scenario)
+        , toContent $ exerciseGeometry scenario)
 
-getScenarioProblemEditR :: ScenarioProblemId -> Handler Html
-getScenarioProblemEditR scenarioProblemId = do
+getExerciseEditR :: ExerciseId -> Handler Html
+getExerciseEditR exerciseId = do
     requireAdmin
-    ScenarioProblem {..} <- runDB $ get404 scenarioProblemId
+    Exercise {..} <- runDB $ get404 exerciseId
     cs <-
         runDB $
         select $
-        from $ \(LeftOuterJoin criterion problemCriterion) -> do
+        from $ \(LeftOuterJoin criterion exerciseCriterion) -> do
             on
-                ((problemCriterion ?. ProblemCriterionCriterionId ==.
+                ((exerciseCriterion ?. ExerciseCriterionCriterionId ==.
                   just (criterion ^. CriterionId)) &&.
-                 (problemCriterion ?. ProblemCriterionProblemId ==.
-                  just (val scenarioProblemId)))
+                 (exerciseCriterion ?. ExerciseCriterionExerciseId ==.
+                  just (val exerciseId)))
             pure
                 ( criterion ^. CriterionId
                 , criterion ^. CriterionName
-                , not_ $ isNothing $ problemCriterion ?. ProblemCriterionId)
+                , not_ $ isNothing $ exerciseCriterion ?. ExerciseCriterionId)
     adminLayout
         (T.pack $
          unwords
              [ "Welcome to the editor for scenario"
-             , show (fromSqlKey scenarioProblemId) ++ ":"
-             , T.unpack scenarioProblemDescription
+             , show (fromSqlKey exerciseId) ++ ":"
+             , T.unpack exerciseDescription
              ]) $ do
         setTitle "qua-kit - scenario"
         $(widgetFile "mooc/admin/scenario-edit")
 
-postScenarioProblemAttachCriterionR ::
-       ScenarioProblemId -> CriterionId -> Handler ()
-postScenarioProblemAttachCriterionR s c = do
+postExerciseAttachCriterionR ::
+       ExerciseId -> CriterionId -> Handler ()
+postExerciseAttachCriterionR s c = do
     void $
         runDB $ do
             mr <-
                 selectFirst
-                    [ ProblemCriterionProblemId P.==. s
-                    , ProblemCriterionCriterionId P.==. c
+                    [ ExerciseCriterionExerciseId P.==. s
+                    , ExerciseCriterionCriterionId P.==. c
                     ]
                     []
             case mr of
                 Nothing ->
                     insert_
-                        ProblemCriterion
-                        { problemCriterionProblemId = s
-                        , problemCriterionCriterionId = c
+                        ExerciseCriterion
+                        { exerciseCriterionExerciseId = s
+                        , exerciseCriterionCriterionId = c
                         }
                 Just _ -> pure ()
-    redirect $ ScenarioProblemEditR s
+    redirect $ ExerciseEditR s
 
-postScenarioProblemDetachCriterionR ::
-       ScenarioProblemId -> CriterionId -> Handler ()
-postScenarioProblemDetachCriterionR s c = do
+postExerciseDetachCriterionR ::
+       ExerciseId -> CriterionId -> Handler ()
+postExerciseDetachCriterionR s c = do
     runDB $
         P.deleteWhere
-            [ ProblemCriterionProblemId P.==. s
-            , ProblemCriterionCriterionId P.==. c
+            [ ExerciseCriterionExerciseId P.==. s
+            , ExerciseCriterionCriterionId P.==. c
             ]
-    redirect $ ScenarioProblemEditR s
+    redirect $ ExerciseEditR s

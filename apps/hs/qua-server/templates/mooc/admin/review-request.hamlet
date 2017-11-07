@@ -13,7 +13,7 @@
           <tr>
             <th>Task
             <th>#scenarios in need of grading
-          $forall (Entity _ scp, ungradedCount) <- tasks
+          $forall (Entity _ ex, ungradedCount) <- tasks
             <tr>
-              <td>#{ scenarioProblemDescription scp }
+              <td>#{ exerciseDescription ex }
               <td>#{ show ungradedCount }

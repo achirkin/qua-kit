@@ -14,15 +14,16 @@ import qualified Control.Monad.Trans.Reader as Reader
 import Data.Aeson (decodeStrict')
 import Data.Aeson.Types (typeMismatch)
 import qualified Data.HashMap.Strict as HashMap
+import Handler.Mooc.User (maybeFetchExerciseId)
 
 
-loggingApp :: Maybe UserId -> Maybe ScenarioProblemId -> WebSocketsT Handler ()
-loggingApp uId scpId = Reader.mapReaderT (`State.evalStateT` Nothing) $ sourceWS $$ mapM_C (\msg -> do
+loggingApp :: Maybe UserId -> Maybe ExerciseId -> WebSocketsT Handler ()
+loggingApp uId exId = Reader.mapReaderT (`State.evalStateT` Nothing) $ sourceWS $$ mapM_C (\msg -> do
        t <- liftIO getCurrentTime
        case decodeStrict' msg of
          Nothing   -> return ()
          Just (WSLoad msgF) -> do
-            i <- lift . lift. runDB . insert $ (msgF uId scpId t :: UserScenarioLoad)
+            i <- lift . lift. runDB . insert $ (msgF uId exId t :: UserScenarioLoad)
             lift . State.put $ Just i
          Just (WSUpdate msgF) -> do
             mi <- lift State.get
@@ -52,7 +53,7 @@ instance FromJSON (UserScenarioLoadId -> UTCTime -> UserScenarioAction) where
        v41 v42 v43 v44
   parseJSON invalid = typeMismatch "UserScenarioAction" invalid
 
-instance FromJSON (Maybe UserId -> Maybe ScenarioProblemId -> UTCTime -> UserScenarioLoad) where
+instance FromJSON (Maybe UserId -> Maybe ExerciseId -> UTCTime -> UserScenarioLoad) where
   parseJSON (Object v) = do
     fc <- v .: "load"
     scale <- v .: "scale"
@@ -67,7 +68,7 @@ instance FromJSON (UserScenarioLoadId -> UTCTime -> UserScenarioUpdate) where
 
 
 data WSInfo
-  = WSLoad (Maybe UserId -> Maybe ScenarioProblemId -> UTCTime -> UserScenarioLoad)
+  = WSLoad (Maybe UserId -> Maybe ExerciseId -> UTCTime -> UserScenarioLoad)
   | WSUpdate (UserScenarioLoadId -> UTCTime -> UserScenarioUpdate)
   | WSAction (UserScenarioLoadId -> UTCTime -> UserScenarioAction)
 
@@ -81,7 +82,9 @@ instance FromJSON WSInfo where
 
 getQVLoggingR :: Handler Html
 getQVLoggingR = do
-    mUId <- maybeAuthId
-    mcustom_exercise_id <- getsSafeSession userSessionCustomExerciseId
-    webSockets $ loggingApp mUId mcustom_exercise_id
+    mUId  <- maybeAuthId
+    mExId <- case mUId of
+      Just uid -> maybeFetchExerciseId uid
+      Nothing  -> return Nothing
+    webSockets $ loggingApp mUId mExId
     notFound

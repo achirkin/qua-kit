@@ -3,13 +3,13 @@
     <div .card-block>
       <div .col-lg-12 .col-md-12 .col-md-12 .col-sm-12>
         <div .card-block .card-img-top>
-          <img .img-fluid src=@{ScenarioProblemImgR scenarioProblemId} width="200px" height="200px" alt="Scenario Image">
+          <img .img-fluid src=@{ExerciseImgR exerciseId} width="200px" height="200px" alt="Scenario Image">
         <h4>
           Scenario
         <p .card-text>
-          Id: #{show $ fromSqlKey scenarioProblemId}
+          Id: #{show $ fromSqlKey exerciseId}
         <p>
-          Description: #{scenarioProblemDescription}
+          Description: #{exerciseDescription}
         <h4>
           Criterions
         <ul .list-group>
@@ -29,8 +29,8 @@
           Enter the following into "Custom Paramaters" field in the exercise settings at edX:
         <p>
           <span style="font-family:monospace;">
-            ["exercise_type=design", "exercise_id=#{show $ fromSqlKey scenarioProblemId}"]
-      <a .btn .col-lg-6 .col-md-6 .col-md-6 .col-sm-6 href=@{ScenarioProblemGeometryR scenarioProblemId}>
+            ["exercise_type=design", "exercise_id=#{show $ fromSqlKey exerciseId}"]
+      <a .btn .col-lg-6 .col-md-6 .col-md-6 .col-sm-6 href=@{ExerciseGeometryR exerciseId}>
         Download Geometry
-      <a .btn .col-lg-6 .col-md-6 .col-md-6 .col-sm-6 href=@{ScenarioProblemEditR scenarioProblemId}>
+      <a .btn .col-lg-6 .col-md-6 .col-md-6 .col-sm-6 href=@{ExerciseEditR exerciseId}>
         Edit Scenario Problem

@@ -8,7 +8,7 @@
         <div.card-main>
           <div.card-inner>
             <h4.card-title>
-              Succesfully uploaded new Scenario problem
+              Succesfully uploaded new Exercise
             <ul .list-group list-group-flush>
               <li .list-group-item>
                 Description: #{newScenarioDataDescription dat}

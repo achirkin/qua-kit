@@ -9,8 +9,9 @@ maybeE errtxt m = ExceptT $ m >>= \mv -> case mv of
   Nothing -> return $ Left errtxt
   Just v  -> return $ Right v
 
-runJSONExceptT :: ExceptT Text Handler Value -> Handler Value
-runJSONExceptT m = f <$> runExceptT m
+runJSONExceptT :: (ToJSON a)
+               => ExceptT Text Handler a -> Handler Value
+runJSONExceptT m = runExceptT m >>= f
   where
-    f (Left err) = object ["error" .= err]
-    f (Right v ) = v
+    f (Left err) = sendResponseStatus badRequest400 err
+    f (Right v ) = returnJson v

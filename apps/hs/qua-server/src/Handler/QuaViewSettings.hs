@@ -1,40 +1,40 @@
 {-# OPTIONS_HADDOCK hide, prune #-}
 module Handler.QuaViewSettings
-    ( getQuaViewSettingsR
+    ( getQuaViewSettingsNewR
+    , getQuaViewSettingsFromScIdR
+    , getQuaViewSettingsFromExIdR
     ) where
 
-
 import Import
-import qualified Handler.Mooc.Scenario as S
+import qualified QuaTypes
 
+getQuaViewSettingsNewR :: Handler Value
+getQuaViewSettingsNewR = quaViewSettingsR NewSubmissionR Nothing Nothing
 
--- | Set up settings for qua-view
---   * qua_view_mode=mode -- edit or view or full; full is default
---   * scenario_id=i -- if set up then load this scenario from database
-getQuaViewSettingsR :: Handler TypedContent
-getQuaViewSettingsR = do
-    qua_view_mode <- fromMaybe "full" <$> getsSafeSession userSessionQuaViewMode
+getQuaViewSettingsFromScIdR :: ScenarioId -> Handler Value
+getQuaViewSettingsFromScIdR scId = do
+  sc <- runDB $ get404 scId
+  quaViewSettingsR (SubmissionR scId) (Just scId) (Just $ scenarioExerciseId sc)
 
-    scenarioLinkScale <- S.getScenarioLink
+getQuaViewSettingsFromExIdR :: ExerciseId -> Handler Value
+getQuaViewSettingsFromExIdR mExId =
+  quaViewSettingsR (NewSubmissionForExerciseR mExId) Nothing $ Just mExId
 
-    app <- getYesod
-    req <- waiRequest
-    let appr = getApprootText guessApproot app req
-        quaviewHTTP = yesodRender app appr HomeR []
-        luciProxyHTTP = yesodRender app appr LuciR []
-        luciProxyWS = "ws" <> drop 4 luciProxyHTTP
-        quaViewLoggingWS = "ws" <> drop 4 (yesodRender app appr QVLoggingR [])
-        submitHTTP = yesodRender app appr SubmitProposalR []
-        mscenarioHTTP = flip (yesodRender app appr) [] . fst <$> scenarioLinkScale
-    return . TypedContent typeJson . toContent . object $
-      [ "viewRoute"  .= quaviewHTTP
-      , "luciRoute"  .= luciProxyWS
-      , "loggingUrl" .= quaViewLoggingWS
-      , "submitUrl"  .= submitHTTP
-      , "profile"     .= qua_view_mode
-      ] ^++^ fmap ("scenarioUrl" .=) mscenarioHTTP
-        ^++^ fmap (("objectScale" .=) . snd) scenarioLinkScale
-
-(^++^) :: [a] -> Maybe a -> [a]
-xs ^++^ Just x = x:xs
-xs ^++^ Nothing = xs
+quaViewSettingsR :: Route App
+                 -> Maybe ScenarioId
+                 -> Maybe ExerciseId
+                 -> Handler Value
+quaViewSettingsR curRoute mScId mExId = do
+  mUsrId <- maybeAuthId
+  app <- getYesod
+  req <- waiRequest
+  let routeUrl route = let appr = getApprootText guessApproot app req
+                       in  yesodRender app appr route []
+  returnJson $ QuaTypes.Settings {
+      loggingUrl               = Just $ "ws" <> drop 4 (routeUrl QVLoggingR)
+    , luciUrl                  = mUsrId >> Just ("ws" <> drop 4 (routeUrl LuciR))
+    , getSubmissionGeometryUrl = mScId >>= return . routeUrl . SubmissionGeometryR
+    , postSubmissionUrl        = mExId >>= return . routeUrl . SubmissionsR
+    , reviewSettingsUrl        = mScId >>= return . routeUrl . QuaViewReviewSettingsR
+    , viewUrl                  = routeUrl curRoute
+    }

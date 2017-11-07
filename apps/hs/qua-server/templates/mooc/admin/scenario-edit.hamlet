@@ -1,12 +1,12 @@
 <div .story_cards>
   <div .card>
     <div .card-main>
-      <img .card-img .pull-top .center-block src=@{ScenarioProblemImgR scenarioProblemId} height="350px" alt="Scenario Image">
+      <img .card-img .pull-top .center-block src=@{ExerciseImgR exerciseId} height="350px" alt="Scenario Image">
 
   <div .card>
     <div .card-inner>
       <p .card-text>
-        #{show $ fromSqlKey scenarioProblemId}: #{scenarioProblemDescription}
+        #{show $ fromSqlKey exerciseId}: #{exerciseDescription}
 
   <table .table>
     <thead>
@@ -26,11 +26,11 @@
             #{criterionName}
           <td>
             $if attached
-              <form action=@{ScenarioProblemDetachCriterionR scenarioProblemId criterionId} method=post>
+              <form action=@{ExerciseDetachCriterionR exerciseId criterionId} method=post>
                 <button .btn type="submit">
                   Detach Criterion
             $else
-              <form action=@{ScenarioProblemAttachCriterionR scenarioProblemId criterionId} method=post>
+              <form action=@{ExerciseAttachCriterionR exerciseId criterionId} method=post>
                 <button .btn type="submit">
                   Attach Criterion
 

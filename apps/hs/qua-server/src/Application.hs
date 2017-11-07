@@ -56,8 +56,8 @@ import Application.Edx (scheduleUpdateGrades)
 import Handler.Common
 import Handler.About
 import Handler.Feedback
-import Handler.Home
 import Handler.LuciProxy
+import Handler.QuaViewReviewSettings
 import Handler.QuaViewSettings
 import Handler.Mooc
 import Handler.Mooc.Criteria
@@ -68,20 +68,17 @@ import Handler.Mooc.Admin.ReviewRequest
 import Handler.Mooc.Admin.ScenarioEditor
 import Handler.Mooc.Admin.UserManager
 import Handler.Mooc.Admin.LuciScenarioDownloader
-import Handler.Mooc.Comment
+import Handler.Mooc.Reviews
 import Handler.Mooc.ExpertReview
-import Handler.Mooc.Scenario
+import Handler.Mooc.Exercise
 import Handler.Mooc.BrowseProposals
-import Handler.Mooc.EditProposal
-import Handler.Mooc.ViewProposal
-import Handler.Mooc.SubmitProposal
 import Handler.Mooc.CompareProposals
 import Handler.Mooc.ProposalPreview
 import Handler.Mooc.User
 import Handler.Mooc.Survey
 -- import Handler.Mooc.Tests
-import Handler.Mooc.SubmissionViewer
 import Handler.Mooc.FAQ
+import Handler.Submissions
 import Handler.LoggingWS
 
 -- This line actually creates our YesodDispatch instance. It is the second half

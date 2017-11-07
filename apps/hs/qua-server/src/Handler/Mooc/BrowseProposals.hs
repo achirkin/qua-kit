@@ -183,7 +183,7 @@ mkSubmissionsWidget submissions = do
                         <p style="display: inline; margin: 0; padding:0; color: #b71c1c;)">
                           #{expertgrade}
                   <div.card-action-btn.pull-right>
-                    $with subViewLink <- SubmissionViewerR (currentScenarioTaskId sc) (currentScenarioAuthorId sc)
+                    $with subViewLink <- SubmissionR $ currentScenarioHistoryScenarioId sc
                       $if isExpert && (isNothing $ currentScenarioGrade sc)
                         <a.btn.btn-flat.btn-brand-accent.waves-attach.waves-effect
                             style="background: red; color: white !important;"
@@ -228,7 +228,7 @@ data ProposalSortParam = Default
 data ProposalParams = ProposalParams {
       onlyNeedsReview   :: Maybe ()
     , onlyByAuthorId    :: Maybe UserId
-    , onlyByExerciseId  :: Maybe ScenarioProblemId
+    , onlyByExerciseId  :: Maybe ExerciseId
     , sortOrder         :: ProposalSortParam
     , propLimit         :: Maybe Int
     , propOffset        :: Int
@@ -254,10 +254,10 @@ convenientReviewOrder = ProposalParams {
     , propOffset        = 0
     }
 
-proposalsForm :: ProposalParams -> [Entity ScenarioProblem] -> Html -> MForm Handler (FormResult ProposalParams, Widget)
+proposalsForm :: ProposalParams -> [Entity Exercise] -> Html -> MForm Handler (FormResult ProposalParams, Widget)
 proposalsForm defParams exercises extra = do
   maybeMe <- lift maybeAuthId
-  let exerciseList = map (\(Entity spId sp) -> (scenarioProblemDescription sp, Just spId)) exercises
+  let exerciseList = map (\(Entity spId sp) -> (exerciseDescription sp, Just spId)) exercises
   (onlyNeedsReviewRes, onlyNeedsReviewView) <- mreq (bootstrapSelectFieldList [
                       ("All"::Text,    Nothing)
                     , ("Needs review", Just ())
@@ -328,12 +328,12 @@ generateJoins ps = (whereParams ++ limitParams, joinStr, orderStr)
       , "   ORDER BY ", primaryOrder, ", s.id DESC"
       ,     limitClause
       , " ) s"
-      , " JOIN problem_criterion"
-      , "   ON s.task_id = problem_criterion.problem_id"
+      , " JOIN exercise_criterion"
+      , "   ON s.exercise_id = exercise_criterion.exercise_id"
       , " JOIN criterion"
-      , "   ON criterion.id = problem_criterion.criterion_id"
+      , "   ON criterion.id = exercise_criterion.criterion_id"
       , " LEFT OUTER JOIN rating"
-      , "   ON s.task_id    = rating.problem_id AND"
+      , "   ON s.exercise_id    = rating.exercise_id AND"
       , "      s.author_id  = rating.author_id AND"
       , "      criterion.id = rating.criterion_id"
       , " LEFT OUTER JOIN ("
@@ -347,7 +347,7 @@ generateJoins ps = (whereParams ++ limitParams, joinStr, orderStr)
         "ORDER BY ", primaryOrder, ", s.id DESC, criterion.id ASC"
       ]
     primaryOrder = case sortOrder ps of
-                     Default   -> "s.task_id DESC, COALESCE(s.grade, 0) DESC"
+                     Default   -> "s.exercise_id DESC, COALESCE(s.grade, 0) DESC"
                      Newest    -> "s.last_update DESC"
                      Oldest    -> "s.last_update ASC"
                      GradeDesc -> "COALESCE(s.grade, 0) DESC"
@@ -365,7 +365,7 @@ generateJoins ps = (whereParams ++ limitParams, joinStr, orderStr)
         wheres = catMaybes [
                   onlyByAuthorId   ps >>= \a -> Just (toPersistValue a, "s.author_id = ?")
                 , onlyNeedsReview  ps >>= \_ -> Just (toPersistValue (0::Int), "s.grade IS NULL AND 0 = ?")
-                , onlyByExerciseId ps >>= \e -> Just (toPersistValue e, "s.task_id = ?")
+                , onlyByExerciseId ps >>= \e -> Just (toPersistValue e, "s.exercise_id = ?")
                  ]
 
 -- | get user name, scenario, and ratings
@@ -390,7 +390,7 @@ fetchLastSubmissions params = groupSubs <$> map convertTypes <$> rawSql query pr
     currentScenarioCols = [ "s.id"
                           , "s.history_scenario_id"
                           , "s.author_id"
-                          , "s.task_id"
+                          , "s.exercise_id"
                           , "s.description"
                           , "s.grade"
                           , "s.last_update"
@@ -421,7 +421,7 @@ countUniqueSubmissions params = getVal <$> rawSql query preparedParams
 convertTypes :: ( Single CurrentScenarioId --currentScId
                 , ( Single ScenarioId --historyScenarioId
                   , Single UserId --authorId
-                  , Single ScenarioProblemId --taskId
+                  , Single ExerciseId --exId
                   , Single Text --description
                   , Single (Maybe Double) --grade
                   , Single UTCTime --lastUpdate
@@ -438,7 +438,7 @@ convertTypes :: ( Single CurrentScenarioId --currentScId
 convertTypes ( Single _currentScId
              , ( Single historyScenarioId
                , Single authorId
-               , Single taskId
+               , Single exerciseId
                , Single description
                , Single grade
                , Single lastUpdate
@@ -456,7 +456,7 @@ convertTypes ( Single _currentScId
                 scenario    = CurrentScenario {
                   currentScenarioHistoryScenarioId = historyScenarioId
                 , currentScenarioAuthorId          = authorId
-                , currentScenarioTaskId            = taskId
+                , currentScenarioExerciseId        = exerciseId
                 , currentScenarioDescription       = description
                 , currentScenarioEdxGradingId      = edxGradingId
                 , currentScenarioGrade             = grade

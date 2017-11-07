@@ -67,15 +67,6 @@ library
         Handler.About
         Handler.Common
         Handler.Feedback
-        Handler.Home
-        Handler.Home.LoadingSplash
-        Handler.Home.LuciConnect
-        Handler.Home.PanelGeometry
-        Handler.Home.PanelInfo
-        Handler.Home.PanelServices
-        Handler.Home.PopupEdxGuide
-        Handler.Home.PopupHelp
-        Handler.Home.UIButtons
         Handler.LoggingWS
         Handler.LuciProxy
         Handler.Mooc
@@ -86,23 +77,21 @@ library
         Handler.Mooc.Admin.UserManager
         Handler.Mooc.Admin.LuciScenarioDownloader
         Handler.Mooc.BrowseProposals
-        Handler.Mooc.Comment
+        Handler.Mooc.Reviews
         Handler.Mooc.CompareProposals
         Handler.Mooc.Criteria
-        Handler.Mooc.EditProposal
         Handler.Mooc.EdxLogin
         Handler.Mooc.ExpertReview
         Handler.Mooc.ProposalPreview
         Handler.Mooc.RenameMe
-        Handler.Mooc.Scenario
-        Handler.Mooc.SubmitProposal
+        Handler.Mooc.Exercise
         Handler.Mooc.Survey
         Handler.Mooc.Tests
         Handler.Mooc.User
-        Handler.Mooc.ViewProposal
-        Handler.Mooc.SubmissionViewer
         Handler.Mooc.FAQ
+        Handler.QuaViewReviewSettings
         Handler.QuaViewSettings
+        Handler.Submissions
         Import
         Import.NoFoundation
         Import.Util
@@ -166,7 +155,8 @@ library
         random -any,
         ltiv1p1 -any,
         esqueleto -any,
-        resource-pool -any
+        resource-pool -any,
+        qua-types >= 0.1
     default-language: Haskell2010
     default-extensions: TemplateHaskell QuasiQuotes OverloadedStrings
                         NoImplicitPrelude MultiParamTypeClasses TypeFamilies GADTs

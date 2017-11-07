@@ -26,7 +26,8 @@
               The application provides an easy-to-use geometry editor, suitable for educational and demonstrational purposes.
             <div class="card-action">
               <div class="card-action-btn pull-left">
-                <a class="btn btn-flat waves-attach waves-light waves-effect" href="@{EditProposalR}">
+                <a class="btn btn-flat waves-attach waves-light waves-effect"
+                    href="@{RedirectToCurrentScenarioR}">
                   <span class="icon">check
                   &nbsp;Use geometry editor
 

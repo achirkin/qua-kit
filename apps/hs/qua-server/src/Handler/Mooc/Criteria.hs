@@ -10,10 +10,10 @@ import Database.Persist.Sql
 
 getCriteriaListR :: Handler Html
 getCriteriaListR = do
-    scp_id <- getCurrentScenarioProblem
+    exId <- getCurrentExercise
 
-    criteria <- runDB $ currentCriteria scp_id
-    oldCriteria <- runDB $ otherCriteria scp_id
+    criteria    <- runDB $ currentCriteria exId
+    oldCriteria <- runDB $ otherCriteria exId
 
     fullLayout Nothing "Qua-kit design criteria" $ do
       setTitle "Qua-kit design criteria"
@@ -68,25 +68,25 @@ getCriteriaImgR ident = do
 
 
 
-currentCriteria :: ScenarioProblemId -> ReaderT SqlBackend Handler [Entity Criterion]
-currentCriteria scp_id = rawSql query [toPersistValue scp_id]
+currentCriteria :: ExerciseId -> ReaderT SqlBackend Handler [Entity Criterion]
+currentCriteria exId = rawSql query [toPersistValue exId]
   where
     query = unlines
-        ["SELECT ?? FROM criterion,problem_criterion"
-        ,"         WHERE problem_criterion.problem_id = ?"
-        ,"           AND problem_criterion.criterion_id = criterion.id;"
+        ["SELECT ?? FROM criterion,exercise_criterion"
+        ,"         WHERE exercise_criterion.exercise_id = ?"
+        ,"           AND exercise_criterion.criterion_id = criterion.id;"
         ]
 
-otherCriteria :: ScenarioProblemId -> ReaderT SqlBackend Handler [Entity Criterion]
-otherCriteria scp_id = rawSql query [toPersistValue scp_id]
+otherCriteria :: ExerciseId -> ReaderT SqlBackend Handler [Entity Criterion]
+otherCriteria exId = rawSql query [toPersistValue exId]
   where
     query = unlines
         ["SELECT ??"
         ,"  FROM criterion"
         ," WHERE criterion.id NOT IN"
         ," ("
-        ,"  SELECT criterion.id FROM criterion,problem_criterion"
-        ,"                     WHERE problem_criterion.problem_id = ?"
-        ,"                       AND problem_criterion.criterion_id = criterion.id"
+        ,"  SELECT criterion.id FROM criterion,exercise_criterion"
+        ,"                     WHERE exercise_criterion.exercise_id = ?"
+        ,"                       AND exercise_criterion.criterion_id = criterion.id"
         ," );"
         ]

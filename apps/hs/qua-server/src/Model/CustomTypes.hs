@@ -28,11 +28,11 @@ data UserRole
     --   is not an admin, and is not allowed to use local luci services
   | UR_STUDENT
     -- ^ A user that should submit an "exercise"
-    -- (submit a scenario for a scenario problem or do votes or etc.)
+    -- (submit a scenario for an exercise or do votes or etc.)
   | UR_LOCAL
     -- ^ Just use custom scenarios and luci services with little or no restrictions
   | UR_ADMIN
-    -- ^ Can edit or invite users, set up exercises (scenario problems), design criterions, etc.
+    -- ^ Can edit or invite users, set up exercises, design criterions, etc.
   | UR_EXPERT
     -- ^ Should grade user submissions - write "expert reviews"
   deriving (Eq, Enum, Bounded, Show, Read)

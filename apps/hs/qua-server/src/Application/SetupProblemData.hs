@@ -36,18 +36,18 @@ importProblemRun0 pool = do
     flip runSqlPool pool $ do
       -- Id of the firt problem (Sep-Nov 2016)
       let pId = toSqlKey 0
-      repsert pId (ScenarioProblem sctaskpreview sctaskfile "Empower Shack scenario" 0.001 "oceronetidasqven")
+      repsert pId (Exercise sctaskpreview sctaskfile "Empower Shack scenario" 0.001 "oceronetidasqven")
       cIdCentrality    <- upsertCriterion cCentrality
       cIdConnectivity  <- upsertCriterion cConnectivity
       cIdAccessibility <- upsertCriterion cAccessibility
       cIdVisibility    <- upsertCriterion cVisibility
 
       -- register criteria in the problem
-      deleteWhere [ProblemCriterionProblemId ==. pId]
-      insert_ (ProblemCriterion pId cIdCentrality)
-      insert_ (ProblemCriterion pId cIdConnectivity)
-      insert_ (ProblemCriterion pId cIdAccessibility)
-      insert_ (ProblemCriterion pId cIdVisibility)
+      deleteWhere [ExerciseCriterionExerciseId ==. pId]
+      insert_ (ExerciseCriterion pId cIdCentrality)
+      insert_ (ExerciseCriterion pId cIdConnectivity)
+      insert_ (ExerciseCriterion pId cIdAccessibility)
+      insert_ (ExerciseCriterion pId cIdVisibility)
 
 
 importProblemRun1 :: ConnectionPool -> IO ()
@@ -65,18 +65,18 @@ importProblemRun1 pool = do
     flip runSqlPool pool $ do
       -- Id of the firt problem (Sep-Nov 2016)
       let pId = toSqlKey 1
-      repsert pId (ScenarioProblem sctaskpreview sctaskfile "Empower Shack scenario 2" 0.5 "duholorinelonedi")
+      repsert pId (Exercise sctaskpreview sctaskfile "Empower Shack scenario 2" 0.5 "duholorinelonedi")
       cIdDistribution  <- upsertCriterion cDistribution
       cIdAccessibility <- upsertCriterion cAccessibility
       cIdVisibility    <- upsertCriterion cVisibility
       cIdCentrality    <- upsertCriterion cCentrality
 
       -- register criteria in the problem
-      deleteWhere [ProblemCriterionProblemId ==. pId]
-      insert_ (ProblemCriterion pId cIdCentrality)
-      insert_ (ProblemCriterion pId cIdDistribution)
-      insert_ (ProblemCriterion pId cIdAccessibility)
-      insert_ (ProblemCriterion pId cIdVisibility)
+      deleteWhere [ExerciseCriterionExerciseId ==. pId]
+      insert_ (ExerciseCriterion pId cIdCentrality)
+      insert_ (ExerciseCriterion pId cIdDistribution)
+      insert_ (ExerciseCriterion pId cIdAccessibility)
+      insert_ (ExerciseCriterion pId cIdVisibility)
 
 
 

@@ -24,7 +24,7 @@ UserProp
 EdxResource
     linkId       Text
     courseId     EdxCourseId
-    exerciseId   ScenarioProblemId
+    exerciseId   ExerciseId
     friendlyName Text Maybe
     EdxResLinkId linkId courseId
     deriving Show
@@ -67,7 +67,7 @@ EdxGradingQueue
 -- | Exercise table.
 --   Keeps description of an exercise (either edX or workshop),
 --   and a template starting geometry.
-ScenarioProblem
+Exercise
     image            ByteString
     geometry         ByteString
     description      Text
@@ -77,12 +77,18 @@ ScenarioProblem
     deriving Eq
     deriving Ord
 
+UserExercise
+    userId           UserId
+    exerciseId       ExerciseId
+    UserExerciseUnique userId -- for the time being, only allow one exercise per user
+    deriving Show
+
 -- | User design submission.
 --   A history table - keeps all user submissions forever.
 --   Never delete stuff from here.
 Scenario
     authorId      UserId
-    taskId        ScenarioProblemId
+    exerciseId    ExerciseId
     image         ByteString
     geometry      ByteString
     description   Text
@@ -92,12 +98,12 @@ Scenario
 CurrentScenario
     historyScenarioId    ScenarioId
     authorId             UserId
-    taskId               ScenarioProblemId
+    exerciseId           ExerciseId
     description          Text
     edxGradingId         EdxGradingId Maybe
     grade                Double Maybe
     lastUpdate           UTCTime default=CURRENT_TIMESTAMP
-    SubmissionOf         authorId taskId
+    SubmissionOf         authorId exerciseId
     LatestSubmissionId   historyScenarioId
 
 Review
@@ -124,11 +130,14 @@ Criterion
     icon         Text
     CriterionDef name
 
-ProblemCriterion
-    problemId ScenarioProblemId
+-- | Implement many-to-many for design criterions and exercises
+ExerciseCriterion
+    exerciseId ExerciseId
     criterionId CriterionId
-    ProblemCriterionUnique problemId criterionId
+    ExerciseCriterionUnique exerciseId criterionId
 
+
+-- | Record a single user voting for a pair of scenarios (which scenario is better).
 Vote
     voterId       UserId
     criterionId   CriterionId
@@ -138,24 +147,35 @@ Vote
     timestamp     UTCTime default=CURRENT_TIMESTAMP
     edxGradingId  EdxGradingId Maybe
 
+
+-- | Rating of a person who votes.
+--   Updated every times the user votes.
 VoteRating
-    problemId     ScenarioProblemId
+    exerciseId    ExerciseId
     studentId     UserId
     evidenceW     Double default=0
     value         Double default=0
-    VoteRatingOf  studentId problemId
+    VoteRatingOf  studentId exerciseId
     deriving Eq
     deriving Ord
     deriving Show
 
+-- | Rating of a user scenario (submission).
+--   It is updated every time a user updates submission or another one votes.
+--   Rating record does not necessarily exists for a current_scenario:
+--   it is created for a (current_scenario, criterion) pair when the first voted
+--   for this pair is received.
+--
+--   currentEvidenceW field tells how much we can believe in the rating.
+--   Use this value to select scenario to present it to users for further voting.
 Rating
-    problemId         ScenarioProblemId
+    exerciseId        ExerciseId
     criterionId       CriterionId
     authorId          UserId
     value             Double default=0
     currentVotesN     Int    default=0
     currentEvidenceW  Double default=1
-    RatingOf authorId problemId criterionId
+    RatingOf authorId exerciseId criterionId
     deriving Eq
     deriving Ord
     deriving Show
@@ -167,7 +187,7 @@ Feedback
 
 UserScenarioLoad
     authorId     UserId Maybe
-    scenarioId   ScenarioProblemId Maybe
+    scenarioId   ExerciseId Maybe
     timestamp    UTCTime default=CURRENT_TIMESTAMP
     geometry     Text
     scale        Double
