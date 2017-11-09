@@ -156,6 +156,7 @@ library
         ltiv1p1 -any,
         esqueleto -any,
         resource-pool -any,
+        filepath >=1.4,
         qua-types >= 0.1
     default-language: Haskell2010
     default-extensions: TemplateHaskell QuasiQuotes OverloadedStrings

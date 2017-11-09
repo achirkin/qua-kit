@@ -25,6 +25,9 @@ data Settings = Settings {
   , postSubmissionUrl        :: Maybe Url  -- ^ URL for students to POST their new submission to
   , reviewSettingsUrl        :: Maybe Url  -- ^ URL to get settings related to reviews
   , viewUrl                  :: Url        -- ^ URL of current qua-viewer page
+  , jsRootUrl                :: Url        -- ^ URL of the root folder for js file;
+                                           --   e.g. jsRootUrl </> qua-view.js is the place of
+                                           --    qua-view executable.
   } deriving Generic
 instance FromJSON  Settings
 instance ToJSON    Settings
@@ -50,6 +53,9 @@ instance Semigroup Settings where
     , viewUrl                  = if viewUrl s1 == viewUrl mempty
                                  then viewUrl s2
                                  else viewUrl s1
+    , jsRootUrl                = if jsRootUrl s1 == jsRootUrl mempty
+                                 then jsRootUrl s2
+                                 else jsRootUrl s1
     }
 instance Monoid Settings where
   mappend = (<>)
@@ -60,4 +66,5 @@ instance Monoid Settings where
      , postSubmissionUrl        = Nothing
      , reviewSettingsUrl        = Nothing
      , viewUrl                  = "" -- TODO: we need to decide on a better mempty value... index.html?
+     , jsRootUrl                = ""
      }

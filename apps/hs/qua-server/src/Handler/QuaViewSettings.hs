@@ -7,6 +7,8 @@ module Handler.QuaViewSettings
 
 import Import
 import qualified QuaTypes
+import System.FilePath (takeDirectory)
+import qualified Data.Text as Text
 
 getQuaViewSettingsNewR :: Handler Value
 getQuaViewSettingsNewR = quaViewSettingsR NewSubmissionR Nothing Nothing
@@ -28,13 +30,14 @@ quaViewSettingsR curRoute mScId mExId = do
   mUsrId <- maybeAuthId
   app <- getYesod
   req <- waiRequest
-  let routeUrl route = let appr = getApprootText guessApproot app req
-                       in  yesodRender app appr route []
-  returnJson $ QuaTypes.Settings {
+  let appr = getApprootText guessApproot app req
+      routeUrl route = yesodRender app appr route []
+  returnJson QuaTypes.Settings {
       loggingUrl               = Just $ "ws" <> drop 4 (routeUrl QVLoggingR)
     , luciUrl                  = mUsrId >> Just ("ws" <> drop 4 (routeUrl LuciR))
-    , getSubmissionGeometryUrl = mScId >>= return . routeUrl . SubmissionGeometryR
-    , postSubmissionUrl        = mExId >>= return . routeUrl . SubmissionsR
-    , reviewSettingsUrl        = mScId >>= return . routeUrl . QuaViewReviewSettingsR
+    , getSubmissionGeometryUrl = routeUrl . SubmissionGeometryR <$> mScId
+    , postSubmissionUrl        = routeUrl . SubmissionsR <$> mExId
+    , reviewSettingsUrl        = routeUrl . QuaViewReviewSettingsR <$> mScId
     , viewUrl                  = routeUrl curRoute
+    , jsRootUrl                = Text.pack . takeDirectory . Text.unpack . routeUrl $ StaticR js_qua_view_js
     }
