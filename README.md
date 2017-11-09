@@ -1,4 +1,19 @@
-## Attention ZuriHac 2017 haskellers!
+## Merging existing database from master branch
+
+Here is the minimal migration script.
+```
+ALTER TABLE "scenario_problem"  RENAME TO "exercise";
+ALTER SEQUENCE "scenario_problem_id_seq" RENAME TO "exercise_id_seq";
+ALTER INDEX "scenario_problem_pkey" RENAME TO "exercise_pkey";
+ALTER TABLE "scenario"          RENAME COLUMN "task_id" TO "exercise_id";
+ALTER TABLE "current_scenario"  RENAME COLUMN "task_id" TO "exercise_id";
+ALTER TABLE "vote_rating"       RENAME COLUMN "problem_id" TO "exercise_id";
+ALTER TABLE "rating"            RENAME COLUMN "problem_id" TO "exercise_id";
+ALTER TABLE "problem_criterion" RENAME COLUMN "problem_id" TO "exercise_id";
+ALTER TABLE "problem_criterion" RENAME TO "exercise_criterion";
+```
+
+## "I want to contribute the project!"
 
 I have prepared a set of [things](https://github.com/achirkin/qua-kit/issues) I want to do for the project. You are welcome to:
  * choose any issue you like
