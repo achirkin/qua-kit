@@ -14,8 +14,10 @@ import Database.Persist.Sql (fromSqlKey, toSqlKey, rawSql, Single(..))
 import qualified Data.Text as Text
 import qualified QuaTypes.Review as QtR
 
-postReviewsR :: ScenarioId -> Handler Value
-postReviewsR scenarioId = runJSONExceptT $ do
+postReviewsR :: CurrentScenarioId -> Handler Value
+postReviewsR cScId = runJSONExceptT $ do
+    cSc <- lift $ runDB $ get404 cScId
+    let scenarioId = currentScenarioHistoryScenarioId cSc
     (Entity userId user) <- maybeE "You must login to review." maybeAuth
     reviewPost <- requireJsonBody
 
@@ -40,15 +42,15 @@ postReviewsR scenarioId = runJSONExceptT $ do
       reviewId <- lift $ insert review
       return $ reviewToTReview (userName user) (Entity reviewId review)
 
-getReviewsR :: ScenarioId -> Handler Value
-getReviewsR scId = do
-    runDB $ do
-      _ <- get404 scId
-      reviews <- fetchReviewsFromDb scId
-      returnJson reviews
+getReviewsR :: CurrentScenarioId -> Handler Value
+getReviewsR cScId = runDB $ do
+  reviews <- fetchReviewsFromDb cScId
+  returnJson reviews
 
-fetchReviewsFromDb :: ScenarioId -> ReaderT SqlBackend Handler [QtR.Review]
-fetchReviewsFromDb scId = do
+fetchReviewsFromDb :: CurrentScenarioId -> ReaderT SqlBackend Handler [QtR.Review]
+fetchReviewsFromDb cScId = do
+  cSc <- get404 cScId
+  let scId = currentScenarioHistoryScenarioId cSc
   let query = Text.unlines
           ["SELECT \"user\".name, ??"
           ,"FROM review"

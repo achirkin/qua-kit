@@ -107,7 +107,7 @@ fetchExpertReviews uId = do
                  orderBy [desc $ expReview ^. ExpertReviewTimestamp]
                  limit newsLimit
                  return (expReview, scenario)
-  let renderReview (Entity _ r, Entity scId _) =
+  let renderReview (Entity _ r, Entity _ sc) =
         let stars =
               let grade = expertReviewGrade r
               in  mconcat $
@@ -115,7 +115,7 @@ fetchExpertReviews uId = do
                 replicate (5 - grade) [whamlet|<span.icon.icon-lg>star_border</span>|]
             widget =
               [whamlet|
-                ^{viewSubmissionBtn scId}
+                ^{viewSubmissionBtn sc}
                 <p .stars>
                   ^{stars}
                 <p>#{expertReviewComment r}
@@ -138,11 +138,11 @@ fetchReviews uId = do
                   orderBy [desc $ review ^. ReviewTimestamp]
                   limit newsLimit
                   return (review, scenario, criterion, user)
-  let renderReview (Entity _ r, Entity scId _, Entity _ crit, Entity _ reviewer) =
+  let renderReview (Entity _ r, Entity _ sc, Entity _ crit, Entity _ reviewer) =
         let critIcon = Blaze.preEscapedToMarkup $ criterionIcon crit
             widget =
               [whamlet|
-                ^{viewSubmissionBtn scId}
+                ^{viewSubmissionBtn sc}
                 <p .commentPara>
                   <span .critIcon>#{ critIcon }
                   <span class="icon icon24 text-brand-accent">
@@ -160,10 +160,10 @@ fetchReviews uId = do
 fetchBetterVotes :: UserId -> Handler [(UTCTime, Widget)]
 fetchBetterVotes = fetchVotesWithComment VoteBetterId renderReview
   where
-    renderReview (Entity _ v, Entity scId _) =
+    renderReview (Entity _ v, Entity _ sc) =
       let widget =
             [whamlet|
-              ^{viewSubmissionBtn scId}
+              ^{viewSubmissionBtn sc}
               <p>
                 <strong>Your submission was voted better than another
                 $maybe expl <- voteExplanation v
@@ -174,10 +174,10 @@ fetchBetterVotes = fetchVotesWithComment VoteBetterId renderReview
 fetchWorseVotes :: UserId -> Handler [(UTCTime, Widget)]
 fetchWorseVotes = fetchVotesWithComment VoteWorseId renderReview
   where
-    renderReview (Entity _ v, Entity scId _) =
+    renderReview (Entity _ v, Entity _ sc) =
       let widget =
             [whamlet|
-              ^{viewSubmissionBtn scId}
+              ^{viewSubmissionBtn sc}
               <p>
                 <strong>Another submission was voted even better than yours
                 $maybe expl <- voteExplanation v
@@ -235,9 +235,9 @@ renderVoteCountWidget (Just (Entity uId _)) = do
            else Nothing
 
 
-viewSubmissionBtn :: ScenarioId -> Widget
-viewSubmissionBtn scId = [whamlet|
+viewSubmissionBtn :: Scenario -> Widget
+viewSubmissionBtn sc = [whamlet|
   <div class="card-action-btn pull-right">
-    <a href=@{ SubmissionR scId }>
+    <a href=@{ FindSubmissionR (scenarioExerciseId sc) (scenarioAuthorId sc) }>
       <span .icon>visibility
   |]

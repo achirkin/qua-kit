@@ -150,12 +150,12 @@ mkSubmissionsWidget submissions = do
       |]
     [whamlet|
       $forall sub <- submissions
-        $with sc <- scenario sub
+        $with (Entity scId sc) <- scenario sub
           <div class="col-xl-3 col-lg-4 col-md-6 col-xs-12">
             <div.card.submissionCard>
               <aside.card-side.card-side-img.pull-left.card-side-moocimg>
                 <img
-                  src=@{ProposalPreviewR $ currentScenarioHistoryScenarioId sc}
+                  src=@{ProposalPreviewR scId}
                   width="200px" height="200px" style="margin-left: -25px;">
               <div.card-main.containerCard>
                 <div.card-inner style="margin: 10px 12px;">
@@ -183,7 +183,7 @@ mkSubmissionsWidget submissions = do
                         <p style="display: inline; margin: 0; padding:0; color: #b71c1c;)">
                           #{expertgrade}
                   <div.card-action-btn.pull-right>
-                    $with subViewLink <- SubmissionR $ currentScenarioHistoryScenarioId sc
+                    $with subViewLink <- SubmissionR scId
                       $if isExpert && (isNothing $ currentScenarioGrade sc)
                         <a.btn.btn-flat.btn-brand-accent.waves-attach.waves-effect
                             style="background: red; color: white !important;"
@@ -212,7 +212,7 @@ data CriterionData = CriterionData {
     }
 
 data Submission = Submission {
-      scenario        :: CurrentScenario
+      scenario        :: Entity CurrentScenario
     , authorName      :: Text
     , avgExpertGrade  :: Maybe Double
     , criterions      :: [CriterionData]
@@ -378,8 +378,8 @@ fetchLastSubmissions params = groupSubs <$> map convertTypes <$> rawSql query pr
       where
         (sub', subs') = go sub subs
         go y (x:xs)
-            | currentScenarioHistoryScenarioId (scenario y) ==
-              currentScenarioHistoryScenarioId (scenario x)
+            | currentScenarioHistoryScenarioId (entityVal $ scenario y) ==
+              currentScenarioHistoryScenarioId (entityVal $ scenario x)
                 = let crits = criterions y ++ criterions x
                   in  go (y {criterions = crits}) xs
             | otherwise = (y, x:xs)
@@ -435,7 +435,7 @@ convertTypes :: ( Single CurrentScenarioId --currentScId
                   , Single Double --rating
                   )
                 ) -> Submission
-convertTypes ( Single _currentScId
+convertTypes ( Single currentScId
              , ( Single historyScenarioId
                , Single authorId
                , Single exerciseId
@@ -453,7 +453,7 @@ convertTypes ( Single _currentScId
                )
              )
              = Submission {
-                scenario    = CurrentScenario {
+                scenario    = Entity currentScId $ CurrentScenario {
                   currentScenarioHistoryScenarioId = historyScenarioId
                 , currentScenarioAuthorId          = authorId
                 , currentScenarioExerciseId        = exerciseId

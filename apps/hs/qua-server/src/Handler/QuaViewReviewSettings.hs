@@ -7,19 +7,18 @@ import Handler.Mooc.Reviews (fetchReviewsFromDb, currentCriteria)
 import Import
 import qualified QuaTypes.Review as QtR
 
-getQuaViewReviewSettingsR :: ScenarioId -> Handler Value
-getQuaViewReviewSettingsR scId = do
-    sc  <- runDB $ get404 scId
+getQuaViewReviewSettingsR :: CurrentScenarioId -> Handler Value
+getQuaViewReviewSettingsR cScId = do
+    cSc  <- runDB $ get404 cScId
     app <- getYesod
     req <- waiRequest
     mUsrId <- maybeAuthId
     let routeUrl route = let appr = getApprootText guessApproot app req
                          in  yesodRender app appr route []
 
-    msc <- runDB $ get404 scId
-    criterions <- runDB $ currentCriteria $ scenarioExerciseId msc
-    reviews    <- runDB $ fetchReviewsFromDb scId
-    let canReview = maybe False (/= scenarioAuthorId sc) mUsrId
+    criterions <- runDB $ currentCriteria $ currentScenarioExerciseId cSc
+    reviews    <- runDB $ fetchReviewsFromDb cScId
+    let canReview = maybe False (/= currentScenarioAuthorId cSc) mUsrId
     returnJson QtR.ReviewSettings {
         criterions = flip map criterions $ \(Entity cId c) -> QtR.Criterion {
                           criterionId   = fromIntegral $ fromSqlKey cId
@@ -28,6 +27,6 @@ getQuaViewReviewSettingsR scId = do
                         }
       , reviews    = reviews
       , reviewsUrl = if canReview
-                     then Just $ routeUrl $ ReviewsR scId
+                     then Just $ routeUrl $ ReviewsR cScId
                      else Nothing
       }

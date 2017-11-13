@@ -15,8 +15,12 @@ import qualified Data.Text as Text
 import Application.Edx
 import Application.Grading
 
-postVoteForProposalR :: CriterionId -> ScenarioId -> ScenarioId -> Handler Html
-postVoteForProposalR cId better worse = do
+postVoteForProposalR :: CriterionId -> CurrentScenarioId -> CurrentScenarioId -> Handler Html
+postVoteForProposalR cId betterCScId worseCScId = do
+    betterSc <- runDB $ get404 betterCScId
+    worseSc  <- runDB $ get404 worseCScId
+    let better = currentScenarioHistoryScenarioId betterSc
+        worse  = currentScenarioHistoryScenarioId worseSc
     userId <- requireAuthId
     mResId <- getsSafeSession userSessionEdxResourceId
 
@@ -217,12 +221,12 @@ getCompareByCriterionR uId cId = do
         |]
 
 
-prepareDescription :: Scenario -> Text
-prepareDescription sc = if n > 3
+prepareDescription :: CurrentScenario -> Text
+prepareDescription cSc = if n > 3
                         then t
                         else unlines (ts ++ replicate (3 - n) "")
   where
-    t = scenarioDescription sc
+    t = currentScenarioDescription cSc
     ts = lines t
     n = length ts
 
@@ -249,7 +253,11 @@ getLeastPopularCriterion exId uId = getValue <$> rawSql query [toPersistValue ex
           ,"LIMIT 1;"
           ]
 
-getLeastPopularSubmissions :: ExerciseId -> UserId -> CriterionId -> ReaderT SqlBackend Handler (Maybe (Entity Scenario, Entity Scenario))
+getLeastPopularSubmissions :: ExerciseId
+                           -> UserId
+                           -> CriterionId
+                           -> ReaderT SqlBackend Handler
+                                (Maybe (Entity CurrentScenario, Entity CurrentScenario))
 getLeastPopularSubmissions exId uId cId = do
     r <- rawSql query ( [uid, uid, uid, toPersistValue exId, uid, cid])
     case r of
@@ -264,21 +272,21 @@ getLeastPopularSubmissions exId uId cId = do
     query = Text.unlines
           ["-- first query gets all submissions ordered by how many times they were voted"
           ,"WITH sc AS ("
-          ,"SELECT scenario.*, t.nn, t.mm"
-          ,"FROM scenario"
-          ,"INNER JOIN ( SELECT scenario.author_id as author_id, scenario.exercise_id as exercise_id, MAX(scenario.last_update) as last_update, SUM (COALESCE(v.m, 0)) as mm, SUM (COALESCE(v.n, 0))  as nn"
-          ,"             FROM scenario"
+          ,"SELECT current_scenario.*, t.nn, t.mm"
+          ,"FROM current_scenario"
+          ,"INNER JOIN ( SELECT current_scenario.author_id as author_id, current_scenario.exercise_id as exercise_id, MAX(current_scenario.last_update) as last_update, SUM (COALESCE(v.m, 0)) as mm, SUM (COALESCE(v.n, 0))  as nn"
+          ,"             FROM current_scenario"
           ,"             LEFT OUTER JOIN"
           ,"                 ( SELECT  vote.better_id as sid, COALESCE(sum(CASE WHEN vote.voter_id = ? THEN 1 ELSE 0 END),0) as m, count(*) as n FROM vote GROUP BY  vote.better_id"
           ,"                   UNION ALL"
           ,"                   SELECT  vote.worse_id as sid, COALESCE(sum(CASE WHEN vote.voter_id = ? THEN 1 ELSE 0 END),0)  as m, count(*) as n FROM vote GROUP BY  vote.worse_id"
           ,"                 ) v"
-          ,"                          ON scenario.id = v.sid"
-          ,"             WHERE scenario.author_id != ? AND scenario.exercise_id = ?"
-          ,"             GROUP BY scenario.author_id, scenario.exercise_id"
+          ,"                ON current_scenario.history_scenario_id = v.sid"
+          ,"             WHERE current_scenario.author_id != ? AND current_scenario.exercise_id = ?"
+          ,"             GROUP BY current_scenario.author_id, current_scenario.exercise_id"
           ,"             ORDER BY mm ASC, nn ASC"
           ,"           ) t"
-          ,"        ON t.author_id = scenario.author_id AND t.exercise_id = scenario.exercise_id AND t.last_update = scenario.last_update"
+          ,"        ON t.author_id = current_scenario.author_id AND t.exercise_id = current_scenario.exercise_id AND t.last_update = current_scenario.last_update"
           ,")"
           ,"-- get all pairs of designs"
           ,"SELECT s1.id, s2.id"

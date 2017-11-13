@@ -13,20 +13,20 @@ import qualified Data.Text as Text
 getQuaViewSettingsNewR :: Handler Value
 getQuaViewSettingsNewR = quaViewSettingsR NewSubmissionR Nothing Nothing
 
-getQuaViewSettingsFromScIdR :: ScenarioId -> Handler Value
-getQuaViewSettingsFromScIdR scId = do
-  sc <- runDB $ get404 scId
-  quaViewSettingsR (SubmissionR scId) (Just scId) (Just $ scenarioExerciseId sc)
+getQuaViewSettingsFromScIdR :: CurrentScenarioId -> Handler Value
+getQuaViewSettingsFromScIdR cScId = do
+  cSc <- runDB $ get404 cScId
+  quaViewSettingsR (SubmissionR cScId) (Just cScId) (Just $ currentScenarioExerciseId cSc)
 
 getQuaViewSettingsFromExIdR :: ExerciseId -> Handler Value
 getQuaViewSettingsFromExIdR mExId =
   quaViewSettingsR (NewSubmissionForExerciseR mExId) Nothing $ Just mExId
 
 quaViewSettingsR :: Route App
-                 -> Maybe ScenarioId
+                 -> Maybe CurrentScenarioId
                  -> Maybe ExerciseId
                  -> Handler Value
-quaViewSettingsR curRoute mScId mExId = do
+quaViewSettingsR curRoute mcScId mExId = do
   mUsrId <- maybeAuthId
   app <- getYesod
   req <- waiRequest
@@ -35,9 +35,9 @@ quaViewSettingsR curRoute mScId mExId = do
   returnJson QuaTypes.Settings {
       loggingUrl               = Just $ "ws" <> drop 4 (routeUrl QVLoggingR)
     , luciUrl                  = mUsrId >> Just ("ws" <> drop 4 (routeUrl LuciR))
-    , getSubmissionGeometryUrl = routeUrl . SubmissionGeometryR <$> mScId
+    , getSubmissionGeometryUrl = routeUrl . SubmissionGeometryR <$> mcScId
     , postSubmissionUrl        = routeUrl . SubmissionsR <$> mExId
-    , reviewSettingsUrl        = routeUrl . QuaViewReviewSettingsR <$> mScId
+    , reviewSettingsUrl        = routeUrl . QuaViewReviewSettingsR <$> mcScId
     , viewUrl                  = routeUrl curRoute
     , jsRootUrl                = Text.pack . takeDirectory . Text.unpack . routeUrl $ StaticR js_qua_view_js
     }

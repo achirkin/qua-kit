@@ -12,36 +12,38 @@ import Import.Util
 import Application.Grading
 import Application.Edx
 
-postWriteExpertReviewR :: ScenarioId -> Handler Value
-postWriteExpertReviewR scId = runJSONExceptT $ do
+postWriteExpertReviewR :: CurrentScenarioId -> Handler Value
+postWriteExpertReviewR cScId = runJSONExceptT $ do
     userId  <- maybeE "You must login to review." maybeAuthId
     grade   <- maybeE "You must specify a grade." $
                  liftM (>>= readMay) $ lookupPostParam "grade"
     comment <- lift $ fromMaybe "" <$> lookupPostParam "comment"
     t       <- liftIO getCurrentTime
+    cSc     <- lift $ runDB $ get404 cScId
     ExceptT $ runDB $ runExceptT $ do
-      scenario <- maybeE "Cannot find a corresponding scenario." $ get scId
-      when (userId == scenarioAuthorId scenario) $
+      when (userId == currentScenarioAuthorId cSc) $
         throwE "You cannot review yourself!"
       when (length comment < 80) $
         throwE "Comment needs to be at least 80 characters."
-      _ <- lift $ upsert (ExpertReview userId scId comment grade t)
+      _ <- lift $ upsert (ExpertReview userId (currentScenarioHistoryScenarioId cSc) comment grade t)
                    [ ExpertReviewGrade     =. grade
                    , ExpertReviewComment   =. comment
                    , ExpertReviewTimestamp =. t ]
 
       -- expert grade overrules votes and thus overwrites existing grade
-      lift $ updateCurrentScenarioGrade scId
+      lift $ updateCurrentScenarioGrade $ currentScenarioHistoryScenarioId cSc
       -- queue new grade for sending to edX
-      lift $ queueDesignGrade scId
+      lift $ queueDesignGrade $ currentScenarioHistoryScenarioId cSc
 
     return $ object [ "grade"     .= grade
                     , "comment"   .= comment
                     , "timestamp" .= t
                     ]
 
-viewExpertReviews :: ScenarioId -> Handler Widget
-viewExpertReviews scId = do
+viewExpertReviews :: CurrentScenarioId -> Handler Widget
+viewExpertReviews cScId = do
+  cSc <- runDB $ get404 cScId
+  let scId = currentScenarioHistoryScenarioId cSc
   reviews <- runDB $ selectList [ExpertReviewScenarioId ==. scId] []
   reviewsAndUsers <- forM reviews $ \(Entity _ r) -> do
     mReviewer <- runDB $ get $ expertReviewReviewerId r
@@ -74,8 +76,10 @@ viewExpertReviews scId = do
                   #{expertReviewComment review}
     |]
 
-writeExpertReview :: UserId -> ScenarioId -> Handler Widget
-writeExpertReview userId scId = do
+writeExpertReview :: UserId -> CurrentScenarioId -> Handler Widget
+writeExpertReview userId cScId = do
+  cSc <- runDB $ get404 cScId
+  let scId = currentScenarioHistoryScenarioId cSc
   reviewExists <- liftM isJust $ runDB $ getBy $ ExpertReviewOf userId scId
   return $ do
     let starNrs = [1..5]::[Int]
@@ -118,7 +122,7 @@ writeExpertReview userId scId = do
         $('#submitExpertReview').click(function(e){
           if (grade && commentField.value.length > 80) {
             $.post(
-              { url: '@{WriteExpertReviewR scId}'
+              { url: '@{WriteExpertReviewR cScId}'
               , data: { grade:   grade
                       , comment: commentField.value
                       }
