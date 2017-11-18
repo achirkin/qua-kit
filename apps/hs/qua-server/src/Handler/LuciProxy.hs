@@ -1,4 +1,5 @@
 {-# OPTIONS_HADDOCK hide, prune #-}
+{-# OPTIONS_GHC -fno-warn-orphans #-}
 module Handler.LuciProxy where
 
 
@@ -63,8 +64,8 @@ luciApp = requireLuciConnection $ \luciAddr -> do
         toLuci = Network.appSink appData
         fromLuci :: Producer (WebSocketsT Handler) ByteString
         fromLuci = Network.appSource appData
-        warnError ::LuciError e -> WebSocketsT Handler ()
-        warnError le = pure () -- $(logWarn) $ pack (show le)
+        warnError :: LuciError Text -> WebSocketsT Handler ()
+        warnError le = $(logWarn) $ pack (show le)
         clientDebugConduit = CList.mapM (\x -> ($(logDebug) $ "CLIENT: " <> pack (show x)) >> return x)
         luciDebugConduit = CList.mapM (\x -> ($(logDebug) $ "LUCI: " <> pack (show x)) >> return x)
     race_
