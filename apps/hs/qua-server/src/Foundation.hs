@@ -271,8 +271,8 @@ instance YesodAuth App where
     authHttpManager = getHttpManager
 
 ldapConf :: LdapAuthConf
-ldapConf = setHost (Insecure "auth.arch.ethz.ch") $ setPort 636
-  $ mkLdapConf Nothing "cn=users,dc=ethz,dc=ch"
+ldapConf = setHost (Secure "isla.ethz.ch") $ setPort 636
+  $ mkLdapConf Nothing "cn=users,dc=isla,dc=ethz,dc=ch"
 
 
 
