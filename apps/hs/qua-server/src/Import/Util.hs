@@ -13,5 +13,5 @@ runJSONExceptT :: (ToJSON a)
                => ExceptT Text Handler a -> Handler Value
 runJSONExceptT m = runExceptT m >>= f
   where
-    f (Left err) = sendResponseStatus badRequest400 err
+    f (Left err) = sendResponseStatus badRequest400 $ object [ "message" .= err ]
     f (Right v ) = returnJson v

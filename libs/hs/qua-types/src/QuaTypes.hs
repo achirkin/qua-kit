@@ -22,7 +22,7 @@ data Settings = Settings {
     loggingUrl               :: Maybe Url  -- ^ WebSocket URL to send user analytics to
   , luciUrl                  :: Maybe Url  -- ^ WebSocket URL to connect to Luci
   , getSubmissionGeometryUrl :: Maybe Url  -- ^ URL to GET geoJSON for current submission
-  , postSubmissionUrl        :: Maybe Url  -- ^ URL for students to POST their new submission to
+  , putSubmissionUrl         :: Maybe Url  -- ^ URL for students to PUT their new or updated submission to
   , reviewSettingsUrl        :: Maybe Url  -- ^ URL to get settings related to reviews
   , viewUrl                  :: Url        -- ^ URL of current qua-viewer page
   , jsRootUrl                :: Url        -- ^ URL of the root folder for js file;
@@ -48,7 +48,7 @@ instance Semigroup Settings where
       loggingUrl               = loggingUrl s1               <|> loggingUrl s2
     , luciUrl                  = luciUrl s1                  <|> luciUrl s2
     , getSubmissionGeometryUrl = getSubmissionGeometryUrl s1 <|> getSubmissionGeometryUrl s2
-    , postSubmissionUrl        = postSubmissionUrl s1        <|> postSubmissionUrl s2
+    , putSubmissionUrl         = putSubmissionUrl s1         <|> putSubmissionUrl s2
     , reviewSettingsUrl        = reviewSettingsUrl s1        <|> reviewSettingsUrl s2
     , viewUrl                  = if viewUrl s1 == viewUrl mempty
                                  then viewUrl s2
@@ -63,7 +63,7 @@ instance Monoid Settings where
        loggingUrl               = Nothing
      , luciUrl                  = Nothing
      , getSubmissionGeometryUrl = Nothing
-     , postSubmissionUrl        = Nothing
+     , putSubmissionUrl         = Nothing
      , reviewSettingsUrl        = Nothing
      , viewUrl                  = "" -- TODO: we need to decide on a better mempty value... index.html?
      , jsRootUrl                = ""
