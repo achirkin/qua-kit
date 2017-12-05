@@ -26,7 +26,7 @@ quaViewSettingsR :: Route App
                  -> Maybe ScenarioId
                  -> Maybe ExerciseId
                  -> Handler Value
-quaViewSettingsR curRoute mScId mExId = do
+quaViewSettingsR curRoute mScId _ = do
   mUsrId <- maybeAuthId
   app <- getYesod
   req <- waiRequest
@@ -40,4 +40,5 @@ quaViewSettingsR curRoute mScId mExId = do
     , reviewSettingsUrl        = routeUrl . QuaViewReviewSettingsR <$> mScId
     , viewUrl                  = routeUrl curRoute
     , jsRootUrl                = Text.pack . takeDirectory . Text.unpack . routeUrl $ StaticR js_qua_view_js
+    , permissions              = QuaTypes.permissions mempty
     }
