@@ -39,23 +39,24 @@
 /mooc/criteria/img/#CriterionId                            CriteriaImgR GET
 /mooc/survey                                               SurveyR GET POST
 
-/submissions/view/review-settings/#ScenarioId              QuaViewReviewSettingsR GET
+/submissions/view/review-settings/#CurrentScenarioId       QuaViewReviewSettingsR GET
 /submissions/ebrowse/                                      BrowseProposalsForExpertsR GET
 /submissions/compare                                       CompareProposalsR GET
-/submissions/vote/#CriterionId/#ScenarioId/#ScenarioId     VoteForProposalR POST
+/submissions/vote/#CriterionId/#CurrentScenarioId/#CurrentScenarioId  VoteForProposalR POST
 /submissions/submit/#ExerciseId                            SubmissionsR POST
 /submissions/settings                                      QuaViewSettingsNewR GET
 /exercises/#ExerciseId/settings                            QuaViewSettingsFromExIdR GET
-!/submissions/#ScenarioId/settings                         QuaViewSettingsFromScIdR GET
-!/submissions/#ScenarioId/preview                          ProposalPreviewR GET
-!/submissions/#ScenarioId/reviews                          ReviewsR GET POST
-!/submissions/#ScenarioId/expertreview                     WriteExpertReviewR POST
-!/submissions/#ScenarioId/geometry                         SubmissionGeometryR GET
+!/submissions/#CurrentScenarioId/settings                  QuaViewSettingsFromScIdR GET
+!/submissions/#CurrentScenarioId/preview                   ProposalPreviewR GET
+!/submissions/#CurrentScenarioId/reviews                   ReviewsR GET POST
+!/submissions/#CurrentScenarioId/expertreview              WriteExpertReviewR POST
+!/submissions/#CurrentScenarioId/geometry                  SubmissionGeometryR GET
 !/submissions/browse/#Int                                  BrowseProposalsR GET
 /submissions/new                                           NewSubmissionR GET
 /submissions/new-for-exercise/#ExerciseId                  NewSubmissionForExerciseR GET
 /submissions/mycurrent                                     RedirectToCurrentScenarioR GET
-!/submissions/#ScenarioId                                  SubmissionR GET PUT
+/submissions/find/#ExerciseId/#UserId                      FindSubmissionR GET
+!/submissions/#CurrentScenarioId                           SubmissionR GET PUT
 
 /renameme                           RenameMeR GET
 /setupAcc/#UserId                   SetupLocalAccount POST

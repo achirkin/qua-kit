@@ -5,8 +5,9 @@ module Handler.Mooc.ProposalPreview
 
 import Import
 
-getProposalPreviewR :: ScenarioId -> Handler TypedContent
-getProposalPreviewR ident = do
-    scenario <- runDB $ get404 ident
+getProposalPreviewR :: CurrentScenarioId -> Handler TypedContent
+getProposalPreviewR cScId = do
+    cSc <- runDB $ get404 cScId
+    sc  <- runDB $ get404 $ currentScenarioHistoryScenarioId cSc
     addHeader "Content-Disposition" "inline"
-    sendResponse (("image/png" :: ByteString), toContent $ scenarioImage scenario)
+    sendResponse (("image/png" :: ByteString), toContent $ scenarioImage sc)
