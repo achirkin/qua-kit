@@ -10,12 +10,18 @@ import Import
 import Control.Monad.Trans.Except
 import Yesod.Auth.Email (saltPass)
 
+-- | Try to fetch exercise id from the user session first,
+--   then try to get the last enrolled exercise id.
 maybeFetchExerciseId :: UserId -> Handler (Maybe ExerciseId)
 maybeFetchExerciseId usrId = do
-  muserExercise <- runDB $ selectFirst
-      [UserExerciseUserId ==. usrId]
-      [Desc UserExerciseEnrolled]
-  return $ userExerciseExerciseId . entityVal <$> muserExercise
+  mSessionExId <- getsSafeSession userSessionCurrentExerciseId
+  case mSessionExId of
+    Just exId -> return $ Just exId
+    Nothing -> do
+      muserExercise <- runDB $ selectFirst
+          [UserExerciseUserId ==. usrId]
+          [Desc UserExerciseEnrolled]
+      return $ userExerciseExerciseId . entityVal <$> muserExercise
 
 postSetupLocalAccount :: UserId -> Handler Value
 postSetupLocalAccount uId = fmap send . runExceptT $ do

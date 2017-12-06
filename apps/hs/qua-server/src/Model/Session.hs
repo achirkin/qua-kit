@@ -1,10 +1,13 @@
 {-# OPTIONS_HADDOCK hide, prune #-}
+-- | Currently, all session variable is stored in the database table user_prop.
+--   It has nothing todo with user cookies since the last update!
 module Model.Session
     ( SessionLens
     , getsSafeSession
     , deleteSafeSession
     , setSafeSession
     , parseSqlKey
+    , userSessionCurrentExerciseId
     , userSessionCustomExerciseCount
     , userSessionCompareCounter
     , userSessionEdxResourceId
@@ -35,6 +38,9 @@ userSessionEdxResourceId :: SessionLens EdxResourceId
 userSessionEdxResourceId =
     SessionLens (>>= parseSqlKey) (T.pack . show . fromSqlKey) "edx_resource_id"
 
+userSessionCurrentExerciseId :: SessionLens ExerciseId
+userSessionCurrentExerciseId =
+    SessionLens (>>= parseSqlKey) (T.pack . show . fromSqlKey) "currentExerciseId"
 
 sessionVar :: SessionLens a -> Text
 sessionVar = ("session_" <>) . convKey
@@ -50,16 +56,12 @@ getsSafeSession ::
     => SessionLens b
     -> HandlerT app IO (Maybe b)
 getsSafeSession sl@SessionLens {..} = do
-    mval <- convFunc <$> lookupSession convKey
-    case mval of
-        Just val -> pure $ Just val
-        Nothing -> do
-            mauth <- maybeAuthId
-            case mauth of
-                Nothing -> pure Nothing
-                Just uid -> do
-                    mprop <- runDB $ getBy $ UserProperty uid $ sessionVar sl
-                    pure $ convFunc ((userPropValue . entityVal) <$> mprop)
+    mauth <- maybeAuthId
+    case mauth of
+      Nothing -> pure Nothing
+      Just uid -> do
+        mprop <- runDB $ getBy $ UserProperty uid $ sessionVar sl
+        pure $ convFunc ((userPropValue . entityVal) <$> mprop)
 
 deleteSafeSession ::
        ( YesodAuth app
@@ -74,9 +76,9 @@ deleteSafeSession ::
 deleteSafeSession sl = do
     mauth <- maybeAuthId
     case mauth of
-        Nothing -> pure ()
-        Just uid -> runDB $ deleteBy $ UserProperty uid $ sessionVar sl
-    deleteSession $ convKey sl
+      Nothing -> pure ()
+      Just uid -> runDB $ deleteBy $ UserProperty uid $ sessionVar sl
+
 
 -- | sets cookie and also upserts UserProp in DB
 setSafeSession ::
@@ -91,17 +93,13 @@ setSafeSession ::
     -> b
     -> HandlerT app IO ()
 setSafeSession sl@SessionLens {..} val = do
-    setSession convKey $ convInvFunc val
     mauth <- maybeAuthId
     case mauth of
-        Nothing -> pure ()
-        Just uid ->
-            void $
-            runDB $
-            upsertBy
-                (UserProperty uid $ sessionVar sl)
-                (UserProp uid (sessionVar sl) $ convInvFunc val)
-                [UserPropValue =. convInvFunc val]
+      Nothing -> pure ()
+      Just uid -> void $ runDB $ upsertBy
+        (UserProperty uid $ sessionVar sl)
+        (UserProp uid (sessionVar sl) $ convInvFunc val)
+        [UserPropValue =. convInvFunc val]
 
 parseSqlKey :: (ToBackendKey SqlBackend a) => Text -> Maybe (Key a)
 parseSqlKey t =

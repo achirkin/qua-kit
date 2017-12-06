@@ -33,17 +33,24 @@ quaViewSettingsR :: Route App
                  -> Maybe UserId
                  -> QuaTypes.Permissions
                  -> Handler Value
-quaViewSettingsR curRoute mcExId mUsrId perms = do
+quaViewSettingsR curRoute mcExId mAuthorId perms = do
   app <- getYesod
   req <- waiRequest
+  mUserId <- maybeAuthId
+      -- show a submission url iff authorId == userId
+  let filteredSubmissionR = case (==) <$> mUserId <*> mAuthorId of
+        Just True  -> SubmissionR <$> mcExId <*> mAuthorId
+        Nothing    -> Nothing
+        Just False -> Nothing
+
   let appr = getApprootText guessApproot app req
       routeUrl route = yesodRender app appr route []
   returnJson QuaTypes.Settings {
       loggingUrl               = Just $ "ws" <> drop 4 (routeUrl QVLoggingR)
-    , luciUrl                  = mUsrId >> Just ("ws" <> drop 4 (routeUrl LuciR))
-    , getSubmissionGeometryUrl = fmap routeUrl $ SubmissionGeometryR <$> mcExId <*> mUsrId
-    , putSubmissionUrl         = fmap routeUrl $ SubmissionR <$> mcExId <*> mUsrId
-    , reviewSettingsUrl        = fmap routeUrl $ QuaViewReviewSettingsR <$> mcExId <*> mUsrId
+    , luciUrl                  = ("ws" <> drop 4 (routeUrl LuciR)) <$ mUserId
+    , getSubmissionGeometryUrl = fmap routeUrl $ SubmissionGeometryR <$> mcExId <*> mAuthorId
+    , putSubmissionUrl         = routeUrl <$> filteredSubmissionR
+    , reviewSettingsUrl        = fmap routeUrl $ QuaViewReviewSettingsR <$> mcExId <*> mAuthorId
     , viewUrl                  = routeUrl curRoute
     , jsRootUrl                = Text.pack . takeDirectory . Text.unpack . routeUrl $ StaticR js_qua_view_js
     , permissions              = perms

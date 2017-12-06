@@ -523,6 +523,7 @@ maybeEnroll = do
     case (mExId, musrId) of
         (Just exId, Just usrId) -> do
           $(logDebug) $ "Enrolling new user in exercise " <> tshow (fromSqlKey exId)
+          setSafeSession userSessionCurrentExerciseId exId
           time   <- liftIO getCurrentTime
           void $ runDB $ upsert (UserExercise usrId exId time)
             [ UserExerciseUserId =. usrId
