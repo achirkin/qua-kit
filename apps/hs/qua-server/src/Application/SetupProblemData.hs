@@ -36,7 +36,7 @@ importProblemRun0 pool = do
     flip runSqlPool pool $ do
       -- Id of the firt problem (Sep-Nov 2016)
       let pId = toSqlKey 0
-      repsert pId (Exercise sctaskpreview sctaskfile "Empower Shack scenario" 0.001 "oceronetidasqven")
+      repsert pId (Exercise sctaskpreview sctaskfile "Empower Shack scenario" 0.001 False "oceronetidasqven")
       cIdCentrality    <- upsertCriterion cCentrality
       cIdConnectivity  <- upsertCriterion cConnectivity
       cIdAccessibility <- upsertCriterion cAccessibility
@@ -65,7 +65,7 @@ importProblemRun1 pool = do
     flip runSqlPool pool $ do
       -- Id of the firt problem (Sep-Nov 2016)
       let pId = toSqlKey 1
-      repsert pId (Exercise sctaskpreview sctaskfile "Empower Shack scenario 2" 0.5 "duholorinelonedi")
+      repsert pId (Exercise sctaskpreview sctaskfile "Empower Shack scenario 2" 0.5 False "duholorinelonedi")
       cIdDistribution  <- upsertCriterion cDistribution
       cIdAccessibility <- upsertCriterion cAccessibility
       cIdVisibility    <- upsertCriterion cVisibility

@@ -71,14 +71,24 @@ instance Monoid Settings where
      , reviewSettingsUrl        = Nothing
      , viewUrl                  = "" -- TODO: we need to decide on a better mempty value... index.html?
      , jsRootUrl                = ""
-     , permissions              = Permissions {
-         canEditProperties        = True
-       }
+     , permissions              = Permissions
+        { canEditProperties      = True
+        , canEraseReloadGeometry = True
+        , canAddDeleteGeometry   = True
+        , canDownloadGeometry    = True
+        , canModifyStaticObjects = True
+        , showHiddenProperties   = False
+        }
      }
 
 -- | Some Bools so we can easily toggle functionality on and off
-data Permissions = Permissions {
-    canEditProperties        :: Bool
+data Permissions = Permissions
+  { canEditProperties      :: Bool
+  , canEraseReloadGeometry :: Bool
+  , canAddDeleteGeometry   :: Bool
+  , canDownloadGeometry    :: Bool
+  , canModifyStaticObjects :: Bool
+  , showHiddenProperties   :: Bool
   } deriving Generic
 instance FromJSON  Permissions
 instance ToJSON    Permissions

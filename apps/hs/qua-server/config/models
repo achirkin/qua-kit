@@ -68,11 +68,12 @@ EdxGradingQueue
 --   Keeps description of an exercise (either edX or workshop),
 --   and a template starting geometry.
 Exercise
-    image            ByteString
-    geometry         ByteString
-    description      Text
-    scale            Double
-    invitationSecret Text
+    image             ByteString
+    geometry          ByteString
+    description       Text
+    scale             Double
+    canAddDeleteGeom  Bool default=False
+    invitationSecret  Text
     deriving Show
     deriving Eq
     deriving Ord

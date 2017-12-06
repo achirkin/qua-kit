@@ -16,8 +16,13 @@ getQuaViewEditorSettingsR :: Handler Value
 getQuaViewEditorSettingsR
   = quaViewSettingsR QuaViewEditorR Nothing Nothing
     QuaTypes.Permissions
-    { canEditProperties = True
-    }
+       { canEditProperties      = True
+       , canEraseReloadGeometry = True
+       , canAddDeleteGeometry   = True
+       , canDownloadGeometry    = True
+       , canModifyStaticObjects = True
+       , showHiddenProperties   = False
+       }
 
 -- | These settings are for students when we know their exercise id,
 --   can save exercise submissions, write reviews, etc.
@@ -25,8 +30,13 @@ getQuaViewExerciseSettingsR :: ExerciseId -> UserId -> Handler Value
 getQuaViewExerciseSettingsR exId uId
   = quaViewSettingsR (SubmissionR exId uId) (Just exId) (Just uId)
     QuaTypes.Permissions
-    { canEditProperties = False
-    }
+       { canEditProperties      = False
+       , canEraseReloadGeometry = False
+       , canAddDeleteGeometry   = False
+       , canDownloadGeometry    = False
+       , canModifyStaticObjects = False
+       , showHiddenProperties   = False
+       }
 
 quaViewSettingsR :: Route App
                  -> Maybe ExerciseId

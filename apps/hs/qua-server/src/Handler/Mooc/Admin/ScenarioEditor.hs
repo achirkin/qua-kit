@@ -53,6 +53,7 @@ postAdminCreateScenarioR = do
                     , exerciseImage = imageBs
                     , exerciseGeometry = geometryBs
                     , exerciseScale = newScenarioDataScale
+                    , exerciseCanAddDeleteGeom = False
                     , exerciseInvitationSecret = invitationSecret
                     }
             showForm (Just dat) [] widget enctype
