@@ -1,6 +1,7 @@
 {-# LANGUAGE CPP #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE Strict #-}
 
 -- | Define serializable data types to enable interoperability between
 --   qua-server and qua-view.
@@ -10,6 +11,7 @@
 --   specific to particular widgets.
 module QuaTypes (
     Settings (..)
+  , Permissions (..)
   ) where
 
 import Control.Applicative ((<|>))
@@ -19,15 +21,16 @@ import QuaTypes.Commons
 
 -- | General qua-view settings
 data Settings = Settings {
-    loggingUrl               :: Maybe Url  -- ^ WebSocket URL to send user analytics to
-  , luciUrl                  :: Maybe Url  -- ^ WebSocket URL to connect to Luci
-  , getSubmissionGeometryUrl :: Maybe Url  -- ^ URL to GET geoJSON for current submission
-  , putSubmissionUrl         :: Maybe Url  -- ^ URL for students to PUT their new or updated submission to
-  , reviewSettingsUrl        :: Maybe Url  -- ^ URL to get settings related to reviews
-  , viewUrl                  :: Url        -- ^ URL of current qua-viewer page
-  , jsRootUrl                :: Url        -- ^ URL of the root folder for js file;
-                                           --   e.g. jsRootUrl </> qua-view.js is the place of
-                                           --    qua-view executable.
+    loggingUrl               :: Maybe Url    -- ^ WebSocket URL to send user analytics to
+  , luciUrl                  :: Maybe Url    -- ^ WebSocket URL to connect to Luci
+  , getSubmissionGeometryUrl :: Maybe Url    -- ^ URL to GET geoJSON for current submission
+  , putSubmissionUrl         :: Maybe Url    -- ^ URL for students to PUT their new or updated submission to
+  , reviewSettingsUrl        :: Maybe Url    -- ^ URL to get settings related to reviews
+  , viewUrl                  :: Url          -- ^ URL of current qua-viewer page
+  , jsRootUrl                :: Url          -- ^ URL of the root folder for js file;
+                                             --   e.g. jsRootUrl </> qua-view.js is the place of
+                                             --   qua-view executable.
+  , permissions              :: Permissions  -- ^ contains mostly booleans
   } deriving Generic
 instance FromJSON  Settings
 instance ToJSON    Settings
@@ -40,7 +43,7 @@ instance ToJSON    Settings
 --   it prefers left settings fields if they exist
 --   and gets right fields overwise.
 --   Therefore, we can use it to overwrite default settings with ones obtained
---   from the server of in another way:
+--   from the server or in another way:
 --
 --   > currentSettings = reallyGoodSettings <> someFairSettings <> defaultSettings <> mempty
 instance Semigroup Settings where
@@ -56,6 +59,7 @@ instance Semigroup Settings where
     , jsRootUrl                = if jsRootUrl s1 == jsRootUrl mempty
                                  then jsRootUrl s2
                                  else jsRootUrl s1
+    , permissions              = permissions s1
     }
 instance Monoid Settings where
   mappend = (<>)
@@ -67,4 +71,18 @@ instance Monoid Settings where
      , reviewSettingsUrl        = Nothing
      , viewUrl                  = "" -- TODO: we need to decide on a better mempty value... index.html?
      , jsRootUrl                = ""
+     , permissions              = Permissions {
+         canEditProperties        = True
+       }
      }
+
+-- | Some Bools so we can easily toggle functionality on and off
+data Permissions = Permissions {
+    canEditProperties        :: Bool
+  } deriving Generic
+instance FromJSON  Permissions
+instance ToJSON    Permissions
+#ifndef ghcjs_HOST_OS
+  where
+    toEncoding = genericToEncoding defaultOptions -- see Yesod.Core.Json
+#endif

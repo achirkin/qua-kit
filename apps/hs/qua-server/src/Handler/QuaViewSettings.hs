@@ -40,4 +40,5 @@ quaViewSettingsR curRoute mcScId mExId = do
     , reviewSettingsUrl        = routeUrl . QuaViewReviewSettingsR <$> mcScId
     , viewUrl                  = routeUrl curRoute
     , jsRootUrl                = Text.pack . takeDirectory . Text.unpack . routeUrl $ StaticR js_qua_view_js
+    , permissions              = QuaTypes.permissions mempty
     }
