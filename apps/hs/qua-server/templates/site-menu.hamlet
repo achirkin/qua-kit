@@ -4,7 +4,7 @@
       <a class="menu-logo" href="@{MoocHomeR}">QUA-KIT
       <ul class="nav">
         <li>
-          <a class="waves-attach waves-effect" href="@{RedirectToCurrentScenarioR}">
+          <a class="waves-attach waves-effect" href="@{RedirectToQuaViewEditR}">
             Work on a design
           <a class="waves-attach waves-effect" href="@{BrowseProposalsR 1}">
             Explore submissions

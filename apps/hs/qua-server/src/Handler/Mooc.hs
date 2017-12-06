@@ -238,6 +238,6 @@ renderVoteCountWidget (Just (Entity uId _)) = do
 viewSubmissionBtn :: Scenario -> Widget
 viewSubmissionBtn sc = [whamlet|
   <div class="card-action-btn pull-right">
-    <a href=@{ FindSubmissionR (scenarioExerciseId sc) (scenarioAuthorId sc) }>
+    <a href=@{ SubmissionR (scenarioExerciseId sc) (scenarioAuthorId sc) }>
       <span .icon>visibility
   |]

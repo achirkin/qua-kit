@@ -15,10 +15,11 @@ import qualified Data.Text as Text
 import Application.Edx
 import Application.Grading
 
-postVoteForProposalR :: CriterionId -> CurrentScenarioId -> CurrentScenarioId -> Handler Html
-postVoteForProposalR cId betterCScId worseCScId = do
-    betterSc <- runDB $ get404 betterCScId
-    worseSc  <- runDB $ get404 worseCScId
+postVoteForProposalR :: ExerciseId -> CriterionId
+                     -> UserId -> UserId -> Handler Html
+postVoteForProposalR exId cId betterUId worseUId = do
+    Entity betterCScId betterSc <- runDB . getBy404 $ SubmissionOf betterUId exId
+    Entity worseCScId  worseSc  <- runDB . getBy404 $ SubmissionOf worseUId  exId
     let better = currentScenarioHistoryScenarioId betterSc
         worse  = currentScenarioHistoryScenarioId worseSc
     userId <- requireAuthId
@@ -98,7 +99,9 @@ getCompareByCriterionR uId cId = do
     Nothing -> do
       setMessage "I am sorry, seems like you have voted too much already."
       fullLayout Nothing "Error" mempty
-    Just (Entity k1 s1, Entity k2 s2) -> do
+    Just (Entity _ s1, Entity _ s2) -> do
+      let u1 = currentScenarioAuthorId s1
+          u2 = currentScenarioAuthorId s2
       _ <- getMessages
       fullLayout (Just . preEscapedToMarkup $ criterionIcon criterion)
                  ("Compare designs according to a "
@@ -113,7 +116,7 @@ getCompareByCriterionR uId cId = do
         toWidgetHead
           [julius|
             function selectLeft() {
-              $('#submitvoteform').attr('action','@{VoteForProposalR cId k1 k2}');
+              $('#submitvoteform').attr('action','@{VoteForProposalR exId cId u1 u2}');
               $('#leftChoiceButton').css('opacity','1');
               $('#leftChoiceButtonA').html('<span class="icon">thumb_up</span> Selected');
               $('#leftChoiceButtonA').addClass('btn-red');
@@ -123,7 +126,7 @@ getCompareByCriterionR uId cId = do
               $('#votebutton').click(function(){$('#submitvoteform').submit();});
             }
             function selectRight() {
-              $('#submitvoteform').attr('action','@{VoteForProposalR cId k2 k1}');
+              $('#submitvoteform').attr('action','@{VoteForProposalR exId cId u2 u1}');
               $('#rightChoiceButton').css('opacity','1');
               $('#rightChoiceButtonA').html('<span class="icon">thumb_up</span> Selected');
               $('#rightChoiceButtonA').addClass('btn-red');
@@ -143,7 +146,7 @@ getCompareByCriterionR uId cId = do
               <div.col-lg-6.col-md-6.col-sm-10.col-xs-12>
                   <div class="card">
                     <aside.card-side.card-side-img.pull-left>
-                      <img src="@{ProposalPreviewR k1}" width="100%">
+                      <img src="@{ProposalPreviewR exId u1}" width="100%">
                     <div class="card-main">
                       <div.card-inner>
                         <p style="white-space: pre-line; overflow-y: hidden; color: #555;">
@@ -151,7 +154,7 @@ getCompareByCriterionR uId cId = do
                       <div.card-action>
                         <div.card-action-btn.pull-left>
                           <a.btn.btn-flat.btn-brand-accent.waves-attach.waves-effect
-                              href="@{SubmissionR k1}" target="_blank">
+                              href="@{SubmissionR exId u1}" target="_blank">
                             <span.icon>visibility
                             View
                         <div.card-action-btn.pull-left #leftChoiceButton style="opacity: 0.6;">
@@ -162,7 +165,7 @@ getCompareByCriterionR uId cId = do
               <div.col-lg-6.col-md-6.col-sm-10.col-xs-12>
                   <div class="card">
                     <aside.card-side.card-side-img.pull-left>
-                      <img src="@{ProposalPreviewR k2}" width="100%">
+                      <img src="@{ProposalPreviewR exId u2}" width="100%">
                     <div class="card-main">
                       <div.card-inner>
                         <p style="white-space: pre-line; overflow-y: hidden; color: #555;">
@@ -170,7 +173,7 @@ getCompareByCriterionR uId cId = do
                       <div.card-action>
                         <div.card-action-btn.pull-left>
                           <a.btn.btn-flat.btn-brand-accent.waves-attach.waves-effect
-                              href="@{SubmissionR k2}" target="_blank">
+                              href="@{SubmissionR exId u2}" target="_blank">
                             <span.icon>visibility
                             View
                         <div.card-action-btn.pull-left #rightChoiceButton style="opacity: 0.6;">

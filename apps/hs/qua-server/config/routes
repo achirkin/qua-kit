@@ -39,24 +39,28 @@
 /mooc/criteria/img/#CriterionId                            CriteriaImgR GET
 /mooc/survey                                               SurveyR GET POST
 
-/submissions/view/review-settings/#CurrentScenarioId       QuaViewReviewSettingsR GET
-/submissions/ebrowse/                                      BrowseProposalsForExpertsR GET
-/submissions/compare                                       CompareProposalsR GET
-/submissions/vote/#CriterionId/#CurrentScenarioId/#CurrentScenarioId  VoteForProposalR POST
-/submissions/submit/#ExerciseId                            SubmissionsR POST
-/submissions/settings                                      QuaViewSettingsNewR GET
-/exercises/#ExerciseId/settings                            QuaViewSettingsFromExIdR GET
-!/submissions/#CurrentScenarioId/settings                  QuaViewSettingsFromScIdR GET
-!/submissions/#CurrentScenarioId/preview                   ProposalPreviewR GET
-!/submissions/#CurrentScenarioId/reviews                   ReviewsR GET POST
-!/submissions/#CurrentScenarioId/expertreview              WriteExpertReviewR POST
-!/submissions/#CurrentScenarioId/geometry                  SubmissionGeometryR GET
-!/submissions/browse/#Int                                  BrowseProposalsR GET
-/submissions/new                                           NewSubmissionR GET
-/submissions/new-for-exercise/#ExerciseId                  NewSubmissionForExerciseR GET
-/submissions/mycurrent                                     RedirectToCurrentScenarioR GET
-/submissions/find/#ExerciseId/#UserId                      FindSubmissionR GET
-!/submissions/#CurrentScenarioId                           SubmissionR GET PUT
+-- working on exercises in qua-view and related functionality
+/exercise/view                                         RedirectToQuaViewEditR GET
+!/exercise/#ExerciseId/#UserId                         SubmissionR GET PUT
+/exercise/#ExerciseId/#UserId/settings                 QuaViewExerciseSettingsR GET
+/exercise/#ExerciseId/#UserId/geometry                 SubmissionGeometryR GET
+/exercise/#ExerciseId/#UserId/preview                  ProposalPreviewR GET
+/exercise/#ExerciseId/#UserId/expertreview             WriteExpertReviewR POST
+/exercise/#ExerciseId/#UserId/reviews                  ReviewsR GET POST
+/exercise/#ExerciseId/#UserId/review-settings          QuaViewReviewSettingsR GET
+
+-- compare proposals exercise
+/exercise/compare                                          CompareProposalsR GET
+/exercise/compare/#ExerciseId/#CriterionId/#UserId/#UserId VoteForProposalR POST
+
+-- browse proposals
+/exercise/browse/#Int                                      BrowseProposalsR GET
+/exercise/ebrowse/                                         BrowseProposalsForExpertsR GET
+
+-- Editing geometry in qua-view without a particular exercise
+/editor              QuaViewEditorR GET
+/editor/settings     QuaViewEditorSettingsR GET
+
 
 /renameme                           RenameMeR GET
 /setupAcc/#UserId                   SetupLocalAccount POST

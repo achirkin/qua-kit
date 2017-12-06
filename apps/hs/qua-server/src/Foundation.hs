@@ -230,7 +230,7 @@ instance YesodAuth App where
               }
       setupEdxGrading uid (credsExtra creds)
       case Map.lookup "custom_exercise_type" (Map.fromList $ credsExtra creds) of
-          Just "design"  -> setUltDest RedirectToCurrentScenarioR
+          Just "design"  -> setUltDest RedirectToQuaViewEditR
           Just "compare" -> setUltDest CompareProposalsR
           _ -> return ()
       return $ Authenticated uid
@@ -281,7 +281,7 @@ instance YesodAuthPersist App
 instance YesodAuthEmail App where
   type AuthEmailId App = UserId
 
-  afterPasswordRoute _ = RedirectToCurrentScenarioR
+  afterPasswordRoute _ = RedirectToQuaViewEditR
   confirmationEmailSentResponse _ = do
     setMessage "A confirmain email has been sent. Please, check your mailbox."
     redirectUltDest MoocHomeR
@@ -330,7 +330,7 @@ instance YesodAuthEmail App where
       Nothing ->
         setUltDest MoocHomeR
       Just _ -> do
-        setUltDest RedirectToCurrentScenarioR
+        setUltDest RedirectToQuaViewEditR
     setCreds False $ Creds "email" email []
   getVerifyKey uid = runDB $ do
     mup <- getBy $ UserProperty uid "verkey"
@@ -494,6 +494,14 @@ getCurrentExercise = do
           Just (Right (i, _)) -> toSqlKey i
           _ -> maxExId
 
+submissionR :: CurrentScenario -> Route App
+submissionR cSc = SubmissionR (currentScenarioExerciseId cSc)
+                              (currentScenarioAuthorId cSc)
+
+submissionPreviewR :: CurrentScenario -> Route App
+submissionPreviewR cSc = ProposalPreviewR (currentScenarioExerciseId cSc)
+                                          (currentScenarioAuthorId cSc)
+
 
 lastExerciseId :: ReaderT SqlBackend Handler ExerciseId
 lastExerciseId = getVal <$> rawSql query []
@@ -515,8 +523,11 @@ maybeEnroll = do
     case (mExId, musrId) of
         (Just exId, Just usrId) -> do
           $(logDebug) $ "Enrolling new user in exercise " <> tshow (fromSqlKey exId)
-          void $ runDB $ upsert (UserExercise usrId exId)
-            [UserExerciseUserId =. usrId, UserExerciseExerciseId =. exId]
+          time   <- liftIO getCurrentTime
+          void $ runDB $ upsert (UserExercise usrId exId time)
+            [ UserExerciseUserId =. usrId
+            , UserExerciseExerciseId =. exId
+            , UserExerciseEnrolled =. time]
         _ -> pure ()
     return mExId
 
@@ -541,4 +552,4 @@ postTempUserR :: Handler Html
 postTempUserR = do
     _ <- maybeEnroll
     setCreds False $ Creds "temporary" "Anonymous user" []
-    redirect RedirectToCurrentScenarioR
+    redirect RedirectToQuaViewEditR

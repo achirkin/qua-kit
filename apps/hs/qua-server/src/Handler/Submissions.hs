@@ -6,19 +6,16 @@ This module contains:
 -}
 
 module Handler.Submissions
-    ( getNewSubmissionR
-    , getNewSubmissionForExerciseR
-    , getRedirectToCurrentScenarioR
-    , getSubmissionR
+    ( getQuaViewEditorR
+    , getSubmissionR, putSubmissionR
     , getSubmissionGeometryR
-    , postSubmissionsR
-    , putSubmissionR
-    , getFindSubmissionR
+    , getRedirectToQuaViewEditR
     ) where
 
 import Application.Edx (sendEdxGrade)
 import Application.Grading (updateRatingOnSubmission)
 import Control.Monad.Trans.Except
+import Control.Monad.Trans.Maybe
 import qualified Data.ByteString.Base64 as BSB (decodeLenient)
 import Handler.Mooc.User (maybeFetchExerciseId)
 import Import
@@ -26,147 +23,121 @@ import Import.Util
 import qualified QuaTypes.Submission as QtS
 
 -- | Serve GUI for free-form editor
-getNewSubmissionR :: Handler Html
-getNewSubmissionR = minimalLayout $ do
+getQuaViewEditorR :: Handler Html
+getQuaViewEditorR = minimalLayout $ do
   toWidgetHead [hamlet|
-    <meta property="qua-view:settingsUrl" content="@{QuaViewSettingsNewR}" /> |]
+    <meta property="qua-view:settingsUrl" content="@{QuaViewEditorSettingsR}" /> |]
   quaW
 
--- | Serve GUI to edit or create the submission for a particular exercise
-getNewSubmissionForExerciseR :: ExerciseId -> Handler Html
-getNewSubmissionForExerciseR exId = minimalLayout $ do
-  toWidgetHead [hamlet|
-    <meta property="qua-view:settingsUrl" content="@{QuaViewSettingsFromExIdR exId}" /> |]
-  quaW
-
--- | Serve GUI to edit a particular submission
-getSubmissionR :: CurrentScenarioId -> Handler Html
-getSubmissionR cscId = do
-  csc <- runDB $ get404 cscId
-  authorName <- runDB (get $ currentScenarioAuthorId csc) >>= return . (maybe "anonymous" userName)
+-- | Serve GUI to edit an exercise submission
+getSubmissionR :: ExerciseId -> UserId -> Handler Html
+getSubmissionR exId uId = do
+  authorName <- maybe "anonymous" userName <$> runDB (get uId)
   minimalLayout $ do
     toWidgetHead [hamlet|
-      <meta property="qua-view:settingsUrl" content="@{QuaViewSettingsFromScIdR cscId}" />
-      <meta property="og:url"         content="@{SubmissionR cscId}" />
+      <meta property="qua-view:settingsUrl" content="@{QuaViewExerciseSettingsR exId uId}" />
+      <meta property="og:url"         content="@{SubmissionR exId uId}" />
       <meta property="og:type"        content="website" />
       <meta property="og:title"       content="Qua-kit: #{authorName}'s design" />
       <meta property="og:description" content="#{authorName} made a design proposal on qua-kit website. Check it out!" />
-      <meta property="og:image"       content="@{ProposalPreviewR cscId}" />
+      <meta property="og:image"       content="@{ProposalPreviewR exId uId}" />
     |]
     quaW
 
--- | Redirect to submission by finding it through exerciseId/userId-tuple
-getFindSubmissionR :: ExerciseId -> UserId -> Handler Html
-getFindSubmissionR exId usrId = do
-  cScIds <- runDB $ selectKeysList [ CurrentScenarioExerciseId ==. exId
-                                   , CurrentScenarioAuthorId ==. usrId]
-                                   [ Desc CurrentScenarioLastUpdate, LimitTo 1]
-  case cScIds of
-    []      -> notFound
-    cScId:_ -> redirect $ SubmissionR cScId
 
 
 -- | Redirect to the user's most recent submission,
 --   or to new submission if no current submission exists
-getRedirectToCurrentScenarioR :: Handler Html
-getRedirectToCurrentScenarioR = do
+getRedirectToQuaViewEditR :: Handler Html
+getRedirectToQuaViewEditR = do
   mUsrId <- maybeAuthId
+  -- get latest enrolled exercise
   mExId  <- (fmap join . mapM maybeFetchExerciseId) mUsrId
-  let lastUpdatedSc usrId = selectFirst [CurrentScenarioAuthorId ==. usrId]
-                                        [Desc CurrentScenarioLastUpdate]
-  mcScEnt <- runDB $
-    case (mUsrId, mExId) of
-      (Just usrId, Just exId) -> do
-        mcScEnt' <- selectFirst [ CurrentScenarioAuthorId ==. usrId
-                                , CurrentScenarioExerciseId ==. exId] []
-        if isJust mcScEnt'
-          then return mcScEnt'
-          else lastUpdatedSc usrId
-      (Just usrId, Nothing) -> lastUpdatedSc usrId
-      _ -> return Nothing
-  let mcScId = entityKey <$> mcScEnt
+  -- either return exercise link, or a pure editor
+  redirect . fromMaybe QuaViewEditorR $ SubmissionR <$> mExId <*> mUsrId
 
-  redirect $ case (mcScId, mExId) of
-    (Just cScId, _)      -> SubmissionR cScId
-    (Nothing, Just exId) -> NewSubmissionForExerciseR exId
-    _                    -> NewSubmissionR
 
--- | Serve GeoJSON for saved submission or empty JSON object otherwise
-getSubmissionGeometryR :: CurrentScenarioId -> Handler Text
-getSubmissionGeometryR cScId = do
-  cSc <- runDB $ get404 cScId
-  let scId = currentScenarioHistoryScenarioId cSc
-  maybe "{}" (decodeUtf8 . scenarioGeometry) <$> runDB (get scId)
+-- | Serve GeoJSON for saved submission.
+--   If userId == authorId, this function guarantees to return scenario
+--   (new or current).
+--   Otherwise, it may return current submsission or fail with 404.
+getSubmissionGeometryR :: ExerciseId -> UserId -> Handler Text
+getSubmissionGeometryR exId authorId = do
+  mcsc <- runDB $ getBy $ SubmissionOf authorId exId
+  case mcsc of
+    Just (Entity _ csc) ->
+      maybe "{}" (decodeUtf8 . scenarioGeometry) <$>
+        runDB (get $ currentScenarioHistoryScenarioId csc)
+    Nothing -> do
+      userId <- requireAuthId
+      if userId == authorId
+      then maybe "{}" (decodeUtf8 . exerciseGeometry) <$> runDB (get exId)
+      else notFound
 
--- | Make new submission
-postSubmissionsR :: ExerciseId -> Handler Value
-postSubmissionsR exId = runJSONExceptT $ do
-  submissionPost <- requireJsonBody
-  time   <- liftIO getCurrentTime
-  userId <- maybeE "You must login to post." maybeAuthId
-  let (desc, geo, img) = unbundleSubPost submissionPost
-  medxResId <- lift $ getsSafeSession userSessionEdxResourceId
-  (scId, cScId) <- ExceptT $ runDB $ runExceptT $ do
-    medxGrading <- case medxResId of
-                     Nothing -> return Nothing
-                     Just ri -> lift . getBy $ EdxGradeKeys ri userId
-    let sc = Scenario
-               userId
-               exId
-               img
-               geo
-               desc
-               time
-    scId  <- lift $ insert sc
-    cScId <- lift . insert $ CurrentScenario scId
-                      (scenarioAuthorId      sc)
-                      (scenarioExerciseId    sc)
-                      (scenarioDescription   sc)
-                      (entityKey <$> medxGrading)
-                      Nothing
-                      (scenarioLastUpdate    sc)
-    return (scId, cScId)
 
-  -- set grading/ratings
-  lift $ runDB $ updateRatingOnSubmission scId
-  lift $ setGrade userId
-  return cScId
-  where
-    setGrade userId = do
-      ye <- getYesod
-      medxResId <- getsSafeSession userSessionEdxResourceId
-      case medxResId of
-        Just edxResId -> sendEdxGrade (appSettings ye) userId edxResId 0.6
-                           $ Just "Automatic grade upon design submission."
-        Nothing -> return ()
 
--- | Update submission
-putSubmissionR :: CurrentScenarioId -> Handler Value
-putSubmissionR cScId = runJSONExceptT $ do
-  submissionPost <- requireJsonBody
-  time   <- liftIO getCurrentTime
-  userId <- maybeE "You must login to post." maybeAuthId
-  cSc <- lift $ runDB $ get404 cScId
-  prevSc <- lift $ runDB $ get404 $ currentScenarioHistoryScenarioId cSc
-  when (userId /= scenarioAuthorId prevSc) $
-    throwE "You cannot update someone else's submission."
-  let (desc, geo, img) = unbundleSubPost submissionPost
-  ExceptT $ runDB $ runExceptT $ do
-    newScId <- lift . insert $ prevSc {
-                                   scenarioImage       = img
-                                 , scenarioDescription = desc
-                                 , scenarioGeometry    = geo
-                                 , scenarioLastUpdate  = time
-                                 }
-    lift $ do
-      newCScId <- update cScId [
-                      CurrentScenarioHistoryScenarioId =. newScId
-                    , CurrentScenarioDescription =. desc
-                    , CurrentScenarioLastUpdate =. time
-                    ]
-      -- update grading/ratings
-      updateRatingOnSubmission newScId
-      return newCScId
+-- | Update or create new submission
+putSubmissionR :: ExerciseId -> UserId -> Handler Value
+putSubmissionR exId authorId = runJSONExceptT $ do
+    -- get all provided information
+    submissionPost <- requireJsonBody
+    time   <- liftIO getCurrentTime
+    userId <- maybeE "You must login to post." maybeAuthId
+    when (userId /= authorId) $
+      throwE "You cannot update someone else's submission."
+    let (desc, geo, img) = unbundleSubPost submissionPost
+
+    -- check if this is a new submission or an updated one
+    mCurSubmission <- lift . runDB . runMaybeT $ do
+      cSc <- MaybeT . getBy $ SubmissionOf authorId exId
+      sc <- MaybeT . get . currentScenarioHistoryScenarioId $ entityVal cSc
+      return (entityKey cSc, sc)
+
+    case mCurSubmission of
+
+      -- if this is an updated version
+      Just (cScId, prevSc) -> lift . runDB $ do
+        newScId <- insert $ prevSc { scenarioImage       = img
+                                   , scenarioDescription = desc
+                                   , scenarioGeometry    = geo
+                                   , scenarioLastUpdate  = time
+                                   }
+        update cScId [ CurrentScenarioHistoryScenarioId =. newScId
+                     , CurrentScenarioDescription =. desc
+                     , CurrentScenarioLastUpdate =. time
+                     ]
+        -- update grading/ratings
+        updateRatingOnSubmission newScId
+
+      -- if this is a new submission
+      Nothing -> lift $ do
+        medxResId <- getsSafeSession userSessionEdxResourceId
+        runDB $ do
+          medxGrading <- case medxResId of
+            Nothing -> return Nothing
+            Just ri -> fmap (fmap entityKey) . getBy $ EdxGradeKeys ri userId
+          let sc = Scenario userId exId img geo desc time
+          newScId  <- insert sc
+          insert_ $ CurrentScenario newScId
+                            (scenarioAuthorId      sc)
+                            (scenarioExerciseId    sc)
+                            (scenarioDescription   sc)
+                            medxGrading
+                            Nothing
+                            (scenarioLastUpdate    sc)
+          -- update grading/ratings
+          updateRatingOnSubmission newScId
+
+        -- send an initial grade to edX if necessary
+        forM_ medxResId $ \edxResId -> do
+          ye <- getYesod
+          sendEdxGrade (appSettings ye) userId edxResId 0.6
+            $ Just "Automatic grade upon design submission."
+
+    return $ Object mempty
+
+
+
 
 unbundleSubPost :: QtS.SubmissionPost -> (Text, ByteString, ByteString)
 unbundleSubPost subPost = (desc, geo, img)

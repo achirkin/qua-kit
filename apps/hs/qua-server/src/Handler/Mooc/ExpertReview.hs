@@ -12,16 +12,16 @@ import Import.Util
 import Application.Grading
 import Application.Edx
 
-postWriteExpertReviewR :: CurrentScenarioId -> Handler Value
-postWriteExpertReviewR cScId = runJSONExceptT $ do
+postWriteExpertReviewR :: ExerciseId -> UserId -> Handler Value
+postWriteExpertReviewR exId authorId = runJSONExceptT $ do
     userId  <- maybeE "You must login to review." maybeAuthId
     grade   <- maybeE "You must specify a grade." $
                  liftM (>>= readMay) $ lookupPostParam "grade"
     comment <- lift $ fromMaybe "" <$> lookupPostParam "comment"
     t       <- liftIO getCurrentTime
-    cSc     <- lift $ runDB $ get404 cScId
+    Entity _ cSc     <- lift $ runDB $ getBy404 $ SubmissionOf authorId exId
     ExceptT $ runDB $ runExceptT $ do
-      when (userId == currentScenarioAuthorId cSc) $
+      when (userId == authorId) $
         throwE "You cannot review yourself!"
       when (length comment < 80) $
         throwE "Comment needs to be at least 80 characters."
@@ -80,6 +80,8 @@ writeExpertReview :: UserId -> CurrentScenarioId -> Handler Widget
 writeExpertReview userId cScId = do
   cSc <- runDB $ get404 cScId
   let scId = currentScenarioHistoryScenarioId cSc
+      exId = currentScenarioExerciseId cSc
+      authorId = currentScenarioAuthorId cSc
   reviewExists <- liftM isJust $ runDB $ getBy $ ExpertReviewOf userId scId
   return $ do
     let starNrs = [1..5]::[Int]
@@ -122,7 +124,7 @@ writeExpertReview userId cScId = do
         $('#submitExpertReview').click(function(e){
           if (grade && commentField.value.length > 80) {
             $.post(
-              { url: '@{WriteExpertReviewR cScId}'
+              { url: '@{WriteExpertReviewR exId authorId}'
               , data: { grade:   grade
                       , comment: commentField.value
                       }

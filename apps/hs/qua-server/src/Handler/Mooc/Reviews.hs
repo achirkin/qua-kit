@@ -14,9 +14,9 @@ import Database.Persist.Sql (fromSqlKey, toSqlKey, rawSql, Single(..))
 import qualified Data.Text as Text
 import qualified QuaTypes.Review as QtR
 
-postReviewsR :: CurrentScenarioId -> Handler Value
-postReviewsR cScId = runJSONExceptT $ do
-    cSc <- lift $ runDB $ get404 cScId
+postReviewsR :: ExerciseId -> UserId -> Handler Value
+postReviewsR exId authorId = runJSONExceptT $ do
+    Entity _ cSc <- lift . runDB . getBy404 $ SubmissionOf authorId exId
     let scenarioId = currentScenarioHistoryScenarioId cSc
     (Entity userId user) <- maybeE "You must login to review." maybeAuth
     reviewPost <- requireJsonBody
@@ -42,14 +42,14 @@ postReviewsR cScId = runJSONExceptT $ do
       reviewId <- lift $ insert review
       return $ reviewToTReview (userName user) (Entity reviewId review)
 
-getReviewsR :: CurrentScenarioId -> Handler Value
-getReviewsR cScId = runDB $ do
-  reviews <- fetchReviewsFromDb cScId
+getReviewsR :: ExerciseId -> UserId -> Handler Value
+getReviewsR exId authorId = runDB $ do
+  reviews <- fetchReviewsFromDb exId authorId
   returnJson reviews
 
-fetchReviewsFromDb :: CurrentScenarioId -> ReaderT SqlBackend Handler [QtR.Review]
-fetchReviewsFromDb cScId = do
-  cSc <- get404 cScId
+fetchReviewsFromDb :: ExerciseId -> UserId -> ReaderT SqlBackend Handler [QtR.Review]
+fetchReviewsFromDb exId authorId = do
+  Entity _ cSc <- getBy404 $ SubmissionOf authorId exId
   let scId = currentScenarioHistoryScenarioId cSc
   let query = Text.unlines
           ["SELECT \"user\".name, ??"

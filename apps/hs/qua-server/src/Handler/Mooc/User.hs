@@ -12,8 +12,10 @@ import Yesod.Auth.Email (saltPass)
 
 maybeFetchExerciseId :: UserId -> Handler (Maybe ExerciseId)
 maybeFetchExerciseId usrId = do
-  muserExercise <- runDB $ getBy $ UserExerciseUnique usrId
-  return $ userExerciseExerciseId <$> entityVal <$> muserExercise
+  muserExercise <- runDB $ selectFirst
+      [UserExerciseUserId ==. usrId]
+      [Desc UserExerciseEnrolled]
+  return $ userExerciseExerciseId . entityVal <$> muserExercise
 
 postSetupLocalAccount :: UserId -> Handler Value
 postSetupLocalAccount uId = fmap send . runExceptT $ do

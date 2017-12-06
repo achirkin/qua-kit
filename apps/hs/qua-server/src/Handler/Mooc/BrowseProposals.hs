@@ -150,12 +150,12 @@ mkSubmissionsWidget submissions = do
       |]
     [whamlet|
       $forall sub <- submissions
-        $with (Entity scId sc) <- scenario sub
+        $with (Entity _ sc) <- scenario sub
           <div class="col-xl-3 col-lg-4 col-md-6 col-xs-12">
             <div.card.submissionCard>
               <aside.card-side.card-side-img.pull-left.card-side-moocimg>
                 <img
-                  src=@{ProposalPreviewR scId}
+                  src=@{submissionPreviewR sc}
                   width="200px" height="200px" style="margin-left: -25px;">
               <div.card-main.containerCard>
                 <div.card-inner style="margin: 10px 12px;">
@@ -183,7 +183,7 @@ mkSubmissionsWidget submissions = do
                         <p style="display: inline; margin: 0; padding:0; color: #b71c1c;)">
                           #{expertgrade}
                   <div.card-action-btn.pull-right>
-                    $with subViewLink <- SubmissionR scId
+                    $with subViewLink <- submissionR sc
                       $if isExpert && (isNothing $ currentScenarioGrade sc)
                         <a.btn.btn-flat.btn-brand-accent.waves-attach.waves-effect
                             style="background: red; color: white !important;"

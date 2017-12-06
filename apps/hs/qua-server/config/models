@@ -80,7 +80,8 @@ Exercise
 UserExercise
     userId           UserId
     exerciseId       ExerciseId
-    UserExerciseUnique userId -- for the time being, only allow one exercise per user
+    enrolled         UTCTime default=CURRENT_TIMESTAMP
+    Enrollment       userId exerciseId
     deriving Show
 
 -- | User design submission.

@@ -2,6 +2,7 @@ $newline never
 $doctype 5
 <html>
   <head>
+    <meta property="fb:app_id" content="1837721753181850"/>
     <meta name="theme-color" content="#f44336" />
     <meta name="msapplication-TileColor" content="#f44336"/>
     <meta name="msapplication-TileImage" content="@{StaticR img_bgimgSq_png}"/>
