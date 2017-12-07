@@ -21,7 +21,7 @@ getQuaViewEditorSettingsR
        , canAddDeleteGeometry   = True
        , canDownloadGeometry    = True
        , canModifyStaticObjects = True
-       , showHiddenProperties   = False
+       , showHiddenProperties   = True
        }
 
 -- | These settings are for students when we know their exercise id,
