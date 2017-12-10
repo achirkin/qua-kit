@@ -18,6 +18,7 @@ import System.IO.Error
 import System.Process
 
 import Path
+import Path.IO
 
 import Helen.Core.OptParse.Types
 import Helen.Core.Types
@@ -64,11 +65,16 @@ startBinaryWithRestarts bc@BinConfig {..} = do
 
 startBinary :: BinConfig -> HelenWorld ProcessHandle
 startBinary BinConfig {..} = do
-    let cmd = unwords $ toFilePath binConfigPath : binConfigArgs
-    let cp = (shell cmd) {std_out = CreatePipe, std_err = CreatePipe}
-    (_, mouth, merrh, ph) <- liftIO $ createProcess_ cmd cp
+    dirPath <- getCurrentDir
+    let execPath = dirPath </> binConfigPath
+        cp = (proc (toFilePath execPath) binConfigArgs)
+          { cwd = Just $ fromAbsDir (parent execPath)
+          , std_out = CreatePipe
+          , std_err = CreatePipe
+          }
+    (_, mouth, merrh, ph) <- liftIO $ createProcess_ (T.unpack binConfigName) cp
     setupOutputHandler LevelInfo mouth
-    setupOutputHandler LevelError merrh
+    setupOutputHandler LevelWarn merrh
     pure ph
   where
     setupOutputHandler level mh =

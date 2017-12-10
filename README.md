@@ -104,6 +104,25 @@ Given Java and maven are set up correctly, run Luci as follows:
 cd apps/hs/helen
 stack install
 ```
+Helen can also run dependend executables, i.e. services.
+Here is an example of helen config to run qua-kit and all services.
+```yaml
+host:             127.0.0.1
+port:             7654
+loglevel:         info
+restart-attempts: 3
+
+trusted-clients:
+  - 127.0.0.1
+
+bundled-services:
+  - name: siren service
+    executable: services/siren
+  - name: dist to walls service
+    executable: services/hs-example-service
+  - name: qua-kit runtime
+    executable: services/qua-server
+```
 
 
 #### luci-connect
