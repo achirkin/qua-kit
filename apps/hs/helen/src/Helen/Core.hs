@@ -11,12 +11,12 @@
 --
 -----------------------------------------------------------------------------
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE RecordWildCards #-}
 module Helen.Core
   ( Helen (..), program, initHelen
   , Client (), clientAddr
   ) where
 
+import           Control.Concurrent (threadDelay)
 import qualified Control.Concurrent.STM.TChan    as STM
 import qualified Control.Concurrent.STM.TMVar    as STM
 import           Control.Monad                   (forever, when)
@@ -86,12 +86,13 @@ initHelen sets = do
 -- | Run main program
 program :: HelenWorld ()
 program = do
-  startupServices
   -- register pre-defined services
   registrationService
   infoService
   -- Run all TCP server in a separate thread
   forkHelen helenChannels
+  liftIO $ threadDelay 500000
+  startupServices
   -- Now process message queue
   ch <- _msgChannel <$> get
   forever $ (liftIO . STM.atomically $ STM.readTChan ch) >>= (\msg -> do

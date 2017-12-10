@@ -49,6 +49,7 @@ import           Control.Lens
 import           Control.Monad                (void)
 import           Control.Monad.IO.Class       (MonadIO (..))
 import           Control.Monad.Base           (MonadBase)
+import           Control.Monad.Catch          (MonadThrow)
 import           Control.Monad.Logger
 import           Control.Monad.RWS.Lazy       (MonadState(..), RWST(..))
 import qualified Control.Monad.RWS.Lazy       as RWS
@@ -212,7 +213,7 @@ instance HelenMonad HelenRoom where
 
 -- | IO-full variant of Helen state with multithread-preserved state.
 newtype HelenWorld t = HelenWorld { unWorld :: ReaderT (STM.TVar Helen) (LoggingT IO) t}
-  deriving (Functor, Applicative, Monad, MonadIO, MonadBase IO)
+  deriving (Functor, Applicative, Monad, MonadIO, MonadThrow, MonadBase IO)
 
 instance MonadBaseControl IO HelenWorld where
   type StM HelenWorld a = a

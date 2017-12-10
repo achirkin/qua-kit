@@ -55,7 +55,8 @@ library
         yaml -any,
         process -any,
         iproute -any,
-        optparse-applicative
+        optparse-applicative,
+        exceptions -any
     default-language: Haskell2010
     hs-source-dirs: src
     ghc-options: -Wall -ferror-spans
@@ -72,4 +73,4 @@ executable helen
         helen -any
     default-language: Haskell2010
     hs-source-dirs: app
-    ghc-options: -Wall -ferror-spans
+    ghc-options: -Wall -ferror-spans -threaded -O2
