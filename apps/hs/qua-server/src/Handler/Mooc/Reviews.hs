@@ -40,7 +40,7 @@ postReviewsR exId authorId = runJSONExceptT $ do
                           (QtR.reviewPostComment reviewPost)
                           t
       reviewId <- lift $ insert review
-      return $ reviewToTReview (userName user) (Entity reviewId review)
+      return $ reviewToQtReview (userName user) (Entity reviewId review)
 
 getReviewsR :: ExerciseId -> UserId -> Handler Value
 getReviewsR exId authorId = runDB $ do
@@ -63,14 +63,14 @@ fetchReviewsFromDb exId authorId = do
           ,"ORDER BY review.timestamp DESC;"
           ]
   rows <- rawSql query [toPersistValue scId]
-  return $ map (\(Single userName, review) -> reviewToTReview userName review) rows
+  return $ map (\(Single userName, review) -> reviewToQtReview userName review) rows
 
-reviewToTReview :: Text -> Entity Review -> QtR.Review
-reviewToTReview userName (Entity reviewId r) = QtR.Review {
-      reviewId          = fromIntegral $ fromSqlKey reviewId
-    , reviewUserName    = userName
-    , reviewCriterionId = fromIntegral $ fromSqlKey $ reviewCriterionId r
-    , reviewThumb       = toThumb $ reviewPositive r
+reviewToQtReview :: Text -> Entity Review -> QtR.Review
+reviewToQtReview userName (Entity _ r) = QtR.Review {
+      reviewUserName    = userName
+    , reviewRating      = QtR.UserRating
+                            (fromIntegral $ fromSqlKey $ reviewCriterionId r)
+                            (toThumb $ reviewPositive r)
     , reviewComment     = reviewComment r
     , reviewTimestamp   = reviewTimestamp r
     }

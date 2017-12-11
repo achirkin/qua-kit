@@ -2,6 +2,7 @@
 module Handler.Mooc.ExpertReview
   ( postWriteExpertReviewR
   , writeExpertReview
+  , fetchExpertReviewsFromDb
   , viewExpertReviews
   ) where
 
@@ -11,6 +12,7 @@ import Import
 import Import.Util
 import Application.Grading
 import Application.Edx
+import qualified QuaTypes.Review as QtR
 
 postWriteExpertReviewR :: ExerciseId -> UserId -> Handler Value
 postWriteExpertReviewR exId authorId = runJSONExceptT $ do
@@ -42,17 +44,11 @@ postWriteExpertReviewR exId authorId = runJSONExceptT $ do
 
 viewExpertReviews :: CurrentScenarioId -> Handler Widget
 viewExpertReviews cScId = do
-  cSc <- runDB $ get404 cScId
-  let scId = currentScenarioHistoryScenarioId cSc
-  reviews <- runDB $ selectList [ExpertReviewScenarioId ==. scId] []
-  reviewsAndUsers <- forM reviews $ \(Entity _ r) -> do
-    mReviewer <- runDB $ get $ expertReviewReviewerId r
-    return (r, mReviewer)
+  reviewsAndUsers <- fetchReviews cScId
   let avgGrade = (fromIntegral $ sum grades) /
-                 (fromIntegral $ length reviews) :: Double
+                 (fromIntegral $ length reviewsAndUsers) :: Double
         where
-          extrGrade (Entity _ r) = expertReviewGrade r
-          grades = map extrGrade reviews
+          grades = map (expertReviewGrade . fst) reviewsAndUsers
   return $ do
     let stars review =
           let grade = expertReviewGrade review
@@ -60,7 +56,7 @@ viewExpertReviews cScId = do
             (replicate grade [whamlet|<span.icon.icon-lg>star</span>|]) ++
             replicate (5 - grade) [whamlet|<span.icon.icon-lg>star_border</span>|]
     [whamlet|
-      $if not $ null reviews
+      $if not $ null reviewsAndUsers
         <div.comment-table>
           #{length reviewsAndUsers} grade(s) with an average of #{ avgGrade } stars
 
@@ -143,3 +139,24 @@ writeExpertReview userId cScId = do
         });
       });
     |]
+
+fetchExpertReviewsFromDb :: CurrentScenarioId -> Handler [QtR.Review]
+fetchExpertReviewsFromDb cScId = do
+  reviewsAndUsers <- fetchReviews cScId
+  let toQtReview (r, mUsr) = QtR.Review {
+        reviewUserName    = maybe "-" userName mUsr
+      , reviewRating      = QtR.ExpertRating $ expertReviewGrade r
+      , reviewComment     = expertReviewComment r
+      , reviewTimestamp   = expertReviewTimestamp r
+      }
+  return $ map toQtReview reviewsAndUsers
+
+fetchReviews :: CurrentScenarioId -> Handler [(ExpertReview, Maybe User)]
+fetchReviews cScId = do
+  cSc <- runDB $ get404 cScId
+  let scId = currentScenarioHistoryScenarioId cSc
+  reviews <- runDB $ selectList [ExpertReviewScenarioId ==. scId] []
+  reviewsAndUsers <- forM reviews $ \(Entity _ r) -> do
+    mReviewer <- runDB $ get $ expertReviewReviewerId r
+    return (r, mReviewer)
+  return reviewsAndUsers

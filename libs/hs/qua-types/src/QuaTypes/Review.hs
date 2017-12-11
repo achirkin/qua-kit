@@ -10,6 +10,7 @@ module QuaTypes.Review (
   , Criterion (..)
   , ThumbState (..)
   , Review (..)
+  , Rating (..)
   ) where
 
 import Data.Time.Clock (UTCTime)
@@ -67,15 +68,29 @@ instance ToJSON   ReviewPost
 
 -- | Previous reviews of the viewed design
 data Review = Review {
-    reviewId          :: !Int
-  , reviewUserName    :: !QuaText
-  , reviewCriterionId :: !Int
-  , reviewThumb       :: !ThumbState
+    reviewUserName    :: !QuaText
+  , reviewRating      :: !Rating
   , reviewComment     :: !QuaText
   , reviewTimestamp   :: !UTCTime
   } deriving Generic
 instance FromJSON  Review
 instance ToJSON    Review
+#ifndef ghcjs_HOST_OS
+  where
+    toEncoding = genericToEncoding defaultOptions -- see Yesod.Core.Json
+#endif
+
+
+data Rating = UserRating {
+                ratingCriterionId :: !Int
+              , ratingThumb       :: !ThumbState
+              }
+            | ExpertRating {
+                ratingGrade       :: !Int
+              }
+  deriving Generic
+instance FromJSON  Rating
+instance ToJSON    Rating
 #ifndef ghcjs_HOST_OS
   where
     toEncoding = genericToEncoding defaultOptions -- see Yesod.Core.Json

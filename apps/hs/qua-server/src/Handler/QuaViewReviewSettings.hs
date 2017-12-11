@@ -3,6 +3,7 @@ module Handler.QuaViewReviewSettings
     ) where
 
 import Database.Persist.Sql (fromSqlKey)
+import Handler.Mooc.ExpertReview (fetchExpertReviewsFromDb)
 import Handler.Mooc.Reviews (fetchReviewsFromDb, currentCriteria)
 import Import
 import qualified QuaTypes.Review as QtR
@@ -15,8 +16,13 @@ getQuaViewReviewSettingsR exId authorId = do
     let routeUrl route = let appr = getApprootText guessApproot app req
                          in  yesodRender app appr route []
 
-    criterions <- runDB $ currentCriteria exId
-    reviews    <- runDB $ fetchReviewsFromDb exId authorId
+    criterions  <- runDB $ currentCriteria exId
+    userReviews <- runDB $ fetchReviewsFromDb exId authorId
+    mcsc <- runDB $ getBy $ SubmissionOf authorId exId
+    expertReviews <- case mcsc of
+                       Just (Entity cScId _) -> fetchExpertReviewsFromDb cScId
+                       Nothing               -> return []
+    let reviews = sortOn QtR.reviewTimestamp $ userReviews ++ expertReviews
     let canReview = maybe False (/= authorId) mUsrId
     returnJson QtR.ReviewSettings {
         criterions = flip map criterions $ \(Entity cId c) -> QtR.Criterion {

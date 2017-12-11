@@ -22,7 +22,7 @@ getQuaViewEditorSettingsR
        , canDownloadGeometry    = True
        , canModifyStaticObjects = True
        , showHiddenProperties   = True
-       , showShareButton        = True
+       , showShareButton        = False
        }
 
 -- | These settings are for students when we know their exercise id,
