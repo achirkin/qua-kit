@@ -78,6 +78,7 @@ instance Monoid Settings where
         , canDownloadGeometry    = True
         , canModifyStaticObjects = True
         , showHiddenProperties   = False
+        , showShareButton        = True
         }
      }
 
@@ -89,6 +90,7 @@ data Permissions = Permissions
   , canDownloadGeometry    :: Bool
   , canModifyStaticObjects :: Bool
   , showHiddenProperties   :: Bool
+  , showShareButton        :: Bool
   } deriving Generic
 instance FromJSON  Permissions
 instance ToJSON    Permissions

@@ -22,6 +22,7 @@ getQuaViewEditorSettingsR
        , canDownloadGeometry    = True
        , canModifyStaticObjects = True
        , showHiddenProperties   = True
+       , showShareButton        = True
        }
 
 -- | These settings are for students when we know their exercise id,
@@ -36,6 +37,7 @@ getQuaViewExerciseSettingsR exId uId
        , canDownloadGeometry    = False
        , canModifyStaticObjects = False
        , showHiddenProperties   = False
+       , showShareButton        = True
        }
 
 quaViewSettingsR :: Route App
