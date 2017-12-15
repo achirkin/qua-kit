@@ -1,0 +1,16 @@
+host: 127.0.0.1
+port: 7654
+loglevel: warning # debug info warning error
+restart-attempts: 3
+
+trusted-clients:
+  - 127.0.0.1
+
+bundled-services:
+  - name: siren
+    executable: services/siren
+  - name: distance-to-walls
+    executable: services/hs-example-service
+    args: loglevel=info
+  - name: qua-server
+    executable: services/qua-server

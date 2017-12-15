@@ -7,7 +7,8 @@ at `http://localhost:3000`.
 
 The siren service is based on PostgreSQL database and its extension PostGIS.
 This means that to build and run the service, you need to install those.
-On Ubuntu 16.04 I am using following command for this purpose:
+In addition, qua-server need `gd` graphics library.
+On mac OS I am using following command for this purpose:
 ```
 brew install libgd
 brew install postgresql
@@ -23,17 +24,11 @@ sudo -u postgres ./setup-sirendb.sh
 ```
 
 ### Running
-The following command run everything in separate unix threads
+
+Current bundle consists of several programs that need to run at the same time.
+Luckily, helen can start programs in separate threads specified in file `helen-config.yaml`.
+Thus, you only need to start helen manually. 
 ```
-./qua-server &
-./helen &
-sleep 1
-./siren &
-./hs-example-service &
-sleep 1
+./helen
 ```
-To stop everithing in the same manner, just type:
-```
-killall helen
-killall qua-server
-```
+Make sure postgres database is set up and running before this.
