@@ -1,6 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE Strict #-}
 
 module Helen.Core.Service.Startup where
 
@@ -30,7 +31,7 @@ startupServices = do
 
 data BinState = BinState
     { binStateProcessHandle :: ProcessHandle
-    , binStateRestartsLeft :: Int
+    , binStateRestartsLeft  :: Int
     }
 
 startBinaryWithRestarts :: BinConfig -> HelenWorld ()
@@ -77,22 +78,15 @@ startBinary BinConfig {..} = do
     setupOutputHandler LevelWarn merrh
     pure ph
   where
-    setupOutputHandler level mh =
-        case mh of
-            Nothing -> pure () -- Should not happen, but let's not crash if it does.
-            Just h ->
-                forkHelen $
-                let loop = do
-                        ml <-
-                            liftIO
-                                ((Just <$> T.hGetLine h) `catch`
-                                 (\e ->
-                                      if isEOFError e
-                                          then pure Nothing
-                                          else throwIO e))
-                        case ml of
-                            Nothing -> pure ()
-                            Just line -> do
-                                logOtherNS binConfigName level line
-                                loop
-                in loop
+    setupOutputHandler _ Nothing  = pure ()
+    setupOutputHandler level (Just h) = forkHelen loop
+      where
+        loop = do
+          el <- liftIO . try $ T.hGetLine h
+          case el of
+            Left e -> if isEOFError e
+                      then pure ()
+                      else logErrorNS binConfigName $ T.pack (show e)
+            Right line -> do
+              logOtherNS binConfigName level line
+              loop
