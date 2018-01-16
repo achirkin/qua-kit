@@ -24,7 +24,7 @@
         <div.card-inner>
           <h4.card-title>
             New Scenario Problem
-          <form role=form method=post enctype=#{enctype} action=@{AdminCreateScenarioR}>
+          <form role=form method=post enctype=#{enctype} action=@{AdminCreateExerciseR}>
             ^{widget}
             <button type="submit" .btn .btn-default>
               Submit

@@ -15,8 +15,8 @@
 /feedback/post                      SubmitFeedbackR POST
 /admin                              AdminR GET
 
-/admin/scenario-editor              AdminScenarioEditorR GET
-/admin/scenario-editor/scenario     AdminCreateScenarioR POST
+/admin/exercise-editor              AdminExerciseEditorR GET
+/admin/exercise-editor/scenario     AdminCreateExerciseR POST
 /admin/user-manager                 AdminUserManagerR GET
 /admin/user-manageruser/create-user AdminCreateUserR POST
 /admin/criterion-editor             AdminCriterionEditorR GET

@@ -1,8 +1,8 @@
 {-# OPTIONS_HADDOCK hide, prune #-}
 {-# LANGUAGE RecordWildCards #-}
-module Handler.Mooc.Admin.ScenarioEditor
-    ( getAdminScenarioEditorR
-    , postAdminCreateScenarioR
+module Handler.Mooc.Admin.ExerciseEditor
+    ( getAdminExerciseEditorR
+    , postAdminCreateExerciseR
     , getExerciseImgR
     , getExerciseGeometryR
     , getExerciseEditR
@@ -27,11 +27,11 @@ import Yesod.Form.Bootstrap3
 
 import Handler.Mooc.Admin
 
-getAdminScenarioEditorR :: Handler Html
-getAdminScenarioEditorR = postAdminCreateScenarioR
+getAdminExerciseEditorR :: Handler Html
+getAdminExerciseEditorR = postAdminCreateExerciseR
 
-postAdminCreateScenarioR :: Handler Html
-postAdminCreateScenarioR = do
+postAdminCreateExerciseR :: Handler Html
+postAdminCreateExerciseR = do
     requireAdmin
     ((res, widget), enctype) <-
         runFormPost $ renderBootstrap3 BootstrapBasicForm newScenarioForm
@@ -68,9 +68,9 @@ postAdminCreateScenarioR = do
         -> HandlerT App IO Html
     showForm mr msgs widget enctype = do
         scenarioWidgets <- getScenarioCards
-        adminLayout "Welcome to the scenario editor" $ do
-            setTitle "qua-kit - scenario editor"
-            $(widgetFile "mooc/admin/scenario-editor")
+        adminLayout "Welcome to the exercise editor" $ do
+            setTitle "qua-kit - exercise editor"
+            $(widgetFile "mooc/admin/exercise-editor")
 
 generateInvitationSecret :: IO Text
 generateInvitationSecret = T.pack <$> replicateM 16 (randomRIO ('a', 'z'))
