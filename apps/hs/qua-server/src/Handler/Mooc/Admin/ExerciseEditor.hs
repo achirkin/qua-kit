@@ -17,6 +17,7 @@ import qualified Data.Conduit.Binary as CB
 import qualified Data.Function as Function (on)
 import qualified Data.List as List (groupBy, head)
 import qualified Data.Text as T
+import Text.Blaze.Html.Renderer.Text
 
 import Database.Esqueleto
 import qualified Database.Persist as P
@@ -53,9 +54,9 @@ postAdminCreateExerciseR = do
                     , exerciseImage = imageBs
                     , exerciseGeometry = geometryBs
                     , exerciseScale = newScenarioDataScale
-                    , exerciseCanAddDeleteGeom = False
+                    , exerciseCanAddDeleteGeom = newScenarioDataCanAddDeleteGeom
                     , exerciseInvitationSecret = invitationSecret
-                    , exerciseOnSubmitMsg = "Thank you, ${userName}! Your submission has been saved."
+                    , exerciseOnSubmitMsg = toStrict $ renderHtml $ newScenarioDataOnSubmitMessage
                     }
             showForm (Just dat) [] widget enctype
   where
@@ -81,14 +82,25 @@ data NewScenarioData = NewScenarioData
     , newScenarioDataImage :: FileInfo
     , newScenarioDataScale :: Double
     , newScenarioDataGeometry :: FileInfo
+    , newScenarioDataCanAddDeleteGeom :: Bool
+    , newScenarioDataOnSubmitMessage :: Html
     }
 
 newScenarioForm :: AForm Handler NewScenarioData
 newScenarioForm =
     NewScenarioData <$> areq textField (labeledField "description") Nothing <*>
     areq fileField (labeledField "image") Nothing <*>
-    areq doubleField (labeledField "scale") (Just 0.5) <*>
-    areq fileField (labeledField "geometry") Nothing
+    areq doubleField (labeledField "scale (obsolete)") (Just 0.5) <*>
+    areq fileField (labeledField "geometry") Nothing <*>
+    areq boolField (labeledField "Allow students to add/delete objects.") (Just False) <*>
+    areq htmlField (labeledField "On-submit html message. Use ${userId}, ${userName}, and ${exerciseId} to customize it.")
+                   (Just
+                      [shamlet|
+                         <p>Thank you, ${userName}!
+                         <p>Your design submission has been saved.
+                            Though you can continue working on it and re-submit it later.
+                      |]
+                   )
 
 labeledField :: Text -> FieldSettings App
 labeledField = bfs
