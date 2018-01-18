@@ -73,6 +73,7 @@ Exercise
     description       Text
     scale             Double
     canAddDeleteGeom  Bool default=False
+    onSubmitMsg       Text default="'Thank you for the submission!'"
     invitationSecret  Text
     deriving Show
     deriving Eq

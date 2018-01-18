@@ -55,6 +55,7 @@ postAdminCreateExerciseR = do
                     , exerciseScale = newScenarioDataScale
                     , exerciseCanAddDeleteGeom = False
                     , exerciseInvitationSecret = invitationSecret
+                    , exerciseOnSubmitMsg = "Thank you, ${userName}! Your submission has been saved."
                     }
             showForm (Just dat) [] widget enctype
   where

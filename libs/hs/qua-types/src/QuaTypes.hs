@@ -25,6 +25,13 @@ data Settings = Settings {
   , luciUrl                  :: Maybe Url    -- ^ WebSocket URL to connect to Luci
   , getSubmissionGeometryUrl :: Maybe Url    -- ^ URL to GET geoJSON for current submission
   , putSubmissionUrl         :: Maybe Url    -- ^ URL for students to PUT their new or updated submission to
+  , onSubmitMsg              :: QuaText      -- ^ A pre-formatted html message that is shown to a user
+                                             --     after they succesfully submit their work using `putSubmissionUrl`.
+                                             --   For qua-view this is an opaque html text.
+                                             --   For qua-server this is a template with placeholders to be interpolated
+                                             --     with user data.
+                                             --     This means, qua-server has to replace such tokens before sending settings;
+                                             --     e.g. ${userId} should be replaced with the current id of a user.
   , reviewSettingsUrl        :: Maybe Url    -- ^ URL to get settings related to reviews
   , viewUrl                  :: Url          -- ^ URL of current qua-viewer page
   , jsRootUrl                :: Url          -- ^ URL of the root folder for js file;
@@ -52,6 +59,8 @@ instance Semigroup Settings where
     , luciUrl                  = luciUrl s1                  <|> luciUrl s2
     , getSubmissionGeometryUrl = getSubmissionGeometryUrl s1 <|> getSubmissionGeometryUrl s2
     , putSubmissionUrl         = putSubmissionUrl s1         <|> putSubmissionUrl s2
+    , onSubmitMsg              = if onSubmitMsg s1 == mempty
+                                 then onSubmitMsg s2 else onSubmitMsg s1
     , reviewSettingsUrl        = reviewSettingsUrl s1        <|> reviewSettingsUrl s2
     , viewUrl                  = if viewUrl s1 == viewUrl mempty
                                  then viewUrl s2
@@ -68,6 +77,7 @@ instance Monoid Settings where
      , luciUrl                  = Nothing
      , getSubmissionGeometryUrl = Nothing
      , putSubmissionUrl         = Nothing
+     , onSubmitMsg              = "<p>Thank you for the submission!</p>"
      , reviewSettingsUrl        = Nothing
      , viewUrl                  = "" -- TODO: we need to decide on a better mempty value... index.html?
      , jsRootUrl                = ""
