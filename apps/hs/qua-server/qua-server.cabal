@@ -158,7 +158,8 @@ library
         esqueleto -any,
         resource-pool -any,
         filepath >=1.4,
-        qua-types >= 0.1
+        qua-types >= 0.1,
+        regex -any
     default-language: Haskell2010
     default-extensions: TemplateHaskell QuasiQuotes OverloadedStrings
                         NoImplicitPrelude MultiParamTypeClasses TypeFamilies GADTs

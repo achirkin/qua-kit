@@ -18,6 +18,7 @@ import qualified Data.Function as Function (on)
 import qualified Data.List as List (groupBy, head)
 import qualified Data.Text as T
 import Text.Blaze.Html.Renderer.Text
+import Text.RE.TDFA.Text
 
 import Database.Esqueleto
 import qualified Database.Persist as P
@@ -56,7 +57,11 @@ postAdminCreateExerciseR = do
                     , exerciseScale = newScenarioDataScale
                     , exerciseCanAddDeleteGeom = newScenarioDataCanAddDeleteGeom
                     , exerciseInvitationSecret = invitationSecret
-                    , exerciseOnSubmitMsg = toStrict $ renderHtml $ newScenarioDataOnSubmitMessage
+                    , exerciseOnSubmitMsg
+                        = (*=~/ [edBS|(<a[^>]*)>///$1 onclick="window.open(this.href)" target="_blank">|])
+                        . (*=~/ [edBS|onclick=\"[^\"]*\"///|])
+                        . (*=~/ [edBS|target=\"[^\"]*\"///|])
+                        . toStrict $ renderHtml $ newScenarioDataOnSubmitMessage
                     }
             showForm (Just dat) [] widget enctype
   where
@@ -94,13 +99,15 @@ newScenarioForm =
     areq fileField (labeledField "geometry") Nothing <*>
     areq boolField (labeledField "Allow students to add/delete objects.") (Just False) <*>
     areq htmlField (labeledField "On-submit html message. Use ${userId}, ${userName}, and ${exerciseId} to customize it.")
-                   (Just
-                      [shamlet|
-                         <p>Thank you, ${userName}!
-                         <p>Your design submission has been saved.
-                            Though you can continue working on it and re-submit it later.
-                      |]
-                   )
+       (Just
+          [shamlet|
+             <h5>Thank you, ${userName}!
+             <p>Your design submission has been saved.
+                Though you can continue working on it and re-submit it later.
+             <a href="https://httpbin.org/get?userId=${userId}&userName=${userName}&exId=${exerciseId}">
+                Proceed with a personalized link
+          |]
+       )
 
 labeledField :: Text -> FieldSettings App
 labeledField = bfs
