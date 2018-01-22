@@ -2,6 +2,11 @@
   <div .card>
     <div .card-main>
       <img .card-img .pull-top .center-block src=@{ExerciseImgR exerciseId} height="350px" alt="Scenario Image">
+      <form role=form method=post enctype=#{enctype}
+        action=@{AdminExerciseR exerciseId}?_method=PUT>
+        ^{widget}
+        <button type="submit" .btn .btn-default>
+          Update
 
   <div .card>
     <div .card-inner>
@@ -33,4 +38,3 @@
               <form action=@{ExerciseAttachCriterionR exerciseId criterionId} method=post>
                 <button .btn type="submit">
                   Attach Criterion
-

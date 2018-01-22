@@ -16,7 +16,8 @@
 /admin                              AdminR GET
 
 /admin/exercise-editor              AdminExerciseEditorR GET
-/admin/exercise-editor/scenario     AdminCreateExerciseR POST
+/admin/exercise                     AdminExercisesR POST
+/admin/exercise/#ExerciseId         AdminExerciseR PUT
 /admin/user-manager                 AdminUserManagerR GET
 /admin/user-manageruser/create-user AdminCreateUserR POST
 /admin/criterion-editor             AdminCriterionEditorR GET
