@@ -59,10 +59,11 @@ createOrUpdateExercise mExId = do
           Just exId -> do
             --update
             void $ runDB $ P.update exId $ [
-                ExerciseDescription      P.=. newScenarioDataDescription
-              , ExerciseScale            P.=. newScenarioDataScale
-              , ExerciseCanAddDeleteGeom P.=. newScenarioDataCanAddDeleteGeom
-              , ExerciseOnSubmitMsg      P.=. changeLinks newScenarioDataOnSubmitMessage
+                ExerciseDescription       P.=. newScenarioDataDescription
+              , ExerciseScale             P.=. newScenarioDataScale
+              , ExerciseCanAddDeleteGeom  P.=. newScenarioDataCanAddDeleteGeom
+              , ExerciseCanEditProperties P.=. newScenarioDataCanEditProperties
+              , ExerciseOnSubmitMsg       P.=. changeLinks newScenarioDataOnSubmitMessage
               ] -- optionally update image, geometry files:
               ++ ((ExerciseImage    P.=.) <$> maybeToList mImg)
               ++ ((ExerciseGeometry P.=.) <$> maybeToList mGeo)
@@ -78,6 +79,7 @@ createOrUpdateExercise mExId = do
                   , exerciseGeometry          = geo
                   , exerciseScale             = newScenarioDataScale
                   , exerciseCanAddDeleteGeom  = newScenarioDataCanAddDeleteGeom
+                  , exerciseCanEditProperties = newScenarioDataCanEditProperties
                   , exerciseInvitationSecret  = invitationSecret
                   , exerciseOnSubmitMsg       = changeLinks newScenarioDataOnSubmitMessage
                   }
@@ -114,6 +116,7 @@ data ExerciseData = ExerciseData
     , newScenarioDataScale             :: Double
     , newScenarioDataGeometry          :: Maybe FileInfo
     , newScenarioDataCanAddDeleteGeom  :: Bool
+    , newScenarioDataCanEditProperties :: Bool
     , newScenarioDataOnSubmitMessage   :: Html
     }
 
@@ -127,6 +130,8 @@ exerciseForm mE = ExerciseData <$>
   aopt fileField (labeledField "geometry") Nothing <*>
   areq boolField (labeledField "Allow students to add/delete objects.")
     (Just $ fromMaybe False $ exerciseCanAddDeleteGeom <$> mE) <*>
+  areq boolField (labeledField "Allow students to edit object properties.")
+    (Just $ fromMaybe False $ exerciseCanEditProperties <$> mE) <*>
   areq htmlField (labeledField "On-submit html message. Use ${userId}, ${userName}, and ${exerciseId} to customize it.")
      (Just $ fromMaybe
         [shamlet|

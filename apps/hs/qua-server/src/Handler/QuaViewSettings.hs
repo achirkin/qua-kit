@@ -31,7 +31,7 @@ getQuaViewExerciseSettingsR exId uId = do
   e <- runDB $ get404 exId
   quaViewSettingsR (SubmissionR exId uId) (Just exId) (Just uId)
     QuaTypes.Permissions
-       { canEditProperties      = False
+       { canEditProperties      = exerciseCanEditProperties e
        , canEraseReloadGeometry = False
        , canAddDeleteGeometry   = exerciseCanAddDeleteGeom e
        , canDownloadGeometry    = False
