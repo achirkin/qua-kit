@@ -134,9 +134,10 @@ Here is the full list of currently ungraded submissions:
 Thank you for your help!
                          |]
       $(logDebug) mailText
+      mailFrom <- appMailFrom
       liftIO $ Mail.renderSendMail $ Mail.simpleMail'
           (Mail.Address Nothing email) --to address
-          (Mail.Address (Just "ETH qua-kit") "noreply@qua-kit.ethz.ch") --from
+          mailFrom
           "Please help review the following submissions" --subject
             $ fromStrict mailText
     Nothing -> return ()
