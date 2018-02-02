@@ -27,34 +27,37 @@
 /admin/get-luci-scenario            LuciScenarioDownloaderR GET
 /temporary-user                     TempUserR POST
 
-/                                                          MoocHomeR GET POST
-/exercises/#ExerciseId                                     ExerciseR GET
-/exercises/#ExerciseId/img                                 ExerciseImgR GET
-/exercises/#ExerciseId/geometry                            ExerciseGeometryR GET
-/exercises/#ExerciseId/edit                                ExerciseEditR GET
-/exercises/#ExerciseId/attach-criterion/#CriterionId       ExerciseAttachCriterionR POST
-/exercises/#ExerciseId/detach-criterion/#CriterionId       ExerciseDetachCriterionR POST
+/                                                    MoocHomeR GET POST
+/exercises/#ExerciseId                               ExerciseR GET
+/exercises/#ExerciseId/img                           ExerciseImgR GET
+/exercises/#ExerciseId/geometry                      ExerciseGeometryR GET
+/exercises/#ExerciseId/edit                          ExerciseEditR GET
+/exercises/#ExerciseId/attach-criterion/#CriterionId ExerciseAttachCriterionR POST
+/exercises/#ExerciseId/detach-criterion/#CriterionId ExerciseDetachCriterionR POST
 
-/mooc/user/#UserId/role                                    SetUserRoleR POST
-/mooc/criteria/browse                                      CriteriaListR GET
-/mooc/criteria/img/#CriterionId                            CriteriaImgR GET
-/mooc/survey                                               SurveyR GET POST
+/mooc/user/#UserId/role                       SetUserRoleR  POST
+/mooc/criteria/browse                         CriteriaListR GET
+/mooc/criteria/img/#CriterionId               CriteriaImgR  GET
+/mooc/survey                                  SurveyR       GET POST
 
 
 
 -- browse proposals
-!/exercise/browse/#Int                                     BrowseProposalsR GET
-/exercise/ebrowse                                          BrowseProposalsForExpertsR GET
+!/exercise/browse/#Int                        BrowseProposalsR           GET
+/exercise/ebrowse                             BrowseProposalsForExpertsR GET
 
 -- working on exercises in qua-view and related functionality
-/exercise/view                                         RedirectToQuaViewEditR GET
-/exercise/#ExerciseId/#UserId                          SubmissionR GET PUT
-/exercise/#ExerciseId/#UserId/settings                 QuaViewExerciseSettingsR GET
-/exercise/#ExerciseId/#UserId/geometry                 SubmissionGeometryR GET
-/exercise/#ExerciseId/#UserId/preview                  ProposalPreviewR GET
-/exercise/#ExerciseId/#UserId/expertreview             WriteExpertReviewR POST
-/exercise/#ExerciseId/#UserId/reviews                  ReviewsR GET POST
-/exercise/#ExerciseId/#UserId/review-settings          QuaViewReviewSettingsR GET
+/exercise/view                                RedirectToQuaViewEditR   GET
+/exercise/#ExerciseId/#UserId                 SubmissionR              GET PUT
+/exercise/#ExerciseId/#UserId/settings        QuaViewExerciseSettingsR GET
+/exercise/#ExerciseId/#UserId/geometry        SubmissionGeometryR      GET
+/exercise/#ExerciseId/#UserId/preview         ProposalPreviewR         GET
+/exercise/#ExerciseId/#UserId/expertreview    WriteExpertReviewR       POST
+/exercise/#ExerciseId/#UserId/reviews         ReviewsR                 GET POST
+/exercise/#ExerciseId/#UserId/review-settings QuaViewReviewSettingsR   GET
+!/exercise/#ExerciseId/enroll/#Text           EnrollExerciseR          GET
+!/exercise/#ExerciseId/register/#Text         EnrollNewUserExerciseR   GET
+
 
 -- compare proposals exercise
 /exercise/compare                                          CompareProposalsR GET

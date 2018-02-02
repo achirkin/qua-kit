@@ -3,12 +3,15 @@ module Handler.Mooc.User
   ( maybeFetchExerciseId
   , postSetupLocalAccount
   , setupLocalAccountFromExistingUserW
+  , getEnrollExerciseR
+  , getEnrollNewUserExerciseR
   ) where
 
 
 import Import
 import Control.Monad.Trans.Except
-import Yesod.Auth.Email (saltPass)
+import Yesod.Auth.Email (saltPass, registerR)
+import Database.Persist.Sql (fromSqlKey)
 
 -- | Try to fetch exercise id from the user session first,
 --   then try to get the last enrolled exercise id.
@@ -55,6 +58,29 @@ postSetupLocalAccount uId = fmap send . runExceptT $ do
   where
     send (Left v) = object ["error" .= String v]
     send (Right v) = object ["success" .= v]
+
+
+getEnrollExerciseR :: ExerciseId -> Text -> Handler Html
+getEnrollExerciseR exId secret = do
+    muserId <- maybeAuthId
+    case muserId of
+      Nothing -> redirect $ (AuthR registerR,  [("exercise", tshow $ fromSqlKey exId), ("invitation-secret", secret)])
+      Just uId -> do
+        ex <- runDB $ get404 exId
+        unless (exerciseInvitationSecret ex == secret) notFound
+        $(logDebug) $ "Enrolling new user in exercise " <> tshow (fromSqlKey exId)
+        setSafeSession userSessionCurrentExerciseId exId
+        time   <- liftIO getCurrentTime
+        void $ runDB $ upsert (UserExercise uId exId time)
+          [ UserExerciseUserId =. uId
+          , UserExerciseExerciseId =. exId
+          , UserExerciseEnrolled =. time]
+        redirect $ RedirectToQuaViewEditR
+
+getEnrollNewUserExerciseR :: ExerciseId -> Text -> Handler Html
+getEnrollNewUserExerciseR exId secret = clearCreds False >> getEnrollExerciseR exId secret
+
+
 
 setupLocalAccountFromExistingUserW :: UserId -> Widget
 setupLocalAccountFromExistingUserW userId = do

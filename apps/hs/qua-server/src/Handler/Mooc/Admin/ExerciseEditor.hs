@@ -26,7 +26,6 @@ import Database.Esqueleto
 import qualified Database.Persist as P
 import System.Random
 
-import Yesod.Auth.Email
 import Yesod.Form.Bootstrap3
 
 import Handler.Mooc.Admin
@@ -169,15 +168,8 @@ groupsOf =
 
 scenarioWidget ::
        Entity Exercise -> [Entity Criterion] -> Handler Widget
-scenarioWidget (Entity exerciseId Exercise {..}) cs = do
-    inviteLink <- getInviteLink exerciseId
+scenarioWidget (Entity exerciseId Exercise {..}) cs =
     pure $(widgetFile "mooc/admin/scenario-card")
-
-getInviteLink :: ExerciseId -> Handler Text
-getInviteLink exerciseId = do
-    urlRender <- getUrlRenderParams
-    params <- invitationParams exerciseId
-    pure $ urlRender (AuthR registerR) params
 
 getExerciseImgR :: ExerciseId -> Handler TypedContent
 getExerciseImgR exerciseId = do
