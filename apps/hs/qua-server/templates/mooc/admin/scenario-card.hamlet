@@ -33,4 +33,4 @@
       <a .btn .col-lg-6 .col-md-6 .col-md-6 .col-sm-6 href=@{ExerciseGeometryR exerciseId}>
         Download Geometry
       <a .btn .col-lg-6 .col-md-6 .col-md-6 .col-sm-6 href=@{ExerciseEditR exerciseId}>
-        Edit Scenario Problem
+        Edit Exercise

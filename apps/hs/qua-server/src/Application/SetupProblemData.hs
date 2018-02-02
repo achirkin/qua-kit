@@ -37,7 +37,7 @@ importProblemRun0 pool = do
     flip runSqlPool pool $ do
       -- Id of the first problem (Sep-Nov 2016)
       let pId = toSqlKey 0
-      repsert pId (Exercise sctaskpreview sctaskfile "Empower Shack scenario" 0.001 False
+      repsert pId (Exercise sctaskpreview sctaskfile "Empower Shack scenario" 0.001 False False
          (toStrict $ renderHtml
            [shamlet|
               <p>Thank you, ${userName}!
@@ -73,7 +73,7 @@ importProblemRun1 pool = do
     flip runSqlPool pool $ do
       -- Id of the second problem
       let pId = toSqlKey 1
-      repsert pId (Exercise sctaskpreview sctaskfile "Empower Shack scenario 2" 0.5 False
+      repsert pId (Exercise sctaskpreview sctaskfile "Empower Shack scenario 2" 0.5 False False
          (toStrict $ renderHtml
            [shamlet|
               <p>Thank you, ${userName}!

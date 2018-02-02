@@ -12,19 +12,21 @@
             <ul .list-group list-group-flush>
               <li .list-group-item>
                 Description: #{newScenarioDataDescription dat}
-              <li .list-group-item>
-                Image: #{fileName $ newScenarioDataImage dat}
+              $maybe image <- newScenarioDataImage dat
+                <li .list-group-item>
+                  Image: #{fileName image}
               <li .list-group-item>
                 Scale: #{show $ newScenarioDataScale dat}
-              <li .list-group-item>
-                Geometry: #{fileName $ newScenarioDataGeometry dat}
+              $maybe geometry <- newScenarioDataGeometry dat
+                <li .list-group-item>
+                  Geometry: #{fileName geometry}
     $nothing
     <div .card>
       <div.card-main>
         <div.card-inner>
           <h4.card-title>
-            New Scenario Problem
-          <form role=form method=post enctype=#{enctype} action=@{AdminCreateExerciseR}>
+            New Exercise
+          <form role=form method=post enctype=#{enctype} action=@{AdminExercisesR}>
             ^{widget}
             <button type="submit" .btn .btn-default>
               Submit
