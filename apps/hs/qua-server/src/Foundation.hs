@@ -310,10 +310,11 @@ instance YesodAuthEmail App where
     $(logDebug) $ "Copy/ Paste this URL in your browser: " <> verurl
 
     -- Send email.
+    mailFrom <- appMailFrom
     catch
       (liftIO . Mail.renderSendMail $ Mail.simpleMail'
         (Mail.Address Nothing email) -- To address
-        (Mail.Address (Just "ETH qua-kit") "noreply@qua-kit.ethz.ch") -- From address
+        mailFrom
         "Please validate your email address" -- Subject
         [stext|
             Please confirm your email address by clicking on the link below.
@@ -553,3 +554,17 @@ postTempUserR = do
     setCreds False $ Creds "temporary" "Anonymous user" []
     _ <- maybeEnroll
     redirect RedirectToQuaViewEditR
+
+-- | default mail from-address
+appMailFrom :: Handler Mail.Address
+appMailFrom = do
+  domain <- appDomainName
+  return $ Mail.Address (Just "ETH qua-kit") ("noreply@" <> domain)
+
+-- | returns domain name of server, TODO: handle https
+appDomainName :: Handler Text
+appDomainName = do
+  app <- getYesod
+  req <- waiRequest
+  -- drop "http://"
+  return $ drop 7 $ getApprootText guessApproot app req
