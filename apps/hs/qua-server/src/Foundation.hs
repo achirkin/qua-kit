@@ -559,12 +559,16 @@ postTempUserR = do
 appMailFrom :: Handler Mail.Address
 appMailFrom = do
   domain <- appDomainName
-  return $ Mail.Address (Just "ETH qua-kit") ("noreply@" <> domain)
+  return $ Mail.Address (Just "Qua-kit") ("noreply@" <> domain)
 
--- | returns domain name of server, TODO: handle https
+-- | returns domain name of server
 appDomainName :: Handler Text
 appDomainName = do
   app <- getYesod
   req <- waiRequest
-  -- drop "http://"
-  return $ drop 7 $ getApprootText guessApproot app req
+  let domainStr = getApprootText guessApproot app req
+      (pref, ds) = Text.breakOn "//" domainStr
+      dsClean = if Text.length ds >= 2
+                then Text.drop 2 ds
+                else pref
+  return . fst $ Text.breakOn "/" ds
