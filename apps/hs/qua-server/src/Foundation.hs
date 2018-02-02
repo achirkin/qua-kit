@@ -282,9 +282,14 @@ instance YesodAuthEmail App where
   type AuthEmailId App = UserId
 
   afterPasswordRoute _ = RedirectToQuaViewEditR
-  confirmationEmailSentResponse _ = do
-    setMessage "A confirmain email has been sent. Please, check your mailbox."
-    redirectUltDest MoocHomeR
+  confirmationEmailSentResponse email = do
+    setMessage $ "A confirmain email has been sent. Please, check your mailbox."
+    setCreds False $ Creds "email" email []
+    mscId <- maybeEnroll
+    redirect $ case mscId of
+      Nothing -> MoocHomeR
+      Just _  -> RedirectToQuaViewEditR
+
 
   addUnverified email verkey = do
     uid <- runDB $ do
@@ -304,6 +309,9 @@ instance YesodAuthEmail App where
     pure uid
 
 
+  -- this function must not log-in user,
+  --   because it is actually used by admin user too!
+  --   (it would lead to admin being re-logged-in as as the new user)
   sendVerifyEmail email _ verurl = do
     -- Print out to the console the verification email, for easier
     -- debugging.
@@ -311,7 +319,7 @@ instance YesodAuthEmail App where
 
     -- Send email.
     mailFrom <- appMailFrom
-    catch
+    _ <- fork $ catch
       (liftIO . Mail.renderSendMail $ Mail.simpleMail'
         (Mail.Address Nothing email) -- To address
         mailFrom
@@ -325,11 +333,12 @@ instance YesodAuthEmail App where
         |]
       )
       (\e -> $(logWarn) $ "[EMAIL REGISTRATION] Could not send an email: " <> Text.pack (show (e :: SomeException)))
-    setCreds False $ Creds "email" email []
-    mscId <- maybeEnroll
-    setUltDest $ case mscId of
-      Nothing -> MoocHomeR
-      Just _  -> RedirectToQuaViewEditR
+    pure ()
+    -- setCreds False $ Creds "email" email []
+    -- mscId <- maybeEnroll
+    -- setUltDest $ case mscId of
+    --   Nothing -> MoocHomeR
+    --   Just _  -> RedirectToQuaViewEditR
 
   getVerifyKey uid = runDB $ do
     mup <- getBy $ UserProperty uid "verkey"
@@ -571,4 +580,4 @@ appDomainName = do
       dsClean = if Text.length ds >= 2
                 then Text.drop 2 ds
                 else pref
-  return . fst $ Text.breakOn "/" ds
+  return . fst $ Text.breakOn "/" dsClean

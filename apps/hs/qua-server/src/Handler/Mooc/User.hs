@@ -82,11 +82,9 @@ setupLocalAccountFromExistingUserW userId = do
                 <div class="card-inner">
                   <h1 class="card-heading">Setup local account
               <div class="card-inner">
-                <b> You can always come back to your last submitted design #
-                by following the exercise link at edX. #
-                However, you can setup a full password-protected acount here to login #
+                You can setup a full password-protected acount here to login #
                 directly on our site. #
-                To get a local account, choose your login username and password.
+                To get a local account, choose your login e-mail and password.
                 <div.text-red #errormsg>
                 <p class="text-center">
                   <form class="form" action="@{SetupLocalAccount userId}" method="post" #createAccForm>

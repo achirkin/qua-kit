@@ -40,9 +40,15 @@
 /mooc/criteria/img/#CriterionId                            CriteriaImgR GET
 /mooc/survey                                               SurveyR GET POST
 
+
+
+-- browse proposals
+!/exercise/browse/#Int                                     BrowseProposalsR GET
+/exercise/ebrowse                                          BrowseProposalsForExpertsR GET
+
 -- working on exercises in qua-view and related functionality
 /exercise/view                                         RedirectToQuaViewEditR GET
-!/exercise/#ExerciseId/#UserId                         SubmissionR GET PUT
+/exercise/#ExerciseId/#UserId                          SubmissionR GET PUT
 /exercise/#ExerciseId/#UserId/settings                 QuaViewExerciseSettingsR GET
 /exercise/#ExerciseId/#UserId/geometry                 SubmissionGeometryR GET
 /exercise/#ExerciseId/#UserId/preview                  ProposalPreviewR GET
@@ -54,9 +60,6 @@
 /exercise/compare                                          CompareProposalsR GET
 /exercise/compare/#ExerciseId/#CriterionId/#UserId/#UserId VoteForProposalR POST
 
--- browse proposals
-/exercise/browse/#Int                                      BrowseProposalsR GET
-/exercise/ebrowse/                                         BrowseProposalsForExpertsR GET
 
 -- Editing geometry in qua-view without a particular exercise
 /editor              QuaViewEditorR GET
