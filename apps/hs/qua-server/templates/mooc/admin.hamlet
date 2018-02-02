@@ -5,12 +5,12 @@
       <div class="card">
         <div class="card-main">
           <div class="card-inner">
-            Scenario Editor
+            Exercise Editor
           <div class="card-action">
             <div class="card-action-btn pull-left">
-              <a class="btn btn-flat waves-attach waves-light waves-effect" href="@{AdminScenarioEditorR}">
+              <a class="btn btn-flat waves-attach waves-light waves-effect" href="@{AdminExerciseEditorR}">
                 <span class="icon">check
-                &nbsp;Open Scenario Editor
+                &nbsp;Open Exercise Editor
 
     <div class="col-lg-4 col-sm-6">
       <div class="card">

@@ -305,7 +305,6 @@ instance YesodAuthEmail App where
 
 
   sendVerifyEmail email _ verurl = do
-    mscId <- maybeEnroll
     -- Print out to the console the verification email, for easier
     -- debugging.
     $(logDebug) $ "Copy/ Paste this URL in your browser: " <> verurl
@@ -325,13 +324,12 @@ instance YesodAuthEmail App where
         |]
       )
       (\e -> $(logWarn) $ "[EMAIL REGISTRATION] Could not send an email: " <> Text.pack (show (e :: SomeException)))
-
-    case mscId of
-      Nothing ->
-        setUltDest MoocHomeR
-      Just _ -> do
-        setUltDest RedirectToQuaViewEditR
     setCreds False $ Creds "email" email []
+    mscId <- maybeEnroll
+    setUltDest $ case mscId of
+      Nothing -> MoocHomeR
+      Just _  -> RedirectToQuaViewEditR
+
   getVerifyKey uid = runDB $ do
     mup <- getBy $ UserProperty uid "verkey"
     return $ case mup of
@@ -519,7 +517,8 @@ maybeSetRoleBasedOnParams userId = do
 maybeEnroll :: Handler (Maybe ExerciseId)
 maybeEnroll = do
     mExId <- checkInvitationParams
-    musrId <- maybeAuthId
+    musrId <- maybeAuthId -- This is Nothing!
+    $(logDebug) $ "New user: " <> tshow (mExId, musrId)
     case (mExId, musrId) of
         (Just exId, Just usrId) -> do
           $(logDebug) $ "Enrolling new user in exercise " <> tshow (fromSqlKey exId)
@@ -551,6 +550,6 @@ checkInvitationParams = do
 
 postTempUserR :: Handler Html
 postTempUserR = do
-    _ <- maybeEnroll
     setCreds False $ Creds "temporary" "Anonymous user" []
+    _ <- maybeEnroll
     redirect RedirectToQuaViewEditR

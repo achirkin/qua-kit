@@ -1,8 +1,8 @@
 {-# OPTIONS_HADDOCK hide, prune #-}
 {-# LANGUAGE RecordWildCards #-}
-module Handler.Mooc.Admin.ScenarioEditor
-    ( getAdminScenarioEditorR
-    , postAdminCreateScenarioR
+module Handler.Mooc.Admin.ExerciseEditor
+    ( getAdminExerciseEditorR
+    , postAdminCreateExerciseR
     , getExerciseImgR
     , getExerciseGeometryR
     , getExerciseEditR
@@ -17,6 +17,8 @@ import qualified Data.Conduit.Binary as CB
 import qualified Data.Function as Function (on)
 import qualified Data.List as List (groupBy, head)
 import qualified Data.Text as T
+import Text.Blaze.Html.Renderer.Text
+import Text.RE.TDFA.Text
 
 import Database.Esqueleto
 import qualified Database.Persist as P
@@ -27,11 +29,11 @@ import Yesod.Form.Bootstrap3
 
 import Handler.Mooc.Admin
 
-getAdminScenarioEditorR :: Handler Html
-getAdminScenarioEditorR = postAdminCreateScenarioR
+getAdminExerciseEditorR :: Handler Html
+getAdminExerciseEditorR = postAdminCreateExerciseR
 
-postAdminCreateScenarioR :: Handler Html
-postAdminCreateScenarioR = do
+postAdminCreateExerciseR :: Handler Html
+postAdminCreateExerciseR = do
     requireAdmin
     ((res, widget), enctype) <-
         runFormPost $ renderBootstrap3 BootstrapBasicForm newScenarioForm
@@ -53,8 +55,13 @@ postAdminCreateScenarioR = do
                     , exerciseImage = imageBs
                     , exerciseGeometry = geometryBs
                     , exerciseScale = newScenarioDataScale
-                    , exerciseCanAddDeleteGeom = False
+                    , exerciseCanAddDeleteGeom = newScenarioDataCanAddDeleteGeom
                     , exerciseInvitationSecret = invitationSecret
+                    , exerciseOnSubmitMsg
+                        = (*=~/ [edBS|(<a[^>]*)>///$1 onclick="window.open(this.href)" target="_blank">|])
+                        . (*=~/ [edBS|onclick=\"[^\"]*\"///|])
+                        . (*=~/ [edBS|target=\"[^\"]*\"///|])
+                        . toStrict $ renderHtml $ newScenarioDataOnSubmitMessage
                     }
             showForm (Just dat) [] widget enctype
   where
@@ -68,9 +75,9 @@ postAdminCreateScenarioR = do
         -> HandlerT App IO Html
     showForm mr msgs widget enctype = do
         scenarioWidgets <- getScenarioCards
-        adminLayout "Welcome to the scenario editor" $ do
-            setTitle "qua-kit - scenario editor"
-            $(widgetFile "mooc/admin/scenario-editor")
+        adminLayout "Welcome to the exercise editor" $ do
+            setTitle "qua-kit - exercise editor"
+            $(widgetFile "mooc/admin/exercise-editor")
 
 generateInvitationSecret :: IO Text
 generateInvitationSecret = T.pack <$> replicateM 16 (randomRIO ('a', 'z'))
@@ -80,14 +87,27 @@ data NewScenarioData = NewScenarioData
     , newScenarioDataImage :: FileInfo
     , newScenarioDataScale :: Double
     , newScenarioDataGeometry :: FileInfo
+    , newScenarioDataCanAddDeleteGeom :: Bool
+    , newScenarioDataOnSubmitMessage :: Html
     }
 
 newScenarioForm :: AForm Handler NewScenarioData
 newScenarioForm =
     NewScenarioData <$> areq textField (labeledField "description") Nothing <*>
     areq fileField (labeledField "image") Nothing <*>
-    areq doubleField (labeledField "scale") (Just 0.5) <*>
-    areq fileField (labeledField "geometry") Nothing
+    areq doubleField (labeledField "scale (obsolete)") (Just 0.5) <*>
+    areq fileField (labeledField "geometry") Nothing <*>
+    areq boolField (labeledField "Allow students to add/delete objects.") (Just False) <*>
+    areq htmlField (labeledField "On-submit html message. Use ${userId}, ${userName}, and ${exerciseId} to customize it.")
+       (Just
+          [shamlet|
+             <h5>Thank you, ${userName}!
+             <p>Your design submission has been saved.
+                Though you can continue working on it and re-submit it later.
+             <a href="https://httpbin.org/get?userId=${userId}&userName=${userName}&exId=${exerciseId}">
+                Proceed with a personalized link
+          |]
+       )
 
 labeledField :: Text -> FieldSettings App
 labeledField = bfs

@@ -84,13 +84,13 @@ instance Monoid Settings where
 
 -- | Some Bools so we can easily toggle functionality on and off
 data Permissions = Permissions
-  { canEditProperties      :: Bool
-  , canEraseReloadGeometry :: Bool
-  , canAddDeleteGeometry   :: Bool
-  , canDownloadGeometry    :: Bool
-  , canModifyStaticObjects :: Bool
-  , showHiddenProperties   :: Bool
-  , showShareButton        :: Bool
+  { canEditProperties      :: Bool -- ^ make properties in info-panel editable
+  , canEraseReloadGeometry :: Bool -- ^ show button to clear geometry and load geometry from file
+  , canAddDeleteGeometry   :: Bool -- ^ show geometry editor pane
+  , canDownloadGeometry    :: Bool -- ^ show button to download geometry as file
+  , canModifyStaticObjects :: Bool -- ^ make all objects movable, even those with property static=true
+  , showHiddenProperties   :: Bool -- ^ also show blacklisted properties in info-panel
+  , showShareButton        :: Bool -- ^ show share to social media etc.
   } deriving Generic
 instance FromJSON  Permissions
 instance ToJSON    Permissions

@@ -6,6 +6,7 @@ module Model.Session
     , getsSafeSession
     , deleteSafeSession
     , setSafeSession
+    , setSafeSessionForUid
     , parseSqlKey
     , userSessionCurrentExerciseId
     , userSessionCustomExerciseCount
@@ -92,14 +93,29 @@ setSafeSession ::
     => SessionLens b
     -> b
     -> HandlerT app IO ()
-setSafeSession sl@SessionLens {..} val = do
+setSafeSession sl val = do
     mauth <- maybeAuthId
     case mauth of
       Nothing -> pure ()
-      Just uid -> void $ runDB $ upsertBy
-        (UserProperty uid $ sessionVar sl)
-        (UserProp uid (sessionVar sl) $ convInvFunc val)
-        [UserPropValue =. convInvFunc val]
+      Just uid -> setSafeSessionForUid uid sl val
+
+setSafeSessionForUid ::
+       ( YesodAuth app
+       , YesodPersist app
+       , YesodAuthPersist app
+       , AuthId app ~ UserId
+       , BaseBackend (YesodPersistBackend app) ~ SqlBackend
+       , PersistUniqueWrite (YesodPersistBackend app)
+       )
+    => UserId
+    -> SessionLens b
+    -> b
+    -> HandlerT app IO ()
+setSafeSessionForUid uid sl@SessionLens {..} val =
+  void $ runDB $ upsertBy
+    (UserProperty uid $ sessionVar sl)
+    (UserProp uid (sessionVar sl) $ convInvFunc val)
+    [UserPropValue =. convInvFunc val]
 
 parseSqlKey :: (ToBackendKey SqlBackend a) => Text -> Maybe (Key a)
 parseSqlKey t =

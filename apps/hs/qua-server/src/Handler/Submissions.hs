@@ -21,6 +21,8 @@ import Handler.Mooc.User (maybeFetchExerciseId)
 import Import
 import Import.Util
 import qualified QuaTypes.Submission as QtS
+import qualified Data.Text as Text
+import Database.Persist.Sql (fromSqlKey)
 
 -- | Serve GUI for free-form editor
 getQuaViewEditorR :: Handler Html
@@ -134,8 +136,23 @@ putSubmissionR exId authorId = runJSONExceptT $ do
           sendEdxGrade (appSettings ye) userId edxResId 0.6
             $ Just "Automatic grade upon design submission."
 
-    return $ Object mempty
+    mOnSubmitMsg <- lift . runDB . runMaybeT $ do
+      u <- MaybeT $ get userId
+      e <- MaybeT $ get exId
+      return $ interpolateSubmitMsg exId userId (userName u) (exerciseOnSubmitMsg e)
 
+    returnJson $ QtS.SubmitResponse $ fromMaybe "Thank you!" mOnSubmitMsg
+
+
+interpolateSubmitMsg :: ExerciseId -- ^ exerciseId
+                     -> UserId -- ^ userId
+                     -> Text -- ^ userName
+                     -> Text -- ^ template
+                     -> Text
+interpolateSubmitMsg eId uId uName
+  = Text.replace "${exerciseId}" (tshow $ fromSqlKey eId)
+  . Text.replace "${userId}"     (tshow $ fromSqlKey uId)
+  . Text.replace "${userName}"    uName
 
 
 

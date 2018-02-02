@@ -9,7 +9,6 @@ import qualified QuaTypes
 import System.FilePath (takeDirectory)
 import qualified Data.Text as Text
 
-
 -- | If a user is not a student, use these generic settings
 --   that give full access to qua-view functions
 getQuaViewEditorSettingsR :: Handler Value
@@ -28,12 +27,13 @@ getQuaViewEditorSettingsR
 -- | These settings are for students when we know their exercise id,
 --   can save exercise submissions, write reviews, etc.
 getQuaViewExerciseSettingsR :: ExerciseId -> UserId -> Handler Value
-getQuaViewExerciseSettingsR exId uId
-  = quaViewSettingsR (SubmissionR exId uId) (Just exId) (Just uId)
+getQuaViewExerciseSettingsR exId uId = do
+  e <- runDB $ get404 exId
+  quaViewSettingsR (SubmissionR exId uId) (Just exId) (Just uId)
     QuaTypes.Permissions
        { canEditProperties      = False
        , canEraseReloadGeometry = False
-       , canAddDeleteGeometry   = False
+       , canAddDeleteGeometry   = exerciseCanAddDeleteGeom e
        , canDownloadGeometry    = False
        , canModifyStaticObjects = False
        , showHiddenProperties   = False

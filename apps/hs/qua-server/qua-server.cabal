@@ -73,7 +73,7 @@ library
         Handler.Mooc.Admin
         Handler.Mooc.Admin.CriterionEditor
         Handler.Mooc.Admin.ReviewRequest
-        Handler.Mooc.Admin.ScenarioEditor
+        Handler.Mooc.Admin.ExerciseEditor
         Handler.Mooc.Admin.UserManager
         Handler.Mooc.Admin.LuciScenarioDownloader
         Handler.Mooc.BrowseProposals
@@ -122,6 +122,7 @@ library
         classy-prelude-conduit >=0.10.2,
         classy-prelude-yesod >=0.10.2,
         blaze-markup >=0.7.1,
+        blaze-html -any,
         bytestring >=0.9,
         base64-bytestring -any,
         text >=0.11,
@@ -157,7 +158,8 @@ library
         esqueleto -any,
         resource-pool -any,
         filepath >=1.4,
-        qua-types >= 0.1
+        qua-types >= 0.1,
+        regex -any
     default-language: Haskell2010
     default-extensions: TemplateHaskell QuasiQuotes OverloadedStrings
                         NoImplicitPrelude MultiParamTypeClasses TypeFamilies GADTs

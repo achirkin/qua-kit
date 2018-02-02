@@ -11,6 +11,7 @@ import Import
 import Database.Persist.Sql
 import qualified Data.ByteString as BS (readFile)
 import qualified Data.Text.IO as Text (readFile)
+import Text.Blaze.Html.Renderer.Text
 --import qualified Data.ByteString.Base64 as BSB (encode)
 
 
@@ -34,9 +35,16 @@ importProblemRun0 pool = do
     cVisibility    <- loadCriterion df "Visibility" "Visibility"
 
     flip runSqlPool pool $ do
-      -- Id of the firt problem (Sep-Nov 2016)
+      -- Id of the first problem (Sep-Nov 2016)
       let pId = toSqlKey 0
-      repsert pId (Exercise sctaskpreview sctaskfile "Empower Shack scenario" 0.001 False "oceronetidasqven")
+      repsert pId (Exercise sctaskpreview sctaskfile "Empower Shack scenario" 0.001 False
+         (toStrict $ renderHtml
+           [shamlet|
+              <p>Thank you, ${userName}!
+              <p>Your design submission has been saved.
+                 However, you can continue working on it and re-submit it later.
+           |]
+         ) "oceronetidasqven")
       cIdCentrality    <- upsertCriterion cCentrality
       cIdConnectivity  <- upsertCriterion cConnectivity
       cIdAccessibility <- upsertCriterion cAccessibility
@@ -63,9 +71,17 @@ importProblemRun1 pool = do
     cCentrality    <- loadCriterion df "Centrality" "Centrality"
 
     flip runSqlPool pool $ do
-      -- Id of the firt problem (Sep-Nov 2016)
+      -- Id of the second problem
       let pId = toSqlKey 1
-      repsert pId (Exercise sctaskpreview sctaskfile "Empower Shack scenario 2" 0.5 False "duholorinelonedi")
+      repsert pId (Exercise sctaskpreview sctaskfile "Empower Shack scenario 2" 0.5 False
+         (toStrict $ renderHtml
+           [shamlet|
+              <p>Thank you, ${userName}!
+              <p>Your design submission has been saved.
+                 However, you can continue working on it and re-submit it later.
+           |]
+         )
+          "duholorinelonedi")
       cIdDistribution  <- upsertCriterion cDistribution
       cIdAccessibility <- upsertCriterion cAccessibility
       cIdVisibility    <- upsertCriterion cVisibility

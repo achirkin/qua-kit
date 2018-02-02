@@ -42,7 +42,8 @@ setupEdxGrading userId params = do
           Nothing -> insert $ EdxResource resource_link_id edxCourseId exercise_id (Map.lookup "custom_component_display_name" pm)
         -- update generic edx resource parameters
         saveCustomParams edxResId
-        lift $ setSafeSession userSessionEdxResourceId edxResId
+        lift $ setSafeSessionForUid userId userSessionEdxResourceId edxResId
+        lift $ setSafeSessionForUid userId userSessionCurrentExerciseId exercise_id
         -- update personal grade link
         case (,) <$> Map.lookup "lis_outcome_service_url" pm
                  <*> Map.lookup "lis_result_sourcedid" pm of
