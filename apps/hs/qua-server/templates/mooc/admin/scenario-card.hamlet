@@ -18,19 +18,19 @@
               <p>
                 #{criterionName}
         <h4>
-          Enroll link:
+          Enroll link
         <p>
           Existing users that have already logged in can re-enroll, new users are also created.
         <p>
-          <span style="font-family:monospace;">
+          <span style="font-family:monospace;color: #ff6f00;">
             @{EnrollExerciseR exerciseId exerciseInvitationSecret}
         <h4>
-          Invite link (a user is forcefully logged-out and a new user is created):
+          Invite link
         <p>
           If somebody is logged in this browser, they will be forcefully logged out;
           a new user is created via registration form.
         <p>
-          <span style="font-family:monospace;">
+          <span style="font-family:monospace;color: #ff6f00;">
             @{EnrollNewUserExerciseR exerciseId exerciseInvitationSecret}
 
         <h4>
