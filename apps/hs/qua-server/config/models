@@ -184,46 +184,23 @@ Rating
     deriving Ord
     deriving Show
 
-
 Feedback
     authorId    UserId Maybe
     text        Text
-
-UserScenarioLoad
-    authorId     UserId Maybe
-    scenarioId   ExerciseId Maybe
-    timestamp    UTCTime default=CURRENT_TIMESTAMP
-    geometry     Text
-    scale        Double
-
-UserScenarioUpdate
-    loaded       UserScenarioLoadId
-    timestamp    UTCTime default=CURRENT_TIMESTAMP
-    geometry     Text
-
-UserScenarioAction
-    loaded       UserScenarioLoadId
-    timestamp    UTCTime default=CURRENT_TIMESTAMP
-    geomId       Int
-    x11 Double
-    x12 Double
-    x13 Double
-    x14 Double
-    x21 Double
-    x22 Double
-    x23 Double
-    x24 Double
-    x31 Double
-    x32 Double
-    x33 Double
-    x34 Double
-    x41 Double
-    x42 Double
-    x43 Double
-    x44 Double
 
 Survey
     userId   UserId Maybe
     question Text
     answer   Text
     deriving Show
+
+-- | A new way to log every action in qua-view.
+--   Refer to qua-view source file Program.WebLogging.hs
+--
+--   Content of the action is a JSON message specifying action type and content.
+QuaViewWebLogging
+    userId      UserId Maybe
+    exerciseId  ExerciseId Maybe
+    ipAddress   Text Maybe
+    timestamp   UTCTime default=CURRENT_TIMESTAMP
+    action      Text

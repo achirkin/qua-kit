@@ -1,5 +1,4 @@
 {-# OPTIONS_HADDOCK hide, prune #-}
-{-# OPTIONS_GHC -fno-warn-orphans #-}
 module Handler.LoggingWS
   ( getQVLoggingR
   ) where
@@ -9,75 +8,20 @@ module Handler.LoggingWS
 import Import
 
 import Yesod.WebSockets
-import qualified Control.Monad.Trans.State.Lazy as State
-import qualified Control.Monad.Trans.Reader as Reader
-import Data.Aeson (decodeStrict')
-import Data.Aeson.Types (typeMismatch)
-import qualified Data.HashMap.Strict as HashMap
 import Handler.Mooc.User (maybeFetchExerciseId)
+import Network.Wai (remoteHost)
+import Network.Socket
+import qualified Data.Text.Lazy.Builder as TLB
+import qualified Data.Text.Lazy.Builder.Int as TLB
+import qualified Data.Text.Encoding as Text
+import qualified Data.Text as Text
+import Data.Char (isSpace)
 
-
-loggingApp :: Maybe UserId -> Maybe ExerciseId -> WebSocketsT Handler ()
-loggingApp uId exId = Reader.mapReaderT (`State.evalStateT` Nothing) $ sourceWS $$ mapM_C (\msg -> do
+loggingApp :: Maybe UserId -> Maybe ExerciseId -> Maybe Text -> WebSocketsT Handler ()
+loggingApp uId exId ipAddr = sourceWS $$ mapM_C (\msg -> do
        t <- liftIO getCurrentTime
-       case decodeStrict' msg of
-         Nothing   -> return ()
-         Just (WSLoad msgF) -> do
-            i <- lift . lift. runDB . insert $ (msgF uId exId t :: UserScenarioLoad)
-            lift . State.put $ Just i
-         Just (WSUpdate msgF) -> do
-            mi <- lift State.get
-            case mi of
-              Nothing -> return ()
-              Just i  -> lift . lift . runDB . insert_ $ (msgF i t :: UserScenarioUpdate)
-         Just (WSAction msgF) -> do
-            mi <- lift State.get
-            case mi of
-              Nothing -> return ()
-              Just i  -> lift . lift . runDB . insert_ $ (msgF i t :: UserScenarioAction)
+       lift . runDB . insert_ $ QuaViewWebLogging uId exId ipAddr t msg
      )
-
-
-instance FromJSON (UserScenarioLoadId -> UTCTime -> UserScenarioAction) where
-  parseJSON (Object v) = do
-    v11:v12:v13:v14
-     :v21:v22:v23:v24
-     :v31:v32:v33:v34
-     :v41:v42:v43:v44:_ <- v .: "transform"
-    geomId <- v .: "geomID"
-    return $ \ldId t -> UserScenarioAction
-       ldId t geomId
-       v11 v12 v13 v14
-       v21 v22 v23 v24
-       v31 v32 v33 v34
-       v41 v42 v43 v44
-  parseJSON invalid = typeMismatch "UserScenarioAction" invalid
-
-instance FromJSON (Maybe UserId -> Maybe ExerciseId -> UTCTime -> UserScenarioLoad) where
-  parseJSON (Object v) = do
-    fc <- v .: "load"
-    scale <- v .: "scale"
-    return $ \uId spid t -> UserScenarioLoad uId spid t fc scale
-  parseJSON invalid = typeMismatch "UserScenarioLoad" invalid
-
-instance FromJSON (UserScenarioLoadId -> UTCTime -> UserScenarioUpdate) where
-  parseJSON (Object v) = do
-    fc <- v .: "update"
-    return $ \ldId t -> UserScenarioUpdate ldId t fc
-  parseJSON invalid = typeMismatch "UserScenarioUpdate" invalid
-
-
-data WSInfo
-  = WSLoad (Maybe UserId -> Maybe ExerciseId -> UTCTime -> UserScenarioLoad)
-  | WSUpdate (UserScenarioLoadId -> UTCTime -> UserScenarioUpdate)
-  | WSAction (UserScenarioLoadId -> UTCTime -> UserScenarioAction)
-
-
-instance FromJSON WSInfo where
-  parseJSON (Object v) | HashMap.member "load" v   = WSLoad   <$> parseJSON (Object v)
-                       | HashMap.member "update" v = WSUpdate <$> parseJSON (Object v)
-                       | otherwise                 = WSAction <$> parseJSON (Object v)
-  parseJSON invalid = typeMismatch "WSInfo" invalid
 
 
 getQVLoggingR :: Handler Html
@@ -86,5 +30,32 @@ getQVLoggingR = do
     mExId <- case mUId of
       Just uid -> maybeFetchExerciseId uid
       Nothing  -> return Nothing
-    webSockets $ loggingApp mUId mExId
+    mHeadRealIp <- lookupHeader "X-Real-IP"
+    mHeadForwardedFor <- lookupHeader "X-Forwarded-For"
+    mReqIp <- getAddr . remoteHost <$> waiRequest
+    webSockets $ loggingApp mUId mExId (findIp mHeadRealIp mHeadForwardedFor mReqIp)
     notFound
+  where
+    toT = fmap Text.decodeUtf8
+    mh [] = Nothing
+    mh (x:_) = Just x
+    getFst = join
+           . fmap ( mh
+                  . filter (not . Text.null)
+                  . map (Text.filter (not . isSpace))
+                  . Text.split (','==))
+    findIp op1 op2 op3 = toT op1 <|> getFst (toT op2) <|> op3
+    getAddr (SockAddrInet _ ha) = case hostAddressToTuple ha of
+      (a,b,c,d) -> Just $
+        tshow a <> "." <> tshow b <> "." <> tshow c <> "." <> tshow d
+    getAddr (SockAddrInet6 _ _ ha6 _) = case hostAddress6ToTuple ha6 of
+      (a,b,c,d,e,f,g,h) -> Just . toStrict . TLB.toLazyText $
+        TLB.hexadecimal a <> ":" <>
+        TLB.hexadecimal b <> ":" <>
+        TLB.hexadecimal c <> ":" <>
+        TLB.hexadecimal d <> ":" <>
+        TLB.hexadecimal e <> ":" <>
+        TLB.hexadecimal f <> ":" <>
+        TLB.hexadecimal g <> ":" <>
+        TLB.hexadecimal h
+    getAddr _ = Nothing
