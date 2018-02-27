@@ -6,6 +6,7 @@
 --   and (optionally) attach some textual explanation.
 module QuaTypes.Review (
     ReviewPost (..)
+  , ExpertReviewPost (..)
   , ReviewSettings (..)
   , Criterion (..)
   , ThumbState (..)
@@ -23,7 +24,8 @@ import QuaTypes.Commons
 data ReviewSettings = ReviewSettings {
     criterions :: [Criterion] -- ^ criterions this submission can be reviewed with
   , reviews    :: [Review]    -- ^ reviews of this submission
-  , reviewsUrl :: Maybe Url    -- ^ URL to post new review to and fetch updated list of reviews from
+  , reviewsUrl :: Maybe Url    -- ^ URL to POST new review to, and GET list of reviews plus expert reviews
+  , expertReviewsUrl :: Maybe Url -- ^ URL to POST new expert review to
   } deriving Generic
 instance FromJSON  ReviewSettings
 instance ToJSON    ReviewSettings
@@ -65,6 +67,14 @@ data ReviewPost = ReviewPost {
   } deriving Generic
 instance FromJSON ReviewPost
 instance ToJSON   ReviewPost
+
+-- | Expert's input - a review of the design viewed
+data ExpertReviewPost = ExpertReviewPost {
+    expertReviewPostGrade   :: !Int
+  , expertReviewPostComment :: !QuaText
+  } deriving Generic
+instance FromJSON ExpertReviewPost
+instance ToJSON   ExpertReviewPost
 
 -- | Previous reviews of the viewed design
 data Review = Review {

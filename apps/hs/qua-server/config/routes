@@ -53,7 +53,7 @@
 /exercise/#ExerciseId/#UserId/geometry        SubmissionGeometryR      GET
 /exercise/#ExerciseId/#UserId/info            SubmissionInfoR          GET
 /exercise/#ExerciseId/#UserId/preview         ProposalPreviewR         GET
-/exercise/#ExerciseId/#UserId/expertreview    WriteExpertReviewR       POST
+/exercise/#ExerciseId/#UserId/expertreviews   ExpertReviewsR           POST
 /exercise/#ExerciseId/#UserId/reviews         ReviewsR                 GET POST
 /exercise/#ExerciseId/#UserId/review-settings QuaViewReviewSettingsR   GET
 !/exercise/#ExerciseId/enroll/#Text           EnrollExerciseR          GET

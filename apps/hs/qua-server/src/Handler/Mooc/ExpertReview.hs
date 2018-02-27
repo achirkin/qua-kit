@@ -1,6 +1,6 @@
 {-# OPTIONS_HADDOCK hide, prune #-}
 module Handler.Mooc.ExpertReview
-  ( postWriteExpertReviewR
+  ( postExpertReviewsR
   , fetchExpertReviewsFromDb
   ) where
 
@@ -12,20 +12,20 @@ import Application.Grading
 import Application.Edx
 import qualified QuaTypes.Review as QtR
 
-postWriteExpertReviewR :: ExerciseId -> UserId -> Handler Value
-postWriteExpertReviewR exId authorId = runJSONExceptT $ do
-    userId  <- maybeE "You must login to review." maybeAuthId
-    grade   <- maybeE "You must specify a grade." $
-                 liftM (>>= readMay) $ lookupPostParam "grade"
-    comment <- lift $ fromMaybe "" <$> lookupPostParam "comment"
-    t       <- liftIO getCurrentTime
-    Entity _ cSc     <- lift $ runDB $ getBy404 $ SubmissionOf authorId exId
+postExpertReviewsR :: ExerciseId -> UserId -> Handler Value
+postExpertReviewsR exId authorId = runJSONExceptT $ do
+    Entity userId user <- maybeE "You must login to review." maybeAuth
+    expertReviewPost <- requireJsonBody
+    let grade   = QtR.expertReviewPostGrade   expertReviewPost
+        comment = QtR.expertReviewPostComment expertReviewPost
+    t <- liftIO getCurrentTime
+    Entity _ cSc <- lift $ runDB $ getBy404 $ SubmissionOf authorId exId
     ExceptT $ runDB $ runExceptT $ do
       when (userId == authorId) $
         throwE "You cannot review yourself!"
       when (length comment < 80) $
         throwE "Comment needs to be at least 80 characters."
-      _ <- lift $ upsert (ExpertReview userId (currentScenarioHistoryScenarioId cSc) comment grade t)
+      Entity _ r <- lift $ upsert (ExpertReview userId (currentScenarioHistoryScenarioId cSc) comment grade t)
                    [ ExpertReviewGrade     =. grade
                    , ExpertReviewComment   =. comment
                    , ExpertReviewTimestamp =. t ]
@@ -35,10 +35,12 @@ postWriteExpertReviewR exId authorId = runJSONExceptT $ do
       -- queue new grade for sending to edX
       lift $ queueDesignGrade $ currentScenarioHistoryScenarioId cSc
 
-    return $ object [ "grade"     .= grade
-                    , "comment"   .= comment
-                    , "timestamp" .= t
-                    ]
+      return QtR.Review {
+          reviewUserName    = userName user
+        , reviewRating      = QtR.ExpertRating $ expertReviewGrade r
+        , reviewComment     = expertReviewComment r
+        , reviewTimestamp   = expertReviewTimestamp r
+        }
 
 
 fetchExpertReviewsFromDb :: CurrentScenarioId -> Handler [QtR.Review]

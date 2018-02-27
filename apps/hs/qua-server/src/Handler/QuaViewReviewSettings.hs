@@ -12,7 +12,8 @@ getQuaViewReviewSettingsR :: ExerciseId -> UserId -> Handler Value
 getQuaViewReviewSettingsR exId authorId = do
     app <- getYesod
     req <- waiRequest
-    mUsrId <- maybeAuthId
+    mUsrEnt <- maybeAuth
+    let mUsrId = entityKey <$> mUsrEnt
     let routeUrl route = let appr = getApprootText guessApproot app req
                          in  yesodRender app appr route []
 
@@ -24,6 +25,7 @@ getQuaViewReviewSettingsR exId authorId = do
                        Nothing               -> return []
     let reviews = sortOn QtR.reviewTimestamp $ userReviews ++ expertReviews
     let canReview = maybe False (/= authorId) mUsrId
+    let isExpert = muserRole mUsrEnt == UR_EXPERT
     returnJson QtR.ReviewSettings {
         criterions = flip map criterions $ \(Entity cId c) -> QtR.Criterion {
                           criterionId   = fromIntegral $ fromSqlKey cId
@@ -34,4 +36,7 @@ getQuaViewReviewSettingsR exId authorId = do
       , reviewsUrl = if canReview
                      then Just . routeUrl $ ReviewsR exId authorId
                      else Nothing
+      , expertReviewsUrl = if isExpert
+                           then Just . routeUrl $ ExpertReviewsR exId authorId
+                           else Nothing
       }
