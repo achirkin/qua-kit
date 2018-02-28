@@ -4,6 +4,8 @@ module Handler.About
   ) where
 
 import Import
+import Paths_qua_server (version)
+import Data.Version (showVersion)
 
 getAboutR :: Handler Html
 getAboutR =
@@ -39,7 +41,7 @@ getAboutR =
                   <div.card-header>
                     <div.card-inner>
                       <h5.h5.margin-bottom-no.margin-top-no>
-                        Qua-kit
+                        Qua-kit v#{showVersion version}
                   <div.card-inner>
                     <p>
                       Qua-kit is a web platform for viewing and manipulating simple urban geometry. #

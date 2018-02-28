@@ -1,5 +1,5 @@
 name: qua-server
-version: 0.1
+version: 2.0.0.1
 cabal-version: >=1.22
 build-type: Custom
 license: MIT
@@ -19,6 +19,8 @@ author: Artem Chirkin
 source-repository head
     type: git
     location: https://github.com/achirkin/qua-kit.git
+    subdir: apps/hs/qua-server
+    branch: reflex
 
 flag dev
     description:
@@ -58,6 +60,8 @@ library
     else
         build-depends:
             persistent-sqlite -any
+    autogen-modules:
+        Paths_qua_server
     exposed-modules:
         Application
         Application.Edx
@@ -102,6 +106,7 @@ library
         Model.Session
         Settings
         Settings.StaticFiles
+        Paths_qua_server
     build-depends:
         authenticate-oauth >= 1.6,
         base >=4 && <5,
