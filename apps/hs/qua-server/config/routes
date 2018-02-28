@@ -51,6 +51,7 @@
 /exercise/#ExerciseId/#UserId                 SubmissionR              GET PUT
 /exercise/#ExerciseId/#UserId/settings        QuaViewExerciseSettingsR GET
 /exercise/#ExerciseId/#UserId/geometry        SubmissionGeometryR      GET
+/exercise/#ExerciseId/#UserId/info            SubmissionInfoR          GET
 /exercise/#ExerciseId/#UserId/preview         ProposalPreviewR         GET
 /exercise/#ExerciseId/#UserId/expertreview    WriteExpertReviewR       POST
 /exercise/#ExerciseId/#UserId/reviews         ReviewsR                 GET POST

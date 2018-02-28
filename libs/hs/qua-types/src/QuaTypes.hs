@@ -24,6 +24,9 @@ data Settings = Settings {
     loggingUrl               :: Maybe Url    -- ^ WebSocket URL to send user analytics to
   , luciUrl                  :: Maybe Url    -- ^ WebSocket URL to connect to Luci
   , getSubmissionGeometryUrl :: Maybe Url    -- ^ URL to GET geoJSON for current submission
+  , getSubmissionInfoUrl     :: Maybe Url    -- ^ URL to GET JSON for current submission info
+                                             --   It contains such information as
+                                             --     user name and description of the submission.
   , putSubmissionUrl         :: Maybe Url    -- ^ URL for students to PUT their new or updated submission to
   , reviewSettingsUrl        :: Maybe Url    -- ^ URL to get settings related to reviews
   , viewUrl                  :: Url          -- ^ URL of current qua-viewer page
@@ -51,6 +54,7 @@ instance Semigroup Settings where
       loggingUrl               = loggingUrl s1               <|> loggingUrl s2
     , luciUrl                  = luciUrl s1                  <|> luciUrl s2
     , getSubmissionGeometryUrl = getSubmissionGeometryUrl s1 <|> getSubmissionGeometryUrl s2
+    , getSubmissionInfoUrl     = getSubmissionInfoUrl s1     <|> getSubmissionInfoUrl s2
     , putSubmissionUrl         = putSubmissionUrl s1         <|> putSubmissionUrl s2
     , reviewSettingsUrl        = reviewSettingsUrl s1        <|> reviewSettingsUrl s2
     , viewUrl                  = if viewUrl s1 == viewUrl mempty
@@ -67,6 +71,7 @@ instance Monoid Settings where
        loggingUrl               = Nothing
      , luciUrl                  = Nothing
      , getSubmissionGeometryUrl = Nothing
+     , getSubmissionInfoUrl     = Nothing
      , putSubmissionUrl         = Nothing
      , reviewSettingsUrl        = Nothing
      , viewUrl                  = "" -- TODO: we need to decide on a better mempty value... index.html?
@@ -79,6 +84,7 @@ instance Monoid Settings where
         , canModifyStaticObjects = True
         , showHiddenProperties   = False
         , showShareButton        = True
+        , isViewerOnly           = False
         }
      }
 
@@ -91,6 +97,8 @@ data Permissions = Permissions
   , canModifyStaticObjects :: Bool -- ^ make all objects movable, even those with property static=true
   , showHiddenProperties   :: Bool -- ^ also show blacklisted properties in info-panel
   , showShareButton        :: Bool -- ^ show share to social media etc.
+  , isViewerOnly           :: Bool -- ^ Override everything and only allow
+                                   --   to view scenario (no editing at all)
   } deriving Generic
 instance FromJSON  Permissions
 instance ToJSON    Permissions

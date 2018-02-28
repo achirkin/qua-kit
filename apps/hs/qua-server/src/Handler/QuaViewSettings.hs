@@ -22,6 +22,7 @@ getQuaViewEditorSettingsR
        , canModifyStaticObjects = True
        , showHiddenProperties   = True
        , showShareButton        = False
+       , isViewerOnly           = False
        }
 
 -- | These settings are for students when we know their exercise id,
@@ -38,6 +39,7 @@ getQuaViewExerciseSettingsR exId uId = do
        , canModifyStaticObjects = False
        , showHiddenProperties   = False
        , showShareButton        = True
+       , isViewerOnly           = False
        }
 
 quaViewSettingsR :: Route App
@@ -45,7 +47,7 @@ quaViewSettingsR :: Route App
                  -> Maybe UserId
                  -> QuaTypes.Permissions
                  -> Handler Value
-quaViewSettingsR curRoute mcExId mAuthorId perms = do
+quaViewSettingsR curRoute mcExId mAuthorId perms' = do
   app <- getYesod
   req <- waiRequest
   mUserId <- maybeAuthId
@@ -54,6 +56,18 @@ quaViewSettingsR curRoute mcExId mAuthorId perms = do
         Just True  -> SubmissionR <$> mcExId <*> mAuthorId
         Nothing    -> Nothing
         Just False -> Nothing
+      -- set viewer to not be able to do anything
+      perms = case (==) <$> mUserId <*> mAuthorId of
+        Just True  -> perms'
+        Nothing    -> perms'
+        Just False -> perms'
+          { QuaTypes.canEditProperties      = False
+          , QuaTypes.canEraseReloadGeometry = False
+          , QuaTypes.canAddDeleteGeometry   = False
+          , QuaTypes.canDownloadGeometry    = False
+          , QuaTypes.canModifyStaticObjects = False
+          , QuaTypes.isViewerOnly           = True
+          }
 
   let appr = getApprootText guessApproot app req
       routeUrl route = yesodRender app appr route []
@@ -61,6 +75,7 @@ quaViewSettingsR curRoute mcExId mAuthorId perms = do
       loggingUrl               = Just $ "ws" <> drop 4 (routeUrl QVLoggingR)
     , luciUrl                  = ("ws" <> drop 4 (routeUrl LuciR)) <$ mUserId
     , getSubmissionGeometryUrl = fmap routeUrl $ SubmissionGeometryR <$> mcExId <*> mAuthorId
+    , getSubmissionInfoUrl     = fmap routeUrl $ SubmissionInfoR <$> mcExId <*> mAuthorId
     , putSubmissionUrl         = routeUrl <$> filteredSubmissionR
     , reviewSettingsUrl        = fmap routeUrl $ QuaViewReviewSettingsR <$> mcExId <*> mAuthorId
     , viewUrl                  = routeUrl curRoute

@@ -1,21 +1,23 @@
 {-# LANGUAGE CPP #-}
 {-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE Strict #-}
 
 -- | The data sent to server when a student submits a scenario (in workshop mode).
 module QuaTypes.Submission (
-    SubmissionPost (..), SubmitResponse (..)
+    SubmissionPost (..), SubmitResponse (..), SubmissionInfo (..)
   ) where
 
 import GHC.Generics
 import QuaTypes.Commons
+import Data.Time.Clock
 
 -- | The data sent when a student submits a design.
 data SubmissionPost = SubmissionPost
-  { subPostDescription  :: !QuaText
+  { subPostDescription  :: QuaText
     -- ^ Arbitrary description given by a student
-  , subPostGeometry     :: !GeoJson
+  , subPostGeometry     :: GeoJson
     -- ^ Scenario (FeatureCollection) in JSON format
-  , subPostPreviewImage :: !Base64
+  , subPostPreviewImage :: Base64
     -- ^ A sceenshot of the current design
   } deriving Generic
 instance FromJSON  SubmissionPost
@@ -37,6 +39,19 @@ newtype SubmitResponse = SubmitResponse
   } deriving Generic
 instance FromJSON  SubmitResponse
 instance ToJSON    SubmitResponse
+#ifndef ghcjs_HOST_OS
+  where
+    toEncoding = genericToEncoding defaultOptions -- see Yesod.Core.Json
+#endif
+
+
+data SubmissionInfo = SubmissionInfo
+  { subInfoDescription :: QuaText
+  , subInfoUserName    :: QuaText
+  , subInfoTime        :: UTCTime
+  } deriving Generic
+instance FromJSON  SubmissionInfo
+instance ToJSON    SubmissionInfo
 #ifndef ghcjs_HOST_OS
   where
     toEncoding = genericToEncoding defaultOptions -- see Yesod.Core.Json

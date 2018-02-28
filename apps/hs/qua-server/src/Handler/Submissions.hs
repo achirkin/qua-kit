@@ -8,6 +8,7 @@ This module contains:
 module Handler.Submissions
     ( getQuaViewEditorR
     , getSubmissionR, putSubmissionR
+    , getSubmissionInfoR
     , getSubmissionGeometryR
     , getRedirectToQuaViewEditR
     ) where
@@ -198,3 +199,15 @@ quaW = do
     <!-- Qua-view generated code -->
     <script src=@{StaticR js_qua_view_js} async type="text/javascript">
   |]
+
+
+getSubmissionInfoR :: ExerciseId -> UserId -> Handler Value
+getSubmissionInfoR exId authorId = do
+  Entity _ csc <- runDB $ getBy404 $ SubmissionOf authorId exId
+  user <- runDB $ get404 authorId
+  return $ toJSON
+    QtS.SubmissionInfo
+     { subInfoDescription = currentScenarioDescription csc
+     , subInfoUserName    = userName user
+     , subInfoTime        = currentScenarioLastUpdate csc
+     }
