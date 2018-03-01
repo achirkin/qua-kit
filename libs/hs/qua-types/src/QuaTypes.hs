@@ -1,7 +1,7 @@
-{-# LANGUAGE CPP #-}
-{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE CPP               #-}
+{-# LANGUAGE DeriveGeneric     #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE Strict #-}
+{-# LANGUAGE Strict            #-}
 
 -- | Define serializable data types to enable interoperability between
 --   qua-server and qua-view.
@@ -9,19 +9,19 @@
 --   This module defines the data types used by the whole qua-view.
 --   Other modules in @QuaTypes.*@ hierarchy define settings and data types
 --   specific to particular widgets.
-module QuaTypes (
-    Settings (..)
+module QuaTypes
+  ( Settings (..)
   , Permissions (..)
   ) where
 
-import Control.Applicative ((<|>))
-import Data.Semigroup
-import GHC.Generics
-import QuaTypes.Commons
+import           Control.Applicative ((<|>))
+import           Data.Semigroup
+import           GHC.Generics
+import           QuaTypes.Commons
 
 -- | General qua-view settings
-data Settings = Settings {
-    loggingUrl               :: Maybe Url    -- ^ WebSocket URL to send user analytics to
+data Settings = Settings
+  { loggingUrl               :: Maybe Url    -- ^ WebSocket URL to send user analytics to
   , luciUrl                  :: Maybe Url    -- ^ WebSocket URL to connect to Luci
   , getSubmissionGeometryUrl :: Maybe Url    -- ^ URL to GET geoJSON for current submission
   , getSubmissionInfoUrl     :: Maybe Url    -- ^ URL to GET JSON for current submission info
@@ -50,8 +50,8 @@ instance ToJSON    Settings
 --
 --   > currentSettings = reallyGoodSettings <> someFairSettings <> defaultSettings <> mempty
 instance Semigroup Settings where
-  (<>) s1 s2 = Settings {
-      loggingUrl               = loggingUrl s1               <|> loggingUrl s2
+  (<>) s1 s2 = Settings
+    { loggingUrl               = loggingUrl s1               <|> loggingUrl s2
     , luciUrl                  = luciUrl s1                  <|> luciUrl s2
     , getSubmissionGeometryUrl = getSubmissionGeometryUrl s1 <|> getSubmissionGeometryUrl s2
     , getSubmissionInfoUrl     = getSubmissionInfoUrl s1     <|> getSubmissionInfoUrl s2
@@ -67,8 +67,8 @@ instance Semigroup Settings where
     }
 instance Monoid Settings where
   mappend = (<>)
-  mempty = Settings {
-       loggingUrl               = Nothing
+  mempty = Settings
+     { loggingUrl               = Nothing
      , luciUrl                  = Nothing
      , getSubmissionGeometryUrl = Nothing
      , getSubmissionInfoUrl     = Nothing

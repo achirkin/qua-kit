@@ -1,15 +1,17 @@
-{-# LANGUAGE CPP #-}
+{-# LANGUAGE CPP           #-}
 {-# LANGUAGE DeriveGeneric #-}
-{-# LANGUAGE Strict #-}
+{-# LANGUAGE Strict        #-}
 
 -- | The data sent to server when a student submits a scenario (in workshop mode).
-module QuaTypes.Submission (
-    SubmissionPost (..), SubmitResponse (..), SubmissionInfo (..)
-  ) where
+module QuaTypes.Submission
+    ( SubmissionPost (..)
+    , SubmitResponse (..)
+    , SubmissionInfo (..)
+    ) where
 
-import GHC.Generics
-import QuaTypes.Commons
-import Data.Time.Clock
+import           Data.Time.Clock
+import           GHC.Generics
+import           QuaTypes.Commons
 
 -- | The data sent when a student submits a design.
 data SubmissionPost = SubmissionPost

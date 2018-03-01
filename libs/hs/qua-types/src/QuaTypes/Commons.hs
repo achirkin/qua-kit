@@ -1,17 +1,17 @@
 {-# LANGUAGE CPP #-}
 
-module QuaTypes.Commons (
-    Base64
-  , GeoJson
-  , Url
-  , QuaText
-  , FromJSON (..)
-  , ToJSON (..)
+module QuaTypes.Commons
+    ( Base64
+    , GeoJson
+    , Url
+    , QuaText
+    , FromJSON (..)
+    , ToJSON (..)
 #ifndef ghcjs_HOST_OS
-  , defaultOptions
-  , genericToEncoding
+    , defaultOptions
+    , genericToEncoding
 #endif
-  ) where
+    ) where
 
 #ifdef ghcjs_HOST_OS
 import Data.JSString
@@ -29,6 +29,9 @@ import Data.Text
 type QuaText = Text
 #endif
 
-type Base64  = QuaText -- ^ binary data serialized as a base64-encoded string
-type GeoJson = QuaText -- ^ to avoid parsing JSON unnecessarily, this is stored as a string
-type Url     = QuaText -- ^ a string holding a URL
+-- | binary data serialized as a base64-encoded string
+type Base64  = QuaText
+-- | to avoid parsing JSON unnecessarily, this is stored as a string
+type GeoJson = QuaText
+-- | a string holding a URL
+type Url     = QuaText
