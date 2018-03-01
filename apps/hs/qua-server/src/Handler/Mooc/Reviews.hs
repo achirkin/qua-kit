@@ -1,5 +1,4 @@
 {-# OPTIONS_HADDOCK hide, prune #-}
-{-# LANGUAGE RecordWildCards #-}
 module Handler.Mooc.Reviews
   ( postReviewsR
   , getReviewsR
@@ -32,7 +31,7 @@ postReviewsR exId authorId = runJSONExceptT $ do
         throwE "You cannot review yourself!"
       oreview <- lift $ getBy (ReviewOf userId scenarioId criterionId)
       when (isJust oreview) $
-        throwE "You have already voted on this exact design according w.r.t. this criterion."
+        throwE "You have already voted on this design and criterion combination."
       let review = Review userId
                           scenarioId
                           criterionId
