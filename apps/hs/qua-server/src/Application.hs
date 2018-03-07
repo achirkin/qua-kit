@@ -77,10 +77,12 @@ import Handler.Mooc.CompareProposals
 import Handler.Mooc.ProposalPreview
 import Handler.Mooc.User
 import Handler.Mooc.Survey
--- import Handler.Mooc.Tests
 import Handler.Mooc.FAQ
 import Handler.Submissions
 import Handler.LoggingWS
+#if DEVELOPMENT
+import Handler.Mooc.Tests
+#endif
 
 -- This line actually creates our YesodDispatch instance. It is the second half
 -- of the call to mkYesodData which occurs in Foundation.hs. Please see the

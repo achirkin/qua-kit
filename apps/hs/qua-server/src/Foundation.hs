@@ -1,11 +1,14 @@
 {-# OPTIONS_HADDOCK hide, prune #-}
+{-# Language CPP #-}
 module Foundation
     ( module Foundation
     , parseSqlKey
     ) where
 
+import qualified Prelude
+import qualified Language.Haskell.TH as TH
+import qualified Language.Haskell.TH.Quote as TH
 import Control.Concurrent.STM.TChan
-
 import qualified Data.Text as Text
 import qualified Data.Map as Map
 import Yesod.Auth.LdapNative
@@ -15,19 +18,15 @@ import qualified Network.Mail.Mime as Mail
 import Text.Hamlet          (hamletFile)
 import Text.Jasmine         (minifym)
 import Text.Shakespeare.Text (stext)
---import Yesod.Auth.OpenId    (authOpenId, IdentifierType (Claimed))
 import Yesod.Auth.Email
 import Yesod.Auth.Message   (AuthMessage (..))
 import Yesod.Default.Util   (addStaticContentExternal)
 import Yesod.Core.Types     (Logger)
 import qualified Yesod.Core.Unsafe as Unsafe
---import qualified Data.CaseInsensitive as CI
---import qualified Data.Text.Encoding as TE
-
 import Data.Text.Read (decimal)
 import System.Directory (createDirectoryIfMissing)
-
 import Text.Blaze (Markup)
+
 import Handler.Mooc.EdxLogin
 import Model.Session
 import Application.Edx
@@ -58,7 +57,17 @@ data App = App
 -- This function also generates the following type synonyms:
 -- type Handler = HandlerT App IO
 -- type Widget = WidgetT App IO ()
+#if DEVELOPMENT
+mkYesodData "App" $(do
+  routes <- TH.runIO $ do
+    a <- Prelude.readFile "config/routes"
+    b <- Prelude.readFile "config/routes.dev"
+    return $ Prelude.unlines [a,b]
+  TH.quoteExp parseRoutes routes
+  )
+#else
 mkYesodData "App" $(parseRoutesFile "config/routes")
+#endif
 
 -- | A convenient synonym for creating forms.
 type Form x = Html -> MForm (HandlerT App IO) (FormResult x, Widget)

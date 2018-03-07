@@ -1,5 +1,5 @@
 name: qua-server
-version: 2.0.0.1
+version: 2.0.0.2
 cabal-version: >=1.22
 build-type: Custom
 license: MIT
@@ -90,7 +90,6 @@ library
         Handler.Mooc.RenameMe
         Handler.Mooc.Exercise
         Handler.Mooc.Survey
-        Handler.Mooc.Tests
         Handler.Mooc.User
         Handler.Mooc.FAQ
         Handler.QuaViewReviewSettings
@@ -107,6 +106,9 @@ library
         Settings
         Settings.StaticFiles
         Paths_qua_server
+    if flag(dev)
+      exposed-modules:
+        Handler.Mooc.Tests
     build-depends:
         authenticate-oauth >= 1.6,
         base >=4 && <5,

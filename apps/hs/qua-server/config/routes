@@ -72,8 +72,3 @@
 
 /renameme                           RenameMeR GET
 /setupAcc/#UserId                   SetupLocalAccount POST
-
-
--- /test/designex         SimulateDesignExerciseR GET
--- /test/compareex        SimulateCompareExerciseR GET
--- /test/loginas/#UserId  LoginAsUserIdR GET
