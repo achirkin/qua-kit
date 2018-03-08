@@ -37,6 +37,7 @@ postExpertReviewsR exId authorId = runJSONExceptT $ do
 
       return QtR.Review {
           reviewUserName    = userName user
+        , reviewIsMine      = True
         , reviewRating      = QtR.ExpertRating $ expertReviewGrade r
         , reviewComment     = expertReviewComment r
         , reviewTimestamp   = expertReviewTimestamp r
@@ -46,20 +47,26 @@ postExpertReviewsR exId authorId = runJSONExceptT $ do
 fetchExpertReviewsFromDb :: CurrentScenarioId -> Handler [QtR.Review]
 fetchExpertReviewsFromDb cScId = do
   reviewsAndUsers <- fetchReviews cScId
-  let toQtReview (r, mUsr) = QtR.Review {
-        reviewUserName    = maybe "-" userName mUsr
+  mUsrId <- maybeAuthId
+  let isMine (Entity reviewerId _) = case mUsrId of
+        Just usrId -> reviewerId == usrId
+        Nothing    -> False
+  let toQtReview (r, mUsrEnt) = QtR.Review {
+        reviewUserName    = maybe "-" (userName . entityVal) mUsrEnt
+      , reviewIsMine      = maybe False isMine mUsrEnt
       , reviewRating      = QtR.ExpertRating $ expertReviewGrade r
       , reviewComment     = expertReviewComment r
       , reviewTimestamp   = expertReviewTimestamp r
       }
   return $ map toQtReview reviewsAndUsers
 
-fetchReviews :: CurrentScenarioId -> Handler [(ExpertReview, Maybe User)]
+fetchReviews :: CurrentScenarioId -> Handler [(ExpertReview, Maybe (Entity User))]
 fetchReviews cScId = do
   cSc <- runDB $ get404 cScId
   let scId = currentScenarioHistoryScenarioId cSc
   reviews <- runDB $ selectList [ExpertReviewScenarioId ==. scId] []
   reviewsAndUsers <- forM reviews $ \(Entity _ r) -> do
-    mReviewer <- runDB $ get $ expertReviewReviewerId r
-    return (r, mReviewer)
+    let reviewerId = expertReviewReviewerId r
+    mReviewer <- runDB $ get reviewerId
+    return (r, (Entity reviewerId) <$> mReviewer)
   return reviewsAndUsers

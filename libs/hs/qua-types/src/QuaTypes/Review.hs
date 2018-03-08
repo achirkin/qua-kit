@@ -84,6 +84,7 @@ instance ToJSON   ExpertReviewPost
 -- | Previous reviews of the viewed design
 data Review = Review
   { reviewUserName  :: QuaText
+  , reviewIsMine    :: !Bool -- ^ review is by currently logged in user
   , reviewRating    :: Rating
   , reviewComment   :: QuaText
   , reviewTimestamp :: UTCTime

@@ -23,7 +23,7 @@ getQuaViewReviewSettingsR exId authorId = do
     expertReviews <- case mcsc of
                        Just (Entity cScId _) -> fetchExpertReviewsFromDb cScId
                        Nothing               -> return []
-    let reviews = sortOn QtR.reviewTimestamp $ userReviews ++ expertReviews
+    let reviews = reverse $ sortOn QtR.reviewTimestamp $ userReviews ++ expertReviews
     let canReview = maybe False (/= authorId) mUsrId
     let isExpert = muserRole mUsrEnt == UR_EXPERT
     returnJson QtR.ReviewSettings {

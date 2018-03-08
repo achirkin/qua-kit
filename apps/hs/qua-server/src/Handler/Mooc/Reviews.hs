@@ -39,7 +39,7 @@ postReviewsR exId authorId = runJSONExceptT $ do
                           (QtR.reviewPostComment reviewPost)
                           t
       reviewId <- lift $ insert review
-      return $ reviewToQtReview (userName user) (Entity reviewId review)
+      return $ reviewToQtReview (userName user) True (Entity reviewId review)
 
 getReviewsR :: ExerciseId -> UserId -> Handler Value
 getReviewsR exId authorId = runDB $ do
@@ -49,9 +49,13 @@ getReviewsR exId authorId = runDB $ do
 fetchReviewsFromDb :: ExerciseId -> UserId -> ReaderT SqlBackend Handler [QtR.Review]
 fetchReviewsFromDb exId authorId = do
   Entity _ cSc <- getBy404 $ SubmissionOf authorId exId
+  mUsrId <- lift maybeAuthId
+  let isMine reviewerId = case mUsrId of
+        Just usrId -> reviewerId == usrId
+        Nothing    -> False
   let scId = currentScenarioHistoryScenarioId cSc
   let query = Text.unlines
-          ["SELECT \"user\".name, ??"
+          ["SELECT \"user\".id, \"user\".name, ??"
           ,"FROM review"
           ,"INNER JOIN \"user\""
           ,"        ON \"user\".id = review.reviewer_id"
@@ -62,11 +66,13 @@ fetchReviewsFromDb exId authorId = do
           ,"ORDER BY review.timestamp DESC;"
           ]
   rows <- rawSql query [toPersistValue scId]
-  return $ map (\(Single userName, review) -> reviewToQtReview userName review) rows
+  return $ map (\(Single userId, Single userName, review) ->
+    reviewToQtReview userName (isMine userId) review) rows
 
-reviewToQtReview :: Text -> Entity Review -> QtR.Review
-reviewToQtReview userName (Entity _ r) = QtR.Review {
+reviewToQtReview :: Text -> Bool -> Entity Review -> QtR.Review
+reviewToQtReview userName isMine (Entity _ r) = QtR.Review {
       reviewUserName    = userName
+    , reviewIsMine      = isMine
     , reviewRating      = QtR.UserRating
                             (fromIntegral $ fromSqlKey $ reviewCriterionId r)
                             (toThumb $ reviewPositive r)
