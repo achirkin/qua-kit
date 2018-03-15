@@ -26,35 +26,39 @@ setupEdxGrading :: ( YesodAuth app
                 -> [(Text,Text)] -- ^ cred params we originally got from edx (via dispatchLti)
                 -> HandlerT app IO ()
 setupEdxGrading userId params = do
-  lookupAndSave userSessionEdxLisOutcomeServiceUrl
-  lookupAndSave userSessionEdxLisResultSourcedId
-  lookupAndSave userSessionEdxResourceLinkId
-  lookupAndSave userSessionEdxContextId
+  mserviceUrl      <- lookupAndSave userSessionEdxLisOutcomeServiceUrl
+  msourcedId       <- lookupAndSave userSessionEdxLisResultSourcedId
+  mresourceLinkId  <- lookupAndSave userSessionEdxResourceLinkId
+  mcontextId       <- lookupAndSave userSessionEdxContextId
+  maybe (return ()) (setSafeSessionForUid userId userSessionCustomExerciseCount)
+    (Map.lookup (convKey userSessionCustomExerciseCount) pm >>= parseInt)
+  let mexercise_id = Map.lookup "custom_exercise_id" pm >>= parseSqlKey --below saved as currentExerciseId
   mapM_ (uncurry setSession) $ filter (isPrefixOf "custom_". fst ) params
   runDB $
-    case (,,) <$> mresource_link_id <*> mcontext_id <*> mexercise_id of
+    case (,,) <$> mresourceLinkId <*> mcontextId <*> mexercise_id of
       Nothing  -> return ()
-      Just (resource_link_id, context_id, exercise_id) -> do
-        Entity edxCourseId _ <- upsert (EdxCourse context_id Nothing) []
+      Just (resource_link_id, contextId, exercise_id) -> do
+        Entity edxCourseId _ <- upsert (EdxCourse contextId Nothing) []
         mEdxRes <- getBy (EdxResLinkId resource_link_id edxCourseId)
         edxResId <- case mEdxRes of
           Just (Entity ek _) -> return ek
-          Nothing -> insert $ EdxResource resource_link_id edxCourseId exercise_id (Map.lookup "custom_component_display_name" pm)
+          Nothing -> insert $ EdxResource resource_link_id edxCourseId exercise_id
+                                (Map.lookup "custom_component_display_name" pm)
         -- update generic edx resource parameters
         saveCustomParams edxResId
         lift $ setSafeSessionForUid userId userSessionEdxResourceId edxResId
         lift $ setSafeSessionForUid userId userSessionCurrentExerciseId exercise_id
         -- update personal grade link
-        case (,) <$> Map.lookup "lis_outcome_service_url" pm
-                 <*> Map.lookup "lis_result_sourcedid" pm of
+        case (,) <$> mserviceUrl <*> msourcedId of
           Just (outcome_url, resultId) -> void $ upsert (EdxGrading edxResId userId outcome_url resultId) []
           Nothing -> return ()
   where
-    mresource_link_id = Map.lookup "resource_link_id" pm
-    mcontext_id       = Map.lookup "context_id" pm
-    mexercise_id      = Map.lookup "custom_exercise_id" pm >>= parseSqlKey
-    lookupAndSave sl = forM_ (Map.lookup (convKey sl) pm) (setSafeSession sl)
+    lookupAndSave sl = do
+      let mval = Map.lookup (convKey sl) pm
+      maybe (return ()) (setSafeSessionForUid userId sl) mval
+      return mval
     pm = Map.fromList params
+    -- the EdxResourceParam data is probably never used, just so the data is saved somewhere:
     saveCustomParams ek = mapM_ ((\(k,v) -> void $ upsert (EdxResourceParam ek k v) []) . first (drop 7))
                                 $ filter (isPrefixOf "custom_". fst ) params
 

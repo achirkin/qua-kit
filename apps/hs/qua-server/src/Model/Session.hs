@@ -7,6 +7,7 @@ module Model.Session
     , deleteSafeSession
     , setSafeSession
     , setSafeSessionForUid
+    , parseInt
     , parseSqlKey
     , userSessionCurrentExerciseId
     , userSessionCustomExerciseCount
@@ -137,8 +138,11 @@ setSafeSessionForUid uid sl@SessionLens {..} val =
     (UserProp uid (sessionVar sl) $ convInvFunc val)
     [UserPropValue =. convInvFunc val]
 
+parseInt :: Integral a => Text -> Maybe a
+parseInt t =
+  case decimal t of
+      Right (i, _) -> Just i
+      _ -> Nothing
+
 parseSqlKey :: (ToBackendKey SqlBackend a) => Text -> Maybe (Key a)
-parseSqlKey t =
-    case decimal t of
-        Right (i, _) -> Just $ toSqlKey i
-        _ -> Nothing
+parseSqlKey = (fmap toSqlKey) . parseInt
