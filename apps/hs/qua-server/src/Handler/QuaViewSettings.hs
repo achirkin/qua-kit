@@ -74,7 +74,10 @@ quaViewSettingsR curRoute mcExId mAuthorId perms' = do
   returnJson QuaTypes.Settings {
       loggingUrl               = Just $ "ws" <> drop 4 (routeUrl QVLoggingR)
     , luciUrl                  = ("ws" <> drop 4 (routeUrl LuciR)) <$ mUserId
-    , getSubmissionGeometryUrl = fmap routeUrl $ SubmissionGeometryR <$> mcExId <*> mAuthorId
+    , getSubmissionGeometryUrl =
+        if isNothing mUserId && isNothing mcExId && isNothing mAuthorId
+        then Just . routeUrl $ StaticR data_demo_scenario
+        else fmap routeUrl $ SubmissionGeometryR <$> mcExId <*> mAuthorId
     , getSubmissionInfoUrl     = fmap routeUrl $ SubmissionInfoR <$> mcExId <*> mAuthorId
     , putSubmissionUrl         = routeUrl <$> filteredSubmissionR
     , reviewSettingsUrl        = fmap routeUrl $ QuaViewReviewSettingsR <$> mcExId <*> mAuthorId

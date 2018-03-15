@@ -48,6 +48,11 @@ getMoocHomeR  = toTypedContent <$> do
          -- fmap listToMaybe $ runDB $ selectList [CurrentScenarioAuthorId ==. uId] []
       Nothing -> return Nothing
 
+    someSubmissionsWidget <- do
+      submissions <- runDB $ fetchLastSubmissions $ noProposalParams
+                              { propLimit = Just 6 }
+      mkSubmissionsWidget submissions
+
     newsItems <- renderNewsItems muser
     mvoteCountWidget <- renderVoteCountWidget muser
 

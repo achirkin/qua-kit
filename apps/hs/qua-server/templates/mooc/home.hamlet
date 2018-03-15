@@ -31,16 +31,29 @@
                   <span class="icon">check
                   &nbsp;Use geometry editor
 
-    <div class="col-lg-4 col-sm-6">
-      <div class="card card-orange">
-        <div class="card-main">
-          <div class="card-inner">
-            A special type of exercises consists in comparing pairs of design proposals according to a single design criterion.
-          <div class="card-action">
-            <div class="card-action-btn pull-left">
-              <a class="btn btn-flat waves-attach waves-light waves-effect" href="@{CompareProposalsR}">
-                <span class="icon">check
-                &nbsp;Compare designs
+  <div .row>
+    <div.col-lg-7.col-md-8.col-sm-9>
+      <div.card>
+        <div.card-main>
+          <div.card-inner>
+            <p>
+              Popular design submissions
+              
+  <div .row>
+    ^{ someSubmissionsWidget }
+
+  <div .row>
+    $if urole /= UR_NOBODY
+      <div class="col-lg-4 col-sm-6">
+        <div class="card card-orange">
+          <div class="card-main">
+            <div class="card-inner">
+              A special type of exercises consists in comparing pairs of design proposals according to a single design criterion.
+            <div class="card-action">
+              <div class="card-action-btn pull-left">
+                <a class="btn btn-flat waves-attach waves-light waves-effect" href="@{CompareProposalsR}">
+                  <span class="icon">check
+                  &nbsp;Compare designs
 
     <div class="col-lg-4 col-sm-6">
       <div class="card card-red">
