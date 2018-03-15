@@ -84,7 +84,7 @@ instance ToJSON   ExpertReviewPost
 -- | Previous reviews of the viewed design
 data Review = Review
   { reviewUserName  :: QuaText
-  , reviewIsMine    :: !Bool -- ^ review is by currently logged in user
+  , reviewIsMine    :: Bool -- ^ review is by currently logged in user
   , reviewRating    :: Rating
   , reviewComment   :: QuaText
   , reviewTimestamp :: UTCTime
@@ -100,10 +100,10 @@ instance ToJSON    Review
 data Rating
   = UserRating
   { ratingCriterionId :: Int
-  , ratingThumb        :: ThumbState
+  , ratingThumb       :: ThumbState
   }
   | ExpertRating
-  { ratingGrade        :: Int
+  { ratingGrade       :: Int
   } deriving Generic
 instance FromJSON  Rating
 instance ToJSON    Rating
