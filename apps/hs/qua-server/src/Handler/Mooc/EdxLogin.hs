@@ -5,6 +5,7 @@ module Handler.Mooc.EdxLogin
   ) where
 
 import Import.NoFoundation
+import Model.Session
 import Web.LTI
 
 import qualified Data.Text as Text
@@ -29,7 +30,10 @@ dispatchAuth _ _ _                 = notFound
 
 -- | This creates a page with url
 --   root.root/auth/page/lti/login
-dispatchLti :: (RenderMessage site FormMessage, YesodAuth site) => LTIProvider -> YesodRequest -> HandlerT site IO TypedContent
+dispatchLti :: (RenderMessage site FormMessage, YesodAuth site)
+            => LTIProvider
+            -> YesodRequest
+            -> HandlerT site IO TypedContent
 dispatchLti conf yreq = do
     clearSession
     eltiRequest <- runExceptT $ processYesodRequest conf yreq
@@ -37,28 +41,32 @@ dispatchLti conf yreq = do
       Left (LTIException err) -> permissionDenied $ Text.pack err
       Left (LTIOAuthException err) -> permissionDenied $ Text.pack $ show err
       Right msg -> do
-        user_id                 <- lookupParam msg "user_id"
-        resource_link_id        <- lookupParam msg "resource_link_id"
-        context_id              <- lookupParam msg "context_id"
-        lis_outcome_service_url <- lookupParamM msg "lis_outcome_service_url"
-        lis_result_sourcedid    <- lookupParamM msg "lis_result_sourcedid"
+        let linkIdName     = convKey userSessionEdxResourceLinkId
+            contextIdName  = convKey userSessionEdxContextId
+            serviceUrlName = convKey userSessionEdxLisOutcomeServiceUrl
+            sourcedIdName  = convKey userSessionEdxLisResultSourcedId
+        user_id                 <- lookupParam  msg "user_id"
+        resource_link_id        <- lookupParam  msg linkIdName
+        context_id              <- lookupParam  msg contextIdName
+        lis_outcome_service_url <- lookupParamM msg serviceUrlName
+        lis_result_sourcedid    <- lookupParamM msg sourcedIdName
         -- set LTI credentials
         setCredsRedirect
              . Creds pluginName user_id
-             $ ("resource_link_id"       , resource_link_id)
-             : ("context_id"             , context_id)
+             $ (linkIdName, resource_link_id)
+             : (contextIdName, context_id)
              : catMaybes
-                [ (,) "lis_outcome_service_url" <$> lis_outcome_service_url
-                , (,) "lis_result_sourcedid" <$> lis_result_sourcedid
+                [ (,) serviceUrlName <$> lis_outcome_service_url
+                , (,) sourcedIdName  <$> lis_result_sourcedid
                 ]
              ++ saveCustomParams (Map.toList msg)
   where
     -- try to get essential edxParameters
-    lookupParam msg p = case Map.lookup p msg of
+    lookupParam msg p = case Map.lookup (Text.encodeUtf8 p) msg of
                         Just v -> return $ Text.decodeUtf8 v
-                        Nothing -> permissionDenied $ "Cannot access request parameter " <> Text.decodeUtf8 p
+                        Nothing -> permissionDenied $ "Cannot access request parameter " <> p
     -- try to get optional edxParameters
-    lookupParamM msg p = return $ Text.decodeUtf8 <$> Map.lookup p msg
+    lookupParamM msg p = return $ Text.decodeUtf8 <$> Map.lookup (Text.encodeUtf8 p) msg
     -- store all special parameters in user session
     saveCustomParams [] = []
     saveCustomParams ((k,v):xs) = if "custom_" `isPrefixOf` k

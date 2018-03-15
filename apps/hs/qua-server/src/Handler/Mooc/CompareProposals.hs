@@ -18,8 +18,8 @@ import Application.Grading
 postVoteForProposalR :: ExerciseId -> CriterionId
                      -> UserId -> UserId -> Handler Html
 postVoteForProposalR exId cId betterUId worseUId = do
-    Entity betterCScId betterSc <- runDB . getBy404 $ SubmissionOf betterUId exId
-    Entity worseCScId  worseSc  <- runDB . getBy404 $ SubmissionOf worseUId  exId
+    Entity _ betterSc <- runDB . getBy404 $ SubmissionOf betterUId exId
+    Entity _ worseSc  <- runDB . getBy404 $ SubmissionOf worseUId  exId
     let better = currentScenarioHistoryScenarioId betterSc
         worse  = currentScenarioHistoryScenarioId worseSc
     userId <- requireAuthId

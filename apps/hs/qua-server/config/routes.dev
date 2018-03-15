@@ -1,7 +1,7 @@
 /test/designex/#ExerciseId   SimulateDesignExerciseR GET
 /test/compareex/#ExerciseId  SimulateCompareExerciseR GET
 /test/loginas/#UserId        LoginAsUserIdR GET
-/test/loginrole/#String      LoginAs GET
+/test/loginrole/#String      LoginAs GET --e.g. /UR_STUDENT
 
 /test/designex   SimulateDesignExercise1R GET
 /test/compareex  SimulateCompareExercise1R GET

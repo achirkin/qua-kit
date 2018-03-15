@@ -23,13 +23,13 @@ setupEdxGrading :: ( YesodAuth app
                    , PersistUniqueWrite (YesodPersistBackend app)
                    )
                 => UserId
-                -> [(Text,Text)] -- ^ session parameters
+                -> [(Text,Text)] -- ^ cred params we originally got from edx (via dispatchLti)
                 -> HandlerT app IO ()
 setupEdxGrading userId params = do
-  lookupAndSave "lis_outcome_service_url"
-  lookupAndSave "lis_result_sourcedid"
-  lookupAndSave "resource_link_id"
-  lookupAndSave "context_id"
+  lookupAndSave userSessionEdxLisOutcomeServiceUrl
+  lookupAndSave userSessionEdxLisResultSourcedId
+  lookupAndSave userSessionEdxResourceLinkId
+  lookupAndSave userSessionEdxContextId
   mapM_ (uncurry setSession) $ filter (isPrefixOf "custom_". fst ) params
   runDB $
     case (,,) <$> mresource_link_id <*> mcontext_id <*> mexercise_id of
@@ -53,7 +53,7 @@ setupEdxGrading userId params = do
     mresource_link_id = Map.lookup "resource_link_id" pm
     mcontext_id       = Map.lookup "context_id" pm
     mexercise_id      = Map.lookup "custom_exercise_id" pm >>= parseSqlKey
-    lookupAndSave t = forM_ (Map.lookup t pm) (setSession t)
+    lookupAndSave sl = forM_ (Map.lookup (convKey sl) pm) (setSafeSession sl)
     pm = Map.fromList params
     saveCustomParams ek = mapM_ ((\(k,v) -> void $ upsert (EdxResourceParam ek k v) []) . first (drop 7))
                                 $ filter (isPrefixOf "custom_". fst ) params

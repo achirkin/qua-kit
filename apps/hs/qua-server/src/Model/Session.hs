@@ -2,7 +2,7 @@
 -- | Currently, all session variable is stored in the database table user_prop.
 --   It has nothing todo with user cookies since the last update!
 module Model.Session
-    ( SessionLens
+    ( SessionLens(..)
     , getsSafeSession
     , deleteSafeSession
     , setSafeSession
@@ -12,6 +12,10 @@ module Model.Session
     , userSessionCustomExerciseCount
     , userSessionCompareCounter
     , userSessionEdxResourceId
+    , userSessionEdxLisOutcomeServiceUrl
+    , userSessionEdxLisResultSourcedId
+    , userSessionEdxResourceLinkId
+    , userSessionEdxContextId
     ) where
 
 import Import.NoFoundation
@@ -29,6 +33,10 @@ data SessionLens a = SessionLens
 readSessionLens :: (Show a, Read a) => Text -> SessionLens a
 readSessionLens = SessionLens (>>= readMay) (T.pack . show)
 
+userSessionCurrentExerciseId :: SessionLens ExerciseId
+userSessionCurrentExerciseId =
+    SessionLens (>>= parseSqlKey) (T.pack . show . fromSqlKey) "currentExerciseId"
+
 userSessionCustomExerciseCount :: SessionLens Int
 userSessionCustomExerciseCount = readSessionLens "custom_exercise_count"
 
@@ -39,9 +47,21 @@ userSessionEdxResourceId :: SessionLens EdxResourceId
 userSessionEdxResourceId =
     SessionLens (>>= parseSqlKey) (T.pack . show . fromSqlKey) "edx_resource_id"
 
-userSessionCurrentExerciseId :: SessionLens ExerciseId
-userSessionCurrentExerciseId =
-    SessionLens (>>= parseSqlKey) (T.pack . show . fromSqlKey) "currentExerciseId"
+userSessionEdxLisOutcomeServiceUrl :: SessionLens Text
+userSessionEdxLisOutcomeServiceUrl =
+    SessionLens id id "lis_outcome_service_url"
+
+userSessionEdxLisResultSourcedId :: SessionLens Text
+userSessionEdxLisResultSourcedId =
+    SessionLens id id "lis_result_sourcedid"
+
+userSessionEdxResourceLinkId :: SessionLens Text
+userSessionEdxResourceLinkId =
+    SessionLens id id "resource_link_id"
+
+userSessionEdxContextId :: SessionLens Text
+userSessionEdxContextId =
+    SessionLens id id "context_id"
 
 sessionVar :: SessionLens a -> Text
 sessionVar = ("session_" <>) . convKey
