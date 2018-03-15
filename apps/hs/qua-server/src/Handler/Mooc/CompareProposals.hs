@@ -61,7 +61,6 @@ postVoteForProposalR exId cId betterUId worseUId = do
             EQ -> do
               setMessage "You are done with this exercise, thank you! You can continue exploring the site or go back to edX."
               deleteSafeSession userSessionCustomExerciseCount
-              deleteSafeSession userSessionCompareCounter
 
               -- send the base grade back to edX
               case mResId of
