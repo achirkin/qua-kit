@@ -64,18 +64,29 @@ getRedirectToQuaViewEditR = do
 --   If userId == authorId, this function guarantees to return scenario
 --   (new or current).
 --   Otherwise, it may return current submsission or fail with 404.
+--
+--   This hanlder also sets etag and never expire headers.
+--   It uses scenario update timestamp as an etag value.
 getSubmissionGeometryR :: ExerciseId -> UserId -> Handler Text
 getSubmissionGeometryR exId authorId = do
   mcsc <- runDB $ getBy $ SubmissionOf authorId exId
   case mcsc of
-    Just (Entity _ csc) ->
+    Just (Entity _ csc) -> do
+      neverExpires
+      setEtag $ tshow $ currentScenarioLastUpdate csc
       maybe "{}" (decodeUtf8 . scenarioGeometry) <$>
         runDB (get $ currentScenarioHistoryScenarioId csc)
     Nothing -> do
       userId <- requireAuthId
       if userId == authorId
-      then maybe "{}" (decodeUtf8 . exerciseGeometry) <$> runDB (get exId)
-      else notFound
+      then do
+        neverExpires
+        -- some random thing here, just different from show date
+        setEtag "JndlubDludsbSKludoSjjbSafb17Ud"
+        maybe "{}" (decodeUtf8 . exerciseGeometry) <$> runDB (get exId)
+      else do
+        alreadyExpired
+        notFound
 
 
 
@@ -204,6 +215,8 @@ quaW = do
 getSubmissionInfoR :: ExerciseId -> UserId -> Handler Value
 getSubmissionInfoR exId authorId = do
   Entity _ csc <- runDB $ getBy404 $ SubmissionOf authorId exId
+  neverExpires
+  setEtag $ tshow $ currentScenarioLastUpdate csc
   user <- runDB $ get404 authorId
   return $ toJSON
     QtS.SubmissionInfo
