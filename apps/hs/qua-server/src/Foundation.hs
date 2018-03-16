@@ -5,9 +5,11 @@ module Foundation
     , parseSqlKey
     ) where
 
+#if DEVELOPMENT
 import qualified Prelude
 import qualified Language.Haskell.TH as TH
 import qualified Language.Haskell.TH.Quote as TH
+#endif
 import Control.Concurrent.STM.TChan
 import qualified Data.Text as Text
 import qualified Data.Map as Map
