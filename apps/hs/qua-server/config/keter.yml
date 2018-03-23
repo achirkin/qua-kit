@@ -11,23 +11,30 @@ stanzas:
     exec: ../dist/bin/qua-server
 
     # Command line options passed to your application.
-    args: [/opt/keter/etc/quakitsettings.yml]
+    args:
+      - /opt/keter/etc/quakitsettings.yml
 
     hosts:
       # You can specify one or more hostnames for your application to respond
       # to. The primary hostname will be used for generating your application
       # root.
       - qua-kit.ethz.ch
+      - www.qua-kit.ethz.ch
+
+    static-hosts:
+      - host: static.qua-kit.ethz.ch
+        root: ../static
 
     # Enable to force Keter to redirect to https
     # Can be added to any stanza
     requires-secure: true
 
   # Static files.
-#  - type: static-files
-#    hosts:
-#      - static.qua-kit.ethz.ch
-#    root: ../static
+  - type: static-files
+    hosts:
+      - static.qua-kit.ethz.ch
+      - www.static.qua-kit.ethz.ch
+    root: ../static
 
     # Uncomment to turn on directory listings.
     # directory-listing: true
