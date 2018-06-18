@@ -61,6 +61,7 @@ import Handler.LuciProxy
 import Handler.QuaViewReviewSettings
 import Handler.QuaViewSettings
 import Handler.Mooc
+import Handler.Mooc.Analysis
 import Handler.Mooc.Criteria
 import Handler.Mooc.RenameMe
 import Handler.Mooc.Admin

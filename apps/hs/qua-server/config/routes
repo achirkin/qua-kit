@@ -72,3 +72,8 @@
 
 /renameme                           RenameMeR GET
 /setupAcc/#UserId                   SetupLocalAccount POST
+
+
+-- analysis results
+/analysis                 BrowseSAR GET
+/analysis/img/#SAImageId  SAImageR  GET

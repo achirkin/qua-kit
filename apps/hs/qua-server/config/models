@@ -204,3 +204,24 @@ QuaViewWebLogging
     ipAddress   Text Maybe
     timestamp   UTCTime default=CURRENT_TIMESTAMP
     action      Text
+
+-- | This table is filled in by a third-party application
+ScenarioAnalysis
+    scenarioId    ScenarioId
+    objectCount   Int
+    blocksImg     SAImageId
+    votesB        SAImageId
+    votesT        SAImageId
+    votesR2       SAImageId
+    votesR3       SAImageId
+    votesR4       SAImageId
+    votesR5       SAImageId
+    votesR6       SAImageId
+    votesR7       SAImageId
+
+SAImage
+    data  ByteString
+    mean  Double
+    var   Double
+    min   Double
+    max   Double
