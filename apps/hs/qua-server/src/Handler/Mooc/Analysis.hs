@@ -15,6 +15,23 @@ import Text.Read (readMaybe)
 -- import Text.Read (read)
 
 
+data SortType = SortAsc | SortDesc
+  deriving (Eq, Ord, Show, Read)
+
+data AResultOrder
+  = ByDate
+  | ByScoreB
+  | ByScoreT
+  | ByScoreR2
+  | ByScoreR3
+  | ByScoreR4
+  | ByScoreR5
+  | ByScoreR6
+  | ByScoreR7
+  deriving (Eq, Ord, Show, Read)
+
+
+
 getBrowseSAR :: Handler Html
 getBrowseSAR = do
 
@@ -22,6 +39,9 @@ getBrowseSAR = do
   limitV  <- getParam "limit" 200
   authorIdV   <- lookupParamSQLKey @User "authorId"
   exerciseIdV   <- lookupParamSQLKey @Exercise "exerciseId"
+  arOrder <- lookupParam "order"
+  arSType <- getParam "sort" SortDesc
+
 
   let -- limit the output per page with reasonable defaults
       withLimitsQ = offset offsetV >> limit limitV
@@ -33,6 +53,25 @@ getBrowseSAR = do
       constrainAuthorQ scenario = maybe (return ()) f authorIdV
         where
           f uId = where_ (scenario ^. ScenarioAuthorId ==. val uId)
+
+      orderQ scenario votesB votesT votesR2 votesR3
+             votesR4 votesR5 votesR6 votesR7 = maybe (return ()) f arOrder
+        where
+          sortE :: ( Esqueleto query expr backend, PersistField a )
+                => expr (E.Value a) -> expr OrderBy
+          sortE = case arSType of
+            SortAsc -> asc
+            SortDesc -> desc
+          f ByDate = orderBy [sortE $ scenario ^. ScenarioLastUpdate ]
+          f ByScoreB  = orderBy [sortE $ votesB  ^. SAImageMax ]
+          f ByScoreT  = orderBy [sortE $ votesT  ^. SAImageMax ]
+          f ByScoreR2 = orderBy [sortE $ votesR2 ^. SAImageMax ]
+          f ByScoreR3 = orderBy [sortE $ votesR3 ^. SAImageMax ]
+          f ByScoreR4 = orderBy [sortE $ votesR4 ^. SAImageMax ]
+          f ByScoreR5 = orderBy [sortE $ votesR5 ^. SAImageMax ]
+          f ByScoreR6 = orderBy [sortE $ votesR6 ^. SAImageMax ]
+          f ByScoreR7 = orderBy [sortE $ votesR7 ^. SAImageMax ]
+
 
 
       -- the main part of the query
@@ -62,6 +101,10 @@ getBrowseSAR = do
         -- optional constraints
         constrainAuthorQ scenario
         constrainExQ scenario
+
+        -- sorting
+        orderQ scenario votesB votesT votesR2 votesR3
+               votesR4 votesR5 votesR6 votesR7
 
         -- limit output
         withLimitsQ
