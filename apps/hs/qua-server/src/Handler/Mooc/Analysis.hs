@@ -136,7 +136,61 @@ getBrowseSAR = do
 
   fullLayout Nothing "Qua-kit design analysis" $ do
     setTitle "Qua-kit design analysis"
+    toWidgetBody
+      [julius|
+        $(function() {
+          var colnames = $("#colnames");
+          $(window).on("scroll", function(e) {
+            if (window.scrollY > 260) {
+              colnames.addClass("colnamesdetached");
+            } else {
+              colnames.removeClass("colnamesdetached");
+            }
+
+          });
+        });
+      |]
+    toWidgetHead
+      [cassius|
+        .anacol
+          width: 128px
+          float: left
+          text-align: center
+          color: #b71c1c
+          margin: 2px
+
+        .colnamesdetached
+          position: fixed
+          top: 10px
+          left: auto
+          z-index: 1000
+      |]
     [whamlet|
+      <div #colnames class="row">
+        <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
+          <div class="card margin-bottom-no">
+            <div class="card-main">
+              <div class="card-inner" style="margin: 8px 8px 38px 8px;">
+                <div.anacol>
+                  Scenario
+                <div.anacol>
+                  Objects 2D
+                <div.anacol>
+                  Bilateral
+                <div.anacol>
+                  Translational
+                <div.anacol>
+                  2-Fold
+                <div.anacol>
+                  3-Fold
+                <div.anacol>
+                  4-Fold
+                <div.anacol>
+                  5-Fold
+                <div.anacol>
+                  6-Fold
+                <div.anacol>
+                  7-Fold
       $forall s <- scenarios
          <div class="row">
           <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
@@ -177,7 +231,7 @@ scenarioAnalysisWidget AInfo {..} =
 aimgWidget :: AImg -> Widget
 aimgWidget AImg {..} =
   [whamlet|
-    <div style="width: 128px; float: left">
+    <div style="width: 128px; float: left; margin: 2px">
       <img src="@{SAImageR aiId}" width="128px" height="128px" >
       <p>
         span: #{roundD aiMin} - #{roundD aiMax}
