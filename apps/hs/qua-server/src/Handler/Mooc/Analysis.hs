@@ -10,6 +10,7 @@ module Handler.Mooc.Analysis
 import Import hiding ((==.), on)
 import Database.Esqueleto as E
 import Text.Read (readMaybe)
+import Numeric
 -- import Import.BootstrapUtil
 -- import qualified Text.Blaze as Blaze
 -- import Text.Read (read)
@@ -274,16 +275,13 @@ getParam pname da = fromMaybe da <$> lookupParam pname
 
 
 roundD :: Double -> String
-roundD x = if abs p > 4 then sho (multd * base) ++ "e" ++ show p
-                        else sho (mult  * base)
+roundD x = if abs p > 4 then showEFloat (Just 4) x ""
+                        else trimS $  showFFloat (Just 4) x ""
   where
-    sho = trimS . show
-    trimS s = reverse . go . reverse $ take 6 s
+    trimS s = reverse . noP . go . reverse $ take 6 s
       where
         go ('0':xs) = go xs
         go xs = xs
-    base = fromIntegral (round (x / mult) :: Int)
-    digits = 3 :: Int
+        noP ('.':xs) = xs
+        noP xs = xs
     p = floor $ logBase 10 x :: Int
-    mult = 10 ^^ (p - digits) :: Double
-    multd = 10 ^^ negate digits :: Double
