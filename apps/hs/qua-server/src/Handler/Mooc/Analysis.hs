@@ -64,14 +64,15 @@ getBrowseSAR = do
             SortAsc -> asc
             SortDesc -> desc
           f ByDate = orderBy [sortE $ scenario ^. ScenarioLastUpdate ]
-          f ByScoreB  = orderBy [sortE $ votesB  ^. SAImageMax ]
-          f ByScoreT  = orderBy [sortE $ votesT  ^. SAImageMax ]
-          f ByScoreR2 = orderBy [sortE $ votesR2 ^. SAImageMax ]
-          f ByScoreR3 = orderBy [sortE $ votesR3 ^. SAImageMax ]
-          f ByScoreR4 = orderBy [sortE $ votesR4 ^. SAImageMax ]
-          f ByScoreR5 = orderBy [sortE $ votesR5 ^. SAImageMax ]
-          f ByScoreR6 = orderBy [sortE $ votesR6 ^. SAImageMax ]
-          f ByScoreR7 = orderBy [sortE $ votesR7 ^. SAImageMax ]
+          f ByScoreB  = orderByScore votesB
+          f ByScoreT  = orderByScore votesT
+          f ByScoreR2 = orderByScore votesR2
+          f ByScoreR3 = orderByScore votesR3
+          f ByScoreR4 = orderByScore votesR4
+          f ByScoreR5 = orderByScore votesR5
+          f ByScoreR6 = orderByScore votesR6
+          f ByScoreR7 = orderByScore votesR7
+          orderByScore v = orderBy [ sortE $ (v  ^. SAImageMax -. v ^. SAImageMean) *. (v  ^. SAImageMax -. v ^. SAImageMean) /. ( v ^. SAImageVar ) ]
 
 
 
