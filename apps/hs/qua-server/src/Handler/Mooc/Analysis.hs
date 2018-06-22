@@ -72,7 +72,8 @@ getBrowseSAR = do
           f ByScoreR5 = orderByScore votesR5
           f ByScoreR6 = orderByScore votesR6
           f ByScoreR7 = orderByScore votesR7
-          orderByScore v = orderBy [ sortE $ (v  ^. SAImageMax -. v ^. SAImageMean) *. (v  ^. SAImageMax -. v ^. SAImageMean) /. ( v ^. SAImageVar ) ]
+          orderByScore v = orderBy [ sortE $ v  ^. SAImageMax ] --  /. ( val 0.0001 +.v ^. SAImageMean ) ]
+             -- (v  ^. SAImageMax -. v ^. SAImageMean) *. (v  ^. SAImageMax -. v ^. SAImageMean) /. (val 0.0001 +. v ^. SAImageVar ) ]
 
 
 
@@ -166,6 +167,19 @@ getBrowseSAR = do
           left: auto
           z-index: 1000
       |]
+    let sortOrdT newOrd = case arSType of
+            SortAsc  -> "&sort=" <> setsort SortAsc SortDesc
+            SortDesc -> "&sort=" <> setsort SortDesc SortAsc
+          where
+            setsort a b = show $ if Just newOrd /= arOrder then a else b
+        exerciseIdT = case exerciseIdV of
+          Nothing -> ""
+          Just eid -> "&exerciseId=" <> show (E.fromSqlKey eid)
+        oflimT = "&offset=" <> show offsetV
+              <> "&limit=" <> show limitV
+        pamsT newOrd = "?order="  <> show newOrd
+                     <> sortOrdT newOrd <> exerciseIdT <> oflimT
+
     [whamlet|
       <div #colnames class="row">
         <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
@@ -173,25 +187,34 @@ getBrowseSAR = do
             <div class="card-main">
               <div class="card-inner" style="margin: 8px 8px 38px 8px;">
                 <div.anacol>
-                  Scenario
+                  <a href="@{BrowseSAR}#{pamsT ByDate}">
+                    Scenario
                 <div.anacol>
                   Objects 2D
                 <div.anacol>
-                  Bilateral
+                  <a href="@{BrowseSAR}#{pamsT ByScoreB}">
+                    Bilateral
                 <div.anacol>
-                  Translational
+                  <a href="@{BrowseSAR}#{pamsT ByScoreT}">
+                    Translational
                 <div.anacol>
-                  2-Fold
+                  <a href="@{BrowseSAR}#{pamsT ByScoreR2}">
+                    2-Fold
                 <div.anacol>
-                  3-Fold
+                  <a href="@{BrowseSAR}#{pamsT ByScoreR3}">
+                    3-Fold
                 <div.anacol>
-                  4-Fold
+                  <a href="@{BrowseSAR}#{pamsT ByScoreR4}">
+                    4-Fold
                 <div.anacol>
-                  5-Fold
+                  <a href="@{BrowseSAR}#{pamsT ByScoreR5}">
+                    5-Fold
                 <div.anacol>
-                  6-Fold
+                  <a href="@{BrowseSAR}#{pamsT ByScoreR6}">
+                    6-Fold
                 <div.anacol>
-                  7-Fold
+                  <a href="@{BrowseSAR}#{pamsT ByScoreR7}">
+                    7-Fold
       $forall s <- scenarios
          <div class="row">
           <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
