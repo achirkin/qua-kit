@@ -1,5 +1,5 @@
 name: qua-server
-version: 2.0.0.3
+version: 2.0.0.4
 cabal-version: >=1.22
 build-type: Custom
 license: MIT
@@ -93,6 +93,7 @@ library
         Handler.Mooc.User
         Handler.Mooc.FAQ
         Handler.Mooc.Analysis
+        Handler.Mooc.Analysis.VoteOrder
         Handler.QuaViewReviewSettings
         Handler.QuaViewSettings
         Handler.Submissions

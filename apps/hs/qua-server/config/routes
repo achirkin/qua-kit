@@ -77,3 +77,12 @@
 -- analysis results
 /analysis                 BrowseSAR GET
 /analysis/img/#SAImageId  SAImageR  GET
+
+--------------------------------------------------------------------------------
+-- other types of activities
+--------------------------------------------------------------------------------
+
+-- vote for symmetry in designs
+/voteorder/#ExerciseId       VoteOrderR GET
+/voteorder/#ExerciseId/vote  DoVoteOrderR GET POST
+!/voteorder/finish           OrderExitPollR GET POST

@@ -225,3 +225,16 @@ SAImage
     var   Double
     min   Double
     max   Double
+
+-- | Compare which design has more order in it
+VoteOrder
+    voterId     UserId
+    betterId    ScenarioId
+    worseId     ScenarioId
+    timestamp   UTCTime default=CURRENT_TIMESTAMP
+
+-- | User thoughts after they do order voting
+ExplainOrder
+    voterId     UserId
+    text        Text
+    timestamp   UTCTime default=CURRENT_TIMESTAMP
