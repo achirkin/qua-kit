@@ -8,7 +8,7 @@ module Handler.Mooc.Analysis.VoteOrder
   ) where
 
 import Import hiding ((==.), (!=.), on)
-import Database.Esqueleto as E
+import Database.Esqueleto as E hiding (isNothing)
 import Text.Read (readMaybe)
 import Crypto.Number.Generate
 
@@ -16,8 +16,10 @@ import Crypto.Number.Generate
 -- | Log in and be redirected to do voting
 getVoteOrderR :: ExerciseId -> Handler Html
 getVoteOrderR exId = do
-    clearCreds False
-    setCreds False $ Creds "temporary" "Anonymous user" []
+    -- clearCreds False
+    mi <- maybeAuthId
+    when (isNothing mi) $
+      setCreds False $ Creds "temporary" "Anonymous user" []
     setMyVoteCount 0
 
     fullLayout Nothing "Qua-kit design order voting" $ do
