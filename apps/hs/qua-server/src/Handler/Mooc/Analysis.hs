@@ -136,6 +136,17 @@ getBrowseSAR = do
 
   scenarios <- fmap (fmap stupidTuples) . runDB $ select $ from coreQ
 
+  exercises <- fmap
+      ( ((Nothing, "All Exercises"):) . map ((Just . E.unValue) *** E.unValue))
+    . runDB
+    . select
+    $ from $ \ex -> do
+      orderBy [ asc $ ex ^. ExerciseId ]
+      return (ex ^. ExerciseId, ex ^. ExerciseDescription)
+
+  let exOptions = flip map exercises $ \(mi, name) ->
+        ( maybe "-1" (pack . show . fromSqlKey) mi, name, mi == exerciseIdV )
+
   fullLayout Nothing "Qua-kit design analysis" $ do
     setTitle "Qua-kit design analysis"
     toWidgetBody
@@ -175,10 +186,18 @@ getBrowseSAR = do
         exerciseIdT = case exerciseIdV of
           Nothing -> ""
           Just eid -> "&exerciseId=" <> show (E.fromSqlKey eid)
-        oflimT = "&offset=" <> show offsetV
-              <> "&limit=" <> show limitV
+        oflimT = "&offset=" <> show offsetV <> limT
+        limT = "&limit=" <> show limitV
+
         pamsT newOrd = "?order="  <> show newOrd
                      <> sortOrdT newOrd <> exerciseIdT <> oflimT
+
+        pamsTEx exId | ordV <- fromMaybe ByDate arOrder
+                     , exIdT <- case exId of
+                        "-1" -> ""
+                        ssss -> "&exerciseId=" <> ssss
+                     = "?order=" <> show ordV
+                     <> "&sort=" <> show arSType <> exIdT <> limT
 
     [whamlet|
       <div #colnames class="row">
@@ -187,8 +206,14 @@ getBrowseSAR = do
             <div class="card-main">
               <div class="card-inner" style="margin: 8px 8px 38px 8px;">
                 <div.anacol>
-                  <a href="@{BrowseSAR}#{pamsT ByDate}">
-                    Scenario
+                  <select.form-control onchange="if (this.value != '#') location = this.value;" style="margin: -8px 0px 0px 0px;">
+                    $forall (exId, exName, isSel) <- exOptions
+                      $if isSel
+                        <option value="#" selected="">
+                          #{exName}
+                      $else
+                        <option value="@{BrowseSAR}#{pamsTEx exId}">
+                          #{exName}
                 <div.anacol>
                   Objects 2D
                 <div.anacol>
