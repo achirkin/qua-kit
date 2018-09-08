@@ -10,6 +10,7 @@
 --
 -----------------------------------------------------------------------------
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE DeriveGeneric #-}
 module Model.Generated where
 
 import Model.CustomTypes

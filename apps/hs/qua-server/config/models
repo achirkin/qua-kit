@@ -238,3 +238,10 @@ ExplainOrder
     voterId     UserId
     text        Text
     timestamp   UTCTime default=CURRENT_TIMESTAMP
+
+-- | Distance in number of pixels between design drawings
+ScenarioPixelDist
+    leftId      ScenarioId
+    rightId     ScenarioId
+    value       Int
+    Primary leftId rightId
