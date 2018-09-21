@@ -245,3 +245,17 @@ ScenarioPixelDist
     rightId     ScenarioId
     value       Int
     Primary leftId rightId
+
+-- | reduced size, many rotation angles, used for NN
+ScenarioAnalysisNN
+    scenarioId    ScenarioId
+    rot           Double
+    blocksImg     SAImageId
+    votesB        SAImageId
+    votesT        SAImageId
+    votesR2       SAImageId
+    votesR3       SAImageId
+    votesR4       SAImageId
+    votesR5       SAImageId
+    votesR6       SAImageId
+    votesR7       SAImageId

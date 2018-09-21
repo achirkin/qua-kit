@@ -1,6 +1,6 @@
 database:
-  user:     "_env:PGUSER:qua-kit"
-  password: "_env:PGPASS:qua-kit"
+  user:     "_env:PGUSER:mooc"
+  password: "_env:PGPASS:mooc"
   host:     "_env:PGHOST:localhost"
   port:     "_env:PGPORT:5432"
   # See config/test-settings.yml for an override during tests
