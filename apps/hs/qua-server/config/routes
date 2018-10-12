@@ -40,12 +40,12 @@
 /mooc/criteria/img/#CriterionId               CriteriaImgR  GET
 /mooc/survey                                  SurveyR       GET POST
 
-/mooc/hs/#ExerciseId/#UserId                        HSR       GET
-!/mooc/hs/#ExerciseId/#Text                         HSFiles1R GET
-!/mooc/hs/#ExerciseId/#Text/#Text                   HSFiles2R GET
-!/mooc/hs/#ExerciseId/#Text/#Text/#Text             HSFiles3R GET
-!/mooc/hs/#ExerciseId/#Text/#Text/#Text/#Text       HSFiles4R GET
-!/mooc/hs/#ExerciseId/#Text/#Text/#Text/#Text/#Text HSFiles5R GET
+/mooc/hs/#ExerciseId/#UserId/service                        HSR       GET
+!/mooc/hs/#ExerciseId/#UserId/#Text                         HSFiles1R GET
+!/mooc/hs/#ExerciseId/#UserId/#Text/#Text                   HSFiles2R GET
+!/mooc/hs/#ExerciseId/#UserId/#Text/#Text/#Text             HSFiles3R GET
+!/mooc/hs/#ExerciseId/#UserId/#Text/#Text/#Text/#Text       HSFiles4R GET
+!/mooc/hs/#ExerciseId/#UserId/#Text/#Text/#Text/#Text/#Text HSFiles5R GET
 
 -- browse proposals
 !/exercise/browse/#Int                        BrowseProposalsR           GET

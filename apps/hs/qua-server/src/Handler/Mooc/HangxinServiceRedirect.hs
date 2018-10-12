@@ -24,8 +24,8 @@ getHSR exId uId = do
            <> show (fromSqlKey exId) <> "/"
            <> show (fromSqlKey uId) <> "/geometry"
 
-getHSFiles1R :: ExerciseId -> Text -> Handler TypedContent
-getHSFiles1R _ t = do
+getHSFiles1R :: ExerciseId -> UserId -> Text -> Handler TypedContent
+getHSFiles1R _ _ t = do
     req <- parseRequest addr
     resp <- Import.httpLbs req
     let hdrs = responseHeaders resp
@@ -38,18 +38,18 @@ getHSFiles1R _ t = do
   where
     addr = baseAddr <> unpack t
 
-getHSFiles2R :: ExerciseId
+getHSFiles2R :: ExerciseId -> UserId
              -> Text -> Text -> Handler TypedContent
-getHSFiles2R e t1 t2 = getHSFiles1R e (t1 <> "/" <> t2)
+getHSFiles2R e u t1 t2 = getHSFiles1R e u (t1 <> "/" <> t2)
 
-getHSFiles3R :: ExerciseId
+getHSFiles3R :: ExerciseId -> UserId
              -> Text -> Text -> Text-> Handler TypedContent
-getHSFiles3R e t1 t2 t3 = getHSFiles2R e t1 (t2 <> "/" <> t3)
+getHSFiles3R e u t1 t2 t3 = getHSFiles2R e u t1 (t2 <> "/" <> t3)
 
-getHSFiles4R :: ExerciseId
+getHSFiles4R :: ExerciseId -> UserId
              -> Text -> Text -> Text -> Text -> Handler TypedContent
-getHSFiles4R e t1 t2 t3 t4 = getHSFiles3R e t1 t2 (t3 <> "/" <> t4)
+getHSFiles4R e u t1 t2 t3 t4 = getHSFiles3R e u t1 t2 (t3 <> "/" <> t4)
 
-getHSFiles5R :: ExerciseId
+getHSFiles5R :: ExerciseId -> UserId
              -> Text -> Text -> Text -> Text -> Text -> Handler TypedContent
-getHSFiles5R e t1 t2 t3 t4 t5 = getHSFiles4R e t1 t2 t3 (t4 <> "/" <> t5)
+getHSFiles5R e u t1 t2 t3 t4 t5 = getHSFiles4R e u t1 t2 t3 (t4 <> "/" <> t5)
