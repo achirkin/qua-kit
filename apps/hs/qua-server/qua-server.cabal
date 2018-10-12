@@ -94,6 +94,7 @@ library
         Handler.Mooc.FAQ
         Handler.Mooc.Analysis
         Handler.Mooc.Analysis.VoteOrder
+        Handler.Mooc.HangxinServiceRedirect
         Handler.QuaViewReviewSettings
         Handler.QuaViewSettings
         Handler.Submissions

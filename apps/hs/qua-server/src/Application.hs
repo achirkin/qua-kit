@@ -80,6 +80,7 @@ import Handler.Mooc.ProposalPreview
 import Handler.Mooc.User
 import Handler.Mooc.Survey
 import Handler.Mooc.FAQ
+import Handler.Mooc.HangxinServiceRedirect
 import Handler.Submissions
 import Handler.LoggingWS
 #if DEVELOPMENT
