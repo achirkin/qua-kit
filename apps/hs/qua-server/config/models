@@ -259,3 +259,4 @@ ScenarioAnalysisNN
     votesR5       SAImageId
     votesR6       SAImageId
     votesR7       SAImageId
+    symmetryScore Double Maybe
