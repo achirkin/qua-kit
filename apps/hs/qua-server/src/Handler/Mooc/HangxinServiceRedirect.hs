@@ -12,7 +12,7 @@ import Text.Blaze
 import Data.CaseInsensitive
 
 baseAddr :: String
-baseAddr = "http://192.168.137.102:5000/" -- "http://129.132.32.134/"
+baseAddr = "http://129.132.32.134/" -- "http://192.168.137.102:5000/" -- "http://129.132.32.134/"
 
 getHSR :: ExerciseId -> UserId -> Handler Html
 getHSR exId uId = do
