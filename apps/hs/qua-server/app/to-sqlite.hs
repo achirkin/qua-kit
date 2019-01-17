@@ -104,11 +104,16 @@ transferTable sourcePool destPool p = do
       withResource destPool $ \destBackend ->
       withResource sourcePool $ \sourceBackend ->
       runConduit $
-        withBackend sourceBackend
-        (selectSource [] [])
+        withBackend sourceBackend (selectKeys [] [])
+        .|
+        withBackend sourceBackend (mapMC getJustEntity)
         .|
         withBackend destBackend
         (awaitForever (\(Entity i r) -> lift (repsert i (enforceType p r))))
+    -- asource <- runSqlPool (selectSourceRes [] []) sourcePool
+    -- flip runSqlPool sourcePool $ runConduit $
+    --   withAcquire asource $ \source ->
+    --    source .| (awaitForever (\(Entity i r) -> lift (repsert i (enforceType p r))))
     putStrLn $ "Done: " <> tshow (typeRep p)
   where
     enforceType :: P t -> t -> t
