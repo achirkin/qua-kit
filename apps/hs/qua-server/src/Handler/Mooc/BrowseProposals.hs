@@ -315,6 +315,7 @@ shortComment t = dropInitSpace . remNewLines $
                     . Text.lines
         dropInitSpace = Text.dropWhile (\c -> c == ' ' || c == '\n' || c == '\r' || c == '\t')
 
+-- TODO: turn this abomination into a proper esqueleto
 generateJoins :: ProposalParams -> ([PersistValue], Text, Text)
 generateJoins ps = (whereParams ++ limitParams, joinStr, orderStr)
   where
@@ -353,10 +354,9 @@ generateJoins ps = (whereParams ++ limitParams, joinStr, orderStr)
                      GradeDesc -> "COALESCE(s.grade, 0) DESC"
                      GradeAsc  -> "COALESCE(s.grade, 0) ASC"
     pOffset = toPersistValue $ propOffset ps
-    (limitParams, limitClause) =
-      case propLimit ps of
-        Just limit -> ([toPersistValue limit, pOffset], "LIMIT ? OFFSET ?")
-        _           -> ([pOffset], "OFFSET ?")
+    (limitParams, limitClause) = -- use default limit size if no limit provided
+                                 -- to make sqlite happy
+      ([toPersistValue $ fromMaybe pageSize (propLimit ps), pOffset], "LIMIT ? OFFSET ?")
     (whereParams, whereClause) =
       if null wheres
       then ([], "")
