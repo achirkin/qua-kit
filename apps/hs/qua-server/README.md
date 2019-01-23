@@ -49,6 +49,38 @@ Deploy qua-server to a configured keter server:
 stack exec yesod keter
 ```
 
+### Expo mode
+
+Expo mode is a version of qua-kit which allows viewing only, but not editing.
+It is compiled statically so that the resulting executable is portable.
+I recommend to compile expo version with sqlite database for further portability:
+```
+stack install qua-server:qua-server --flag qua-server:-postgresql  --flag qua-server:expo
+```
+As a result, to ship the binary version of qua-kit, you need to have the binary itself,
+plus qua-kit.db (pre-populated sqlite database) and folder 'static'.
+Put these three items into one folder and qua-kit is ready to go!
+
+#### compilation requirements
+
+First of all, you need development versions of database libraries.
+In ubuntu this is either `libsqlite3-dev` or `libpq-dev`.
+Note, normal version of qua-kit compiled with sqlite does not need `libsqlite3-dev`,
+but expo version may need it.
+This is because the expo version tries is a static executable.
+
+Next, in gcc (at least on linux) has some problems with static compilation.
+You will see an error complaining about `crtbeginT.o`.
+On my ubuntu machine, I solved this by copying a file:
+```
+pushd /usr/lib/gcc/x86_64-linux-gnu/7/
+sudo cp crtbeginT.o crtbeginT.o.orig
+sudo cp crtbeginS.o crtbeginT.o
+popd
+```
+
+
+
 ### Acknowledgements
 
 Thanks to [Daemonite's Material UI](https://github.com/Daemonite/material) team for frontend templates.

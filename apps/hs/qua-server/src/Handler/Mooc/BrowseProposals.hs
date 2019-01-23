@@ -356,7 +356,7 @@ generateJoins ps = (whereParams ++ limitParams, joinStr, orderStr)
     pOffset = toPersistValue $ propOffset ps
     (limitParams, limitClause) = -- use default limit size if no limit provided
                                  -- to make sqlite happy
-      ([toPersistValue $ fromMaybe pageSize (propLimit ps), pOffset], "LIMIT ? OFFSET ?")
+      ([toPersistValue $ fromMaybe 9999999 (propLimit ps), pOffset], "LIMIT ? OFFSET ?")
     (whereParams, whereClause) =
       if null wheres
       then ([], "")

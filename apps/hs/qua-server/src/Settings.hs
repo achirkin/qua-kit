@@ -7,19 +7,22 @@
 -- declared in the Foundation.hs file.
 module Settings where
 
+import Data.Function ((&))
 import ClassyPrelude.Yesod
+import Control.Lens ((%~))
 import qualified Control.Exception as Exception (throw)
 import Data.Aeson                  (Result (..), fromJSON, withObject, (.!=),
                                     (.:?))
 import Data.FileEmbed              (embedFile)
 import Data.Yaml                   (decodeEither')
 import Data.Pool                   (Pool)
+import qualified Data.Text          as Text
 import qualified Data.Text.Encoding as Text
 import Database.Persist.Sql        (IsSqlBackend)
 #if POSTGRESQL
 import Database.Persist.Postgresql (PostgresConf (..), createPostgresqlPool)
 #else
-import Database.Persist.Sqlite     (SqliteConf (..), createSqlitePool, createSqlitePoolFromInfo)
+import Database.Persist.Sqlite     (SqliteConf (..), createSqlitePoolFromInfo, sqlConnectionStr, mkSqliteConnectionInfo)
 #endif
 import Language.Haskell.TH.Syntax  (Exp, Name, Q)
 --import Network.Wai.Handler.Warp    (HostPreference)
@@ -39,14 +42,55 @@ type PersistConf = SqliteConf
 #endif
 
 
+isExpo :: Bool
+#if EXPO
+isExpo = True
+#else
+isExpo = False
+#endif
+
+isPostgres :: Bool
+#if POSTGRESQL
+isPostgres = True
+#else
+isPostgres = False
+#endif
+
+isDev :: Bool
+#if DEVELOPMENT
+isDev = True
+#else
+isDev = False
+#endif
+
 createAppSqlPool :: (MonadIO m, MonadBaseControl IO m, MonadLogger m, IsSqlBackend backend)
                  => PersistConf -> m (Pool backend)
 #if POSTGRESQL
 createAppSqlPool c = createPostgresqlPool (pgConnStr c) (pgPoolSize c)
 #else
-createAppSqlPool (SqliteConf db ps) = createSqlitePool db ps
-createAppSqlPool (SqliteConfInfo ci ps) = createSqlitePoolFromInfo ci ps
+createAppSqlPool (SqliteConf db ps) = createSqlitePoolFromInfo (mkSqliteConnectionInfo $ "file:" <> db <> "?" <> askReadOnly) ps
+createAppSqlPool (SqliteConfInfo ci ps) = createSqlitePoolFromInfo (ci & sqlConnectionStr %~ perhapsReadOnly) ps
 #endif
+
+askReadOnly :: Text
+#if POSTGRESQL
+askReadOnly = "target_session_attrs=read-only"
+#else
+askReadOnly = "mode=ro"
+#endif
+
+perhapsReadOnly :: Text -> Text
+#if EXPO
+perhapsReadOnly s = case unsnoc start of
+    Just (_, '?') -> start <> askReadOnly <> end
+    Just (_, '&') -> start <> askReadOnly <> end
+    _             -> start <> "?" <> askReadOnly
+  where
+    (start, end) = drop 1 . snd . Text.breakOn "&" <$> Text.breakOn "mode=" s
+#else
+perhapsReadOnly = id
+#endif
+
 
 -- | Runtime settings to configure this application. These settings can be
 -- loaded from various sources: defaults, environment variables, config files,

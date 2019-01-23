@@ -37,6 +37,16 @@ flag postgresql
     description:
         Use PostgreSQL database. Otherwise use sqlite.
 
+flag expo
+    default: False
+    manual:  True
+    description:
+        Run qua-kit in "expo" mode.
+        This means a read-only database and viewing designs only.
+        I recommend to use it together with "-postgresql" to make a standalone
+        independent executable with sqlite databse.
+        See README.md for the compilation requirements.
+
 custom-setup
     setup-depends:
         base >=4.8 && <5,
@@ -47,6 +57,10 @@ library
 
     if flag(postgresql)
         cpp-options: -DPOSTGRESQL
+
+    if flag(expo)
+        cpp-options: -DEXPO
+        ghc-options: -static -optl-static -optl-pthread -fPIC
 
     if (flag(dev) || flag(library-only))
         cpp-options: -DDEVELOPMENT
@@ -183,6 +197,16 @@ executable qua-server
     if flag(postgresql)
         cpp-options: -DPOSTGRESQL
 
+    if flag(expo)
+        cpp-options: -DEXPO
+        ghc-options: -static -optl-static -optl-pthread -fPIC
+
+    if flag(dev)
+        cpp-options: -DDEVELOPMENT
+        ghc-options: -O0
+    else
+        ghc-options: -O2
+
     if flag(library-only)
         buildable: False
     main-is: main.hs
@@ -192,6 +216,8 @@ executable qua-server
     default-language: Haskell2010
     hs-source-dirs: app
     ghc-options: -threaded -rtsopts -with-rtsopts=-N
+
+
 
 executable qua-server-to-sqlite
 

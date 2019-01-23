@@ -39,10 +39,11 @@ import System.Log.FastLogger                (defaultBufSize, newStdoutLoggerSet,
 #define SIMULATE_GRADING_LEARNING 0
 #endif
 
+#if EXPO
+#else
 #if SIMULATE_GRADING_LEARNING == 1
 import Application.Grading (simulateGradingLearning)
 #endif
-
 
 #if DEVELOPMENT
 -- automatically import some data to start with
@@ -50,6 +51,7 @@ import Application.SetupProblemData (importProblemData)
 #else
 -- schedule sending grades to edX from time to time
 import Application.Edx (scheduleUpdateGrades)
+#endif
 #endif
 
 -- Import all relevant handler modules here.
@@ -121,6 +123,8 @@ makeFoundation appSettings = do
     -- Create the database connection pool
     pool <- runLoggingT (createAppSqlPool $ appDatabaseConf appSettings) logFunc
 
+#if EXPO
+#else
     -- Perform database migration using our application's logging settings.
     runLoggingT (runSqlPool (runMigration migrateAll) pool) logFunc
 
@@ -139,7 +143,7 @@ makeFoundation appSettings = do
     -- run simulation of grading procedure
     runLoggingT (runResourceT $ runSqlPool simulateGradingLearning pool) logFunc
 #endif
-
+#endif
     -- Return the foundation
     return $ mkFoundation pool
 
@@ -247,6 +251,9 @@ handler h = getAppSettings >>= makeFoundation >>= flip unsafeHandler h
 db :: ReaderT SqlBackend (HandlerT App IO) a -> IO a
 db = handler . runDB
 
+
+#if EXPO
+#else
 -- | Create a default admin user and set a password at the program startup.
 --
 --   username: "admin@qua-kit.hs"
@@ -266,3 +273,4 @@ registerAdmin pool = flip runSqlPool pool $ do
               "Qua-kit Super Admin" UR_ADMIN Nothing Nothing un pw True
         Just _ -> return ()
        --Just (Entity key _) -> update key [UserRole =. UR_ADMIN]
+#endif
