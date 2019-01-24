@@ -201,7 +201,10 @@ executable qua-server
 
     if flag(expo)
         cpp-options: -DEXPO
-        ghc-options: -static -optl-static -optl-pthread -fPIC
+        ghc-options: -static -optl-pthread -fPIC
+    
+    if (flag(expo) && !os(darwin))
+        ghc-options: -optl-static
 
     if flag(dev)
         cpp-options: -DDEVELOPMENT
@@ -223,7 +226,7 @@ executable qua-server
 
 executable qua-server-to-sqlite
 
-    if flag(library-only)
+    if (flag(library-only) || !flag(postgresql))
         buildable: False
     main-is: to-sqlite.hs
     other-modules:
