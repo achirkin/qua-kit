@@ -7,9 +7,7 @@
 -- declared in the Foundation.hs file.
 module Settings where
 
-import Data.Function ((&))
 import ClassyPrelude.Yesod
-import Control.Lens ((%~))
 import qualified Control.Exception as Exception (throw)
 import Data.Aeson                  (Result (..), fromJSON, withObject, (.!=),
                                     (.:?))
@@ -18,11 +16,14 @@ import Data.Yaml                   (decodeEither')
 import Data.Pool                   (Pool)
 import qualified Data.Text          as Text
 import qualified Data.Text.Encoding as Text
-import Database.Persist.Sql        (IsSqlBackend)
+import qualified Data.Map as Map
+import Database.Persist.Sql
 #if POSTGRESQL
-import Database.Persist.Postgresql (PostgresConf (..), createPostgresqlPool)
+import Database.Persist.Postgresql
 #else
-import Database.Persist.Sqlite     (SqliteConf (..), createSqlitePoolFromInfo, sqlConnectionStr, mkSqliteConnectionInfo)
+import Database.Persist.Sqlite
+import Control.Lens ((%~))
+import Data.Function ((&))
 #endif
 import Language.Haskell.TH.Syntax  (Exp, Name, Q)
 --import Network.Wai.Handler.Warp    (HostPreference)
@@ -34,6 +35,12 @@ import qualified Data.ByteString.Char8 as BS
 import Data.Conduit.Network
 import Web.LTI
 
+#if EXPO
+import Language.Haskell.TH
+import qualified Unsafe.Coerce as Unsafe (unsafeCoerce)
+import qualified System.IO.Unsafe as Unsafe (unsafePerformIO)
+#endif
+
 -- Go with Sqlite on development, and Postgres on production
 #if POSTGRESQL
 type PersistConf = PostgresConf
@@ -42,54 +49,98 @@ type PersistConf = SqliteConf
 #endif
 
 
-isExpo :: Bool
-#if EXPO
-isExpo = True
-#else
-isExpo = False
-#endif
-
-isPostgres :: Bool
-#if POSTGRESQL
-isPostgres = True
-#else
-isPostgres = False
-#endif
-
-isDev :: Bool
-#if DEVELOPMENT
-isDev = True
-#else
-isDev = False
-#endif
-
 createAppSqlPool :: (MonadIO m, MonadBaseControl IO m, MonadLogger m, IsSqlBackend backend)
                  => PersistConf -> m (Pool backend)
 #if POSTGRESQL
-createAppSqlPool c = createPostgresqlPool (pgConnStr c) (pgPoolSize c)
+createAppSqlPool c = prepareSqlPool
+   <$> createPostgresqlPool (pgConnStr c) (pgPoolSize c)
+  -- encodeUtf8 . processConnStr . decodeUtf8 $ pgConnStr c
 #else
-createAppSqlPool (SqliteConf db ps) = createSqlitePoolFromInfo (mkSqliteConnectionInfo $ "file:" <> db <> "?" <> askReadOnly) ps
-createAppSqlPool (SqliteConfInfo ci ps) = createSqlitePoolFromInfo (ci & sqlConnectionStr %~ perhapsReadOnly) ps
-#endif
-
-askReadOnly :: Text
-#if POSTGRESQL
-askReadOnly = "target_session_attrs=read-only"
-#else
-askReadOnly = "mode=ro"
-#endif
-
-perhapsReadOnly :: Text -> Text
-#if EXPO
-perhapsReadOnly s = case unsnoc start of
-    Just (_, '?') -> start <> askReadOnly <> end
-    Just (_, '&') -> start <> askReadOnly <> end
-    _             -> start <> "?" <> askReadOnly
+createAppSqlPool c = prepareSqlPool
+   <$> createSqlitePoolFromInfo (getCInfo c & sqlConnectionStr %~ processConnStr) (getPoolSize c)
   where
-    (start, end) = drop 1 . snd . Text.breakOn "&" <$> Text.breakOn "mode=" s
-#else
-perhapsReadOnly = id
+    getCInfo (SqliteConf db _) = mkSqliteConnectionInfo $ "file:" <> db
+    getCInfo (SqliteConfInfo ci _) = ci
+    getPoolSize (SqliteConf _ n) = n
+    getPoolSize (SqliteConfInfo _ n) = n
 #endif
+
+
+
+-- Modify resource at the moment of its creation.
+-- Very ugly workaround, but seems to work. 
+prepareSqlPool :: IsSqlBackend backend
+               => Pool backend -> Pool backend
+#if EXPO
+prepareSqlPool origPool = $(do
+    -- I know Pool data type has one constructor and its first field is "create"
+    -- this is what I am looking for.
+    (TyConI (DataD _ _ _ _ [RecC _ ((createN,_,_):_)] _)) <- reify ''Pool
+    recUpdE
+      [e|origPool|]
+      [(,) createN <$> [e| updateCreate ($(varE createN) origPool) |] ]
+  )
+  where
+    updateCreate = fmap (Unsafe.unsafeCoerce mkBackendReadOnly)
+#else
+prepareSqlPool = id
+#endif
+
+
+#if EXPO
+-- Try to make the database read-only by modifying a backend object.
+mkBackendReadOnly :: SqlBackend -> SqlBackend
+mkBackendReadOnly bk = bk
+    { connInsertSql = const $ const $ Unsafe.unsafePerformIO roError
+    , connUpsertSql = Nothing
+    , connInsertManySql = Nothing
+    , connMigrateSql = const $ const $ const roError
+    -- , connBegin = const roError
+    -- , connCommit = const roError
+    -- , connRollback = const roError
+    }
+  where
+    roError = ioError $ mkIOError
+      illegalOperationErrorType
+      "Attempted to write into the database using read-only connection"
+      Nothing Nothing
+#endif
+
+
+processConnStr :: Text -> Text
+#if EXPO
+processConnStr cs = combineConnStr base (readOnlyMode <> pams)
+  where
+    (base, pams) = splitConnStr cs
+#else
+processConnStr = id
+#endif
+
+-- | Setting a connection string parameter for a read-only database.
+readOnlyMode :: Map Text Text
+#if POSTGRESQL
+-- this is not working, because libpq support only 'any' (default) or 'read-write'
+readOnlyMode = Map.singleton "target_session_attrs" "read-only"
+#else
+readOnlyMode = Map.singleton "mode" "ro"
+#endif
+
+--   Assumes that the question marks in the file name are escaped and parameters do not have '&' symbol unescaped.
+splitConnStr :: Text -> (Text, Map Text Text)
+splitConnStr s = (base, pams)
+  where
+    (base, pamsStr) = drop 1 <$> Text.breakOn "?" s
+    pamsLst = Text.splitOn "&" pamsStr
+    pams = Map.fromList $ fmap (drop 1) . Text.breakOn "=" <$> pamsLst
+
+-- Assemble a base and params into a connection string uri
+combineConnStr :: Text -> Map Text Text -> Text
+combineConnStr base pams
+    | null pams = base
+    | otherwise = base <> "?" <> Text.intercalate "&" (kv <$> Map.toList pams)
+  where
+    kv (k, v) = k <> "=" <> v
+
 
 
 -- | Runtime settings to configure this application. These settings can be
