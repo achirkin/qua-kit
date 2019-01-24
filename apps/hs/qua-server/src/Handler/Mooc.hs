@@ -1,4 +1,5 @@
 {-# OPTIONS_HADDOCK hide, prune #-}
+{-# LANGUAGE CPP #-}
 module Handler.Mooc
   ( getMoocHomeR, postMoocHomeR
   ) where
@@ -6,25 +7,34 @@ module Handler.Mooc
 
 
 
---import qualified Data.Map as Map
-
-import qualified Data.Maybe as Mb
-import Database.Esqueleto
 import Import hiding ((/=.), (==.), (=.), on, isNothing, count)
 import Handler.Mooc.BrowseProposals
+#if EXPO
+#else
+import qualified Data.Maybe as Mb
+import Database.Esqueleto
 import Handler.Mooc.EdxLogin
 import Handler.Mooc.User
 import qualified Text.Blaze as Blaze
+#endif
+
 
 
 postMoocHomeR :: Handler TypedContent
+#if EXPO
+postMoocHomeR = toTypedContent <$> getBrowseProposalsR 1
+#else
 postMoocHomeR = do
   master <- getYesod
   yreq <- getRequest
   dispatchLti (appLTICredentials $ appSettings master) yreq
+#endif
 
 getMoocHomeR :: Handler TypedContent
-getMoocHomeR  = toTypedContent <$> do
+#if EXPO
+getMoocHomeR = toTypedContent <$> getBrowseProposalsR 1
+#else
+getMoocHomeR = toTypedContent <$> do
     setUltDestCurrent
     muser <- maybeAuth
     createAccW <- case muser of
@@ -86,6 +96,7 @@ getMoocHomeR  = toTypedContent <$> do
                   margin-right: 3px
           |]
         $(widgetFile "mooc/home")
+
 
 renderNewsItems :: Maybe (Entity User) -> Handler [(UTCTime, Widget)]
 renderNewsItems Nothing = return []
@@ -246,3 +257,5 @@ viewSubmissionBtn sc = [whamlet|
     <a href=@{ SubmissionR (scenarioExerciseId sc) (scenarioAuthorId sc) }>
       <span .icon>visibility
   |]
+
+#endif

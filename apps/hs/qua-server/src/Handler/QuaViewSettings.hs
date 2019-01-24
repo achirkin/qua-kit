@@ -1,4 +1,5 @@
 {-# OPTIONS_HADDOCK hide, prune #-}
+{-# LANGUAGE CPP #-}
 module Handler.QuaViewSettings
     ( getQuaViewEditorSettingsR
     , getQuaViewExerciseSettingsR
@@ -47,6 +48,37 @@ quaViewSettingsR :: Route App
                  -> Maybe UserId
                  -> QuaTypes.Permissions
                  -> Handler Value
+#if EXPO
+quaViewSettingsR curRoute mcExId mAuthorId _ = do
+  app <- getYesod
+  req <- waiRequest
+  let appr = getApprootText guessApproot app req
+      routeUrl route = yesodRender app appr route []
+      showDemo = isNothing mcExId || isNothing mAuthorId
+  returnJson QuaTypes.Settings
+    { loggingUrl               = Nothing
+    , luciUrl                  = Nothing
+    , getSubmissionGeometryUrl =
+        if showDemo
+        then Just . routeUrl $ StaticR data_demo_scenario
+        else fmap routeUrl $ SubmissionGeometryR <$> mcExId <*> mAuthorId
+    , getSubmissionInfoUrl     = fmap routeUrl $ SubmissionInfoR <$> mcExId <*> mAuthorId
+    , putSubmissionUrl         = Nothing
+    , reviewSettingsUrl        = fmap routeUrl $ QuaViewReviewSettingsR <$> mcExId <*> mAuthorId
+    , viewUrl                  = routeUrl curRoute
+    , jsRootUrl                = Text.pack . takeDirectory . Text.unpack . routeUrl $ StaticR js_qua_view_js
+    , permissions              = QuaTypes.Permissions
+       { canEditProperties      = showDemo
+       , canEraseReloadGeometry = showDemo
+       , canAddDeleteGeometry   = showDemo
+       , canDownloadGeometry    = True
+       , canModifyStaticObjects = False
+       , showHiddenProperties   = False
+       , showShareButton        = False
+       , isViewerOnly           = not showDemo
+       }
+    }
+#else
 quaViewSettingsR curRoute mcExId mAuthorId perms' = do
   app <- getYesod
   req <- waiRequest
@@ -85,3 +117,4 @@ quaViewSettingsR curRoute mcExId mAuthorId perms' = do
     , jsRootUrl                = Text.pack . takeDirectory . Text.unpack . routeUrl $ StaticR js_qua_view_js
     , permissions              = perms
     }
+#endif

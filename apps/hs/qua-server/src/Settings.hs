@@ -48,6 +48,12 @@ type PersistConf = PostgresConf
 type PersistConf = SqliteConf
 #endif
 
+amIExpo :: Bool
+#if EXPO
+amIExpo = True
+#else
+amIExpo = False
+#endif
 
 createAppSqlPool :: (MonadIO m, MonadBaseControl IO m, MonadLogger m, IsSqlBackend backend)
                  => PersistConf -> m (Pool backend)
@@ -68,7 +74,7 @@ createAppSqlPool c = prepareSqlPool
 
 
 -- Modify resource at the moment of its creation.
--- Very ugly workaround, but seems to work. 
+-- Very ugly workaround, but seems to work.
 prepareSqlPool :: IsSqlBackend backend
                => Pool backend -> Pool backend
 #if EXPO

@@ -40,6 +40,7 @@ import System.Log.FastLogger                (defaultBufSize, newStdoutLoggerSet,
 #endif
 
 #if EXPO
+import Web.Browser
 #else
 #if SIMULATE_GRADING_LEARNING == 1
 import Application.Grading (simulateGradingLearning)
@@ -124,6 +125,20 @@ makeFoundation appSettings = do
     pool <- runLoggingT (createAppSqlPool $ appDatabaseConf appSettings) logFunc
 
 #if EXPO
+    let txtLine = "-------------------------------------------------------"
+        txtBdrs = "--                                                   --"
+        putStrInLine s = putStrLn $ "-- " <> s <> drop (length s + 3) txtBdrs
+        myUrl = case appRoot appSettings of
+          Just r -> unpack r
+          Nothing -> "http://localhost:" <> show (appPort appSettings) <> "/"
+    _ <- openBrowser myUrl
+    putStrLn txtLine
+    putStrInLine "Qua-kit is running now"
+    putStrInLine ""
+    putStrInLine "Open this page in a browser:"
+    putStrInLine $ "        " <> pack myUrl
+    putStrInLine ""
+    putStrLn txtLine
 #else
     -- Perform database migration using our application's logging settings.
     runLoggingT (runSqlPool (runMigration migrateAll) pool) logFunc
@@ -144,7 +159,6 @@ makeFoundation appSettings = do
     runLoggingT (runResourceT $ runSqlPool simulateGradingLearning pool) logFunc
 #endif
 #endif
-    -- Return the foundation
     return $ mkFoundation pool
 
 
@@ -159,6 +173,10 @@ makeApplication foundation = do
     return $ logWare $ methodOverride $ defaultMiddlewaresNoLogging appPlain
 
 makeLogWare :: App -> IO Middleware
+#if EXPO
+-- disable request logging in expo mode
+makeLogWare = const $ return id
+#else
 makeLogWare foundation =
     mkRequestLogger def
         { outputFormat =
@@ -170,7 +188,7 @@ makeLogWare foundation =
                             else FromSocket)
         , destination = Logger $ loggerSet $ appLogger foundation
         }
-
+#endif
 
 -- | Warp settings for the given foundation value.
 warpSettings :: App -> Settings

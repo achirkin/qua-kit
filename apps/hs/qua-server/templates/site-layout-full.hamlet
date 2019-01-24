@@ -30,21 +30,22 @@ $doctype 5
         qua-kit
       <ul class="nav nav-list pull-right">
         <li class="dropdown margin-right">
-          $maybe user <- muser
-            <a class="dropdown-toggle padding-left-no padding-right-no" data-toggle="dropdown">
-              <p style="margin-right: 0.5em;" #usernameplace>#{userName user}
-              <span class="avatar avatar-sm" #twocharsplace>#{twoCharsName $ userName user}
-            <ul class="dropdown-menu dropdown-menu-right">
-              <li>
-                <a class="padding-right-lg waves-attach waves-effect" data-backdrop="static" data-toggle="modal" href="#ui_renameme_dialog">
-                  <span class="icon icon-lg margin-right">edit
-                  Change name
-              <li>
-                <a class="padding-right-lg waves-attach waves-effect" href="@{AuthR LogoutR}">
-                  <span class="icon icon-lg margin-right">exit_to_app
-                  Logout
-          $nothing
-            <a href=@{AuthR LoginR}>Login
+          $if not amIExpo
+            $maybe user <- muser
+              <a class="dropdown-toggle padding-left-no padding-right-no" data-toggle="dropdown">
+                <p style="margin-right: 0.5em;" #usernameplace>#{userName user}
+                <span class="avatar avatar-sm" #twocharsplace>#{twoCharsName $ userName user}
+              <ul class="dropdown-menu dropdown-menu-right">
+                <li>
+                  <a class="padding-right-lg waves-attach waves-effect" data-backdrop="static" data-toggle="modal" href="#ui_renameme_dialog">
+                    <span class="icon icon-lg margin-right">edit
+                    Change name
+                <li>
+                  <a class="padding-right-lg waves-attach waves-effect" href="@{AuthR LogoutR}">
+                    <span class="icon icon-lg margin-right">exit_to_app
+                    Logout
+            $nothing
+              <a href=@{AuthR LoginR}>Login
 
     <!-- Navigation bar -->
     ^{siteMenu}
@@ -53,7 +54,8 @@ $doctype 5
     <main class="content">
       <div class="content-header ui-content-header">
         <div class="container">
-          <h1 class="content-heading">Quick Urban Analysis Kit
+          <h1 class="content-heading">Quick Urban Analysis Kit 
+            <sup style="font-size: 50%; font-style: italic; top: -1em;"> Expo
       <div class="container">
         <section class="content-inner margin-top-no">
 

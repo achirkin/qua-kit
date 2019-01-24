@@ -30,21 +30,25 @@ $doctype 5
         qua-kit
       <ul class="nav nav-list pull-right" style="z-index: 10002">
         <li class="dropdown margin-right">
-          $maybe user <- muser
-            <a class="dropdown-toggle padding-left-no padding-right-no" data-toggle="dropdown">
-              <p style="margin-right: 0.5em; color: #BF360C" #usernameplace>#{userName user}
-              <span class="avatar avatar-sm" style="color: #BF360C" #twocharsplace>#{twoCharsName $ userName user}
-            <ul class="dropdown-menu dropdown-menu-right">
-              <li>
-                <a class="padding-right-lg waves-attach waves-effect" data-backdrop="static" data-toggle="modal" href="#ui_renameme_dialog">
-                  <span class="icon icon-lg margin-right">edit
-                  Change name
-              <li>
-                <a class="padding-right-lg waves-attach waves-effect" href="@{AuthR LogoutR}">
-                  <span class="icon icon-lg margin-right">exit_to_app
-                  Logout
-          $nothing
-            <a href="@{AuthR LoginR}" style="color: #BF360C">Login
+          $if amIExpo
+            <p style="margin-right: 0.5em; color: #BF360C">
+              Expo
+          $else
+            $maybe user <- muser
+              <a class="dropdown-toggle padding-left-no padding-right-no" data-toggle="dropdown">
+                <p style="margin-right: 0.5em; color: #BF360C" #usernameplace>#{userName user}
+                <span class="avatar avatar-sm" style="color: #BF360C" #twocharsplace>#{twoCharsName $ userName user}
+              <ul class="dropdown-menu dropdown-menu-right">
+                <li>
+                  <a class="padding-right-lg waves-attach waves-effect" data-backdrop="static" data-toggle="modal" href="#ui_renameme_dialog">
+                    <span class="icon icon-lg margin-right">edit
+                    Change name
+                <li>
+                  <a class="padding-right-lg waves-attach waves-effect" href="@{AuthR LogoutR}">
+                    <span class="icon icon-lg margin-right">exit_to_app
+                    Logout
+            $nothing
+              <a href="@{AuthR LoginR}" style="color: #BF360C">Login
 
     <!-- Navigation bar -->
     ^{siteMenu}

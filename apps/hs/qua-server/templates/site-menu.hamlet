@@ -5,20 +5,24 @@
       <ul class="nav">
         <li>
           <a class="waves-attach waves-effect" href="@{RedirectToQuaViewEditR}">
-            Work on a design
+            $if amIExpo
+              Playground
+            $else
+              Work on a design
           <a class="waves-attach waves-effect" href="@{BrowseProposalsR 1}">
             Explore submissions
           <a class="waves-attach waves-effect" href="@{CriteriaListR}">
             Understand criteria
-          $if isJust muser
+          $if not amIExpo && isJust muser
             <a class="waves-attach waves-effect" href="@{CompareProposalsR}">
               Compare designs
           <a class="waves-attach waves-effect" href="@{FAQR}">
             Frequently Asked Questions
           <a class="waves-attach waves-effect" href="@{AboutR}">
             About
-          <a class="waves-attach waves-effect" href="@{FeedbackR}">
-            Feedback
-          $if fmap userRole muser == Just UR_ADMIN
-            <a class="waves-attach waves-effect" href="@{AdminR}">
-              Admin
+          $if not amIExpo
+            <a class="waves-attach waves-effect" href="@{FeedbackR}">
+              Feedback
+            $if fmap userRole muser == Just UR_ADMIN
+              <a class="waves-attach waves-effect" href="@{AdminR}">
+                Admin

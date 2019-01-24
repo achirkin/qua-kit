@@ -61,6 +61,8 @@ library
     if flag(expo)
         cpp-options: -DEXPO
         ghc-options: -static -optl-static -optl-pthread -fPIC
+        build-depends:
+          open-browser -any
 
     if (flag(dev) || flag(library-only))
         cpp-options: -DDEVELOPMENT
