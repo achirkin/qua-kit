@@ -11,7 +11,7 @@ import           Data.Pool                   (Pool, withResource)
 import           Data.Typeable               (typeRep)
 import           Data.Yaml.Config
 import qualified Database.Persist.Postgresql as Postgres
-import           Database.Persist.Sql        (runSqlPool)
+import           Database.Persist.Sql        (fromSqlKey, runSqlPool)
 import qualified Database.Persist.Sqlite     as Sqlite
 import           Model
 
@@ -59,35 +59,51 @@ main = runStdoutLoggingT $ filterLogger filterLogLevel $ do
     -- and go table by table...
     -- make sure the order is correct
     -- also omit tables, which are not needed for the "expo" version of qua-kit
-    transferTable poolPostgres poolSqlite (P @Criterion)
-    transferTable poolPostgres poolSqlite (P @Exercise)
-    transferTable poolPostgres poolSqlite (P @ExerciseCriterion)
-    transferTable poolPostgres poolSqlite (P @User)
-    -- transferTable poolPostgres poolSqlite (P @UserProp)
-    transferTable poolPostgres poolSqlite (P @UserExercise)
+    transferTable poolPostgres poolSqlite (keep @Criterion)
+    transferTable poolPostgres poolSqlite (keep @Exercise)
+    transferTable poolPostgres poolSqlite (keep @ExerciseCriterion)
+    transferTable poolPostgres poolSqlite clearSensistiveUserData
+    -- transferTable poolPostgres poolSqlite (keep @UserProp)
+    transferTable poolPostgres poolSqlite (keep @UserExercise)
 
-    transferTable poolPostgres poolSqlite (P @EdxCourse)
-    transferTable poolPostgres poolSqlite (P @EdxResource)
-    -- transferTable poolPostgres poolSqlite (P @EdxResourceParam)
-    transferTable poolPostgres poolSqlite (P @EdxGrading)
-    -- transferTable poolPostgres poolSqlite (P @EdxGradingQueue)
+    transferTable poolPostgres poolSqlite (keep @EdxCourse)
+    transferTable poolPostgres poolSqlite (keep @EdxResource)
+    transferTable poolPostgres poolSqlite (keep @EdxResourceParam)
+    transferTable poolPostgres poolSqlite (keep @EdxGrading)
+    -- transferTable poolPostgres poolSqlite (keep @EdxGradingQueue)
 
-    transferTable poolPostgres poolSqlite (P @Scenario)
-    transferTable poolPostgres poolSqlite (P @CurrentScenario)
-    transferTable poolPostgres poolSqlite (P @Review)
-    transferTable poolPostgres poolSqlite (P @ExpertReview)
+    transferTable poolPostgres poolSqlite (keep @Scenario)
+    transferTable poolPostgres poolSqlite (keep @CurrentScenario)
+    transferTable poolPostgres poolSqlite (keep @Review)
+    transferTable poolPostgres poolSqlite (keep @ExpertReview)
 
-    transferTable poolPostgres poolSqlite (P @Vote)
-    transferTable poolPostgres poolSqlite (P @Rating)
-    transferTable poolPostgres poolSqlite (P @VoteRating)
+    transferTable poolPostgres poolSqlite (keep @Vote)
+    transferTable poolPostgres poolSqlite (keep @Rating)
+    transferTable poolPostgres poolSqlite (keep @VoteRating)
 
-    -- transferTable poolPostgres poolSqlite (P @Feedback)
-    -- transferTable poolPostgres poolSqlite (P @Survey)
-    -- transferTable poolPostgres poolSqlite (P @QuaViewWebLogging)
+    -- transferTable poolPostgres poolSqlite (keep @Feedback)
+    -- transferTable poolPostgres poolSqlite (keep @Survey)
+    transferTable poolPostgres poolSqlite clearIpAddress
 
 
--- Proxy type
-data P t = P
+-- | Keep record as-is.
+--   Just a version of id that takes one type parameter
+keep :: Key a -> a -> a
+keep = const id
+
+clearSensistiveUserData :: Key User -> User -> User
+clearSensistiveUserData i u = u
+  { userEthUserName = Nothing
+  , userEdxUserId   = Nothing
+  , userEmail       = Just $ "user" <> itxt <> "@notgmail.com"
+  , userPassword    = Just "sha256|16|AK5Dd0IF3Hdkgywn506B5Q==|MxrRScUOlKp7dXOEGMpEYiiMvN/Us7S9XRKVXJnAQlg="
+  }
+  where
+    itxt = tshow $ fromSqlKey i
+
+
+clearIpAddress :: Key QuaViewWebLogging -> QuaViewWebLogging -> QuaViewWebLogging
+clearIpAddress _ q = q { quaViewWebLoggingIpAddress = Just "127.0.0.1" }
 
 transferTable :: ( MonadIO m
                  , MonadBaseControl IO m
@@ -97,25 +113,20 @@ transferTable :: ( MonadIO m
                  )
               => Pool SqlBackend
               -> Pool SqlBackend
-              -> P record
+              -> (Key record -> record -> record)
               -> m ()
-transferTable sourcePool destPool p = do
+transferTable sourcePool destPool f = do
     runResourceT $
-      withResource destPool $ \destBackend ->
+      withResource sourcePool $ \keysBackend ->
       withResource sourcePool $ \sourceBackend ->
+      withResource destPool   $ \destBackend ->
       runConduit $
-        withBackend sourceBackend (selectKeys [] [])
+        withBackend keysBackend (selectKeys [] [])
         .|
         withBackend sourceBackend (mapMC getJustEntity)
         .|
         withBackend destBackend
-        (awaitForever (\(Entity i r) -> lift (repsert i (enforceType p r))))
-    -- asource <- runSqlPool (selectSourceRes [] []) sourcePool
-    -- flip runSqlPool sourcePool $ runConduit $
-    --   withAcquire asource $ \source ->
-    --    source .| (awaitForever (\(Entity i r) -> lift (repsert i (enforceType p r))))
-    putStrLn $ "Done: " <> tshow (typeRep p)
+        (awaitForever (\(Entity i r) -> lift (repsert i (f i r))))
+    putStrLn $ "Done: " <> tshow (typeRep f)
   where
-    enforceType :: P t -> t -> t
-    enforceType _ = id
     withBackend b = transPipe (`runReaderT` b)
