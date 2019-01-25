@@ -26,10 +26,6 @@ import Network.Wai.Handler.Warp             (Settings, defaultSettings,
                                              runSettings, setHost,
                                              setOnException, setPort, getPort)
 import Network.Wai.Middleware.MethodOverride
-import Network.Wai.Middleware.RequestLogger (Destination (Logger),
-                                             IPAddrSource (..),
-                                             OutputFormat (..), destination,
-                                             mkRequestLogger, outputFormat)
 import System.Log.FastLogger                (defaultBufSize, newStdoutLoggerSet,
                                              toLogStr)
 
@@ -41,7 +37,14 @@ import System.Log.FastLogger                (defaultBufSize, newStdoutLoggerSet,
 
 #if EXPO
 import Web.Browser
+import System.Environment
+import System.Directory
+import System.FilePath
 #else
+import Network.Wai.Middleware.RequestLogger (Destination (Logger),
+                                             IPAddrSource (..),
+                                             OutputFormat (..), destination,
+                                             mkRequestLogger, outputFormat)
 #if SIMULATE_GRADING_LEARNING == 1
 import Application.Grading (simulateGradingLearning)
 #endif
@@ -224,6 +227,9 @@ develMain = develMainHelper getApplicationDev
 -- | The @main@ function for an executable running this site.
 appMain :: IO ()
 appMain = do
+#if EXPO
+    setWorkingDir
+#endif
     -- Get the settings from all relevant sources
     settings <- loadYamlSettingsArgs
         -- fall back to compile-time values, set to [] to require values at runtime
@@ -241,6 +247,20 @@ appMain = do
     -- Run the application with Warp
     runSettings (warpSettings foundation) app
 
+#if EXPO
+setWorkingDir :: IO ()
+setWorkingDir = fmap (const () :: Either SomeException () -> ()) . try $ do
+    epl <- getExecutablePath
+    ep <- resolveSymLinks epl
+    setCurrentDirectory $ takeDirectory ep
+
+resolveSymLinks :: FilePath -> IO FilePath
+resolveSymLinks l = flip catch (const $ pure l :: SomeException -> IO FilePath) $ do
+    isl <- pathIsSymbolicLink l
+    if isl
+    then getSymbolicLinkTarget l
+    else pure l
+#endif
 
 --------------------------------------------------------------
 -- Functions for DevelMain.hs (a way to run the app from GHCi)
