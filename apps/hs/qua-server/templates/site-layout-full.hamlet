@@ -54,8 +54,9 @@ $doctype 5
     <main class="content">
       <div class="content-header ui-content-header">
         <div class="container">
-          <h1 class="content-heading">Quick Urban Analysis Kit 
-            <sup style="font-size: 50%; font-style: italic; top: -1em;"> Expo
+          <h1 class="content-heading">Quick Urban Analysis Kit
+            $if amIExpo
+              <sup style="font-size: 50%; font-style: italic; top: -1em;"> Expo
       <div class="container">
         <section class="content-inner margin-top-no">
 
