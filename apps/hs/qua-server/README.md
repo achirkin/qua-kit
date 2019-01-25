@@ -2,7 +2,7 @@
 # Quick Urban Analysis Kit - Server
 =================================================
 
-This is a server side of qua-kit projet.
+This is a server side of qua-kit project.
 
 
 ### Compile qua-server as a standalone executable
@@ -63,13 +63,7 @@ Put these three items into one folder and qua-kit is ready to go!
 
 #### compilation requirements
 
-First of all, you need development versions of database libraries.
-In ubuntu this is either `libsqlite3-dev` or `libpq-dev`.
-Note, normal version of qua-kit compiled with sqlite does not need `libsqlite3-dev`,
-but expo version may need it.
-This is because the expo version tries is a static executable.
-
-Next, in gcc (at least on linux) has some problems with static compilation.
+Linux version has some problems with GCC and static compilation.
 You will see an error complaining about `crtbeginT.o`.
 On my ubuntu machine, I solved this by copying a file:
 ```
