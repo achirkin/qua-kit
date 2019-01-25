@@ -1,50 +1,3 @@
-## Merging existing database from master branch
-
-Here is the minimal migration script.
-```
-ALTER TABLE "scenario_problem"  RENAME TO "exercise";
-ALTER SEQUENCE "scenario_problem_id_seq" RENAME TO "exercise_id_seq";
-ALTER INDEX "scenario_problem_pkey" RENAME TO "exercise_pkey";
-ALTER TABLE "scenario"          RENAME COLUMN "task_id" TO "exercise_id";
-ALTER TABLE "current_scenario"  RENAME COLUMN "task_id" TO "exercise_id";
-ALTER TABLE "vote_rating"       RENAME COLUMN "problem_id" TO "exercise_id";
-ALTER TABLE "rating"            RENAME COLUMN "problem_id" TO "exercise_id";
-ALTER TABLE "problem_criterion" RENAME COLUMN "problem_id" TO "exercise_id";
-ALTER TABLE "problem_criterion" RENAME TO "exercise_criterion";
-```
-
-## "I want to contribute the project!"
-
-I have prepared a set of [things](https://github.com/achirkin/qua-kit/issues) I want to do for the project. You are welcome to:
- * choose any issue you like
- * discuss with me its implementation
- * solve it during the event
- * ask any questions
- * propose new tasks
-
-### "I want to code, not to spend too much time trying to undestand qua-kit internals!"
-
-Ok! I have a nice option to write standalone programs that can be easily integrated into qua-kit. I call them "computational services". Computational service is a small console program that consumes urban geometry and produces some analysis results.
-We support the following execution modes:
- * `points`: Take a grid of points and a geometry, return grid of results (qua-kit visualizes it using heatmap).
- * `object`: Compute a single value for each geometry object (floating-point value is added into object properties).
- * `scenario`: Do whatever you want with geometry and return a single line of text or an image (e.g. some plot).
- * `new`: Create new geometry (or modify existing).
-
-Example of such a service is available in `services/examples-hs/` - it computes distance to a closest object for each point on a grid. You can see how it works on our live page:
- 1. Go to https://qua-kit.ethz.ch/viewer
- 2. To be able to connect to luci, you need to login. The default admin credentials are:
-    * username: "admin@qua-kit.hs"
-    * password: "make it some random thing"
- 3. Open control panel (Red "Tools" button -> gear button)
- 4. Press button "CONNECT" (connect to luci)
- 5. Press "SCENARIOS" and select "Empower Shack" on the bottom of the list
- 6. Go to "SERVICES" tab
- 7. There will be one service available "hs-example-service". Make sure "points" mode is selected.
- 8. Press green button "Play" to run service
- 9. You will see heatmap-like visualization for mode "points"
-
-
 # Quick Urban Analysis Kit
 
 
@@ -183,7 +136,7 @@ refer to `siren` docs for details.
         stack install
         hs-example-service
      
-  5. Go to page `http://localhost:3000/viewer`
+  5. Go to page `http://localhost:3000/editor`
       * (hint) Open browser console to see debug output if you have any troubles.
   6. To be able to connect to luci, you need to login. The default admin credentials are:
       * username: "admin@qua-kit.hs"
@@ -202,3 +155,23 @@ refer to `siren` docs for details.
      Check if all optional parameters of your service are displayed as intended.
   10. Press green `play` button.
      
+
+# "I want to contribute the project!"
+
+I have prepared a set of [things](https://github.com/achirkin/qua-kit/issues) I want to do for the project. You are welcome to:
+ * choose any issue you like
+ * discuss with me its implementation
+ * solve it during the event
+ * ask any questions
+ * propose new tasks
+
+## "I want to code, not to spend too much time trying to undestand qua-kit internals!"
+
+Ok! I have a nice option to write standalone programs that can be easily integrated into qua-kit. I call them "computational services". Computational service is a small console program that consumes urban geometry and produces some analysis results.
+We support the following execution modes:
+ * `points`: Take a grid of points and a geometry, return grid of results (qua-kit visualizes it using heatmap).
+ * `object`: Compute a single value for each geometry object (floating-point value is added into object properties).
+ * `scenario`: Do whatever you want with geometry and return a single line of text or an image (e.g. some plot).
+ * `new`: Create new geometry (or modify existing).
+
+Example of such a service is available in `services/examples-hs/` - it computes distance to a closest object for each point on a grid.
