@@ -4,11 +4,8 @@
       <a class="menu-logo" href="@{MoocHomeR}">QUA-KIT
       <ul class="nav">
         <li>
-          <a class="waves-attach waves-effect" href="@{RedirectToQuaViewEditR}">
-            $if amIExpo
-              Playground
-            $else
-              Work on a design
+          <a class="waves-attach waves-effect" href="@{TempUserR}?exercise=#{guessedExerciseId}">
+              Work on a new design
           <a class="waves-attach waves-effect" href="@{BrowseProposalsR 1}">
             Explore submissions
           <a class="waves-attach waves-effect" href="@{CriteriaListR}">

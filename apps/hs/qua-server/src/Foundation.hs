@@ -102,6 +102,7 @@ instance Yesod App where
 --        master <- getYesod
         mmsg <- getMessage
         muser <- fmap entityVal <$> maybeAuth
+        guessedExerciseId <- show . fromSqlKey <$> getCurrentExercise
         siteMenu <- pageBody <$> widgetToPageContent $(widgetFile "site-menu")
 
         -- We break up the default layout into two components:
@@ -169,6 +170,7 @@ fullLayout :: Maybe Markup -> Text -> Widget -> Handler Html
 fullLayout mmsgIcon defaultMsg widget = do
     mmsg <- getMessage
     muser <- fmap entityVal <$> maybeAuth
+    guessedExerciseId <- show . fromSqlKey <$> getCurrentExercise
     siteMenu <- pageBody <$> widgetToPageContent $(widgetFile "site-menu")
     pc <- widgetToPageContent widget
     withUrlRenderer $(hamletFile "templates/site-layout-full.hamlet")
@@ -178,6 +180,7 @@ adminLayout :: Text -> Widget -> Handler Html
 adminLayout defaultMsg widget = do
     mmsg <- getMessage
     muser <- fmap entityVal <$> maybeAuth
+    guessedExerciseId <- show . fromSqlKey <$> getCurrentExercise
     siteMenu <- pageBody <$> widgetToPageContent $(widgetFile "site-menu")
     pc <- widgetToPageContent widget
     withUrlRenderer $(hamletFile "templates/site-layout-admin.hamlet")
@@ -186,6 +189,7 @@ adminLayout defaultMsg widget = do
 minimalLayout :: Widget -> Handler Html
 minimalLayout widget = do
     muser <- fmap entityVal <$> maybeAuth
+    guessedExerciseId <- show . fromSqlKey <$> getCurrentExercise
     siteMenu <- pageBody <$> widgetToPageContent $(widgetFile "site-menu")
     pc <- widgetToPageContent widget
     withUrlRenderer $(hamletFile "templates/site-layout-minimal.hamlet")
@@ -508,10 +512,12 @@ requirePostParam pam errstr = lookupPostParam pam >>= \mv -> case mv of
 getCurrentExercise :: Handler ExerciseId
 getCurrentExercise = do
     mtExId <- lookupSession "custom_exercise_id"
+    mgExId <- (>>= parseSqlKey) <$> lookupGetParam "exercise"
+    mpExId <- (>>= parseSqlKey) <$> lookupPostParam "exercise"
     maxExId <- runDB lastExerciseId
     return $ case decimal <$> mtExId of
           Just (Right (i, _)) -> toSqlKey i
-          _ -> maxExId
+          _ -> fromMaybe maxExId $ mgExId <|> mpExId
 
 submissionR :: CurrentScenario -> Route App
 submissionR cSc = SubmissionR (currentScenarioExerciseId cSc)
@@ -568,6 +574,24 @@ checkInvitationParams = do
           pure $ if Just (exerciseInvitationSecret sp) == is
               then Just spId
               else Nothing
+
+getTempUserR :: Handler Html
+getTempUserR = do
+    setCreds False $ Creds "temporary" "Anonymous user" []
+    musrId <- maybeAuthId
+    mExId <- (>>= parseSqlKey) <$> lookupGetParam "exercise"
+    $(logDebug) $ "New user: " <> tshow (mExId, musrId)
+    case (mExId, musrId) of
+        (Just exId, Just usrId) -> do
+          $(logDebug) $ "Enrolling new user in exercise " <> tshow (fromSqlKey exId)
+          setSafeSession userSessionCurrentExerciseId exId
+          time   <- liftIO getCurrentTime
+          void $ runDB $ upsert (UserExercise usrId exId time)
+            [ UserExerciseUserId =. usrId
+            , UserExerciseExerciseId =. exId
+            , UserExerciseEnrolled =. time]
+        _ -> pure ()
+    redirect RedirectToQuaViewEditR
 
 postTempUserR :: Handler Html
 postTempUserR = do
