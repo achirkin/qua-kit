@@ -533,9 +533,7 @@ lastExerciseId = getVal <$> rawSql query []
   where
     getVal (Single c:_)  = c
     getVal [] = toSqlKey 0
-    query = unlines
-          ["SELECT max(id) FROM exercise;"
-          ]
+    query = "SELECT coalesce(max(id), 0) FROM exercise;"
 
 maybeSetRoleBasedOnParams :: UserId -> Handler ()
 maybeSetRoleBasedOnParams userId = do
