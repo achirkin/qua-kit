@@ -4,7 +4,7 @@ module Handler.About
   ) where
 
 import Import
-import Paths_qua_server (version)
+import Paths_qua_server_ura (version)
 import Data.Version (showVersion)
 
 getAboutR :: Handler Html
