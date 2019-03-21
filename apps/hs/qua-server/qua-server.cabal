@@ -1,5 +1,5 @@
 name: qua-server
-version: 2.0.2.0
+version: 2.0.2.777
 cabal-version: >=1.22
 build-type: Custom
 license: MIT
@@ -194,7 +194,7 @@ library
                         ViewPatterns TupleSections RecordWildCards
     hs-source-dirs: src
 
-executable qua-server
+executable qua-server-ura
 
     if flag(postgresql)
         cpp-options: -DPOSTGRESQL
