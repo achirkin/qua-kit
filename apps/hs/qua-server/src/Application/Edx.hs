@@ -92,10 +92,10 @@ executeEdxGrading :: ( MonadReader env m
                   -> Double
                   -> Maybe Text -> m ()
 executeEdxGrading _ Nothing _ _ = $(logWarn) "[GRADING][edX] Could not send a grade to a student because EdxGrading record is not found."
-executeEdxGrading aSettings (Just (EdxGrading _ _ outcomeUrl resultId)) grade comment = do
-  req <- replaceResultRequest (appLTICredentials aSettings) (Text.unpack outcomeUrl) resultId grade comment
-  catch ( void $ httpNoBody req )
-        (\e -> $(logWarn) $ "[GRADING][edX] " <> Text.pack (show (e :: SomeException)))
+executeEdxGrading aSettings (Just (EdxGrading _ _ outcomeUrl resultId)) grade comment =
+  ( replaceResultRequest (appLTICredentials aSettings) (Text.unpack outcomeUrl) resultId grade comment
+      >>= void . httpNoBody
+  ) `catch` (\e -> $(logWarn) $ "[GRADING][edX] " <> Text.pack (show (e :: SomeException)))
 
 
 
